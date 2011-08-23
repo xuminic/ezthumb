@@ -1,0 +1,401 @@
+.TH EZTHUMB 1 "Feb 10, 2011" Linux ""
+.SH NAME
+ezthumb \- generate thumbnails of video clips
+.SH SYNOPSIS
+.B ezthumb
+.RI [ options ]
+.I video_clips...
+.SH DESCRIPTION
+.B ezthumb
+is used to generate screenshots from video files. According to the user's 
+command, this program can compose these screenshots into a thumbnail canvas, 
+which is the default function, or combine them into an animated GIF file. 
+It also can save the screenshots separately. 
+.B ezthumb
+uses the
+.SM FFMPEG
+libraries as its engine so it almost supports every codecs. 
+The output format can be
+.B JPG, PNG
+or
+.B GIF.
+.B PNG
+and
+.B GIF
+support transparent background.
+
+.SH OPTIONS
+.TP
+.BR \-b , " \-\-background \fIfilename\fP"
+Load a picture as the background of the thumbnail canvas. It supports
+.B JPG
+and
+.B PNG
+format. The background picture is placed in the canvas center by default.
+However this is adjustable. See 
+.BR \-\-pos\-bg
+option for the detail.
+
+.TP
+.BR \-c , " \-\-colour \fIMI:TM:BG\fP"
+Specify the colour of text and canvas. 
+.I MI
+is for the text of the media information.
+.I TM
+is for the time stamp in the screen shots and
+.I BG
+is the canvas' background colour. These colour codes use the same form of
+.B RRGGBB
+which is composed by Red, Green and Blue. The
+.B RRGGBB
+must be set by 6 hexadecimal number to make sure the colour won't go wrong,
+for example:
+.I 0f55f0.
+
+.TP
+.BR \-d , " \-\-during \fIquick\fP"
+Specify the duration finding mode. Normally the video's duration can be
+retrieved from the container, which is the default mode
+.B "quick" .
+However, some dodge video clips include an inaccurate time duration value
+so the best way to retrieve the duration is the
+.B "scan"
+mode to scan the whole video file till the last packet. Its drawback is
+too slow. The compromise mode is 
+.B "skim"
+which only scan the last part of the video.
+.TP
+.BR \-e , " \-\-edge \fIvalue\fP"
+This option defines the thickness of the black edge around each screenshots.
+The default value 0 means these's no black edge around screenshots.
+
+.TP
+.BR \-f , " \-\-font \fIfilename\fP"
+This option specifies the whole path of a TrueType font which is used to
+render the media information and timestamp in the output picture. If this
+option is not specified, the program will use the internal fix-pixel fonts.
+Note the fontconfig patterns is also acceptable.
+
+.TP
+.BR \-F , " \-\-fontsize \fIMI:TM\fP"
+This option is used to set the pointsize of the font. 
+.B MI
+is for the text size of the media information and 
+.B TM
+is for the size of time stamps inside the screen shots.
+
+.TP
+.BR \-g , " \-\-grid \fIcolumn x row\fP"
+This option is used to define the thumbnail grid in the canvas. The default
+value
+.I "4x4"
+means there are 4 columns and 4 rows thumbnails in the canvas. Therefore
+there are 16 screenshots in total.
+.B Note
+that there are two
+.B tricky
+modes. If 
+.I column
+is 0, 
+.B ezthumb
+will separately save screenshots into the number of
+.I row
+files. If
+.I row
+is also 0,
+.B ezthumb
+will save all key frames (I-frame) into separate files. 
+So watch out, it may be hundreds.
+.TP
+.BR \-i , " \-\-info"
+Display the information of the media file. This option won't 
+generate any picture.
+.TP
+.BR  \-m , " \-\-format \fIpicture_format\fP"
+This option is used to define the output format. 
+.B ezthumb
+support three formats:
+.I jpg, gif
+and
+.I png.
+The
+.I jpg
+can be followed by an identifier
+.I @
+and a quality factor. For example, the default format is
+.I jpg@85 .
+The
+.I gif
+format can also be followed by a factor. In that case, it means to generate an
+.B animated GIF 
+file. The factor is the interval in millisecond between each frames. 
+For example,
+.I gif@1000
+means to generate the animated GIF file from the screenshots and the interval
+between frames is 1 second.
+.TP
+.BR \-p , " \-\-transparent"
+Set the background to transparent. Note that only
+.B PNG
+and
+.B GIF
+support the transparent background.
+.TP
+.BR \-s , " \-\-ssize \fIthumbnail_size\fP"
+Specify the dimension of each thumbnail. There are two methods to describe the
+dimension. One is setting the width and height explicitly like
+.I "160x120".
+Another one is setting a zoom ratio like
+.I "50%".
+In that case the thumbnail would be 50% of the original frame size, such as
+160x120 thumbnail from a 320x240 video. 
+
+.B Note
+that this option would be overriden by the
+.BR \-w
+option. If the
+.BR \-w
+was not specified, the dimension of the canvas would be summed up by the 
+dimension of thumbnail, the grid measurement and the gaps between thumbnails.
+However, if the
+.BR \-w
+option was specified, the width of each thumbnails is deducted from the 
+canvas width and gap size. The height of each thumbnails is calculated by
+the aspect ratio.
+.TP
+.BR \-t , " \-\-timestep \fImillisecond\fP"
+Specify the time interval between each screen shots in millisecond.
+If this option was not specified, 
+.BR ezthumb
+would calculate the average interval by the duration of the video and 
+the number of screen shots.
+.TP
+.BR \-v , " \-\-verbose"
+Output verbose information.
+.TP
+.BR \-w , " \-\-width \fIsize_in_pixel\fP"
+Specify the whole width of the thumbnail canvas in pixel. This option would
+override the 
+.BR \-s
+option and the width of each thumbnails is deducted from the canvas width 
+and gap size. The height of each thumbnails is calculated by the aspect ratio.
+.TP
+.BR \-x , " \-\-suffix \fIstring\fP"
+Set the suffix of the generated file name. For example, if a video clip names
+.I myvideo.avi
+and the default option is
+.I "_thumb",
+the generated thumbnail picture file name would be
+.I myvideo_thumb.avi.
+.TP
+.BR "\-\-gap\-shots \fIsize_of_gap\fP"
+define the gap size between each thumbnail. The size can be defined by pixel 
+size or by percentage of the thumbnail width. For example,
+.I "\-\-gap\-shots 4"
+means the gap of 4 pixels between each screen shots, but
+.I "\-\-gap\-shots 4%"
+means the gap is 4% of of the width of a single screen shot.
+.TP
+.BR "\-\-gap\-margin \fIsize_of_margin\fP"
+define the margin size around the thumbnail canvas. The size can be defined 
+by pixel size or by percentage of the thumbnail width. For example,
+.I "\-\-gap\-margin 4"
+means to keep 4 pixels blank in the margin, but
+.I "\-\-gap\-margin 4%"
+means the margin is 4% of the width of a single screen shot.
+.TP
+.BR "\-\-opt\-info \fIon|off\fP"
+enable or disable displaying the media information in the head part of the
+thumbnail canvas. The default is
+.I on.
+.TP
+.BR "\-\-opt\-time \fIon|off\fP"
+enable or disable displaying the timestamp in each screen shots. The default is
+.I on.
+.TP
+.BR "\-\-opt\-ffr \fIon|off\fP"
+enable or disable taking screen shots from the first frame. The default is
+.I off
+because most videos start from a black screen.
+.TP
+.BR "\-\-opt\-lfr \fIon|off\fP"
+enable or disable taking screen shots to the last frame. The default is
+.I off
+because most videos end to a black screen.
+.TP
+.BR "\-\-pos\-bg \fIposition_code ( : qualification )\fP"
+define the position of the background picture. The default setting is
+.I mc.
+.br
+See 
+.B POSITION CODES
+for the details.
+.TP
+.BR "\-\-pos\-time \fIposition_code\fP"
+define the position of the timestamp inside the screenshots. 
+The default setting is
+.I rt.
+.br
+See 
+.B POSITION CODES
+for the details.
+.TP
+.BR "\-\-pos\-info \fIposition_code\fP"
+define the position of the media information. The default setting is
+.I lt.
+Note that the media information can only be placed in the head area
+of the canvas. 
+.br
+See
+.B POSITION CODES
+for the details.
+.TP
+.BR "\-\-time\-from \fIstarting_time\fP"
+define the starting time position where the 
+.B ezthumb
+would start to take shoots. The default setting is the head of the video.
+The time position can be defined as explicit as 
+.I HH:MM:SS 
+and 
+.I HH:MM:SS:MS.
+It also can be defined as the percentage of the video length like 
+.I 33%
+etc. Note that the
+.BR "\-\-opt\-ffr
+and 
+.BR "\-\-opt\-lfr
+options are still applicable with this option.
+.TP
+.BR "\-\-time\-end \fIending_time\fP"
+define the ending time position where the 
+.B ezthumb
+would stop taking shoots. The default setting is the end of the video.
+The time position can be defined as explicit as 
+.I HH:MM:SS 
+and 
+.I HH:MM:SS:MS.
+It also can be defined as the percentage of the video length like 
+.I 33%
+etc. Note that the
+.BR "\-\-opt\-ffr
+and 
+.BR "\-\-opt\-lfr
+options are still applicable with this option.
+.TP
+.BR "\-\-linear"
+enforce the
+.B ezthumb
+to take screen shots by walking through the video file linearly. 
+The default behaviour of 
+.B ezthumb
+is to seek to the closest video frame to take the snapshot.
+However, some video format doesn't support the random seek so the workaround
+is scanning the whole video file and taking snapshots at right places. The
+.B ezthumb
+would swith to this mode automatically if the seeking function failed.
+User can also explicitly specify this option to enforce the 
+.I linear 
+mode.
+.TP
+.BR "\-\-anyframe"
+disable the key-frame-only mode. The default behaviour of
+.B ezthumb
+is taking screen shots in the nearest key frame (I-Frame). 
+It is quick but inaccurate towards the specified place. With this option,
+.B ezthumb
+would take screen shots in all kinds of frames,  I-Frame or P-Frame, 
+It is accurate in time but slow and sometimes takes pictures within 
+.B "ghost shadow".
+.B NOTE
+that if the
+.B time step
+is less than 10 seconds, it automatically changes into the
+.I off
+mode.
+
+.SH POSITION CODES
+Position codes are used to describe the object position in the target image.
+There are ten position codes:
+.TP
+.BR lt
+set the object to the left top corner
+.TP
+.BR lc
+set the object to the left center side
+.TP
+.BR lb
+set the object to the left bottom corner
+.TP
+.BR mt
+set the object to the middle top side
+.TP
+.BR mc
+set the object to the middle center
+.TP
+.BR mb
+set the object to the middle bottom side
+.TP
+.BR rt
+set the object to the right top corner
+.TP
+.BR rc
+set the object to the right center side
+.TP
+.BR rb
+set the object to the right bottom side
+.TP
+.BR tt
+tile the object
+.PP
+For the background picture, the position code can be followed by a 
+qualification code:
+.TP
+.BR st
+stretch to fit the whole canvas
+.TP
+.BR ex
+enlarge to fit the width of the canvas. The picture keeps its orignal ratio.
+.TP
+.BR ey
+enlarge to fit the height of the canvas. The picture keeps its orignal ratio.
+.TP
+.BR sx
+stretch the width of the picture to fit the canvas but keep its height same.
+.TP
+.BR sy
+stretch the height of the picture to fit the canvas but keep its width same.
+
+.SH EXAMPLES
+.B ezthumb "\-g 4x8" "\-s 33%" myvideo.avi
+.P
+Create a 4x8 thumbnail picture while each screen shot is 33% of the width and 
+height of the video frame.
+.P
+.B ezthumb "\-g 1x12" "\-s 160x120" "\-\-opt\-info off" "\-\-opt\-ffr on" "\-\-opt\-lfr on" myvideo.avi
+.P
+Create a 1x12 thumbnail picture while each screen shot is 160x120 pixels.
+Do not display the media information and the screen shots include the first
+and the last frame.
+.P
+.B ezthumb "\-g 3x6" "\-w 1024" \-p "\-t 60000" "\-m png" myvideo.avi
+.P
+Create a width of 1024 thumbnail picture with 3x6 screen shots inside.
+Each screen shot was taken by 1 minute interval.
+The picture is PNG format and the background is transparent
+.P
+.B ezthumb "\-g 0x18" "\-\-opt\-time off" myvideo.avi
+.P
+Generate 18 screen shots which are saved in 18 separated files. 
+The time stamps were disabled in these screen shots.
+.P
+.B ezthumb "\-\-anyframe" myvideo.avi
+.P
+Disable the key-frame-only mode so
+.B ezthumb
+will take screen shots at the more accurate location, which includes the
+P-Frame.
+
+.SH AUTHOR
+"Andy Xuming" <xuming@users.sourceforge.net>
+
+

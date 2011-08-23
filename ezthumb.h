@@ -1,0 +1,357 @@
+
+/*  Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
+
+    This file is part of EZTHUMB, a utility to generate thumbnails
+
+    EZTHUMB is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    EZTHUMB, is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifndef	_EZTHUMB_H_
+#define _EZTHUMB_H_
+
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libswscale/swscale.h"
+#include "gd.h"
+
+#define	EZTHUMB_VERSION		"1.3.1"
+
+
+#define EZ_ERR_NONE		0
+#define EZ_ERR_FILE		-1	/* can not open the video file */
+#define EZ_ERR_STREAM		-2	/* wrong stream */
+#define EZ_ERR_CODEC_FAIL	-3	/* wrong codec */
+#define EZ_ERR_CODEC_NONE	-4	/* unsupported codec */
+#define EZ_ERR_LOWMEM		-5
+#define EZ_ERR_SWSCALE		-6	/* failed to initial swscale */
+#define EZ_ERR_IMG_FORMAT	-7
+#define EZ_ERR_PARAM		-8
+#define EZ_ERR_FORMAT		-9	/* wrong video format */
+#define EZ_ERR_VIDEOSTREAM	-10	/* no viden stream */
+
+#define EN_FILE_OPEN		1000	/* successfully open a video file */
+#define EN_MEDIA_OPEN		1001	/* successfully open the media file */
+#define EN_IMAGE_CREATED	1002	/* successfully created the EZIMG */
+#define EN_PROC_BEGIN		1003	/* start to process the video */
+#define EN_PROC_CURRENT		1004	/* current process */
+#define EN_PROC_END		1005	/* end of the process */
+#define EN_PACKET_RECV		1006	/* received an effective packet */
+#define EN_FRAME_COMPLETE	1007	/* decoded a complete frame */
+#define EN_FRAME_PARTIAL	1008	/* frame partially decoded */
+#define EN_FRAME_EFFECT		1009	/* received an effective frame */
+#define EN_SCAN_PACKET		1010	/* received a packet in scan mode */
+#define EN_SCAN_IFRAME		1011
+#define EN_TYPE_VIDEO		1012
+#define EN_TYPE_AUDIO		1013
+#define EN_TYPE_UNKNOWN		1014
+#define EN_DUR_HEADSTRUC	1015
+#define EN_DUR_SEEKTO		1016
+#define EN_DUR_BACKWARD		1017
+#define EN_DUR_SCAN		1018
+#define EN_PTS_LIST		1019
+#define EN_SEEK_FRAME		1020
+#define EN_STREAM_FORMAT	1021
+
+
+#define EZ_DUR_CLIPHEAD		0
+#define EZ_DUR_QK_SCAN		1
+#define EZ_DUR_FULLSCAN		2
+
+
+#define EZOP_INFO		1	/* include the media info area */
+#define EZOP_TIMEST		2	/* include the inset timestamp */
+#define EZOP_FFRAME		4	/* start from the first frame */
+#define EZOP_LFRAME		8	/* include the last frame */
+/* Take shots at any frame, otherwise it only takes shots at key frames. 
+ * However, if the shot's step is less than EZ_GATE_KEY_STEP millisecond, 
+ * it automatically converts into EZOP_ANYFRAME mode */
+#define EZOP_ANYFRAME		16	
+/* Display media information in the command line. It just displays the
+ * common information, not includes the debug info */
+#define EZOP_CLI_INFO		32
+/* Display the debug log in the command line. */
+#define EZOP_CLI_DEBUG		64
+/* Display the FFMPEG debug log in the command line */
+#define EZOP_CLI_FFM_LOG	128
+/* Setup the transparent background */
+#define EZOP_TRANSPARENT	256
+/* Linear process the whole video clip without using av_seek_frame()
+ * Sometimes this function doesn't work in WMV files so processing the 
+ * whole video file from first packet to the last packet is necessary */
+#define EZOP_LINEAR		512
+
+
+#define EZ_POS_LEFTTOP		0
+#define EZ_POS_LEFTCENTER	1
+#define EZ_POS_LEFTBOTTOM	2
+#define EZ_POS_MIDTOP		3
+#define EZ_POS_MIDCENTER	4
+#define EZ_POS_MIDBOTTOM	5
+#define EZ_POS_RIGHTTOP		6
+#define EZ_POS_RIGHTCENTER   	7
+#define EZ_POS_RIGHTBOTTOM	8
+#define EZ_POS_TILE		9	/* tile deploy the subject */
+#define EZ_POS_MASK		0xff
+#define EZ_POS_STRETCH		0x100	/* stretch the subject to fit */
+#define EZ_POS_ENLARGE_X	0x200
+#define EZ_POS_ENLARGE_Y	0x300
+#define EZ_POS_STRETCH_X	0x400
+#define EZ_POS_STRETCH_Y	0x500
+
+
+#define EZ_FONT_AUTO		0
+#define EZ_FONT_TINY		8
+#define EZ_FONT_SMALL		9
+#define EZ_FONT_MEDIUM		10
+#define EZ_FONT_LARGE		11
+#define EZ_FONT_GIANT		12
+
+#define EZ_TEXT_INSET_GAP	4
+#define EZ_TEXT_MINFO_GAP	0
+#define EZ_TEXT_SHADOW_OFF	2
+#define EZ_SHOT_SHADOW_OFF	3
+
+#define EZ_GATE_KEY_STEP	10000		/* minimal seek step in ms */
+#define EZ_GATE_QK_SCAN		(1 << 22)	/* 4M */
+#define EZ_RATIO_OFF		0x40000000
+
+#define EZ_ST_ALL		0	/* all packet in the whole file */	
+#define EZ_ST_KEY		1	/* number of key frames */
+#define EZ_ST_REWIND		2	/* number of PTS rewind */
+#define EZ_ST_OFF		3
+#define EZ_ST_MAX_REC		16	/* maximum monited streams */
+
+
+#define BYTE	unsigned char
+
+/* This structure is used to store the user defined parameters.
+ * These parameters are globally avaiable so they affect all video clips. 
+ * Most parameters are raw which means the program only uses them indirectly.*/
+typedef	struct	{
+	/* thumbshots array in the canvas. If grid_col == 0, it will save
+	 * screenshot separately, shots count on grid_row. If both grid_col
+	 * and grid_row are 0, the shots count on tm_step. If tm_step
+	 * is 0 too, it will save every keyframes */
+	int	grid_col;	/* number of thumbshots in column (4) */
+	int	grid_row;	/* number of thumbshots in row (4) */
+
+	/* the whole width of the thumbnail canvas can be specified first.
+	 * the grid_col and grid_row can be decided by other parameters */
+	int	canvas_width;	/* canvas width in pixel */
+	int	tm_step;	/* timestep in millisecond to take shots */
+
+	/* binary ORed options */
+	int	flags;		/* see EZOP_* */
+
+	/* gap and rim size can be decided by pixels if the value is between
+	 * 0-255, or by ratio factors if the value is over 1000. For example,
+	 * if grid_gap_w is 1003, it means the gap width is 3% of the 
+	 * thumbshot's width. The 1000 will be shifted out. */
+	int	grid_gap_w;	/* gap width between each thumbshots (2) */
+	int	grid_gap_h;	/* gap height between each thumbshots (2) */
+	int	grid_rim_w;	/* rim width in the canvas */
+	int	grid_rim_h;	/* rim height in the canvas */
+
+	/* color setting is combined by R,G,B and A (array index 0-3) */
+	BYTE	edge_color[4];		/* edge line wrapping the thumbshot */
+	BYTE	shadow_color[4];	/* shadow of the thumbshot */
+	BYTE	canvas_color[4];	/* background color of the canvas */
+
+	/* edge is always inside the thumbshot */
+	int	edge_width;	/* thickness of the edge line (0=disable) */
+	int	shadow_width;	/* thickness of the shadow (0=disable) */
+
+	/* Scaling setting of single thumbshot. The tn_factor is a 100-based
+	 * factor for scaling the original image, for example, 50 means 50%
+	 * and 150 means 150%. If tn_factor is enabled, ie > 0, it overwrites
+	 * tn_width and tn_height. */
+	int	tn_width;	/* width of a thumbshot */
+	int	tn_height;	/* height of a thumbshot */
+	int	tn_facto;	/* scale facto of a thumbshot (0=disable) */
+
+	/* specify the freetype font and its size. If only one set parameter
+	 * is specified, the other one will be copied automatically. 
+	 * Shadow color of info area is equal to shadow_color[4] */
+	char	*mi_font;	/* freetype font for info area */
+	int	mi_size;	/* font size of the info area (0=auto) */
+	BYTE	mi_color[4];	/* text color of the media info */
+	int	mi_shadow;	/* width of media info shadow (shadow_color)*/
+	int	mi_position;	/* layout position of the media info */
+	int	st_position;	/* layout position of the status line */
+
+	char	*ins_font;	/* freetype font for inset text */
+	int	ins_size;	/* font size of the inset text (0=auto) */
+	BYTE	ins_color[4];	/* text color of the inset text */
+	BYTE	its_color[4];	/* shadow color of the inset text */
+	int	ins_shadow;	/* width of the shadow of the inset text */
+	int	ins_position;	/* layout position of the inset text */
+
+	char	img_format[8];	/* only support jpg, png and gif */
+	int	img_quality;	/* for jpeg quality */
+	char	suffix[64];	/* suffix of the target file name (utf-8) */
+
+	char	*background;	/* picture for the canvas background */
+	int	bg_position;	/* the position of the background */
+
+	int	time_from;	/* from where to take shots (ms) */
+	int	time_to;	/* to where the process end (ms) */
+	int	dur_mode;	/* howto get the clip's duration */
+
+	char	*pathout;	/* output path */
+
+	/* callback functions to indicate the progress */
+	int	(*notify)(void *vobj, int event, long param, long, void *);
+} EZOPT;
+
+/* This structure is used to store the runtime parameters. Most parameters
+ * are transformed from the EZOPT structure. Due to the difference of each
+ * video clips, the content of this structure is dynamic in each operation */
+typedef	struct	{
+	/* frame images extracted from the video stream */
+	AVFrame	*rgb_frame;	/* turn the frame to RGB mode */
+	uint8_t	*rgb_buffer;	/* the buffer of the RGB mode frame */
+	int	src_width;	/* original video frame size */
+	int	src_height;
+	int	src_pixfmt;	/* original video frame pixel format */
+
+	/* scaled frame images */
+	struct	SwsContext	*swsctx;	/* scaler context */
+	int	dst_width;	/* scaled video frame size */
+	int	dst_height;
+	int	dst_pixfmt;	/* scaled video frame pixel format */
+
+	/* canvas defines */
+	int	grid_col;
+	int	grid_row;
+	int	canvas_width;
+	int	canvas_height;
+	int	shots;		/* the total screenshots */
+
+	/* time setting: they are all calculated from the duration, not PTS */
+	int	time_from;	/* from where to take shots (ms) */
+	int	time_during;	/* the time range of shots (ms) */
+	int	time_step;	/* timestep in millisecond to take shots */
+	int64_t	*pts_list;	/* the list of proposal PTS for screenshots */
+	int64_t *pts_keyf;	/* the PTS of the nearest keyframe ahead */
+
+	/* gaps */
+	int	gap_width;	/* gap between shots in column */
+	int	gap_height;	/* gap between shots in row */
+	int	rim_width;	/* blank area in left and right rim */
+	int	rim_height;	/* blank area in top and bottom rim */
+
+	/* colors */
+	int	color_canvas;	/* background color of the canvas */
+	int	color_shadow;	/* shadow of the thumbshot */
+	int	color_minfo;	/* the media info */
+	int	color_edge;	/* edge line wrapping the thumbshot */
+	int	color_inset;	/* inset text in each shots */
+	int	color_inshadow;	/* shadow color of the inset text */
+
+	gdImage	*gdframe;	/* gd context for each frame */
+	gdImage	*gdcanvas;	/* gd context for the whole canvas */
+
+	EZOPT	*sysopt;	/* link to the EZOPT parameters */
+	void	*cbparam;	/* the callback parameter block */
+	int	canvas_minfo;	/* height of the media info area */
+	char	filename[1];	/* file name buffer */
+} EZIMG;
+
+typedef	struct		{
+	AVFormatContext	*formatx;
+	AVCodecContext	*codecx;
+	int		vsidx;
+
+	/* real duration time in millisecond basis */
+	int64_t		duration;
+	unsigned	state[EZ_ST_OFF];
+	unsigned	nbrec[EZ_ST_MAX_REC];
+
+	struct timeval	tmark;		/* the beginning timestamp */
+
+	EZOPT		*sysopt;	/* link to the EZOPT parameters */
+	EZIMG		*image;		/* link to its EZIMG parameters */
+	char		*filename;	/* link to the file name */
+} EZVID;
+
+
+#define uperror(n,c)	{ if (n) *(n) = (c); }
+
+#define EZ_HI_WORD(n)	(((n) >> 16) & 0xffff)
+#define EZ_LO_WORD(n)	((n) & 0xffff)
+#define EZ_MK_WORD(w,h)	(((w) << 16) | ((h) & 0xffff))
+
+
+void ezopt_init(EZOPT *ezopt);
+int ezthumb(char *filename, EZOPT *ezopt);
+int ezinfo(char *filename, EZOPT *ezopt);
+int ezlist(char *filename, EZOPT *ezopt);
+
+EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
+int video_free(EZVID *vidx);
+int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_save_scan_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_seek_available(EZVID *vidx, EZIMG *image);
+int64_t video_extract_frame(EZVID *vidx, EZIMG *image, AVFrame *, int64_t);
+int video_media_on_canvas(EZVID *vidx, EZIMG *image);
+int video_find_stream(EZVID *vidx, int flags);
+int video_enlist_image_pts(EZVID *vidx, EZIMG *image);
+int64_t video_duration(EZVID *vidx, int scanmode);
+int64_t video_pts_to_ms(EZVID *vidx, int64_t pts);
+int64_t video_ms_to_pts(EZVID *vidx, int64_t ms);
+int64_t video_pts_to_system(EZVID *vidx, int64_t pts);
+int64_t video_system_to_pts(EZVID *vidx, int64_t syspts);
+
+EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
+int image_free(EZIMG *image);
+int image_scale(EZIMG *image, AVFrame *frame);
+int image_font_test(EZIMG *image, char *filename);
+int image_gdframe_screenshot(EZIMG *image, AVFrame *frame, char *timestamp);
+int image_gdframe_update(EZIMG *image);
+int image_gdframe_timestamp(EZIMG *image, char *timestamp);
+int image_gdframe_save(EZIMG *image, char *filename, int idx);
+int image_gdframe_strlen(EZIMG *image, int fsize, char *s);
+int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char *s);
+int image_gdcanvas_save(EZIMG *image, char *filename);
+int image_gdcanvas_update(EZIMG *image, int idx);
+int image_gdcanvas_print(EZIMG *image, int row, int off, char *s);
+int image_gdcanvas_strlen(EZIMG *image, int fsize, char *s);
+int image_gdcanvas_puts(EZIMG *image, int fsize, int x, int y, int c, char *s);
+int image_gdcanvas_background(EZIMG *image);
+FILE *image_gif_anim_open(EZIMG *image, char *filename);
+int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
+int image_gif_anim_close(EZIMG *image, FILE *fout);
+
+
+/* eznotify.c */
+int eznotify(void *vobj, int event, long param, long opt, void *block);
+int ezdefault(void *vobj, int event, long param, long opt, void *block);
+int dump_format_context(AVFormatContext *format);
+int dump_video_context(AVCodecContext *codec);
+int dump_audio_context(AVCodecContext *codec);
+int dump_other_context(AVCodecContext *codec);
+int dump_codec_attr(AVFormatContext *format, int i);
+int dump_codec_video(AVCodecContext *codec);
+int dump_codec_audio(AVCodecContext *codec);
+int dump_packet(AVPacket *p);
+int dump_frame(AVFrame *frame, int got_pic);
+int dump_frame_packet(AVPacket *packet, AVFrame *frame, int ffin);
+int dump_stream(AVStream *stream);
+int dump_ezimage(EZIMG *image);
+
+
+#endif	/* _EZTHUMB_H_ */
+

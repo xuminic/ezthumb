@@ -1,0 +1,40 @@
+
+20110821: V1.3.1
+  + main.c: add '-I' option and move av_log_set_level() to main()
+  + ezthumb.c: video_seek_available() fixed a bug that desn't rewind the video
+    stream when this function failed.
+  - A problem: if the video clip is shorted than it claimed, the output would
+    be nasty
+
+20110820: V1.3
+  + ezthumb.c: fixed the buggy video_ms_to_pts() and video_system_to_pts()
+
+20110819: merged change from 1.2.2, the '--outdir' option
+  + main.c: add command line option "--linear" to indicate the ezthumb
+    to walk through the whole video rather than using av_seek_frame()
+    Change command line option "--opt-key" to "--anyframe"
+
+20110818: pre V1.3
+  + main.c: use a generic event_cb() to handle all notifications.
+  + eznotify.c: generic module to handle all notifications.
+  + ezthumb.c: isolated the functions to generate thumbnails to:
+    video_save_scan_pass(), video_save_quick_pass()
+    The problem comes with some .wmv files which could not apply 
+    av_seek_frame(). The solution is to walk through the whole video from
+    first packet to the last.
+
+20110302:
+  + main.c: add command line options to set up colours and font size.
+
+20110301:
+  + ezthumb.c: fix the coredump if using still images as input sources.
+
+20110227: V1.2
+  + support setting the starting and the ending time position
+  + add a status line to the bottom of the canvas
+
+20110223: V1.1
+  + support the animated GIF
+  + support the transparent background
+
+
