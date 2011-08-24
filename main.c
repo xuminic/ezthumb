@@ -315,9 +315,9 @@ int main(int argc, char **argv)
 			puts("");
 			break;
 		}
-		if (c != EZ_ERR_NONE) {
+		/*if (c != EZ_ERR_NONE) {
 			break;
-		}
+		}*/
 		optind++;
 	}
 	return c;

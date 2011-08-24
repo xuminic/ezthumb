@@ -1,4 +1,7 @@
 
+20110824: V1.3.2
+  + eznotify.c: fixed a bug that calling the eznotify() with null pointer
+
 20110821: V1.3.1
   + main.c: add '-I' option and move av_log_set_level() to main()
   + ezthumb.c: video_seek_available() fixed a bug that desn't rewind the video

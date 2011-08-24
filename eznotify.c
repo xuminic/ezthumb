@@ -37,7 +37,7 @@ int eznotify(void *vobj, int event, long param, long opt, void *block)
 {
 	EZVID	*vidx = vobj;
 
-	if (vidx->sysopt->notify) {
+	if (vidx && vidx->sysopt->notify) {
 		return vidx->sysopt->notify(vidx, event, param, opt, block);
 	}
 	return ezdefault(vidx, event, param, opt, block);

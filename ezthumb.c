@@ -205,13 +205,13 @@ int ezlist(char *filename, EZOPT *ezopt)
 
 	//if (avformat_open_input(&formatx, filename, NULL, NULL) != 0) {
 	if (av_open_input_file(&formatx, filename, NULL, 0, NULL)!=0) {
-		eznotify(NULL, EZ_ERR_FORMAT, 0, 0, filename);
+		//eznotify(NULL, EZ_ERR_FORMAT, 0, 0, filename);
 		return EZ_ERR_FORMAT;
 	}
 	//dump_format_context(formatx);
 
 	if (av_find_stream_info(formatx) < 0) {
-		eznotify(NULL, EZ_ERR_STREAM, 0, 0, filename);
+		//eznotify(NULL, EZ_ERR_STREAM, 0, 0, filename);
 		av_close_input_file(formatx);
 		return EZ_ERR_STREAM;
 	}
