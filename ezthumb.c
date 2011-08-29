@@ -97,6 +97,7 @@ void ezopt_init(EZOPT *ezopt)
 	strcpy(ezopt->suffix, "_thumb");
 
 	ezopt->bg_position = EZ_POS_MIDCENTER;
+	ezopt->vs_idx = -1;	/* default: first found video stream */
 }
 
 int ezthumb(char *filename, EZOPT *ezopt)
@@ -198,37 +199,57 @@ int ezinfo(char *filename, EZOPT *ezopt)
 
 int ezlist(char *filename, EZOPT *ezopt)
 {
-	AVFormatContext	*formatx = NULL;	/* must NULL it !! */
-	AVCodecContext	*codecx;
-	char	tmp[16];
-	int	i, sec;
+	EZVID	*vidx;
+	int	rc;
 
-	//if (avformat_open_input(&formatx, filename, NULL, NULL) != 0) {
-	if (av_open_input_file(&formatx, filename, NULL, 0, NULL)!=0) {
-		//eznotify(NULL, EZ_ERR_FORMAT, 0, 0, filename);
-		return EZ_ERR_FORMAT;
+	rc = EZ_ERR_NONE;
+	if ((vidx = video_allocate(filename, ezopt, &rc)) != NULL) {
+		eznotify(vidx, EN_STREAM_INFO, 0, 0, vidx);
+		video_free(vidx);
 	}
-	//dump_format_context(formatx);
+	return rc;
+}
 
-	if (av_find_stream_info(formatx) < 0) {
-		//eznotify(NULL, EZ_ERR_STREAM, 0, 0, filename);
-		av_close_input_file(formatx);
-		return EZ_ERR_STREAM;
+int ezstatis(char *filename, EZOPT *ezopt)
+{
+	struct MeStat	mestat[EZ_ST_MAX_REC];	/* shoule be big enough */
+	EZVID		*vidx;
+	AVPacket	packet;
+	int		i;
+
+	i = EZ_ERR_NONE;
+	if ((vidx = video_allocate(filename, ezopt, &i)) == NULL) {
+		return i;
 	}
 
-	for (i = 0; i < formatx->nb_streams; i++) {
-		codecx = formatx->streams[i]->codec;
-		if (codecx->codec_type == CODEC_TYPE_VIDEO) {
-			sec = (int)(formatx->duration / AV_TIME_BASE);
-			sprintf(tmp,"%dx%d", codecx->width, codecx->height);
-			printf("%2d:%02d:%02d %10s: %s\n", sec / 3600, 
-					(sec % 3600) / 60, (sec % 3600) % 60,
-					tmp, filename);
-			break;
+	memset(mestat, 0, sizeof(mestat));
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		i = packet.stream_index;
+		if (i > vidx->formatx->nb_streams) {
+			i = vidx->formatx->nb_streams;
 		}
-	}
+		if (i >= EZ_ST_MAX_REC) {
+			av_free_packet(&packet);
+			continue;
+		}
 
-	av_close_input_file(formatx);
+		mestat[i].received++;
+		if (packet.flags == PKT_FLAG_KEY) {
+			mestat[i].key++;
+		}
+		if (packet.pts != AV_NOPTS_VALUE) {
+			if (packet.pts < mestat[i].pts_last) {
+				mestat[i].rewound++;
+				mestat[i].pts_base += mestat[i].pts_last;
+			}
+			mestat[i].pts_last = packet.pts;
+		}
+		av_free_packet(&packet);
+	}
+	eznotify(vidx, EN_MEDIA_STATIS, (long) mestat, 
+			vidx->formatx->nb_streams + 1, vidx);
+
+	video_free(vidx);
 	return EZ_ERR_NONE;
 }
 
@@ -248,7 +269,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	vidx->filename = filename;	/* keep a copy of the filename */
 
 	//if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
-	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL)!=0) {
+	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
 		uperror(errcode, EZ_ERR_FORMAT);
 		eznotify(vidx, EZ_ERR_FORMAT, 0, 0, filename);
 		free(vidx);
@@ -258,10 +279,9 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	/* FIXME: what are these for? */
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
 	if (av_find_stream_info(vidx->formatx) < 0) {
-		av_close_input_file(vidx->formatx);
 		uperror(errcode, EZ_ERR_STREAM);
 		eznotify(vidx, EZ_ERR_STREAM, 0, 0, filename);
-		free(vidx);
+		video_free(vidx);
 		return NULL;
 	}
 	
@@ -269,10 +289,9 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 	/* find the video stream and open the codec driver */
 	if ((rc = video_find_stream(vidx, ezopt->flags)) != EZ_ERR_NONE) {
-		av_close_input_file(vidx->formatx);
 		uperror(errcode, rc);
 		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 0, 0, filename);
-		free(vidx);
+		video_free(vidx);
 		return NULL;
 	}
 
@@ -281,10 +300,9 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	 * so it would be wiser to avoid the still image stream, which duration
 	 * is only several milliseconds. FIXME if this assumption is wrong */
 	if (video_duration(vidx, ezopt->dur_mode) < 500) {
-		av_close_input_file(vidx->formatx);
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
-		free(vidx);
+		video_free(vidx);
 		return NULL;
 	}
 
@@ -297,8 +315,12 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 int video_free(EZVID *vidx)
 {
-	avcodec_close(vidx->codecx);
-	av_close_input_file(vidx->formatx);
+	if (vidx->codecx) {
+		avcodec_close(vidx->codecx);
+	}
+	if (vidx->formatx) {
+		av_close_input_file(vidx->formatx);
+	}
 	free(vidx);
 	return EZ_ERR_NONE;
 }
@@ -795,13 +817,21 @@ int video_find_stream(EZVID *vidx, int flags)
 {
 	AVCodecContext	*codecx;
 	AVCodec		*codec = NULL;
-	int		i, rc = EZ_ERR_NONE;
+	int		i, rc;
 
+	rc = EZ_ERR_VIDEOSTREAM;
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		eznotify(vidx, EN_STREAM_FORMAT, i, 0, vidx->formatx);
 		codecx = vidx->formatx->streams[i]->codec;
 		switch (codecx->codec_type) {
 		case CODEC_TYPE_VIDEO:
+			eznotify(vidx, EN_TYPE_VIDEO, i, 0, codecx);
+
+			if ((vidx->sysopt->vs_idx >= 0) && 
+					(vidx->sysopt->vs_idx != i)) {
+				break;
+			}
+
 			vidx->vsidx  = i;
 			vidx->codecx = codecx;
 
@@ -811,11 +841,11 @@ int video_find_stream(EZVID *vidx, int flags)
 
 			/* open the codec */
 			codec = avcodec_find_decoder(vidx->codecx->codec_id);
-			eznotify(vidx, EN_TYPE_VIDEO, i, 0, codecx);
 			if (avcodec_open(vidx->codecx, codec) < 0) {
 				rc = EZ_ERR_CODEC_FAIL;
 				eznotify(vidx, rc, codecx->codec_id, 0, codecx);
 			}
+			rc = EZ_ERR_NONE;
 			break;
 
 		case CODEC_TYPE_AUDIO:

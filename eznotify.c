@@ -33,6 +33,10 @@
 #include "gdfontg.h"
 
 
+static int ezdump_video_info(EZVID *vidx);
+static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx);
+
+
 int eznotify(void *vobj, int event, long param, long opt, void *block)
 {
 	EZVID	*vidx = vobj;
@@ -169,10 +173,66 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			printf("av_seek_frame() failed. (%ld)\n", param);
 		}
 		break;
+	case EN_STREAM_INFO:
+		ezdump_video_info(vidx);
+		break;
+	case EN_MEDIA_STATIS:
+		ezdump_media_statistics((struct MeStat *) param, 
+				(int)opt, vidx);
+		break;
 	}
 	return event;
 }
 
+static int ezdump_video_info(EZVID *vidx)
+{
+	AVCodecContext	*codecx;
+	char	tmp[16];
+	int	i, sec;
+
+	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+		codecx = vidx->formatx->streams[i]->codec;
+		if (codecx->codec_type == CODEC_TYPE_VIDEO) {
+			sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
+			sprintf(tmp,"%dx%d", codecx->width, codecx->height);
+			printf("%2d:%02d:%02d %10s#%d: %s\n",
+					sec / 3600,
+					(sec % 3600) / 60, 
+					(sec % 3600) % 60,
+					tmp, i, vidx->filename);
+		}
+	}
+	return 0;
+}
+
+static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
+{
+	int	i, ms;
+
+	printf("Media: %s\n", vidx->filename);
+	for (i = 0; i < n - 1; i++) {
+		printf("[%d] ", i);
+		switch(vidx->formatx->streams[i]->codec->codec_type) {
+		case CODEC_TYPE_VIDEO:
+			printf("VIDEO  ");
+			break;
+		case CODEC_TYPE_AUDIO:
+			printf("AUDIO  ");
+			break;
+		case CODEC_TYPE_SUBTITLE:
+			printf("SUBTITL");
+			break;
+		default:
+			printf("UNKNOWN");
+			break;
+		}
+		ms = video_pts_to_ms(vidx, 
+				mestat[i].pts_base + mestat[i].pts_last);
+		printf("%8lu KEY:%-6lu TIME:%d\n",
+				mestat[i].received, mestat[i].key, ms / 1000);
+	}
+	return 0;
+}
 
 int dump_format_context(AVFormatContext *format)
 {

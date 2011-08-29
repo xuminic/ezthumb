@@ -36,12 +36,13 @@ static	struct	cliopt	clist[] = {
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
 	{ 'F', "fontsize",2, "the size setting of the font" },
 	{ 'g', "grid",    2, "the thumbnail grid in the canvas.(4x4)" },
-	{ 'i', "info",    0, "display the media information" },
-	{ 'I', "list",    0, "display the media information in list form" },
+	{ 'i', "list",    0, "display the media information in list form" },
+	{ 'I', "info",    0, "display the media information" },
 	{ 'm', "format",  2, "the output format (jpg@85)" },
 	{ 'o', "outdir",  2, "the directory for storing output images" },
 	{ 'p', "transparent", 0, "make the background transparent" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
+	{ 'S', "statis",  0, "display the media statistics" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
 	{ 'v', "verbose", 0, "verbose mode" },
 	{ 'w', "width",   1, "the whole width of the thumbnail canvas" },
@@ -60,6 +61,7 @@ static	struct	cliopt	clist[] = {
 	{  19, "time-end", 2, "the time in video where ends shooting" },
 	{  20, "linear",   0, "linear process the whole video, aka no seek" },
 	{  21, "anyframe", 0, "take shots at any frames includes P-frame" },
+	{  22, "index",    1, "the index of the video stream" },
 	{ 1,   "help",    0, "Display the help message" },
 	{ 2,   "version", 0, "Display the version number" },
 	{ 0, NULL, 0, NULL }
@@ -183,6 +185,9 @@ int main(int argc, char **argv)
 		case 21:	/* nonkey */
 			sysoption.flags |= EZOP_ANYFRAME;
 			break;
+		case 22:	/* index */
+			sysoption.vs_idx = strtol(optarg, NULL, 0);
+			break;
 		case 'b':
 			sysoption.background = optarg;
 			break;
@@ -223,12 +228,12 @@ int main(int argc, char **argv)
 				sysoption.grid_row = strtol(++p, NULL, 10);
 			}
 			break;
-		case 'i':
+		case 'I':
 			todo = c;
 			/* make these options default */
 			sysoption.flags |= EZOP_CLI_INFO;
 			break;
-		case 'I':
+		case 'i':
 			todo = c;
 			break;
 		case 'm':	/* Examples: png, jpg@90, gif, gif@1000 */
@@ -258,6 +263,9 @@ int main(int argc, char **argv)
 				sysoption.tn_width  = c;
 				sysoption.tn_height = strtol(++p, NULL, 0);
 			}
+			break;
+		case 'S':
+			todo = c;
 			break;
 		case 't':
 			sysoption.tm_step = strtol(optarg, NULL, 0);
@@ -303,11 +311,14 @@ int main(int argc, char **argv)
 
 	while (optind < argc) {
 		switch (todo) {
-		case 'i':
+		case 'I':
 			c = ezinfo(argv[optind], &sysoption);
 			puts("");
 			break;
-		case 'I':
+		case 'S':
+			c = ezstatis(argv[optind], &sysoption);
+			break;
+		case 'i':
 			c = ezlist(argv[optind], &sysoption);
 			break;
 		default:

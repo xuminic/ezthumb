@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.3.2"
+#define	EZTHUMB_VERSION		"1.3.2a"
 
 
 #define EZ_ERR_NONE		0
@@ -62,6 +62,8 @@
 #define EN_PTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
+#define EN_STREAM_INFO		1022
+#define EN_MEDIA_STATIS		1023
 
 
 #define EZ_DUR_CLIPHEAD		0
@@ -208,6 +210,7 @@ typedef	struct	{
 	int	time_to;	/* to where the process end (ms) */
 	int	dur_mode;	/* howto get the clip's duration */
 
+	int	vs_idx;		/* specify the stream index */
 	char	*pathout;	/* output path */
 
 	/* callback functions to indicate the progress */
@@ -269,7 +272,7 @@ typedef	struct	{
 } EZIMG;
 
 typedef	struct		{
-	AVFormatContext	*formatx;
+	AVFormatContext	*formatx;	/* must NULL it !! */
 	AVCodecContext	*codecx;
 	int		vsidx;
 
@@ -293,10 +296,20 @@ typedef	struct		{
 #define EZ_MK_WORD(w,h)	(((w) << 16) | ((h) & 0xffff))
 
 
+struct	MeStat		{	/* media statistics */
+	unsigned long	received;	/* all received packets */
+	unsigned long	key;		/* key frames */
+	unsigned long	rewound;	/* rewound occurance counter */
+
+	int64_t		pts_base;
+	int64_t		pts_last;
+};
+
 void ezopt_init(EZOPT *ezopt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
 int ezlist(char *filename, EZOPT *ezopt);
+int ezstatis(char *filename, EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
 int video_free(EZVID *vidx);
