@@ -85,6 +85,7 @@ int para_get_color(EZOPT *opt, char *s);
 int para_get_fontsize(EZOPT *opt, char *s);
 
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
+static int event_list(void *vobj, int event, long param, long opt, void *);
 
 extern int fixtoken(char *sour, char **idx, int ids, char *delim);
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
@@ -295,11 +296,6 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	/* inject the progress report functions */
-	if ((sysoption.flags & EZOP_CLI_DEBUG) == 0) {
-		sysoption.notify = event_cb;
-	}
-
 	avcodec_register_all();
 	av_register_all();
 
@@ -309,27 +305,32 @@ int main(int argc, char **argv)
 		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
 	}
 
-	while (optind < argc) {
-		switch (todo) {
-		case 'I':
+	switch (todo) {
+	case 'I':
+		for ( ; optind < argc; optind++) {
 			c = ezinfo(argv[optind], &sysoption);
-			puts("");
-			break;
-		case 'S':
-			c = ezstatis(argv[optind], &sysoption);
-			break;
-		case 'i':
-			c = ezlist(argv[optind], &sysoption);
-			break;
-		default:
-			c = ezthumb(argv[optind], &sysoption);
-			puts("");
-			break;
 		}
-		/*if (c != EZ_ERR_NONE) {
-			break;
-		}*/
-		optind++;
+		break;
+	case 'S':
+		for ( ; optind < argc; optind++) {
+			c = ezstatis(argv[optind], &sysoption);
+		}
+		break;
+	case 'i':
+		sysoption.notify = event_list;
+		for ( ; optind < argc; optind++) {
+			c = ezlist(argv[optind], &sysoption);
+		}
+		break;
+	default:
+		/* inject the progress report functions */
+		if ((sysoption.flags & EZOP_CLI_DEBUG) == 0) {
+			sysoption.notify = event_cb;
+		}
+		for ( ; optind < argc; optind++) {
+			c = ezthumb(argv[optind], &sysoption);
+		}
+		break;
 	}
 	return c;
 }
@@ -526,4 +527,14 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	return event;
 }
 
+
+static int event_list(void *vobj, int event, long param, long opt, void *block)
+{
+	EZVID	*vidx = vobj;
+
+	if (event >= 0) {
+		return ezdefault(vidx, event, param, opt, block);
+	}
+	return event;
+}
 

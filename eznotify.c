@@ -75,8 +75,11 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			 * disabling the av_log */
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
-			//av_dump_format(vidx->formatx, 0, block, 0);
+#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 100)
+			av_dump_format(vidx->formatx, 0, block, 0);
+#else
 			dump_format(vidx->formatx, 0, block, 0);
+#endif
 			av_log_set_level(i);
 		}
 		break;
@@ -231,6 +234,7 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 		printf("%8lu KEY:%-6lu TIME:%d\n",
 				mestat[i].received, mestat[i].key, ms / 1000);
 	}
+	puts("");
 	return 0;
 }
 

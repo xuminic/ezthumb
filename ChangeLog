@@ -3,6 +3,13 @@
 20110829:
   + main.c: '--index' option and adjust the '-i', '-S' and '-I' options
   + ezthumb.c: fixed the bug about no video stream issue
+  + LIBAVFORMAT_VERSION_MAJOR: is used to control the depreciated APIs
+  - BUGGY: the "APIchanges" in FFMPEG has error in av_open_input_file() so
+    the version number is not correct about this
+    function.LIBAVFORMAT_VERSION_MAJOR: is used to control the depreciated
+    APIs
+    - BUGGY: the "APIchanges" in FFMPEG has error in av_open_input_file() so
+      the version number is not correct about this function.
 
 20110824: V1.3.2
   + eznotify.c: fixed a bug that calling the eznotify() with null pointer

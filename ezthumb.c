@@ -268,8 +268,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;	/* keep a copy of the filename */
 
-	//if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
+#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
+	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
+#else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
+#endif
 		uperror(errcode, EZ_ERR_FORMAT);
 		eznotify(vidx, EZ_ERR_FORMAT, 0, 0, filename);
 		free(vidx);
