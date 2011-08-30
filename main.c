@@ -61,7 +61,7 @@ static	struct	cliopt	clist[] = {
 	{  19, "time-end", 2, "the time in video where ends shooting" },
 	{  20, "linear",   0, "linear process the whole video, aka no seek" },
 	{  21, "anyframe", 0, "take shots at any frames includes P-frame" },
-	{  22, "index",    1, "the index of the video stream" },
+	{  22, "vindex",   1, "the index of the video stream" },
 	{ 1,   "help",    0, "Display the help message" },
 	{ 2,   "version", 0, "Display the version number" },
 	{ 0, NULL, 0, NULL }
@@ -319,13 +319,6 @@ int main(int argc, char **argv)
 			c = ezstatis(argv[optind], &sysoption);
 		}
 		break;
-		/*
-	case 'i':
-		sysoption.notify = event_list;
-		for ( ; optind < argc; optind++) {
-			c = ezlist(argv[optind], &sysoption);
-		}
-		break;*/
 	default:
 		/* inject the progress report functions */
 		if ((sysoption.flags & EZOP_CLI_DEBUG) == 0) {
