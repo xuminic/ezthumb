@@ -236,6 +236,7 @@ int main(int argc, char **argv)
 			break;
 		case 'i':
 			todo = c;
+			sysoption.flags |= EZOP_CLI_LIST;
 			break;
 		case 'm':	/* Examples: png, jpg@90, gif, gif@1000 */
 			sysoption.img_quality = 0;
@@ -307,6 +308,8 @@ int main(int argc, char **argv)
 
 	switch (todo) {
 	case 'I':
+	case 'i':
+		sysoption.notify = event_list;
 		for ( ; optind < argc; optind++) {
 			c = ezinfo(argv[optind], &sysoption);
 		}
@@ -316,12 +319,13 @@ int main(int argc, char **argv)
 			c = ezstatis(argv[optind], &sysoption);
 		}
 		break;
+		/*
 	case 'i':
 		sysoption.notify = event_list;
 		for ( ; optind < argc; optind++) {
 			c = ezlist(argv[optind], &sysoption);
 		}
-		break;
+		break;*/
 	default:
 		/* inject the progress report functions */
 		if ((sysoption.flags & EZOP_CLI_DEBUG) == 0) {

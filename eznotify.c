@@ -86,6 +86,12 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_MEDIA_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
 			dump_format_context(vidx->formatx);
+			printf("Duration in millisecond (mode %d): %d\n",
+					vidx->sysopt->dur_mode, 
+					vidx->duration);
+		}
+		if (vidx->sysopt->flags & EZOP_CLI_LIST) {
+			ezdump_video_info(vidx);
 		}
 		break;
 	case EN_IMAGE_CREATED:
@@ -154,10 +160,12 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			dump_other_context(block);
 		}
 		break;
-	case EN_DUR_BACKWARD:
-		printf("Rewound PTS [%ld]: %lld < %lld\n", param,
-				(long long)((AVPacket*) block)->pts,
-				*((long long *) opt));
+	case EN_DURATION:
+		if (param == 2) {
+			printf("Rewound PTS: %lld < %lld\n",
+					(long long)((AVPacket*) block)->pts,
+					*((long long *) opt));
+		}
 		break;
 	case EN_PTS_LIST:
 		/*for (i = 0; i < param; i++) {
@@ -175,9 +183,6 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		} else {
 			printf("av_seek_frame() failed. (%ld)\n", param);
 		}
-		break;
-	case EN_STREAM_INFO:
-		ezdump_video_info(vidx);
 		break;
 	case EN_MEDIA_STATIS:
 		ezdump_media_statistics((struct MeStat *) param, 
@@ -198,7 +203,7 @@ static int ezdump_video_info(EZVID *vidx)
 		if (codecx->codec_type == CODEC_TYPE_VIDEO) {
 			sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
 			sprintf(tmp,"%dx%d", codecx->width, codecx->height);
-			printf("%2d:%02d:%02d %10s#%d: %s\n",
+			printf("%2d:%02d:%02d %10s [%d]: %s\n",
 					sec / 3600,
 					(sec % 3600) / 60, 
 					(sec % 3600) % 60,

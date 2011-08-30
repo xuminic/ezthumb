@@ -34,8 +34,8 @@
 
 
 static int ezopt_cal_ratio(int ratio, int refsize);
-static int ezopt_cal_shots(int64_t duration, int tmstep, int mode);
-static int ezopt_cal_timestep(int64_t duration, int shots, int mode);
+static int ezopt_cal_shots(int duration, int tmstep, int mode);
+static int ezopt_cal_timestep(int duration, int shots, int mode);
 static int ezopt_gif_anim(EZOPT *ezopt);
 
 static char *minfo_video(AVStream *stream, char *buffer);
@@ -166,47 +166,22 @@ int ezinfo(char *filename, EZOPT *ezopt)
 {
 	EZVID		*vidx;
 	EZIMG		*image;
-	int		i, rc, cotype;
+	int		rc;
 
 	rc = EZ_ERR_NONE;
 	if ((vidx = video_allocate(filename, ezopt, &rc)) == NULL) {
 		return rc;
 	}
 
-	printf("Duration in millisecond (mode %d): %lld\n", 
-			ezopt->dur_mode, (long long) vidx->duration);
-	printf("Packets: %u, Key Frames: %u, Rewind PTS: %u\n",
-			vidx->state[EZ_ST_ALL], vidx->state[EZ_ST_KEY],
-			vidx->state[EZ_ST_REWIND]);
-
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
-		cotype = vidx->formatx->streams[i]->codec->codec_type;
-		printf("Received %s packets: %u\n", 
-				id_lookup(id_codec_type, cotype) + 11,
-				vidx->nbrec[i]);
-	}
-	
-	if ((ezopt->flags & EZOP_CLI_DEBUG) && 
-			(image = image_allocate(vidx, ezopt, &rc))) {
-		dump_ezimage(image);
-		//image_font_test(image, vidx->filename);
-		image_free(image);
+	if (ezopt->flags & EZOP_CLI_DEBUG) {
+		if ((image = image_allocate(vidx, ezopt, &rc)) != NULL) {
+			//dump_ezimage(image);
+			//image_font_test(image, vidx->filename);
+			image_free(image);
+		}
 	}
 
 	video_free(vidx);
-	return rc;
-}
-
-int ezlist(char *filename, EZOPT *ezopt)
-{
-	EZVID	*vidx;
-	int	rc;
-
-	rc = EZ_ERR_NONE;
-	if ((vidx = video_allocate(filename, ezopt, &rc)) != NULL) {
-		eznotify(vidx, EN_STREAM_INFO, 0, 0, vidx);
-		video_free(vidx);
-	}
 	return rc;
 }
 
@@ -336,7 +311,7 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int64_t	ptsnow;
 	FILE	*gifp;
 	char	timestamp[64];
-	int	i, gotkey, ffin, gifa;
+	int	i, gotkey, tsnow, ffin, gifa;
 
 
 	/* If the output format is the animated GIF89a, then it opens
@@ -346,7 +321,7 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		gifp = image_gif_anim_open(image, vidx->filename);
 	}
 
-	eznotify(vidx, EN_PROC_BEGIN, (int) vidx->duration, 0, NULL);
+	eznotify(vidx, EN_PROC_BEGIN, (long)vidx->duration, 0, NULL);
 
 	/* shift the start time by the blank time */
 	ptsnow = video_system_to_pts(vidx, vidx->formatx->start_time);
@@ -364,13 +339,13 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		}
 
 		/* convert current PTS time to millisecond */
-		ptsnow = video_pts_to_ms(vidx, packet.pts);
+		tsnow = (int) video_pts_to_ms(vidx, packet.pts);
 
-		if (ptsnow  < image->time_from) {
+		if (tsnow  < image->time_from) {
 			av_free_packet(&packet);
 			continue;
 		}
-		if (ptsnow > image->time_from + image->time_during) {
+		if (tsnow > image->time_from + image->time_during) {
 			av_free_packet(&packet);
 			break;
 		}
@@ -389,7 +364,7 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		gotkey = 0;	/* reset the keyframe mark */
 
 		/* attach a human readable timestamp */
-		meta_timestamp((int) ptsnow, 1, timestamp);
+		meta_timestamp(tsnow, 1, timestamp);
 		image_gdframe_screenshot(image, frame, timestamp);
 		if (gifp) {
 			image_gif_anim_add(image, gifp, gifa);
@@ -397,8 +372,7 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			image_gdframe_save(image, vidx->filename, i);
 		}
 
-		eznotify(vidx, EN_PROC_CURRENT, 
-				(int) vidx->duration, (int) ptsnow, NULL);
+		eznotify(vidx, EN_PROC_CURRENT, vidx->duration, tsnow, NULL);
 		i++;
 	}
 	if (gifp) {
@@ -437,8 +411,7 @@ int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		}
 		/* convert current PTS to millisecond and then 
 		 * metamorphose to human readable form */
-		pts = video_pts_to_ms(vidx, pts);
-		meta_timestamp((int) pts, 1, timestamp);
+		meta_timestamp((int)video_pts_to_ms(vidx, pts), 1, timestamp);
 
 		/* write the timestamp into the shot */
 		image_gdframe_screenshot(image, frame, timestamp);
@@ -559,8 +532,7 @@ int video_save_scan_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 
 		/* convert current PTS to millisecond and then 
 		 * metamorphose to human readable form */
-		pts = video_pts_to_ms(vidx, pts);
-		meta_timestamp((int) pts, 1, timestamp);
+		meta_timestamp((int)video_pts_to_ms(vidx, pts), 1, timestamp);
 
 		/* write the timestamp into the shot */
 		image_gdframe_screenshot(image, frame, timestamp);
@@ -872,27 +844,19 @@ int video_find_stream(EZVID *vidx, int flags)
  * to decide the final PTS. To speed up the process, the third method,
  * EZ_DUR_QK_SCAN, only scan the last 90% clip. 
  * User need to specify the scan method. */
-int64_t video_duration(EZVID *vidx, int scanmode)
+int video_duration(EZVID *vidx, int scanmode)
 {
 	//AVStream	*stream;
 	AVPacket	packet;
 	int64_t		last_pts, cur_pts, base_pts;
-
-	/* state[0]: all packets received
-	 * state[1]: all key frame video packets received
-	 * state[2]: rewound PTS occurred
-	 * state[3]: stream 0 packets received
-	 * state[4]: stream 1 packets received
-	 * ... */
-	memset(vidx->state, 0, sizeof(int) * EZ_ST_MAX_REC);
 
 	//stream = vidx->formatx->streams[vidx->vsidx];
 	if (vidx->formatx->duration && (scanmode == EZ_DUR_CLIPHEAD)) {
 		/* convert duration from AV_TIME_BASE to video stream base */
 		cur_pts = video_system_to_pts(vidx, vidx->formatx->duration);
 		/* convert duration from video stream base to milliseconds */
-		vidx->duration = video_pts_to_ms(vidx, cur_pts);
-		eznotify(vidx, EN_DUR_HEADSTRUC, 0, 0, &vidx->duration);
+		vidx->duration = (int) video_pts_to_ms(vidx, cur_pts);
+		eznotify(vidx, EN_DURATION, 0, vidx->duration, NULL);
 		return vidx->duration;
 	}
 
@@ -906,23 +870,15 @@ int64_t video_duration(EZVID *vidx, int scanmode)
 			//printf("Start %lld\n", cur_pts);
 			av_seek_frame(vidx->formatx, vidx->vsidx, 
 					cur_pts, AVSEEK_FLAG_BYTE);
-			eznotify(vidx, EN_DUR_SEEKTO, 0, 0, &cur_pts);
+			eznotify(vidx, EN_DURATION, 1, 0, &cur_pts);
 		}
 	}
 
 	last_pts = cur_pts = base_pts = 0;
 	while (av_read_frame(vidx->formatx, &packet) >= 0) {
-		vidx->state[EZ_ST_ALL]++;	/* received a valid packet */
-		if (packet.stream_index < EZ_ST_MAX_REC) {
-			vidx->nbrec[packet.stream_index]++;
-		}
 		if (packet.stream_index != vidx->vsidx) {	/* no video */
 			av_free_packet(&packet);
 			continue;
-		}
-		if (packet.flags == PKT_FLAG_KEY) {	/* key frame packet */
-			vidx->state[EZ_ST_KEY]++;
-			//dump_packet(&packet);
 		}
 		if (packet.pts == AV_NOPTS_VALUE) {	/* no PTS there */
 			av_free_packet(&packet);
@@ -930,9 +886,7 @@ int64_t video_duration(EZVID *vidx, int scanmode)
 		}
 		/* in case of the rewinding PTS */
 		if (packet.pts < last_pts) {
-			vidx->state[EZ_ST_REWIND]++;
-			eznotify(vidx, EN_DUR_BACKWARD, 
-					vidx->state[EZ_ST_REWIND],
+			eznotify(vidx, EN_DURATION, 2, 
 					(long)&last_pts, &packet);
 			base_pts += last_pts;
 			last_pts = packet.pts;
@@ -953,8 +907,8 @@ int64_t video_duration(EZVID *vidx, int scanmode)
 	}
 
 	/* convert duration from video stream base to milliseconds */
-	vidx->duration = video_pts_to_ms(vidx, cur_pts);
-	eznotify(vidx, EN_DUR_SCAN, 0, 0, &vidx->duration);
+	vidx->duration = (int) video_pts_to_ms(vidx, cur_pts);
+	eznotify(vidx, EN_DURATION, 3, vidx->duration, NULL);
 	return vidx->duration;
 }
 
@@ -1965,7 +1919,7 @@ static int ezopt_cal_ratio(int ratio, int refsize)
 	return 0;
 }
 
-static int ezopt_cal_shots(int64_t duration, int tmstep, int mode)
+static int ezopt_cal_shots(int duration, int tmstep, int mode)
 {
 	int	shots;
 
@@ -1979,7 +1933,7 @@ static int ezopt_cal_shots(int64_t duration, int tmstep, int mode)
 	return shots;
 }
 
-static int ezopt_cal_timestep(int64_t duration, int shots, int mode)
+static int ezopt_cal_timestep(int duration, int shots, int mode)
 {
 	if (mode & EZOP_FFRAME) {
 		shots--;

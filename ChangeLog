@@ -1,4 +1,6 @@
 
+20110830: V1.3.3
+  + ezthumb.c: duration structure changed
 
 20110829:
   + main.c: '--index' option and adjust the '-i', '-S' and '-I' options

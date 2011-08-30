@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.3.2a"
+#define	EZTHUMB_VERSION		"1.3.3"
 
 
 #define EZ_ERR_NONE		0
@@ -55,10 +55,7 @@
 #define EN_TYPE_VIDEO		1012
 #define EN_TYPE_AUDIO		1013
 #define EN_TYPE_UNKNOWN		1014
-#define EN_DUR_HEADSTRUC	1015
-#define EN_DUR_SEEKTO		1016
-#define EN_DUR_BACKWARD		1017
-#define EN_DUR_SCAN		1018
+#define EN_DURATION		1015
 #define EN_PTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
@@ -92,6 +89,8 @@
  * Sometimes this function doesn't work in WMV files so processing the 
  * whole video file from first packet to the last packet is necessary */
 #define EZOP_LINEAR		512
+/* Display a short list of the media information in the command line */
+#define EZOP_CLI_LIST		1024
 
 
 #define EZ_POS_LEFTTOP		0
@@ -277,9 +276,7 @@ typedef	struct		{
 	int		vsidx;
 
 	/* real duration time in millisecond basis */
-	int64_t		duration;
-	unsigned	state[EZ_ST_OFF];
-	unsigned	nbrec[EZ_ST_MAX_REC];
+	int		duration;
 
 	struct timeval	tmark;		/* the beginning timestamp */
 
@@ -308,7 +305,6 @@ struct	MeStat		{	/* media statistics */
 void ezopt_init(EZOPT *ezopt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
-int ezlist(char *filename, EZOPT *ezopt);
 int ezstatis(char *filename, EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
@@ -322,7 +318,7 @@ int64_t video_extract_frame(EZVID *vidx, EZIMG *image, AVFrame *, int64_t);
 int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 int video_find_stream(EZVID *vidx, int flags);
 int video_enlist_image_pts(EZVID *vidx, EZIMG *image);
-int64_t video_duration(EZVID *vidx, int scanmode);
+int video_duration(EZVID *vidx, int scanmode);
 int64_t video_pts_to_ms(EZVID *vidx, int64_t pts);
 int64_t video_ms_to_pts(EZVID *vidx, int64_t ms);
 int64_t video_pts_to_system(EZVID *vidx, int64_t pts);
