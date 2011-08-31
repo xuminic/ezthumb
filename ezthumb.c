@@ -275,6 +275,9 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 
+	/* get current time */
+	gettimeofday(&vidx->tmark, NULL);
+
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library
 	 * so it would be wiser to avoid the still image stream, which duration
@@ -285,10 +288,6 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
-
-	/* get current time */
-	gettimeofday(&vidx->tmark, NULL);
-
 	eznotify(vidx, EN_MEDIA_OPEN, 0, 0, filename);
 	return vidx;
 }
@@ -837,6 +836,43 @@ int video_find_stream(EZVID *vidx, int flags)
 	return rc;
 }
 
+int video_seekable(EZVID *vidx)
+{
+	AVPacket	packet;
+	int64_t		last_pts, cur_pts;
+
+	/* find the first video packet */
+	last_pts = 0;
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if ((packet.stream_index == vidx->vsidx) &&
+				(packet.pts != AV_NOPTS_VALUE)) {
+			last_pts = packet.pts;
+			break;
+		}
+	}
+	
+	/* move to 90% of the stream */
+	cur_pts = vidx->formatx->file_size * 9 / 10;
+	av_seek_frame(vidx->formatx, vidx->vsidx, cur_pts, AVSEEK_FLAG_BYTE);
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if ((packet.stream_index == vidx->vsidx) &&
+				(packet.pts != AV_NOPTS_VALUE)) {
+			cur_pts = packet.pts;
+			break;
+		}
+	}
+
+	av_seek_frame(vidx->formatx, vidx->vsidx, 0,AVSEEK_FLAG_BYTE);
+
+	if (cur_pts <= last_pts) {
+		vidx->seekable = 0;
+	} else {
+		vidx->seekable = 1;
+	}
+	return vidx->seekable;
+}
+
+
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
  * grab the duration data from the clip head, EZ_DUR_CLIPHEAD. It's already 
@@ -848,23 +884,25 @@ int video_find_stream(EZVID *vidx, int flags)
  * User need to specify the scan method. */
 int video_duration(EZVID *vidx, int scanmode)
 {
-	//AVStream	*stream;
 	AVPacket	packet;
 	int64_t		last_pts, cur_pts, base_pts;
 
-	//stream = vidx->formatx->streams[vidx->vsidx];
+	if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		video_seekable(vidx);
+	}
+
 	if (vidx->formatx->duration && (scanmode == EZ_DUR_CLIPHEAD)) {
 		/* convert duration from AV_TIME_BASE to video stream base */
 		cur_pts = video_system_to_pts(vidx, vidx->formatx->duration);
 		/* convert duration from video stream base to milliseconds */
 		vidx->duration = (int) video_pts_to_ms(vidx, cur_pts);
-		eznotify(vidx, EN_DURATION, 0, vidx->duration, NULL);
+		eznotify(vidx, EN_DURATION, ENX_DUR_MHEAD, 
+				vidx->duration, NULL);
 		return vidx->duration;
 	}
 
-
 	/* quick scan from the tail of the stream */
-	if (scanmode == EZ_DUR_QK_SCAN) {
+	if (scanmode != EZ_DUR_FULLSCAN) {
 		/* we only do this when the file is not too small */
 		if (vidx->formatx->file_size > EZ_GATE_QK_SCAN) {
 			/* byte seek from 90% of the clip */
@@ -872,7 +910,8 @@ int video_duration(EZVID *vidx, int scanmode)
 			//printf("Start %lld\n", cur_pts);
 			av_seek_frame(vidx->formatx, vidx->vsidx, 
 					cur_pts, AVSEEK_FLAG_BYTE);
-			eznotify(vidx, EN_DURATION, 1, 0, &cur_pts);
+			eznotify(vidx, EN_DURATION, ENX_DUR_JUMP, 
+					0, &cur_pts);
 		}
 	}
 
@@ -888,7 +927,7 @@ int video_duration(EZVID *vidx, int scanmode)
 		}
 		/* in case of the rewinding PTS */
 		if (packet.pts < last_pts) {
-			eznotify(vidx, EN_DURATION, 2, 
+			eznotify(vidx, EN_DURATION, ENX_DUR_REWIND, 
 					(long)&last_pts, &packet);
 			base_pts += last_pts;
 			last_pts = packet.pts;
@@ -910,7 +949,7 @@ int video_duration(EZVID *vidx, int scanmode)
 
 	/* convert duration from video stream base to milliseconds */
 	vidx->duration = (int) video_pts_to_ms(vidx, cur_pts);
-	eznotify(vidx, EN_DURATION, 3, vidx->duration, NULL);
+	eznotify(vidx, EN_DURATION, ENX_DUR_SCAN, vidx->duration, NULL);
 	return vidx->duration;
 }
 

@@ -86,9 +86,9 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_MEDIA_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
 			dump_format_context(vidx->formatx);
-			printf("Duration in millisecond (mode %d): %d\n",
+			printf("Duration in millisecond (mode %d:%d): %d\n",
 					vidx->sysopt->dur_mode, 
-					vidx->duration);
+					vidx->seekable,	vidx->duration);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_LIST) {
 			ezdump_video_info(vidx);
@@ -166,7 +166,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_DURATION:
-		if (param == 2) {
+		if (param == ENX_DUR_REWIND) {
 			printf("Rewound PTS: %lld < %lld\n",
 					(long long)((AVPacket*) block)->pts,
 					*((long long *) opt));

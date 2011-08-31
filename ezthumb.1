@@ -53,17 +53,17 @@ for example:
 .I 0f55f0.
 
 .TP
-.BR \-d , " \-\-during \fIquick\fP"
+.BR \-d , " \-\-during \fIhead\fP"
 Specify the duration finding mode. Normally the video's duration can be
-retrieved from the container, which is the default mode
-.B "quick" .
+retrieved from the container head, which is the default mode
+.B "head" .
 However, some dodge video clips include an inaccurate time duration value
 so the best way to retrieve the duration is the
 .B "scan"
 mode to scan the whole video file till the last packet. Its drawback is
 too slow. The compromise mode is 
-.B "skim"
-which only scan the last part of the video.
+.B "fast"
+which only fast scan the tail of the video.
 .TP
 .BR \-e , " \-\-edge \fIvalue\fP"
 This option defines the thickness of the black edge around each screenshots.
@@ -312,6 +312,18 @@ that if the
 is less than 10 seconds, it automatically changes into the
 .I off
 mode.
+.TP
+.BR "\-\-vindex" \fIvideo_stream_index\fP"
+specify the video stream index number inside the container file.
+The default behaviour of
+.B ezthumb
+is taking screen shots from the first video stream it has met.
+This option could override it and take screen shots from any stream.
+The stream indexes can be found by 
+.BR "\-i"
+or
+.BR "\-I"
+option.
 
 .SH POSITION CODES
 Position codes are used to describe the object position in the target image.

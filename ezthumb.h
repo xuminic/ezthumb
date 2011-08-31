@@ -63,6 +63,11 @@
 #define EN_STREAM_INFO		1022
 #define EN_MEDIA_STATIS		1023
 
+#define ENX_DUR_MHEAD		0	/* duration from media head */
+#define ENX_DUR_JUMP		1	/* jumping for a quick scan */
+#define ENX_DUR_REWIND		2	/* rewinding occurred */
+#define ENX_DUR_SCAN		3	/* duration from media scan */
+
 
 #define EZ_DUR_CLIPHEAD		0
 #define EZ_DUR_QK_SCAN		1
@@ -278,6 +283,7 @@ typedef	struct		{
 
 	/* real duration time in millisecond basis */
 	int		duration;
+	int		seekable;	/* is this clip seekable? */
 
 	struct timeval	tmark;		/* the beginning timestamp */
 
