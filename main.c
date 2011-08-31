@@ -267,6 +267,8 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'S':
+			/* make these options default */
+			sysoption.flags |= EZOP_CLI_INFO;
 			todo = c;
 			break;
 		case 't':

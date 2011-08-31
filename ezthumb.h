@@ -56,6 +56,7 @@
 #define EN_TYPE_AUDIO		1013
 #define EN_TYPE_UNKNOWN		1014
 #define EN_DURATION		1015
+#define EN_PACKET_KEY		1016
 #define EN_PTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
@@ -343,6 +344,9 @@ int image_gdcanvas_background(EZIMG *image);
 FILE *image_gif_anim_open(EZIMG *image, char *filename);
 int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 int image_gif_anim_close(EZIMG *image, FILE *fout);
+
+int meta_time_diff(struct timeval *tvbegin);
+
 
 
 /* eznotify.c */

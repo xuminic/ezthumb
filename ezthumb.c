@@ -49,7 +49,6 @@ static gdFont *meta_fontset(int fsize);
 static char *meta_basename(char *fname, char *buffer);
 static char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx);
 static int meta_copy_image(gdImage *dst, gdImage *src, int x, int, int, int);
-static int meta_time_diff(struct timeval *tvbegin);
 
 
 void ezopt_init(EZOPT *ezopt)
@@ -190,7 +189,7 @@ int ezstatis(char *filename, EZOPT *ezopt)
 	struct MeStat	mestat[EZ_ST_MAX_REC];	/* shoule be big enough */
 	EZVID		*vidx;
 	AVPacket	packet;
-	int		i;
+	int		i, imax = 0;
 
 	i = EZ_ERR_NONE;
 	if ((vidx = video_allocate(filename, ezopt, &i)) == NULL) {
@@ -207,10 +206,14 @@ int ezstatis(char *filename, EZOPT *ezopt)
 			av_free_packet(&packet);
 			continue;
 		}
+		imax = i > imax ? i : imax;
 
 		mestat[i].received++;
 		if (packet.flags == PKT_FLAG_KEY) {
 			mestat[i].key++;
+			if (packet.stream_index == vidx->vsidx) {
+				eznotify(vidx, EN_PACKET_KEY, 0, 0, &packet);
+			}
 		}
 		if (packet.pts != AV_NOPTS_VALUE) {
 			if (packet.pts < mestat[i].pts_last) {
@@ -221,8 +224,7 @@ int ezstatis(char *filename, EZOPT *ezopt)
 		}
 		av_free_packet(&packet);
 	}
-	eznotify(vidx, EN_MEDIA_STATIS, (long) mestat, 
-			vidx->formatx->nb_streams + 1, vidx);
+	eznotify(vidx, EN_MEDIA_STATIS, (long) mestat, imax + 1, vidx);
 
 	video_free(vidx);
 	return EZ_ERR_NONE;
@@ -2162,7 +2164,7 @@ static int meta_copy_image(gdImage *dst, gdImage *src,
 	return 0;
 }
 
-static int meta_time_diff(struct timeval *tvbegin)
+int meta_time_diff(struct timeval *tvbegin)
 {
 	struct	timeval	tvnow;
 	int	diff;
