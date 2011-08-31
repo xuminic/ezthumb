@@ -1,4 +1,7 @@
 
+20110831:
+  + ezthumb.c: a little bit speed up of the video_duration() function
+
 20110830: V1.3.3
   + ezthumb.c: duration structure changed
 
@@ -8,10 +11,7 @@
   + LIBAVFORMAT_VERSION_MAJOR: is used to control the depreciated APIs
   - BUGGY: the "APIchanges" in FFMPEG has error in av_open_input_file() so
     the version number is not correct about this
-    function.LIBAVFORMAT_VERSION_MAJOR: is used to control the depreciated
-    APIs
-    - BUGGY: the "APIchanges" in FFMPEG has error in av_open_input_file() so
-      the version number is not correct about this function.
+    function.
 
 20110824: V1.3.2
   + eznotify.c: fixed a bug that calling the eznotify() with null pointer

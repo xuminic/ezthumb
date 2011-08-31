@@ -82,13 +82,25 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 #endif
 			av_log_set_level(i);
 		}
+		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+			printf("%s: open successed (%ld ms)\n", 
+					(char*) block, opt);
+		}
 		break;
 	case EN_MEDIA_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
 			dump_format_context(vidx->formatx);
-			printf("Duration in millisecond (mode %d:%d): %d\n",
-					vidx->sysopt->dur_mode, 
-					vidx->seekable,	vidx->duration);
+			printf("Duration in millisecond by ");
+			if (vidx->sysopt->dur_mode == EZ_DUR_FULLSCAN) {
+				printf("full scan: ");
+			} else if (vidx->sysopt->dur_mode == EZ_DUR_QK_SCAN) {
+				printf("fast scan: ");
+			} else {
+				printf("stream head: ");
+			}
+			/*printf("%d (%d:%ld)\n", vidx->duration,
+					vidx->seekable, opt);*/
+			printf("%d (%ld ms)\n", vidx->duration, opt);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_LIST) {
 			ezdump_video_info(vidx);
@@ -179,14 +191,11 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}*/
 		break;
 	case EN_SEEK_FRAME:
-		if ((vidx->sysopt->flags & EZOP_CLI_DEBUG) == 0) {
-			break;
-		}
-		printf("Seek Test Complete (%ld ms): ", opt);
-		if (param == 0) {
-			printf("av_seek_frame() works. (%ld)\n", param);
-		} else {
-			printf("av_seek_frame() failed. (%ld)\n", param);
+		if (param) {
+			printf("WARNING: stream backward seeking disabled.\n");
+		} else if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+			printf("Backward seeking with av_seek_frame(): %ld\n",
+					opt);
 		}
 		break;
 	case EN_MEDIA_STATIS:

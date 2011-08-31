@@ -244,6 +244,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	memset(vidx, 0, sizeof(EZVID));
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;	/* keep a copy of the filename */
+	gettimeofday(&vidx->tmark, NULL);	/* get current time */
 
 #if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
@@ -265,8 +266,6 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 	
-	eznotify(vidx, EN_FILE_OPEN, 0, 0, filename);
-
 	/* find the video stream and open the codec driver */
 	if ((rc = video_find_stream(vidx, ezopt->flags)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
@@ -275,8 +274,9 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 
-	/* get current time */
-	gettimeofday(&vidx->tmark, NULL);
+	eznotify(vidx, EN_FILE_OPEN, 0, 
+			meta_time_diff(&vidx->tmark), filename);
+
 
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library
@@ -288,7 +288,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
-	eznotify(vidx, EN_MEDIA_OPEN, 0, 0, filename);
+	eznotify(vidx, EN_MEDIA_OPEN, 0, 
+			meta_time_diff(&vidx->tmark), filename);
 	return vidx;
 }
 
@@ -627,10 +628,12 @@ int video_seek_available(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	struct timeval	tmstart; 
-	int64_t		lastpts = 0, nowpts;
-	int		i, rc;
+	int64_t		lastpts, nowpts;
+	int		rc;
 
 	gettimeofday(&tmstart, NULL);
+
+	lastpts = nowpts = 0;
 	av_seek_frame(vidx->formatx, vidx->vsidx, image->pts_list[0],
 			AVSEEK_FLAG_BACKWARD);
 	while (av_read_frame(vidx->formatx, &packet) >= 0) {
@@ -641,10 +644,26 @@ int video_seek_available(EZVID *vidx, EZIMG *image)
 		}
 		av_free_packet(&packet);
 	}
+#if 1
+	av_seek_frame(vidx->formatx, vidx->vsidx, image->pts_list[1],
+			AVSEEK_FLAG_BACKWARD);
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if (packet.stream_index == vidx->vsidx) {
+			nowpts = packet.pts;
+			av_free_packet(&packet);
+			break;
+		}
+		av_free_packet(&packet);
+	}
+	if (nowpts > lastpts) {
+		rc = 0;
+	} else {
+		rc = -1;
+	}
+#else
 	nowpts = lastpts;
-	rc = 0;
-	for (i = 1; i < image->shots; i++) {
-		av_seek_frame(vidx->formatx, vidx->vsidx, image->pts_list[i],
+	for (rc = 1; rc < image->shots; rc++) {
+		av_seek_frame(vidx->formatx, vidx->vsidx, image->pts_list[rc],
 				AVSEEK_FLAG_BACKWARD);
 		while (av_read_frame(vidx->formatx, &packet) >= 0) {
 			if (packet.stream_index == vidx->vsidx) {
@@ -660,10 +679,11 @@ int video_seek_available(EZVID *vidx, EZIMG *image)
 		}
 		lastpts = nowpts;
 	}
-	if (i == image->shots) {
-		i = 0;
+	if (rc == image->shots) {
+		rc = 0;
 	}
-	eznotify(vidx, EN_SEEK_FRAME, i, meta_time_diff(&tmstart), 0);
+#endif
+	eznotify(vidx, EN_SEEK_FRAME, rc, meta_time_diff(&tmstart), NULL);
 	av_seek_frame(vidx->formatx, vidx->vsidx, 0, AVSEEK_FLAG_BYTE);
 	return rc;
 }
@@ -865,11 +885,9 @@ int video_seekable(EZVID *vidx)
 	av_seek_frame(vidx->formatx, vidx->vsidx, 0,AVSEEK_FLAG_BYTE);
 
 	if (cur_pts <= last_pts) {
-		vidx->seekable = 0;
-	} else {
-		vidx->seekable = 1;
+		return 0;	/* failed, not seekable */
 	}
-	return vidx->seekable;
+	return 1;	/* good, this file is seekable */
 }
 
 
@@ -887,9 +905,9 @@ int video_duration(EZVID *vidx, int scanmode)
 	AVPacket	packet;
 	int64_t		last_pts, cur_pts, base_pts;
 
-	if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
-		video_seekable(vidx);
-	}
+	/*if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		vidx->seekable = video_seekable(vidx);
+	}*/
 
 	if (vidx->formatx->duration && (scanmode == EZ_DUR_CLIPHEAD)) {
 		/* convert duration from AV_TIME_BASE to video stream base */

@@ -283,7 +283,7 @@ typedef	struct		{
 
 	/* real duration time in millisecond basis */
 	int		duration;
-	int		seekable;	/* is this clip seekable? */
+	//int		seekable;	/* is this clip seekable? */
 
 	struct timeval	tmark;		/* the beginning timestamp */
 
