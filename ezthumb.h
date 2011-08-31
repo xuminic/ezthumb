@@ -56,11 +56,17 @@
 #define EN_TYPE_AUDIO		1013
 #define EN_TYPE_UNKNOWN		1014
 #define EN_DURATION		1015
+#define EN_PACKET_KEY		1016
 #define EN_PTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
 #define EN_STREAM_INFO		1022
 #define EN_MEDIA_STATIS		1023
+
+#define ENX_DUR_MHEAD		0	/* duration from media head */
+#define ENX_DUR_JUMP		1	/* jumping for a quick scan */
+#define ENX_DUR_REWIND		2	/* rewinding occurred */
+#define ENX_DUR_SCAN		3	/* duration from media scan */
 
 
 #define EZ_DUR_CLIPHEAD		0
@@ -277,6 +283,7 @@ typedef	struct		{
 
 	/* real duration time in millisecond basis */
 	int		duration;
+	int		seekable;	/* is this clip seekable? */
 
 	struct timeval	tmark;		/* the beginning timestamp */
 
@@ -343,6 +350,9 @@ int image_gdcanvas_background(EZIMG *image);
 FILE *image_gif_anim_open(EZIMG *image, char *filename);
 int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 int image_gif_anim_close(EZIMG *image, FILE *fout);
+
+int meta_time_diff(struct timeval *tvbegin);
+
 
 
 /* eznotify.c */

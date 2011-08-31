@@ -31,7 +31,7 @@ static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "OPTIONS:" },
 	{ 'b', "background", 2, "the background picture" },
 	{ 'c', "colour",  2, "the colour setting (MI:TM:BG)(RRGGBB)" },
-	{ 'd', "during",  2, "the duration finding mode (quick)(skim|scan)" },
+	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
 	{ 'e', "edge",    1, "the width of the screen shot edge (0)" },
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
 	{ 'F', "fontsize",2, "the size setting of the font" },
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 		case 'd':	/* Examples: 0,1,quick,skim,scan */
 			if (isdigit((int) optarg[0])) {
 				sysoption.dur_mode = strtol(optarg, NULL, 0);
-			} else if (!strcmp(optarg, "skim")) {
+			} else if (!strcmp(optarg, "fast")) {
 				sysoption.dur_mode = EZ_DUR_QK_SCAN;
 			} else if (!strcmp(optarg, "scan")) {
 				sysoption.dur_mode = EZ_DUR_FULLSCAN;
@@ -267,6 +267,8 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'S':
+			/* make these options default */
+			sysoption.flags |= EZOP_CLI_INFO;
 			todo = c;
 			break;
 		case 't':

@@ -86,9 +86,9 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_MEDIA_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
 			dump_format_context(vidx->formatx);
-			printf("Duration in millisecond (mode %d): %d\n",
+			printf("Duration in millisecond (mode %d:%d): %d\n",
 					vidx->sysopt->dur_mode, 
-					vidx->duration);
+					vidx->seekable,	vidx->duration);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_LIST) {
 			ezdump_video_info(vidx);
@@ -112,6 +112,11 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 
 	case EN_PACKET_RECV:
 		//dump_packet(block);
+		break;
+	case EN_PACKET_KEY:
+		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+			dump_packet(block);
+		}
 		break;
 	case EN_FRAME_COMPLETE:
 		//dump_frame(block, opt);
@@ -161,7 +166,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_DURATION:
-		if (param == 2) {
+		if (param == ENX_DUR_REWIND) {
 			printf("Rewound PTS: %lld < %lld\n",
 					(long long)((AVPacket*) block)->pts,
 					*((long long *) opt));
@@ -218,8 +223,13 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 	int	i, ms;
 
 	printf("Media: %s\n", vidx->filename);
-	for (i = 0; i < n - 1; i++) {
+	for (i = 0; i < n; i++) {
 		printf("[%d] ", i);
+		if (i >= vidx->formatx->nb_streams) {
+			printf("ERROR  %8lu\n", mestat[i].received);
+			continue;
+		}
+		
 		switch(vidx->formatx->streams[i]->codec->codec_type) {
 		case CODEC_TYPE_VIDEO:
 			printf("VIDEO  ");
@@ -236,10 +246,11 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 		}
 		ms = video_pts_to_ms(vidx, 
 				mestat[i].pts_base + mestat[i].pts_last);
-		printf("%8lu KEY:%-6lu TIME:%d\n",
-				mestat[i].received, mestat[i].key, ms / 1000);
+		printf(":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
+				mestat[i].received, mestat[i].key, 
+				mestat[i].rewound, ms / 1000);
 	}
-	puts("");
+	printf("Time used: %.3f\n", meta_time_diff(&vidx->tmark) / 1000.0);
 	return 0;
 }
 
