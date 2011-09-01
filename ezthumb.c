@@ -592,7 +592,8 @@ int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	i = 0;
 	last_pts = 0;
 	gettimeofday(&tmstart, NULL);
-	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+	while ((i < image->shots) && 
+			(av_read_frame(vidx->formatx, &packet) >= 0)) {
 		if (packet.stream_index != vidx->vsidx) {
 			av_free_packet(&packet);
 			continue;
@@ -601,6 +602,7 @@ int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			av_free_packet(&packet);
 			continue;
 		}
+
 		if (packet.pts < image->pts_list[i]) {
 			last_pts = packet.pts;
 			av_free_packet(&packet);
@@ -609,16 +611,22 @@ int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		
 		/* found the first i-frame ahead */
 		eznotify(vidx, EN_SCAN_PACKET, i, (long)&last_pts, &packet);
-		av_free_packet(&packet);
 
-		image->pts_keyf[i] = last_pts;
-		i++;
-		if (i >= image->shots) {
-			break;
+		for ( ; i < image->shots; i++) {
+			if (image->pts_list[i] > packet.pts) {
+				break;
+			}
+			image->pts_keyf[i] = last_pts;
 		}
+
+		last_pts = packet.pts;
+		av_free_packet(&packet);
 	}
-	eznotify(vidx, EN_SCAN_IFRAME, meta_time_diff(&tmstart), 
-			i, image->pts_keyf);
+	for ( ; i < image->shots; i++) {
+		image->pts_keyf[i] = last_pts;
+	}
+	eznotify(vidx, EN_SCAN_IFRAME, i, meta_time_diff(&tmstart), 
+			image->pts_keyf);
 	/* reset the stream */
 	av_seek_frame(vidx->formatx, vidx->vsidx, 0, AVSEEK_FLAG_BYTE);
 	return 0;

@@ -141,16 +141,19 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			dump_frame_packet((AVPacket *)opt, block, param);
 		}
 		break;
+	case EN_SCAN_PACKET:
+		dump_packet(block);
+		break;
 	case EN_SCAN_IFRAME:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
-			printf("I-Frame Scanned (%ld ms): ", param);
-			for (i = 0; i < opt; i++) {
-				printf("%lld ", ((long long *)block)[i]);
-				if (i == 4) {
-					printf(" ... \n");
-					break;
-				}
+		printf("I-Frame Scanned (%ld ms):\n", opt);
+		for (i = 0; i < param; i++) {
+			printf("%9lld", ((long long *)block)[i]);
+			if ((i % 8) == 7) {
+				printf("\n");
 			}
+		}
+		if ((i % 8) != 0) {
+			printf("\n");
 		}
 		break;
 	case EN_STREAM_FORMAT:
@@ -185,10 +188,16 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_PTS_LIST:
-		/*for (i = 0; i < param; i++) {
-			printf("#%d PTS around: %lld\n", 
-					i, ((long long *)block)[i]);
-		}*/
+		printf("Screenshot PTS estimating:\n");
+		for (i = 0; i < param; i++) {
+			printf("%9lld", ((long long *)block)[i]);
+			if ((i % 8) == 7) {
+				printf("\n");
+			}
+		}
+		if ((i % 8) != 0) {
+			printf("\n");
+		}
 		break;
 	case EN_SEEK_FRAME:
 		if (param) {
