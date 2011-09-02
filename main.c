@@ -503,6 +503,11 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		break;
 
 	case EN_PROC_CURRENT:
+		if (param == 0) {	/* for key frame saving only */
+			printf(".");
+			break;
+		}
+
 		expect = opt * 100 / param / 2;
 		if (dotted >= expect) {
 			printf("\b\b\b\b%3ld%%", opt * 100 / param);
@@ -513,7 +518,11 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		break;
 
 	case EN_PROC_END:
-		printf("\b\b\b\bdone\n");
+		if (param == 0) {       /* for key frame saving only */
+			printf(" done\n");
+		} else {
+			printf("\b\b\b\bdone\n");
+		}
 		printf("%s: %ldx%ld canvas.\n", 
 				block ? (char*) block : "", param, opt);
 

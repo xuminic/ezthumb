@@ -149,8 +149,8 @@ int ezthumb(char *filename, EZOPT *ezopt)
 	
 	if (ezopt->flags & EZOP_LINEAR) {
 		video_save_scan_pass(vidx, image, frame);
-	} else if (video_seek_available(vidx, image)) {
-		video_save_scan_pass(vidx, image, frame);
+	/*} else if (video_seek_available(vidx, image)) {
+		video_save_scan_pass(vidx, image, frame);*/
 	} else {
 		video_save_quick_pass(vidx, image, frame);
 	}
@@ -305,151 +305,284 @@ int video_free(EZVID *vidx)
 	return EZ_ERR_NONE;
 }
 
-/* This function is used to save every key frames in the video clip
- * into individual files. */
-int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
+
+static int video_snap_begin(EZVID *vidx, EZIMG *image)
 {
-	AVPacket	packet;
-	int64_t	ptsnow;
-	FILE	*gifp;
-	char	timestamp[64];
-	int	i, gotkey, tsnow, ffin, gifa;
-
-
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
-	gifp = NULL;
-	if ((gifa = ezopt_gif_anim(image->sysopt)) > 0) {
-		gifp = image_gif_anim_open(image, vidx->filename);
+	vidx->gifx_fp = NULL;
+	if ((vidx->gifx_opt = ezopt_gif_anim(image->sysopt)) > 0) {
+		vidx->gifx_fp = image_gif_anim_open(image, vidx->filename);
 	}
 
 	eznotify(vidx, EN_PROC_BEGIN, (long)vidx->duration, 0, NULL);
-
-	/* shift the start time by the blank time */
-	ptsnow = video_system_to_pts(vidx, vidx->formatx->start_time);
-	image->time_from += (int) video_pts_to_ms(vidx, ptsnow);
-
-	i = gotkey = 0;
-	while (av_read_frame(vidx->formatx, &packet) >= 0) {
-		if (packet.stream_index != vidx->vsidx) {
-			av_free_packet(&packet);
-			continue;
-		}
-		if ((packet.flags != PKT_FLAG_KEY) && (gotkey == 0)) {
-			av_free_packet(&packet);
-			continue;
-		}
-
-		/* convert current PTS time to millisecond */
-		tsnow = (int) video_pts_to_ms(vidx, packet.pts);
-
-		if (tsnow  < image->time_from) {
-			av_free_packet(&packet);
-			continue;
-		}
-		if (tsnow > image->time_from + image->time_during) {
-			av_free_packet(&packet);
-			break;
-		}
-	
-		eznotify(vidx, EN_PACKET_RECV, i, 0, &packet);	
-		avcodec_decode_video2(vidx->codecx, frame, &ffin, &packet);
-		av_free_packet(&packet);
-
-		if (ffin == 0) {	/* the packet is not finished */
-			gotkey = 1;
-			eznotify(vidx, EN_FRAME_PARTIAL, i, ffin, frame);
-			continue;
-		}
-
-		eznotify(vidx, EN_FRAME_COMPLETE, i, 0, frame);
-		gotkey = 0;	/* reset the keyframe mark */
-
-		/* attach a human readable timestamp */
-		meta_timestamp(tsnow, 1, timestamp);
-		image_gdframe_screenshot(image, frame, timestamp);
-		if (gifp) {
-			image_gif_anim_add(image, gifp, gifa);
-		} else {
-			image_gdframe_save(image, vidx->filename, i);
-		}
-
-		eznotify(vidx, EN_PROC_CURRENT, vidx->duration, tsnow, NULL);
-		i++;
-	}
-	if (gifp) {
-		image_gif_anim_close(image, gifp);
-	}
-	eznotify(vidx, EN_PROC_END, meta_time_diff(&vidx->tmark), 0, NULL);
-	return EZ_ERR_NONE;
+	return 0;
 }
 
-int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
+static int video_snap_update(EZVID *vidx, EZIMG *image, AVFrame *frame, 
+		int sn, int64_t pts)
 {
-	FILE	*gifp;
-	int64_t	pts;
-	char	timestamp[128];
-	int	i, gifa;
+	char	timestamp[64];
 
-	/* If the output format is the animated GIF89a, then it opens
-	 * the target file and device */
-	gifp = NULL;
-	if ((gifa = ezopt_gif_anim(image->sysopt)) > 0) {
-		gifp = image_gif_anim_open(image, vidx->filename);
+	/* offset the PTS by the start time */
+	if (vidx->formatx->start_time) {
+		pts -= video_system_to_pts(vidx, 
+				vidx->formatx->start_time);
 	}
 
-	/* display the begin of the process */
-	eznotify(vidx, EN_PROC_BEGIN, image->shots, 0, NULL);
+	/* convert current PTS to millisecond and then 
+	 * metamorphose to human readable form */
+	meta_timestamp((int)video_pts_to_ms(vidx, pts), 1, timestamp);
 
-	for (i = 0; i < image->shots; i++) {
-		//printf("seekend=%lld  seekat=%lld\n", seekend, seekat);
-		pts = video_extract_frame(vidx, image, frame, 
-				image->pts_list[i]);
+	/* write the timestamp into the shot */
+	image_gdframe_screenshot(image, frame, timestamp);
 
-		/* offset the PTS by the start time */
-		if (vidx->formatx->start_time) {
-			pts -= video_system_to_pts(vidx, 
-					vidx->formatx->start_time);
-		}
-		/* convert current PTS to millisecond and then 
-		 * metamorphose to human readable form */
-		meta_timestamp((int)video_pts_to_ms(vidx, pts), 1, timestamp);
-
-		/* write the timestamp into the shot */
-		image_gdframe_screenshot(image, frame, timestamp);
-
-		if (image->gdcanvas) {
-			image_gdcanvas_update(image, i);
-		} else if (gifp) {
-			image_gif_anim_add(image, gifp, gifa);
-		} else {
-			image_gdframe_save(image, vidx->filename, i);
-		}
-
-		/* display the on-going information */
-		eznotify(vidx, EN_PROC_CURRENT, image->shots, i, NULL);
+	if (image->gdcanvas) {
+		image_gdcanvas_update(image, sn);
+	} else if (vidx->gifx_fp) {
+		image_gif_anim_add(image, vidx->gifx_fp, vidx->gifx_opt);
+	} else {
+		image_gdframe_save(image, vidx->filename, sn);
 	}
+
+	/* display the on-going information */
+	eznotify(vidx, EN_PROC_CURRENT, image->shots, sn, &pts);
+	return 0;
+}
+
+static int video_snap_end(EZVID *vidx, EZIMG *image)
+{
+	char	status[128];
 
 	/* display the end of the process and generate the status line */
-	sprintf(timestamp, "%dx%d Thumbnails Generated by Ezthumb %s (%.3f s)",
-			image->dst_width, image->dst_height, EZTHUMB_VERSION, 
+	sprintf(status, "%dx%d Thumbnails Generated by Ezthumb %s (%.3f s)",
+			image->dst_width, image->dst_height, 
+			EZTHUMB_VERSION, 
 			meta_time_diff(&vidx->tmark) / 1000.0);
 	eznotify(vidx, EN_PROC_END, image->canvas_width, 
-			image->canvas_height, timestamp);
+			image->canvas_height, status);
 
 	if (image->gdcanvas) {
 		/* update the media information area */
 		if (image->sysopt->flags & EZOP_INFO) {
 			video_media_on_canvas(vidx, image);
 			/* Insert as status line */
-			image_gdcanvas_print(image, -1, 0, timestamp);
+			image_gdcanvas_print(image, -1, 0, status);
 		}
 		image_gdcanvas_save(image, vidx->filename);
-	} else if (gifp) {
-		image_gif_anim_close(image, gifp);
+	} else if (vidx->gifx_fp) {
+		image_gif_anim_close(image, vidx->gifx_fp);
 	}
+	return 0;
+}
+
+static int video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet)
+{
+	int	ffin;
+
+	do {
+		avcodec_decode_video2(vidx->codecx, frame, &ffin, packet);
+		if (ffin) {
+			return 0;	/* successfully decoded a frame */
+		}
+		/* the packet is not finished */
+		eznotify(vidx, EN_FRAME_PARTIAL, 0, ffin, frame);
+		av_free_packet(packet);
+	} while (av_read_frame(vidx->formatx, packet) >= 0);
+	return -1;
+}
+
+static int video_pts_range(EZVID *vidx, EZIMG *image, int64_t pts)
+{
+	int	tsnow;
+
+	/* offset the PTS by the start time */
+	if (vidx->formatx->start_time) {
+		pts -= video_system_to_pts(vidx, 
+				vidx->formatx->start_time);
+	}
+	tsnow = (int) video_pts_to_ms(vidx, pts);
+
+	if (tsnow  < image->time_from) {
+		return -1;
+	}
+	if (tsnow > image->time_from + image->time_during) {
+		return 1;
+	}
+	return 0;
+}
+
+
+
+/* This function is used to save every key frames in the video clip
+ * into individual files. */
+int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
+{
+	AVPacket	packet;
+	int64_t		ptsnow;
+	int		i, rc;
+
+	video_snap_begin(vidx, image);
+
+	/* shift the start time by the blank time */
+	//ptsnow = video_system_to_pts(vidx, vidx->formatx->start_time);
+	//image->time_from += (int) video_pts_to_ms(vidx, ptsnow);
+
+	i = 0;
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if (packet.stream_index != vidx->vsidx) {
+			av_free_packet(&packet);
+			continue;
+		}
+		if (packet.flags != PKT_FLAG_KEY) {
+			av_free_packet(&packet);
+			continue;
+		}
+
+		/* convert current PTS time to millisecond */
+		ptsnow = packet.pts;
+
+		rc = video_pts_range(vidx, image, ptsnow);
+		if (rc < 0) {
+			av_free_packet(&packet);
+			continue;
+		}
+		if (rc > 0) {
+			av_free_packet(&packet);
+			break;
+		}
+
+		eznotify(vidx, EN_PACKET_RECV, i, 0, &packet);
+		video_decode_packet(vidx, frame, &packet);
+		av_free_packet(&packet);
+
+		eznotify(vidx, EN_FRAME_COMPLETE, i, 0, frame);
+		video_snap_update(vidx, image, frame, i, ptsnow);
+		i++;
+	}
+	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
 }
+
+int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
+{
+	int64_t	pts;
+	int	i;
+
+	video_snap_begin(vidx, image);
+	for (i = 0; i < image->shots; i++) {
+		//printf("seekend=%lld  seekat=%lld\n", seekend, seekat);
+		pts = video_extract_frame(vidx, image, frame, 
+				image->pts_list[i]);
+		video_snap_update(vidx, image, frame, i, pts);
+	}
+	video_snap_end(vidx, image);
+	return EZ_ERR_NONE;
+}
+
+int video_save_single_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
+{
+	int64_t	pts_next_key;
+	int	i;
+
+	video_snap_begin(vidx, image);
+	for (i = 0; i < image->shots; ) {
+		pts_next_key = video_locate_keyframe(vidx, image->pts_list[i]);
+		i += video_extract_frames(vidx, image, frame, i, pts_next_key);
+	}
+	video_snap_end(vidx, image);
+	return EZ_ERR_NONE;
+}
+
+
+int64_t video_locate_keyframe(EZVID *vidx, int64_t aimed_pts)
+{
+	AVPacket	packet;
+	int64_t		seekat, pts_last_key, pts_next_key;
+
+	pts_last_key = pts_next_key  = 0;
+	seekat = 0;
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if (packet.stream_index != vidx->vsidx) {
+			av_free_packet(&packet);
+			continue;
+		}
+
+		pts_next_key = packet.pts;
+
+		if (packet.flags != PKT_FLAG_KEY) {
+			av_free_packet(&packet);
+			continue;
+		}
+		if (packet.pts <= aimed_pts) {
+			pts_last_key  = packet.pts;
+			seekat = packet.pos;
+			av_free_packet(&packet);
+			continue;
+		}
+		av_free_packet(&packet);
+		break;
+	}
+	av_seek_frame(vidx->formatx, vidx->vsidx, seekat, AVSEEK_FLAG_BYTE);
+	return pts_next_key;
+}
+
+int video_extract_frames(EZVID *vidx, EZIMG *image, AVFrame *frame,
+		                int sn, int64_t pts_next_key)
+{
+	AVPacket	packet;
+	int64_t		pts;
+	int		i, n, rc;
+
+	for (n = 0, i = sn; i < image->shots; i++, n++) {
+		if (image->pts_list[i] > pts_next_key) {
+			break;
+		}
+	}
+
+	i = sn;
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if (packet.stream_index != vidx->vsidx) {
+			av_free_packet(&packet);
+			continue;
+		}
+		eznotify(vidx, EN_PACKET_RECV, 0, 0, &packet);
+
+		pts = packet.pts;
+
+		/* must to decode every frames from the key frame to keep
+		 * the picture good */
+		video_decode_packet(vidx, frame, &packet);
+
+		eznotify(vidx, EN_FRAME_COMPLETE, 0, 0, frame);
+
+		/* If user requires an accurate frame step, we then return
+		 * the closest frame even if it's a P-frame. Otherwise we 
+		 * return the nearest key frame to get a clear shot. */
+		if (n > 1) {
+			rc = (pts >= image->pts_list[i]) ? 1 : 0;
+		} else if (image->sysopt->flags & EZOP_ANYFRAME) {
+			rc = (pts >= image->pts_list[i]) ? 1 : 0;
+		} else {
+			rc = frame->key_frame ? 1 : 0;
+		}
+		if (rc == 0) {
+			av_free_packet(&packet);
+			continue;
+		}
+		eznotify(vidx, EN_FRAME_EFFECT, 0, (long)&packet, frame);
+		av_free_packet(&packet);
+
+		video_snap_update(vidx, image, frame, i, pts);
+		i++;
+		if (i >= sn + n) {
+			break;
+		}
+	}
+	return n;
+}
+		
+
 
 int video_save_scan_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
@@ -652,7 +785,7 @@ int video_seek_available(EZVID *vidx, EZIMG *image)
 		}
 		av_free_packet(&packet);
 	}
-#if 1
+#if 1	/* fast mode */
 	av_seek_frame(vidx->formatx, vidx->vsidx, image->pts_list[1],
 			AVSEEK_FLAG_BACKWARD);
 	while (av_read_frame(vidx->formatx, &packet) >= 0) {
@@ -668,7 +801,7 @@ int video_seek_available(EZVID *vidx, EZIMG *image)
 	} else {
 		rc = -1;
 	}
-#else
+#else	/* slow mode */
 	nowpts = lastpts;
 	for (rc = 1; rc < image->shots; rc++) {
 		av_seek_frame(vidx->formatx, vidx->vsidx, image->pts_list[rc],
@@ -740,9 +873,10 @@ int64_t video_extract_frame(EZVID *vidx, EZIMG *image, AVFrame *frame,
 		 * key frame, for example the EZ_GATE_KEY_STEP millisecond, 
 		 * it would be pointless to stick on the key frame. In that
 		 * case, the program grab the P-frame instead. */
-		if (image->time_step < EZ_GATE_KEY_STEP) {
+		/*if (image->time_step < EZ_GATE_KEY_STEP) {
 			rc = (nowpts >= seekpts) ? 1 : 0;
-		} else if (image->sysopt->flags & EZOP_ANYFRAME) {
+		} else */
+		if (image->sysopt->flags & EZOP_ANYFRAME) {
 			rc = (nowpts >= seekpts) ? 1 : 0;
 		} else {
 			rc = frame->key_frame ? 1 : 0;
@@ -1279,7 +1413,7 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	/* enlarge the canvas height to include the media information */
 	if ((ezopt->flags & EZOP_INFO) == 0) {
 		image->canvas_minfo = 0;
-	} else {
+	} else if (image->canvas_height > 0) {
 		size = image_gdcanvas_strlen(image, 
 				image->sysopt->mi_size, "bqBQ");
 		/* we only need the font height plus the gap size */

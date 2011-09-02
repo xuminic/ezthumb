@@ -283,9 +283,11 @@ typedef	struct		{
 
 	/* real duration time in millisecond basis */
 	int		duration;
-	//int		seekable;	/* is this clip seekable? */
 
 	struct timeval	tmark;		/* the beginning timestamp */
+
+	FILE		*gifx_fp;	/* for GIF89 animation */
+	int		gifx_opt;	/* for GIF89 animation */
 
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
 	EZIMG		*image;		/* link to its EZIMG parameters */
@@ -319,6 +321,11 @@ int video_free(EZVID *vidx);
 int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_save_scan_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_save_single_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int64_t video_locate_keyframe(EZVID *vidx, int64_t aimed_pts);
+int video_extract_frames(EZVID *vidx, EZIMG *image, AVFrame *frame,
+		int sn, int64_t pts_next_key);
+
 int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_seek_available(EZVID *vidx, EZIMG *image);
 int64_t video_extract_frame(EZVID *vidx, EZIMG *image, AVFrame *, int64_t);
