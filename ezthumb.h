@@ -57,7 +57,7 @@
 #define EN_TYPE_UNKNOWN		1014
 #define EN_DURATION		1015
 #define EN_PACKET_KEY		1016
-#define EN_PTS_LIST		1019
+#define EN_DTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
 #define EN_STREAM_INFO		1022
@@ -135,7 +135,7 @@
 
 #define EZ_ST_ALL		0	/* all packet in the whole file */	
 #define EZ_ST_KEY		1	/* number of key frames */
-#define EZ_ST_REWIND		2	/* number of PTS rewind */
+#define EZ_ST_REWIND		2	/* number of DTS rewind */
 #define EZ_ST_OFF		3
 #define EZ_ST_MAX_REC		16	/* maximum monited streams */
 
@@ -246,12 +246,12 @@ typedef	struct	{
 	int	canvas_height;
 	int	shots;		/* the total screenshots */
 
-	/* time setting: they are all calculated from the duration, not PTS */
+	/* time setting: they are all calculated from the duration, not DTS */
 	int	time_from;	/* from where to take shots (ms) */
 	int	time_during;	/* the time range of shots (ms) */
 	int	time_step;	/* timestep in millisecond to take shots */
-	int64_t	*pts_list;	/* the list of proposal PTS for screenshots */
-	int64_t *pts_keyf;	/* the PTS of the nearest keyframe ahead */
+	int64_t	*dts_list;	/* the list of proposal DTS for screenshots */
+	int64_t *dts_keyf;	/* the DTS of the nearest keyframe ahead */
 
 	/* gaps */
 	int	gap_width;	/* gap between shots in column */
@@ -281,10 +281,14 @@ typedef	struct		{
 	AVCodecContext	*codecx;
 	int		vsidx;
 
-	/* real duration time in millisecond basis */
-	int		duration;
-
+	int		duration;	/* the stream duration in ms */
+	int		unseek;		/* video unseekable flag */
 	struct timeval	tmark;		/* the beginning timestamp */
+
+	int64_t		keygap;		/* maximum gap between keyframe */
+	int64_t		keylast;	/* the DTS of the last keyframe */
+	int		keycount;
+	int64_t		keydelta;	/* the delta DTS of snapshots */
 
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */
@@ -307,8 +311,8 @@ struct	MeStat		{	/* media statistics */
 	unsigned long	key;		/* key frames */
 	unsigned long	rewound;	/* rewound occurance counter */
 
-	int64_t		pts_base;
-	int64_t		pts_last;
+	int64_t		dts_base;
+	int64_t		dts_last;
 };
 
 void ezopt_init(EZOPT *ezopt);
@@ -322,21 +326,21 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_save_scan_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_save_single_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int64_t video_locate_keyframe(EZVID *vidx, int64_t aimed_pts);
+int64_t video_locate_keyframe(EZVID *vidx, int64_t aimed_dts);
 int video_extract_frames(EZVID *vidx, EZIMG *image, AVFrame *frame,
-		int sn, int64_t pts_next_key);
+		int sn, int64_t dts_next_key);
 
 int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_seek_available(EZVID *vidx, EZIMG *image);
 int64_t video_extract_frame(EZVID *vidx, EZIMG *image, AVFrame *, int64_t);
 int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 int video_find_stream(EZVID *vidx, int flags);
-int video_enlist_image_pts(EZVID *vidx, EZIMG *image);
+int video_enlist_image_dts(EZVID *vidx, EZIMG *image);
 int video_duration(EZVID *vidx, int scanmode);
-int64_t video_pts_to_ms(EZVID *vidx, int64_t pts);
-int64_t video_ms_to_pts(EZVID *vidx, int64_t ms);
-int64_t video_pts_to_system(EZVID *vidx, int64_t pts);
-int64_t video_system_to_pts(EZVID *vidx, int64_t syspts);
+int64_t video_dts_to_ms(EZVID *vidx, int64_t dts);
+int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
+int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
+int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
 EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
 int image_free(EZIMG *image);
