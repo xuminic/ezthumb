@@ -1,0 +1,6 @@
+
+# Generate 4x4 thumbnails, 50% screen size
+ezthumb video.wmv
+
+# Generate 4x4 thumbnails, 50% screen size and accurate frames
+ezthumb --anyframe video.wmv
