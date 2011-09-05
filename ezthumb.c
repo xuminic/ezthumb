@@ -464,7 +464,7 @@ static int video_rewind(EZVID *vidx)
 }
 
 /* return 1: decode p-frame  0: key frame only */
-static int video_frame_threshold(EZVID *vidx, EZIMG *image)
+static int video_frame_select(EZVID *vidx, EZIMG *image)
 {
 	if (image->sysopt->flags & EZOP_ANYFRAME) {
 		return 1;
@@ -477,31 +477,20 @@ static int video_frame_threshold(EZVID *vidx, EZIMG *image)
 
 /* This function is used to save every key frames in the video clip
  * into individual files. */
-int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
+int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
 	AVPacket	packet;
-	int64_t		dtsnow, dtslast;
+	int64_t		dts;
 	int		i, rc;
 
 	video_snap_begin(vidx, image);
 
 	i = 0;
 	video_keyframe_counter(vidx, image, NULL);
-	while (av_read_frame(vidx->formatx, &packet) >= 0) {
-		if (packet.stream_index != vidx->vsidx) {
-			av_free_packet(&packet);
-			continue;
+	while (1) {
+		if ((dts = video_keyframe_next(idx, image, &packet)) < 0) {
+			break;
 		}
-		if (packet.flags != PKT_FLAG_KEY) {
-			av_free_packet(&packet);
-			continue;
-		}
-		if ((dtsnow = meta_packet_timestamp(&packet)) < 0) {
-			av_free_packet(&packet);
-			continue;
-		}
-
-		video_keyframe_counter(vidx, image, &packet);
 
 		rc = video_dts_range(vidx, image, dtsnow);
 		if (rc < 0) {
@@ -521,7 +510,7 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
 		av_free_packet(&packet);
 
-		video_snap_update(vidx, image, frame, i, dtsnow);
+		video_snap_update(vidx, image, frame, i, dts);
 		i++;
 	}
 	video_snap_end(vidx, image);
@@ -531,7 +520,7 @@ int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 /* for these conditions: backward seeking available, key frame only,
  * snap interval is larger than maximum key frame interval and no rewind
  * clips */
-int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
+int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
 	AVPacket	packet;
 	int64_t		dts;
@@ -543,34 +532,17 @@ int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 				video_snap_point(vidx, image, i), 
 				AVSEEK_FLAG_BACKWARD);
 
-		while (av_read_frame(vidx->formatx, &packet) >= 0) {
-			if (packet.stream_index != vidx->vsidx) {
-				av_free_packet(&packet);
-				continue;
-			}
-			if (packet.flags != PKT_FLAG_KEY) {
-				av_free_packet(&packet);
-				continue;
-			}
-			if ((dts = meta_packet_timestamp(&packet)) < 0) {
-				av_free_packet(&packet);
-				continue;
-			}
-
-			if (video_decode_packet(vidx, frame, &packet) < 0) {
-				dts = -1;	/* flag its end */
-				break;
-			}
-
-			eznotify(vidx, EN_FRAME_COMPLETE, i, 0, frame);
-			eznotify(vidx, EN_FRAME_EFFECT, i, 
-					(long)&packet, frame);
-			av_free_packet(&packet);
+		if ((dts = video_keyframe_next(vidx, image, &packet)) < 0) {
 			break;
 		}
-		if (dts < 0) {
-			break;
+		if (video_decode_packet(vidx, frame, &packet) < 0) 
+			break;	/* flag its end */
 		}
+
+		eznotify(vidx, EN_FRAME_COMPLETE, i, (long)&packet, frame);
+		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
+		av_free_packet(&packet);
+
 		video_snap_update(vidx, image, frame, i, dts);
 	}
 	video_snap_end(vidx, image);
@@ -578,103 +550,15 @@ int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 }
 
 
-int video_save_auto_pass(EZVID *vidx, EZIMG *image, AVFrame *frame, int i)
-{
-	AVPacket	packet;
-	int64_t		dts, dts_diff, dts_target, dts_last;
-	
-
-	dts_target = video_snap_point(vidx, image, i);
-	dts_last = 0;	/* ??? */
-	while (av_read_frame(vidx->formatx, &packet) >= 0) {
-		if (packet.stream_index != vidx->vsidx) {
-			av_free_packet(&packet);
-			continue;
-		}
-		if (packet.flags != PKT_FLAG_KEY) {
-			av_free_packet(&packet);
-			continue;
-
-		}
-		if ((dts = meta_packet_timestamp(&packet)) < 0) {
-			av_free_packet(&packet);
-			continue;
-		}
-		video_keyframe_counter(vidx, image, &packet);
-
-		if ((dts_diff = dts_target - dts) > vidx->keygap) {
-			av_free_packet(&packet);
-			dts_last = dts;
-			continue;
-		}
-
-		if (dts_diff < 0) {
-			if (video_frame_threshold(vidx, image)) {	
-				/* P-frame required */
-				av_seek_frame(vidx->formatx, vidx->vsidx, 
-						dts_last, AVSEEK_FLAG_BACKWARD);
-				video_keyframe_counter(vidx, image, NULL);
-				av_free_packet(&packet);
-				continue;
-			} else if (video_decode_packet(vidx, frame, &packet) >= 0) {
-				eznotify(vidx, EN_FRAME_COMPLETE, i, 0, frame);
-				eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
-				av_free_packet(&packet);
-				return 0;
-			}
-			return -1;
-		}
-
-		if (video_frame_threshold(vidx, image) == 0) {	
-			/* key frame only */
-			av_free_packet(&packet);
-			dts_last = dts;
-			continue;
-		}
-
-		//i += video_extract_frames();
-		do {
-			if (packet.stream_index != vidx->vsidx) {
-				av_free_packet(&packet);
-				continue;
-			}
-			dts = meta_packet_timestamp(&packet);
-
-			if (video_decode_packet(vidx, frame, &packet) < 0) {
-				break;
-			}
-
-			eznotify(vidx, EN_FRAME_COMPLETE, 0, 0, frame);
-			if (dts < dts_target) {
-				av_free_packet(&packet);
-				continue;
-			}
-
-			eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
-			av_free_packet(&packet);
-
-			video_snap_update(vidx, image, frame, i, dts);
-			i++;
-
-			if (vidx->keydelta > vidx->keygap) {
-				break;
-			}
-
-		} while (av_read_frame(vidx->formatx, &packet) >= 0)；
-	}
-
-
-
-
-
-
-int video_save_single_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
+int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
 	int64_t	dts_next_key;
 	int	i;
 
 	video_snap_begin(vidx, image);
 	for (i = 0; i < image->shots; ) {
+		dts = video_keyframe_next(vidx, image, &packet);
+
 		dts_next_key = video_locate_keyframe(vidx, image->dts_list[i]);
 		i += video_extract_frames(vidx, image, frame, i, dts_next_key);
 		break;
@@ -682,6 +566,168 @@ int video_save_single_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
 }
+
+
+static int64_t video_keyframe_next(EZVID *vidx, EZIMG *image, AVPacket *packet)
+{
+	int64_t		dts;
+
+	while (av_read_frame(vidx->formatx, packet) >= 0) {
+		if (packet->stream_index != vidx->vsidx) {
+			av_free_packet(packet);
+			continue;
+		}
+		if (packet->flags != PKT_FLAG_KEY) {
+			av_free_packet(packet);
+			continue;
+		}
+		if ((dts = meta_packet_timestamp(packet)) < 0) {
+			av_free_packet(packet);
+			continue;
+		}
+
+		/* find a valid key frame so updating the keyframe gap */
+		video_keyframe_counter(vidx, image, packet);
+		return dts;
+	}
+	return -1;
+}
+
+
+static int64_t video_seek_keyframe(EZVID *vidx, EZIMG *image, AVPacket *packet, int idx)
+{
+	int64_t		dts, dts_snap, dts_last, dts_diff;
+
+	dts_snap = video_snap_point(vidx, image, idx);
+	dts_last = 0;
+
+	while (av_read_frame(vidx->formatx, packet) >= 0) {
+		if (packet->stream_index != vidx->vsidx) {
+			av_free_packet(packet);
+			continue;
+		}
+		if (packet->flags != PKT_FLAG_KEY) {
+			av_free_packet(packet);
+			continue;
+
+		}
+		if ((dts = meta_packet_timestamp(packet)) < 0) {
+			av_free_packet(packet);
+			continue;
+		}
+
+		/* find a valid key frame so updating the keyframe gap */
+		video_keyframe_counter(vidx, image, packet);
+
+		/* if the distance between the snap point and this key frame
+		 * is longer than the maximum gap of key frames, we would 
+		 * expect for another key frame */
+		if ((dts_diff = dts_snap - dts) > vidx->keygap) {
+			av_free_packet(packet);
+			dts_last = dts;
+			continue;
+		}
+
+		/* if the distance is negative, we must have overread to the
+		 * next key frame, which is caused by the incomplete maximum
+		 * gap of key frames. In that case, we must increate the gap
+		 * size and rewind to the previous key frame and run again */
+		if ((dts_diff < 0) && video_frame_select(vidx, image)) {
+			av_seek_frame(vidx->formatx, vidx->vsidx,
+					dts_last, AVSEEK_FLAG_BACKWARD);
+			video_keyframe_counter(vidx, image, NULL); /* reset */
+			av_free_packet(packet);
+			continue;
+		}
+
+		/* if we only want to snapshot at key frames, we leap to the
+		 * next one and take sanpshot there */
+		if ((dts_diff > 0) && !video_frame_select(vidx, image)) {
+			av_free_packet(packet);
+			dts_last = dts;
+			continue;
+		}
+
+		/* so the proper key frame has been read */
+		return dts;
+	}
+	return -1;
+}
+
+static int video_extract_pframes(EZVID *vidx, EZIMG *image, AVFrame *frame, AVPacket *packet, int i)
+{
+	int64_t		dts, dts_snap;
+
+	dts_snap = video_snap_point(vidx, image, i);
+	do {
+		if (packet->stream_index != vidx->vsidx) {
+			av_free_packet(packet);
+			continue;
+		}
+		if ((dts = meta_packet_timestamp(packet)) < 0) {
+			av_free_packet(packet);
+			continue;
+		}
+
+		if (video_decode_packet(vidx, frame, packet) < 0) {
+			break;
+		}
+
+		eznotify(vidx, EN_FRAME_COMPLETE, i, 0, frame);
+		if (dts < dts_snap) {
+			av_free_packet(packet);
+			continue;
+		}
+
+		eznotify(vidx, EN_FRAME_EFFECT, i, (long)packet, frame);
+		av_free_packet(packet);
+
+		video_snap_update(vidx, image, frame, i, dts);
+		i++;
+		dts_snap = video_snap_point(vidx, image, i);
+
+		if (vidx->keydelta > vidx->keygap) {
+			break;
+		}
+
+	} while (av_read_frame(vidx->formatx, packet) >= 0)；
+	return i;
+}
+
+
+int video_save_auto_pass(EZVID *vidx, EZIMG *image, AVFrame *frame)
+{
+	AVPacket	packet;
+	int64_t		dts, dts_now, dts_snap;
+	int		i;
+
+	video_snap_begin(vidx, image);
+	for (i = 0; i < image->shots; i++) {
+		dts_snap = video_snap_point(vidx, image, i);
+		dts_now  = video_seek_keyframe(vidx, image, &packet, i);
+		if (dts_now < 0) {
+			break;
+		}
+
+		if (dts_now < dts_snap) {
+			i = video_extract_pframes(vidx, image, frame, &packet, i);
+			i--;
+		} else {
+			if (video_decode_packet(vidx, frame, &packet) < 0) {
+				break;
+			}
+			eznotify(vidx, EN_FRAME_COMPLETE, i, 0, frame);
+			eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
+			av_free_packet(&packet);
+			video_snap_update(vidx, image, frame, i, dts_now);
+		}
+	}
+	video_snap_end(vidx, image);
+	return EZ_ERR_NONE;
+}
+
+
+
 
 
 int64_t video_locate_keyframe(EZVID *vidx, int64_t aimed_dts)
