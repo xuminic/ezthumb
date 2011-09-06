@@ -62,6 +62,7 @@
 #define EN_STREAM_FORMAT	1021
 #define EN_STREAM_INFO		1022
 #define EN_MEDIA_STATIS		1023
+#define EN_STREAM_BROKEN	1024
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -322,21 +323,11 @@ int ezstatis(char *filename, EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
 int video_free(EZVID *vidx);
-int video_save_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_save_quick_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_save_scan_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_save_single_pass(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int64_t video_locate_keyframe(EZVID *vidx, int64_t aimed_dts);
-int video_extract_frames(EZVID *vidx, EZIMG *image, AVFrame *frame,
-		int sn, int64_t dts_next_key);
-
-int video_scan_keyframe(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_seek_available(EZVID *vidx, EZIMG *image);
-int64_t video_extract_frame(EZVID *vidx, EZIMG *image, AVFrame *, int64_t);
-int video_media_on_canvas(EZVID *vidx, EZIMG *image);
-int video_find_stream(EZVID *vidx, int flags);
-int video_enlist_image_dts(EZVID *vidx, EZIMG *image);
-int video_duration(EZVID *vidx, int scanmode);
+int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_snapshot_auto(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int64_t video_dts_to_ms(EZVID *vidx, int64_t dts);
 int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
 int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
@@ -344,23 +335,6 @@ int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
 EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
 int image_free(EZIMG *image);
-int image_scale(EZIMG *image, AVFrame *frame);
-int image_font_test(EZIMG *image, char *filename);
-int image_gdframe_screenshot(EZIMG *image, AVFrame *frame, char *timestamp);
-int image_gdframe_update(EZIMG *image);
-int image_gdframe_timestamp(EZIMG *image, char *timestamp);
-int image_gdframe_save(EZIMG *image, char *filename, int idx);
-int image_gdframe_strlen(EZIMG *image, int fsize, char *s);
-int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char *s);
-int image_gdcanvas_save(EZIMG *image, char *filename);
-int image_gdcanvas_update(EZIMG *image, int idx);
-int image_gdcanvas_print(EZIMG *image, int row, int off, char *s);
-int image_gdcanvas_strlen(EZIMG *image, int fsize, char *s);
-int image_gdcanvas_puts(EZIMG *image, int fsize, int x, int y, int c, char *s);
-int image_gdcanvas_background(EZIMG *image);
-FILE *image_gif_anim_open(EZIMG *image, char *filename);
-int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
-int image_gif_anim_close(EZIMG *image, FILE *fout);
 
 int meta_time_diff(struct timeval *tvbegin);
 

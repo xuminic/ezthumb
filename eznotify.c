@@ -183,20 +183,8 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_DURATION:
 		if (param == ENX_DUR_REWIND) {
 			printf("Rewound PTS: %lld < %lld\n",
-					(long long)((AVPacket*) block)->pts,
+					(long long)((AVPacket*) block)->dts,
 					*((long long *) opt));
-		}
-		break;
-	case EN_PTS_LIST:
-		printf("Screenshot PTS estimating:\n");
-		for (i = 0; i < param; i++) {
-			printf("%9lld", ((long long *)block)[i]);
-			if ((i % 8) == 7) {
-				printf("\n");
-			}
-		}
-		if ((i % 8) != 0) {
-			printf("\n");
 		}
 		break;
 	case EN_SEEK_FRAME:
@@ -262,8 +250,8 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 			printf("UNKNOWN");
 			break;
 		}
-		ms = video_pts_to_ms(vidx, 
-				mestat[i].pts_base + mestat[i].pts_last);
+		ms = video_dts_to_ms(vidx, 
+				mestat[i].dts_base + mestat[i].dts_last);
 		printf(":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
 				mestat[i].received, mestat[i].key, 
 				mestat[i].rewound, ms / 1000);
