@@ -1,4 +1,9 @@
 
+20110906: V1.4.0
+  Many codes regroups in recent day. Begin with a thought that reducing 
+  scan passes if video file doesn't support backward seek. I roughly
+  have got an idea of a heuristic method. Hope it can be done in 1.4.1
+
 20110831:
   + ezthumb.c: a little bit speed up of the video_duration() function
 

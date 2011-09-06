@@ -142,7 +142,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_SCAN_PACKET:
-		dump_packet(block);
+		//printf("Key Frame %d: %lld\n", param, *((long long *)block));
 		break;
 	case EN_SCAN_IFRAME:
 		printf("I-Frame Scanned (%ld ms):\n", opt);
@@ -188,16 +188,19 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_SEEK_FRAME:
-		if (param) {
-			printf("WARNING: stream backward seeking disabled.\n");
+		if (param == 0) {
+			printf("WARNING: Backward Seeking Disabled.\n");
 		} else if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
-			printf("Backward seeking with av_seek_frame(): %ld\n",
-					opt);
+			printf("Backward Seeking Test: %lld to %lld (%ld ms)\n",
+					((long long *) block)[0],
+					((long long *) block)[1], opt);
 		}
 		break;
 	case EN_MEDIA_STATIS:
-		ezdump_media_statistics((struct MeStat *) param, 
-				(int)opt, vidx);
+		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
+			ezdump_media_statistics((struct MeStat *) param, 
+					(int)opt, vidx);
+		}
 		break;
 	}
 	return event;
@@ -446,7 +449,7 @@ int dump_ezimage(EZIMG *image)
 			image->sysopt->flags & EZOP_TIMEST ? "TS" : "",
 			image->sysopt->flags & EZOP_FFRAME ? "FF" : "",
 			image->sysopt->flags & EZOP_LFRAME ? "LF" : "",
-			image->sysopt->flags & EZOP_ANYFRAME ? "AF" : "",
+			image->sysopt->flags & EZOP_P_FRAME ? "PF" : "",
 			image->sysopt->flags & EZOP_CLI_INFO ? "CI" : "",
 			image->sysopt->flags & EZOP_CLI_DEBUG ? "CD" : "",
 			image->sysopt->flags & EZOP_CLI_FFM_LOG ? "CF" : "");

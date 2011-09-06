@@ -29,7 +29,6 @@
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: ezthumb [OPTIONS] video_clip ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
-	{ 'b', "background", 2, "the background picture" },
 	{ 'c', "colour",  2, "the colour setting (MI:TM:BG)(RRGGBB)" },
 	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
 	{ 'e', "edge",    1, "the width of the screen shot edge (0)" },
@@ -40,13 +39,13 @@ static	struct	cliopt	clist[] = {
 	{ 'I', "info",    0, "display the media information" },
 	{ 'm', "format",  2, "the output format (jpg@85)" },
 	{ 'o', "outdir",  2, "the directory for storing output images" },
-	{ 'p', "transparent", 0, "make the background transparent" },
+	{ 'p', "process", 1, "specify the process method (0|1|2|3|4)" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
-	{ 'S', "statis",  0, "display the media statistics" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
 	{ 'v', "verbose", 0, "verbose mode" },
 	{ 'w', "width",   1, "the whole width of the thumbnail canvas" },
 	{ 'x', "suffix",  2, "the suffix of output filename (_thumb)" },
+	{   7, "background", 2, "the background picture" },
 	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
 	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
 	{  10, "opt-info", 2, "the media infomation (on)" },
@@ -59,11 +58,11 @@ static	struct	cliopt	clist[] = {
 	{   0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
 	{  18, "time-from",2, "the time in video where begins shooting" },
 	{  19, "time-end", 2, "the time in video where ends shooting" },
-	{  20, "linear",   0, "linear process the whole video, aka no seek" },
-	{  21, "anyframe", 0, "take shots at any frames includes P-frame" },
+	{  23, "transparent", 0, "generate the transparent background" },
+	{  21, "accurate", 0, "take accurate shots including P-frames" },
 	{  22, "vindex",   1, "the index of the video stream" },
-	{ 1,   "help",    0, "Display the help message" },
-	{ 2,   "version", 0, "Display the version number" },
+	{   1, "help",    0, "Display the help message" },
+	{   2, "version", 0, "Display the version number" },
 	{ 0, NULL, 0, NULL }
 };
 
@@ -109,6 +108,9 @@ int main(int argc, char **argv)
 		case 2:
 			printf(version, EZTHUMB_VERSION);
 			return 0;
+		case 7:
+			sysoption.background = optarg;
+			break;
 		case 8:	/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
 			sysoption.grid_gap_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -180,17 +182,15 @@ int main(int argc, char **argv)
 		case 19:	/* time-end */
 			sysoption.time_to = para_get_time_point(optarg);
 			break;
-		case 20:	/* linear */
-			sysoption.flags |= EZOP_LINEAR;
-			break;
 		case 21:	/* nonkey */
-			sysoption.flags |= EZOP_ANYFRAME;
+			sysoption.flags |= EZOP_P_FRAME;
 			break;
 		case 22:	/* index */
 			sysoption.vs_idx = strtol(optarg, NULL, 0);
 			break;
-		case 'b':
-			sysoption.background = optarg;
+		case 23:
+			sysoption.flags |= EZOP_TRANSPARENT;
+			sysoption.canvas_color[3] = 0;
 			break;
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
 			para_get_color(&sysoption, optarg);
@@ -252,8 +252,23 @@ int main(int argc, char **argv)
 			sysoption.pathout = optarg;
 			break;
 		case 'p':
-			sysoption.flags |= EZOP_TRANSPARENT;
-			sysoption.canvas_color[3] = 0;
+			if ((*optarg == '1') || !strcmp(optarg, "skim")) {
+				sysoption.flags |= EZOP_PROC_SKIM;
+				break;
+			}
+			if ((*optarg == '2') || !strcmp(optarg, "scan")) {
+				sysoption.flags |= EZOP_PROC_SCAN;
+				break;
+			}
+			if ((*optarg == '3') || !strcmp(optarg, "twopass")) {
+				sysoption.flags |= EZOP_PROC_TWOPASS;
+				break;
+			}
+			if ((*optarg == '4') || !strcmp(optarg, "heuris")) {
+				sysoption.flags |= EZOP_PROC_HEURIS;
+				break;
+			}
+			sysoption.flags |= EZOP_PROC_AUTO;
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
 			c = strtol(optarg, &p, 0);
@@ -265,11 +280,6 @@ int main(int argc, char **argv)
 				sysoption.tn_width  = c;
 				sysoption.tn_height = strtol(++p, NULL, 0);
 			}
-			break;
-		case 'S':
-			/* make these options default */
-			sysoption.flags |= EZOP_CLI_INFO;
-			todo = c;
 			break;
 		case 't':
 			sysoption.tm_step = strtol(optarg, NULL, 0);
@@ -314,11 +324,6 @@ int main(int argc, char **argv)
 		sysoption.notify = event_list;
 		for ( ; optind < argc; optind++) {
 			c = ezinfo(argv[optind], &sysoption);
-		}
-		break;
-	case 'S':
-		for ( ; optind < argc; optind++) {
-			c = ezstatis(argv[optind], &sysoption);
 		}
 		break;
 	default:

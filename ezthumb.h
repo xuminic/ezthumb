@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.3.3"
+#define	EZTHUMB_VERSION		"1.4.0"
 
 
 #define EZ_ERR_NONE		0
@@ -82,7 +82,7 @@
 /* Take shots at any frame, otherwise it only takes shots at key frames. 
  * However, if the shot's step is less than EZ_GATE_KEY_STEP millisecond, 
  * it automatically converts into EZOP_ANYFRAME mode */
-#define EZOP_ANYFRAME		16	
+#define EZOP_P_FRAME		16	
 /* Display media information in the command line. It just displays the
  * common information, not includes the debug info */
 #define EZOP_CLI_INFO		32
@@ -92,12 +92,15 @@
 #define EZOP_CLI_FFM_LOG	128
 /* Setup the transparent background */
 #define EZOP_TRANSPARENT	256
-/* Linear process the whole video clip without using av_seek_frame()
- * Sometimes this function doesn't work in WMV files so processing the 
- * whole video file from first packet to the last packet is necessary */
-#define EZOP_LINEAR		512
 /* Display a short list of the media information in the command line */
-#define EZOP_CLI_LIST		1024
+#define EZOP_CLI_LIST		512
+
+#define EZOP_PROC_MASK		0xf0000
+#define EZOP_PROC_AUTO		0
+#define EZOP_PROC_SKIM		0x10000	/* use av_seek_frame() */
+#define EZOP_PROC_SCAN		0x20000	/* single pass i-frame scan */
+#define EZOP_PROC_TWOPASS	0x30000	/* two pass scan support p-frame */
+#define EZOP_PROC_HEURIS	0x40000 /* heuristic scan */
 
 
 #define EZ_POS_LEFTTOP		0
@@ -251,8 +254,6 @@ typedef	struct	{
 	int	time_from;	/* from where to take shots (ms) */
 	int	time_during;	/* the time range of shots (ms) */
 	int	time_step;	/* timestep in millisecond to take shots */
-	int64_t	*dts_list;	/* the list of proposal DTS for screenshots */
-	int64_t *dts_keyf;	/* the DTS of the nearest keyframe ahead */
 
 	/* gaps */
 	int	gap_width;	/* gap between shots in column */
@@ -327,7 +328,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_snapshot_auto(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame);
 int64_t video_dts_to_ms(EZVID *vidx, int64_t dts);
 int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
 int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
