@@ -1,6 +1,23 @@
+Functional Test Plan
+====================
 
-# Generate 4x4 thumbnails, 50% screen size
-ezthumb video.wmv
+Test File:
+small.wmv: 4 i-frames, 10 seconds, backward seekable
 
-# Generate 4x4 thumbnails, 50% screen size and accurate frames
-ezthumb --anyframe video.wmv
+
+
+
+#001 Generate 4x4 thumbnails, 50% screen size
+ezthumb small.wmv
+
+#002 Generate 4x4 thumbnails, 50% screen size and accurate frames
+ezthumb --accurate small.wmv
+
+#003 Display media quick list
+ezthumb -i *
+
+#004 Display detailed media information
+ezthumb -I small.wmv
+
+#005 Do a full scan and display the media information
+ezthumb -I -d scan small.wmv

@@ -187,6 +187,11 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 					*((long long *) opt));
 		}
 		break;
+	case EN_BUMP_BACK:
+		printf("Bump back to %lld: %ld (%lld < %lld)\n",
+				*((long long *) block), param,
+				vidx->keydelta, vidx->keygap);
+		break;
 	case EN_SEEK_FRAME:
 		if (param == 0) {
 			printf("WARNING: Backward Seeking Disabled.\n");
@@ -259,6 +264,7 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 				mestat[i].received, mestat[i].key, 
 				mestat[i].rewound, ms / 1000);
 	}
+	printf("Maximum gap of key frames: %lld\n", vidx->keygap);
 	printf("Time used: %.3f\n", meta_time_diff(&vidx->tmark) / 1000.0);
 	return 0;
 }
