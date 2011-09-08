@@ -58,6 +58,7 @@
 #define EN_DURATION		1015
 #define EN_PACKET_KEY		1016
 #define EN_BUMP_BACK		1017
+#define EN_SNAP_SHOT		1018
 #define EN_DTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
@@ -69,6 +70,15 @@
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
 #define ENX_DUR_REWIND		2	/* rewinding occurred */
 #define ENX_DUR_SCAN		3	/* duration from media scan */
+
+#define ENX_SS_SKIM		0
+#define ENX_SS_SCAN		1
+#define ENX_SS_TWOPASS		2
+#define ENX_SS_HEURIS		3
+#define ENX_SS_IFRAMES		4
+
+#define ENX_SEEK_BW_YES		1
+#define ENX_SEEK_BW_NO		0
 
 
 #define EZ_DUR_CLIPHEAD		0
@@ -285,13 +295,14 @@ typedef	struct		{
 	int		vsidx;
 
 	int		duration;	/* the stream duration in ms */
-	int		unseek;		/* video unseekable flag */
 	struct timeval	tmark;		/* the beginning timestamp */
 
 	int64_t		keygap;		/* maximum gap between keyframe */
 	int64_t		keylast;	/* the DTS of the last keyframe */
+	int64_t		keyfirst;	/* the DTS of the first keyframe */
 	int		keycount;
 	int64_t		keydelta;	/* the delta DTS of snapshots */
+	int		keyseek;	/* video keyframe seekable flag */
 
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */

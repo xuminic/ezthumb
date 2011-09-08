@@ -193,7 +193,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 				vidx->keydelta, vidx->keygap);
 		break;
 	case EN_SEEK_FRAME:
-		if (param == 0) {
+		if (param == ENX_SEEK_BW_NO) {
 			printf("WARNING: Backward Seeking Disabled.\n");
 		} else if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
 			printf("Backward Seeking Test: %lld to %lld (%ld ms)\n",
