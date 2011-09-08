@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.4.0"
+#define	EZTHUMB_VERSION		"1.4.1"
 
 
 #define EZ_ERR_NONE		0
@@ -65,6 +65,7 @@
 #define EN_STREAM_INFO		1022
 #define EN_MEDIA_STATIS		1023
 #define EN_STREAM_BROKEN	1024
+#define EN_IFRAME_CREDIT	1025
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -79,6 +80,10 @@
 
 #define ENX_SEEK_BW_YES		1
 #define ENX_SEEK_BW_NO		0
+
+#define ENX_IFRAME_RESET	0
+#define ENX_IFRAME_SET		1
+#define ENX_IFRAME_UPDATE	2
 
 
 #define EZ_DUR_CLIPHEAD		0
@@ -144,8 +149,6 @@
 #define EZ_TEXT_SHADOW_OFF	2
 #define EZ_SHOT_SHADOW_OFF	3
 
-#define EZ_GATE_KEY_STEP	10000		/* minimal seek step in ms */
-#define EZ_GATE_QK_SCAN		(1 << 22)	/* 4M */
 #define EZ_RATIO_OFF		0x40000000
 
 #define EZ_ST_ALL		0	/* all packet in the whole file */	
@@ -295,14 +298,13 @@ typedef	struct		{
 	int		vsidx;
 
 	int		duration;	/* the stream duration in ms */
+	int		seekable;	/* video keyframe seekable flag */
 	struct timeval	tmark;		/* the beginning timestamp */
 
 	int64_t		keygap;		/* maximum gap between keyframe */
 	int64_t		keylast;	/* the DTS of the last keyframe */
-	int64_t		keyfirst;	/* the DTS of the first keyframe */
 	int		keycount;
 	int64_t		keydelta;	/* the delta DTS of snapshots */
-	int		keyseek;	/* video keyframe seekable flag */
 
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */

@@ -190,21 +190,35 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_BUMP_BACK:
 		printf("Bump back to %lld: %ld (%lld < %lld)\n",
 				*((long long *) block), param,
-				vidx->keydelta, vidx->keygap);
+				(long long) vidx->keydelta, 
+				(long long) vidx->keygap);
 		break;
 	case EN_SEEK_FRAME:
 		if (param == ENX_SEEK_BW_NO) {
 			printf("WARNING: Backward Seeking Disabled.\n");
 		} else if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
-			printf("Backward Seeking Test: %lld to %lld (%ld ms)\n",
-					((long long *) block)[0],
-					((long long *) block)[1], opt);
+			printf("Backward Seeking Test successed to %lld\n",
+					*((long long *) block));
 		}
 		break;
 	case EN_MEDIA_STATIS:
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
 			ezdump_media_statistics((struct MeStat *) param, 
 					(int)opt, vidx);
+		}
+		break;
+	case EN_IFRAME_CREDIT:
+		switch (param) {
+		case ENX_IFRAME_RESET:
+			break;
+		case ENX_IFRAME_SET:
+			printf("Key Frame start from: %lld\n", 
+					(long long) vidx->keylast);
+			break;
+		case ENX_IFRAME_UPDATE:
+			printf("Key Frame Gap Update: %lld\n", 
+					(long long) vidx->keygap);
+			break;
 		}
 		break;
 	}
@@ -264,7 +278,7 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 				mestat[i].received, mestat[i].key, 
 				mestat[i].rewound, ms / 1000);
 	}
-	printf("Maximum gap of key frames: %lld\n", vidx->keygap);
+	printf("Maximum Gap of key frames: %lld\n", (long long) vidx->keygap);
 	printf("Time used: %.3f\n", meta_time_diff(&vidx->tmark) / 1000.0);
 	return 0;
 }

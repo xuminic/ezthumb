@@ -39,6 +39,7 @@ static int64_t *video_keyframe_survey(EZVID *vidx, EZIMG *image);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
 static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
+static int64_t video_current_dts(EZVID *vidx);
 static int video_seekable_random(EZVID *vidx, EZIMG *image);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static int video_find_stream(EZVID *vidx, int flags);
@@ -178,7 +179,6 @@ int ezthumb(char *filename, EZOPT *ezopt)
 	 *************************************************************/
 	
 	vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
-	vidx->keyfirst = -1;
 	video_keyframe_credit(vidx, -1);
 
 	switch (ezopt->flags & EZOP_PROC_MASK) {
@@ -195,12 +195,19 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		video_snapshot_heuristic(vidx, image, frame);
 		break;
 	default:
+		/*
 		if (video_seekable_random(vidx, image) == ENX_SEEK_BW_YES) {
 			video_snapshot_skim(vidx, image, frame);
 		} else if (ezopt->flags & EZOP_P_FRAME) {
-			video_snapshot_twopass(vidx, image, frame);
+			video_snapshot_heuristic(vidx, image, frame);
 		} else {
 			video_snapshot_scan(vidx, image, frame);
+		}
+		*/
+		if (video_seekable_random(vidx, image) == ENX_SEEK_BW_YES) {
+			video_snapshot_skim(vidx, image, frame);
+		} else {
+			video_snapshot_heuristic(vidx, image, frame);
 		}
 		break;
 	}
@@ -249,7 +256,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	memset(vidx, 0, sizeof(EZVID));
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;	/* keep a copy of the filename */
-	vidx->keyfirst = -1;
+	vidx->seekable = -1;
 	gettimeofday(&vidx->tmark, NULL);	/* get current time */
 
 #if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
@@ -704,27 +711,22 @@ static int64_t *video_keyframe_survey(EZVID *vidx, EZIMG *image)
 static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
-	if (packet == NULL) {
+	if (dts < 0) {
 		vidx->keylast = -1;
+		eznotify(vidx, EN_IFRAME_CREDIT, ENX_IFRAME_RESET, 0, vidx);
 		return vidx->keycount;
 	}
 
 	/* record the status of the first key frame since resetted */
 	if (vidx->keylast < 0) {
 		vidx->keylast = dts;
-		if (vidx->keyfirst == dts) {
-			vidx->keyseek = ENX_SEEK_BW_NO;
-		} else {
-			vidx->keyseek = ENX_SEEK_BW_YES;
-		}
-		if (vidx->keyfirst < 0) {
-			vidx->keyfirst = dts;
-		}
+		eznotify(vidx, EN_IFRAME_CREDIT, ENX_IFRAME_SET, 0, vidx);
 		return vidx->keycount;
 	}
 
 	if (dts - vidx->keylast > vidx->keygap) {
 		vidx->keygap = dts - vidx->keylast;
+		eznotify(vidx, EN_IFRAME_CREDIT, ENX_IFRAME_UPDATE, 0, vidx);
 	}
 	vidx->keycount++;
 	vidx->keylast = dts;
@@ -735,10 +737,6 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 {
 	int64_t		dts, dts_last, dts_diff;
 	int		keyflag;
-
-	if (vidx->keyseek == ENX_SEEK_BW_YES) {
-		video_seeking(vidx, dts_snap);
-	}
 
 	dts_last = 0;
 	while ((dts = video_keyframe_next(vidx, packet)) >= 0) {
@@ -804,40 +802,52 @@ static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 	return -1;
 }
 
-static int video_seekable_random(EZVID *vidx, EZIMG *image)
+static int64_t video_current_dts(EZVID *vidx)
 {
 	AVPacket	packet;
-	struct timeval	tmstart; 
+	int64_t		dts;
+
+	while (av_read_frame(vidx->formatx, &packet) >= 0) {
+		if (packet.stream_index != vidx->vsidx) {
+			av_free_packet(&packet);
+			continue;
+		}
+		if ((dts = meta_packet_timestamp(&packet)) < 0) {
+			av_free_packet(&packet);
+			continue;
+		}
+		av_free_packet(&packet);
+		return dts;
+	}
+	return -1;
+}
+
+static int video_seekable_random(EZVID *vidx, EZIMG *image)
+{
 	int64_t		dts[2];
 
-	gettimeofday(&tmstart, NULL);
-
-	vidx->keyseek = ENX_SEEK_BW_YES;
+	if (vidx->seekable >= 0) {
+		return vidx->seekable;
+	}
 
 	/* find the first key frame */
-	if ((dts[0] = video_keyframe_next(vidx, &packet)) < 0) {
-		vidx->keyseek = ENX_SEEK_BW_NO;	/* not seek-able */
-		goto vsr_exit;
-	}
-	av_free_packet(&packet);
+	dts[0] = video_current_dts(vidx);
 	
 	/* find the last key frame */
 	video_seeking(vidx, video_snap_point(vidx, image, image->shots - 1));
-	if ((dts[1] = video_keyframe_next(vidx, &packet)) < 0) {
-		vidx->keyseek = ENX_SEEK_BW_NO;	/* not seek-able */
-		goto vsr_exit;
-	}
-	av_free_packet(&packet);
-
+	dts[1] = video_current_dts(vidx);
+	
 	video_rewind(vidx);
-	if (dts[1] <= dts[0]) {
-		vidx->keyseek = ENX_SEEK_BW_NO; 
-	}
 
-vsr_exit:
-	eznotify(vidx, EN_SEEK_FRAME, vidx->keyseek, 
-			meta_time_diff(&tmstart), dts);
-	return vidx->keyseek;
+	if ((dts[1] < 0) || (dts[0] < 0)) {
+		vidx->seekable = ENX_SEEK_BW_NO;
+	} else if (dts[1] <= dts[0]) {
+		vidx->seekable = ENX_SEEK_BW_NO; 
+	} else {
+		vidx->seekable = ENX_SEEK_BW_YES;
+	}
+	eznotify(vidx, EN_SEEK_FRAME, vidx->seekable, 0, &dts[1]);
+	return vidx->seekable;
 }
 
 
@@ -959,7 +969,7 @@ static int video_find_stream(EZVID *vidx, int flags)
  * User need to specify the scan method. */
 static int video_duration(EZVID *vidx, int scanmode)
 {
-	int64_t		cur_dts;
+	int64_t		first_dts, cur_dts;
 
 	if (vidx->formatx->duration && (scanmode == EZ_DUR_CLIPHEAD)) {
 		/* convert duration from AV_TIME_BASE to video stream base */
@@ -973,19 +983,24 @@ static int video_duration(EZVID *vidx, int scanmode)
 
 	/* quick scan from the tail of the stream */
 	if (scanmode != EZ_DUR_FULLSCAN) {
-		/* we only do this when the file is not too small */
-		if (vidx->formatx->file_size > EZ_GATE_QK_SCAN) {
-			/* byte seek from 90% of the clip */
-			cur_dts = vidx->formatx->file_size * 9 / 10;
-			//printf("Start %lld\n", cur_dts);
-			av_seek_frame(vidx->formatx, vidx->vsidx, 
-					cur_dts, AVSEEK_FLAG_BYTE);
-			eznotify(vidx, EN_DURATION, ENX_DUR_JUMP, 
-					0, &cur_dts);
+		first_dts = video_current_dts(vidx);
+		
+		/* seek to 90% of the clip */
+		cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
+		video_seeking(vidx, cur_dts * 9 / 10);
+		cur_dts = video_current_dts(vidx);
+
+		if ((first_dts < 0) || (cur_dts < 0)) {
+			vidx->seekable = ENX_SEEK_BW_NO;
+		} else if (cur_dts <= first_dts) {
+			vidx->seekable = ENX_SEEK_BW_NO;
+		} else {
+			vidx->seekable = ENX_SEEK_BW_YES;
 		}
+		eznotify(vidx, EN_SEEK_FRAME, vidx->seekable, 0, &cur_dts);
+		eznotify(vidx, EN_DURATION, ENX_DUR_JUMP, 0, &cur_dts);
 	}
 
-	video_keyframe_credit(vidx, -1);
 	cur_dts = video_statistics(vidx);
 
 	video_rewind(vidx); 	/* rewind the stream to head */
@@ -1010,6 +1025,7 @@ static int64_t video_statistics(EZVID *vidx)
 	int		i, imax = 0;
 
 	memset(mestat, 0, sizeof(mestat));
+	video_keyframe_credit(vidx, -1);
 	while (av_read_frame(vidx->formatx, &packet) >= 0) {
 		i = packet.stream_index;
 		if (i > vidx->formatx->nb_streams) {
