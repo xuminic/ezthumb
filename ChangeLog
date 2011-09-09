@@ -1,4 +1,10 @@
 
+20110908: V1.4.2
+  Displaying the screen shot method has been moved into video_snap_begin()
+
+20110908: V1.4.1
+  heuristic method is ready for test.
+
 20110906: V1.4.0
   Many codes regroups in recent day. Begin with a thought that reducing 
   scan passes if video file doesn't support backward seek. I roughly

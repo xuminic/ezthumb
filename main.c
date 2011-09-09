@@ -503,7 +503,24 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 
 	switch (event) {
 	case EN_PROC_BEGIN:
-		printf("Building      ");
+		switch (opt) {
+		case ENX_SS_SCAN:
+			printf("Building (Scan)      ");
+			break;
+		case ENX_SS_TWOPASS:
+			printf("Building (2Pass)     ");
+			break;
+		case ENX_SS_HEURIS:
+			printf("Building (Heur)      ");
+			break;
+		case ENX_SS_IFRAMES:
+			printf("Building (iFrame) ");
+			break;
+		case ENX_SS_SKIM:
+		default:
+			printf("Building (Fast)      ");
+			break;
+		}	
 		dotted = 0;
 		break;
 

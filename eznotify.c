@@ -208,6 +208,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_IFRAME_CREDIT:
+		/*
 		switch (param) {
 		case ENX_IFRAME_RESET:
 			break;
@@ -219,7 +220,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			printf("Key Frame Gap Update: %lld\n", 
 					(long long) vidx->keygap);
 			break;
-		}
+		}*/
 		break;
 	}
 	return event;

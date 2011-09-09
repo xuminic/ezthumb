@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.4.1"
+#define	EZTHUMB_VERSION		"1.4.2"
 
 
 #define EZ_ERR_NONE		0
@@ -58,7 +58,6 @@
 #define EN_DURATION		1015
 #define EN_PACKET_KEY		1016
 #define EN_BUMP_BACK		1017
-#define EN_SNAP_SHOT		1018
 #define EN_DTS_LIST		1019
 #define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021

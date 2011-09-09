@@ -46,7 +46,7 @@ static int video_find_stream(EZVID *vidx, int flags);
 static int video_duration(EZVID *vidx, int scanmode);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
-static int video_snap_begin(EZVID *vidx, EZIMG *image);
+static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
 static int video_snap_update(EZVID *vidx, EZIMG *image, AVFrame *frame, 
 		int sn, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
@@ -331,8 +331,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
-	eznotify(vidx, EN_SNAP_SHOT, ENX_SS_IFRAMES, 0, NULL);
-	video_snap_begin(vidx, image);
+	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
 	i = 0;
 	video_keyframe_credit(vidx, -1);
@@ -368,8 +367,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int64_t		dts, dts_snap, last_key;
 	int		i;
 
-	eznotify(vidx, EN_SNAP_SHOT, ENX_SS_SKIM, 0, NULL);
-	video_snap_begin(vidx, image);
+	video_snap_begin(vidx, image, ENX_SS_SKIM);
 	for (i = last_key = 0; i < image->shots; i++) {
 		dts_snap = video_snap_point(vidx, image, i);
 
@@ -414,8 +412,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int64_t		dts, dts_snap, last_key = -1;
 	int		i;
 
-	eznotify(vidx, EN_SNAP_SHOT, ENX_SS_SCAN, 0, NULL);
-	video_snap_begin(vidx, image);
+	video_snap_begin(vidx, image, ENX_SS_SCAN);
 	for (i = dts = 0; i < image->shots; i++) {
 		dts_snap = video_snap_point(vidx, image, i);
 
@@ -454,12 +451,11 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int64_t		dts, dts_snap, last_key = -1;
 	int		i;
 
-	eznotify(vidx, EN_SNAP_SHOT, ENX_SS_TWOPASS, 0, NULL);	
 	if ((keylist = video_keyframe_survey(vidx, image)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 
-	video_snap_begin(vidx, image);
+	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
 	for (i = dts = 0; i < image->shots; i++) {
 		/* find the snap point to shoot */
 		dts_snap = video_snap_point(vidx, image, i);
@@ -510,8 +506,7 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int64_t		dts, dts_snap, last_key = -1;
 	int		i;
 
-	eznotify(vidx, EN_SNAP_SHOT, ENX_SS_HEURIS, 0, NULL);
-	video_snap_begin(vidx, image);
+	video_snap_begin(vidx, image, ENX_SS_HEURIS);
 	for (i = dts = 0; i < image->shots; i++) {
 		dts_snap = video_snap_point(vidx, image, i);
 		/*printf("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
@@ -1079,7 +1074,7 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 }
 
 
-static int video_snap_begin(EZVID *vidx, EZIMG *image)
+static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 {
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
@@ -1088,7 +1083,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image)
 		vidx->gifx_fp = image_gif_anim_open(image, vidx->filename);
 	}
 
-	eznotify(vidx, EN_PROC_BEGIN, (long)vidx->duration, 0, NULL);
+	eznotify(vidx, EN_PROC_BEGIN, (long)vidx->duration, method, NULL);
 	return 0;
 }
 
