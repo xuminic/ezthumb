@@ -249,8 +249,11 @@ static int ezdump_video_info(EZVID *vidx)
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		codecx = vidx->formatx->streams[i]->codec;
 		if (codecx->codec_type == CODEC_TYPE_VIDEO) {
-			sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
-			sprintf(tmp,"%dx%d", codecx->width, codecx->height);
+			/* Fixed: the video information should use the actual
+			 * duration of the clip */
+			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
+			sec = vidx->duration / 1000;
+			sprintf(tmp, "%dx%d", codecx->width, codecx->height);
 			printf("%2d:%02d:%02d %10s [%d]: %s\n",
 					sec / 3600,
 					(sec % 3600) / 60, 
