@@ -1514,24 +1514,23 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 		/* define the colors that are used in the canvas
 		 * and setup the background color */
-		image->color_canvas = gdImageColorAllocateAlpha(
+		image->color_canvas = gdImageColorResolveAlpha(
 				image->gdcanvas,
 				ezopt->canvas_color[0], 
 				ezopt->canvas_color[1],
 				ezopt->canvas_color[2], 
 				ezopt->canvas_color[3]);
-		image->color_shadow = gdImageColorAllocateAlpha(
+		image->color_shadow = gdImageColorResolveAlpha(
 				image->gdcanvas,
 				ezopt->shadow_color[0], 
 				ezopt->shadow_color[1],
 				ezopt->shadow_color[2], 
 				ezopt->shadow_color[3]);
-		image->color_minfo = gdImageColorAllocateAlpha(
+		image->color_minfo = gdImageColorResolve(
 				image->gdcanvas,
 				ezopt->mi_color[0], 
 				ezopt->mi_color[1],
-				ezopt->mi_color[2], 
-				ezopt->mi_color[3]);
+				ezopt->mi_color[2]);
 
 		/* setup the background color */
 		gdImageFilledRectangle(image->gdcanvas, 0, 0, 
@@ -1543,13 +1542,13 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	}
 
 	/* define the colors used in the screen shots */
-	image->color_edge = gdImageColorAllocateAlpha(image->gdframe,
+	image->color_edge = gdImageColorResolve(image->gdframe,
 			ezopt->edge_color[0], ezopt->edge_color[1],
-			ezopt->edge_color[2], ezopt->edge_color[3]);
-	image->color_inset = gdImageColorAllocateAlpha(image->gdframe,
+			ezopt->edge_color[2]);
+	image->color_inset = gdImageColorResolve(image->gdframe,
 			ezopt->ins_color[0], ezopt->ins_color[1],
-			ezopt->ins_color[2], ezopt->ins_color[3]);
-	image->color_inshadow = gdImageColorAllocateAlpha(image->gdframe,
+			ezopt->ins_color[2]);
+	image->color_inshadow = gdImageColorResolveAlpha(image->gdframe,
 			ezopt->its_color[0], ezopt->its_color[1],
 			ezopt->its_color[2], ezopt->its_color[3]);
 
@@ -1789,6 +1788,7 @@ static int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char
 {
 	int	brect[8];
 
+	//printf("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", x, y, fsize, s, c);
 	fsize = meta_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
 		gdImageString(image->gdframe, meta_fontset(fsize),

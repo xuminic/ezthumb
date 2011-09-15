@@ -3,8 +3,11 @@ Functional Test Plan
 
 Test File:
 small.wmv: 4 i-frames, 10 seconds, backward seekable
-
-
+middle.avi: 40 minutes video clip
+broken.avi: a broken video clip
+jumppy.avi: composed by 3 clips each has minutes offset (cat broken.avi xag xap > jumppy.avi)
+bumppy.avi: content the rewound time stamp (cat broken.avi xar xaf > bummpy.avi)
+DejaVuSans.ttf: TTF font file
 
 
 #001 Generate 4x4 thumbnails, 50% screen size
@@ -21,3 +24,30 @@ ezthumb -I small.wmv
 
 #005 Do a full scan and display the media information
 ezthumb -I -d scan small.wmv
+
+#006 Do a quick scan and display the media information
+ezthumb -I -d fast small.wmv
+
+#007 Specify the canvas colour: Media information is BLUE, Timestamp is RED,
+#    The background is grey
+ezthumb -c 0000ff:ff0000:7f7f7f small.wmv
+
+#008 Only setup the background colour:
+ezthumb -c ::7f7f7f small.wmv
+
+#009 Check the effect of the -d option: see the different of below
+ezthumb -i broken.avi
+ezthumb -i -d fast broken.avi
+
+#010 Set up the thumbnail edge
+ezthumb -e 4 small.wmv
+
+#011 Test the external font with DejaVuSans.ttf:
+ezthumb -f ./DejaVuSans.ttf small.wmv
+
+#012 Use the external font DejaVuSans.ttf and change its size
+ezthumb -f ./DejaVuSans.ttf -F 16:8 small.wmv
+
+#013 Use the font but only change the size of the time stamp, and colour:
+ezthumb -f ./DejaVuSans.ttf -F :16 -c :ff0000: small.wmv
+
