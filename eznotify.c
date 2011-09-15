@@ -90,6 +90,8 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_MEDIA_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
 			dump_format_context(vidx->formatx);
+		}
+		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
 			printf("Duration in millisecond by ");
 			if (vidx->sysopt->dur_mode == EZ_DUR_FULLSCAN) {
 				printf("full scan: ");
@@ -185,6 +187,18 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			printf("Rewound PTS: %lld < %lld\n",
 					(long long)((AVPacket*) block)->dts,
 					*((long long *) opt));
+		}
+		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+			if (param == ENX_DUR_MHEAD) {
+				printf("Duration from Media head: %ld (ms)\n",
+						opt);
+			} else if (param == ENX_DUR_JUMP) {
+				printf("Jump to DTS: %lld\n", 
+						*((long long *)block));
+			} else if (param == ENX_DUR_SCAN) {
+				printf("Duration from scanning: %ld (ms)\n",
+						opt);
+			}
 		}
 		break;
 	case EN_BUMP_BACK:

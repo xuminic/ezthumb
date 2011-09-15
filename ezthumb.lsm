@@ -3,7 +3,7 @@ Title:          ezthumb
 Version:        2.0
 Entered-date:   2011-03-20
 Description:    A video thumbnail generator based on FFMPEG library.
-                Its basic function is to take screenshots from video files
+                The basic function is to sample screenshots from video files
                 and tile them into a single picture. It can also generate
                 separate screenshots or animated GIF files.
 Keywords:       ezthumb, thumbnail, screenshot, FFMPEG
