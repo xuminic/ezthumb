@@ -351,8 +351,8 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
 		av_free_packet(&packet);
 
-		video_snap_update(vidx, image, frame, i, dts);
 		i++;
+		video_snap_update(vidx, image, frame, i, dts);
 	}
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
@@ -393,7 +393,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
 		av_free_packet(&packet);
 
-		video_snap_update(vidx, image, frame, i, dts);
+		video_snap_update(vidx, image, frame, i+1, dts);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
@@ -429,13 +429,13 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame); 
 			av_free_packet(&packet);
 		}
-		video_snap_update(vidx, image, frame, i, dts);
+		video_snap_update(vidx, image, frame, i+1, dts);
 		last_key = dts;
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		for ( ; (i < image->shots) && (last_key >= 0); i++) {
-			video_snap_update(vidx, image, frame, i, last_key);
+			video_snap_update(vidx, image, frame, i+1, last_key);
 		}
 	}
 	video_snap_end(vidx, image);
@@ -486,13 +486,13 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
 		av_free_packet(&packet);
 
-		video_snap_update(vidx, image, frame, i, dts);
+		video_snap_update(vidx, image, frame, i+1, dts);
 		last_key = dts;
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		for ( ; (i < image->shots) && (last_key >= 0); i++) {
-			video_snap_update(vidx, image, frame, i, last_key);
+			video_snap_update(vidx, image, frame, i+1, last_key);
 		}
 	}
 	video_snap_end(vidx, image);
@@ -532,13 +532,13 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame)
 
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
 		av_free_packet(&packet);
-		video_snap_update(vidx, image, frame, i, dts);
+		video_snap_update(vidx, image, frame, i+1, dts);
 		last_key = dts;
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		for ( ; (i < image->shots) && (last_key >= 0); i++) {
-			video_snap_update(vidx, image, frame, i, last_key);
+			video_snap_update(vidx, image, frame, i+1, last_key);
 		}
 	}
 	video_snap_end(vidx, image);
