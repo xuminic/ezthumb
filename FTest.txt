@@ -42,12 +42,45 @@ ezthumb -i -d fast broken.avi
 #010 Set up the thumbnail edge
 ezthumb -e 4 small.wmv
 
-#011 Test the external font with DejaVuSans.ttf:
+
+#021 Test the internal font with different size:
+ezthumb -F 16:8 small.wmv
+
+#022 Test the internal font with different size and colour:
+ezthumb -F 16:8 -c 00ff00:0000ff small.wmv
+
+#023 Test the external font with DejaVuSans.ttf:
 ezthumb -f ./DejaVuSans.ttf small.wmv
 
-#012 Use the external font DejaVuSans.ttf and change its size
+#024 Use the external font DejaVuSans.ttf and change its size
 ezthumb -f ./DejaVuSans.ttf -F 16:8 small.wmv
 
-#013 Use the font but only change the size of the time stamp, and colour:
+#025 Use the same font but only change the size and colour of the time stamp:
 ezthumb -f ./DejaVuSans.ttf -F :16 -c :ff0000: small.wmv
+
+
+#030 Set up an 8x1 grid
+ezthumb -g 8x1 small.wmv
+
+#031 Set up a 1x8 grid
+ezthumb -g 1x8 small.wmv
+
+#032 No grid and canvas at all, save to separate 8 screen shots:
+ezthumb -g 0x8 small.wmv
+
+#033 No grid and canvas, save all i-frame separately:
+ezthumb -g 0x0 small.wmv
+
+#034 Take snapshots and change to expected size in percentage:
+ezthumb -g 3x5 -s 40% small.wmv
+ezthumb -g 3x5 -s 20% small.wmv
+
+#035 Take snapshots and change to expected size in pixel:
+ezthumb -g 3x5 -s 300x100 small.wmv
+
+#036 Limit the width of the canvas and automatically fit the snapshots
+ezthumb -g 3x5 -s 300x100 -w 1024 small.wmv
+
+
+
 
