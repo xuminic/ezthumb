@@ -11,6 +11,7 @@ DejaVuSans.ttf: TTF font file
 
 
 #001 Generate 4x4 thumbnails, 50% screen size
+-    More explain lines should start with a '-'
 ezthumb small.wmv
 
 #002 Generate 4x4 thumbnails, 50% screen size and accurate frames
@@ -29,13 +30,13 @@ ezthumb -I -d scan small.wmv
 ezthumb -I -d fast small.wmv
 
 #007 Specify the canvas colour: Media information is BLUE, Timestamp is RED,
-#    The background is grey
+-    The background is grey
 ezthumb -c 0000ff:ff0000:7f7f7f small.wmv
 
 #008 Only setup the background colour:
 ezthumb -c ::7f7f7f small.wmv
 
-#009 Check the effect of the -d option: see the different of below
+#009 Check the result of '-d' option: see the different of below
 ezthumb -i broken.avi
 ezthumb -i -d fast broken.avi
 
@@ -81,6 +82,75 @@ ezthumb -g 3x5 -s 300x100 small.wmv
 #036 Limit the width of the canvas and automatically fit the snapshots
 ezthumb -g 3x5 -s 300x100 -w 1024 small.wmv
 
+#037 Set up the gaps between screen shots in pixel:
+ezthumb -g 3x5 --gap-shots 0 small.wmv
+ezthumb -g 3x5 --gap-shots 10 small.wmv
 
+#038 Set up the gaps between screen shots in proportion:
+ezthumb -g 3x5 --gap-shots 0% small.wmv
+ezthumb -g 3x5 --gap-shots 10% small.wmv
+
+#039 Set up the canvas margin in pixel:
+ezthumb -g 3x5 --gap-margin 0 small.wmv
+ezthumb -g 3x5 --gap-margin 20 small.wmv
+
+#040 Set up the canvas margin in proportion:
+ezthumb -g 3x5 --gap-margin 0% small.wmv
+ezthumb -g 3x5 --gap-margin 20% small.wmv
+
+#041 Turn off the media information
+ezthumb --opt-info off small.wmv
+
+#042 Place the media information to the right corner
+ezthumb --pos-info rt small.wmv
+ezthumb --pos-info rc small.wmv
+ezthumb --pos-info rb small.wmv
+
+#043 Place the media information to the center
+ezthumb --pos-info mt small.wmv
+ezthumb --pos-info mc small.wmv
+ezthumb --pos-info mb small.wmv
+
+#044 Turn off the timestamp
+ezthumb --opt-time off small.wmv
+
+#045 Place the timestamp to the left-top, left-bottom and right-bottom corner:
+ezthumb --pos-time lt small.wmv
+ezthumb --pos-time lb small.wmv
+ezthumb --pos-time rb small.wmv
+
+#046 Place the timestamp to the unusual place:
+ezthumb --pos-time lc small.wmv
+ezthumb --pos-time mt small.wmv
+ezthumb --pos-time mc small.wmv
+ezthumb --pos-time mb small.wmv
+ezthumb --pos-time rc small.wmv
+
+#047 Make sure the 'tt' place does NOT work for media information and timestamp
+ezthumb --pos-info tt small.wmv
+ezthumb --pos-time tt small.wmv
+
+
+#060 Generate JPG outputs with the different qualities. 
+-    The quality over 100 should be ignored.
+ezthumb -m jpg@20 small.wmv
+ezthumb -m jpg@100 small.wmv
+ezthumb -m jpg@120 small.wmv
+
+#061 Generate PNG outputs. The tailing '@20' should be ignored.
+ezthumb -m png small.wmv
+ezthumb -m png@20 small.wmv
+
+#062 Generate GIF outputs. 
+ezthumb -m gif small.wmv
+
+#063 Generate the animation GIF outputs. The time interval is 500 milliseconds:
+ezthumb -m gif@500 small.wmv
+
+#064 Generate the animation GIF outputs without timestamps:
+ezthumb -m gif@300 --opt-time off small.wmv
+
+#065 Generate the animation GIF outputs by key-frames:
+ezthumb -m gif@1000 -g 0 small.wmv
 
 

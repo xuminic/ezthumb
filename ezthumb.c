@@ -1408,10 +1408,22 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 				image->rim_width * 2 -
 				image->gap_width * (ezopt->grid_col - 1)) /
 				ezopt->grid_col;
-			image->dst_height = (image->dst_width * 
-				image->src_height / image->src_width) & ~1;
+			/* the dst_height is a little bit tricky. We would
+			 * honor the user specified proportion. 
+			 * See FTest#036 */
+			if ((ezopt->tn_width > 0) && (ezopt->tn_height > 0)) {
+				image->dst_height = image->dst_width * 
+					ezopt->tn_height / ezopt->tn_width;
+			} else {
+				image->dst_height = image->dst_width * 
+					image->src_height / image->src_width;
+			}
+			/* adjust the dimention of shots to even boundry */
 			image->dst_width  = image->dst_width & ~1;
+			image->dst_height = image->dst_height & ~1;
 		} else {
+			/* Otherwise the canvas_width will be calculated by 
+			 * those actual dimentions */
 			image->gap_width = ezopt_cal_ratio(ezopt->grid_gap_w, 
 					image->dst_width);
 			image->rim_width = ezopt_cal_ratio(ezopt->grid_rim_w, 
