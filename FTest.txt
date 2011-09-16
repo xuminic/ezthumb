@@ -8,6 +8,8 @@ broken.avi: a broken video clip
 jumppy.avi: composed by 3 clips each has minutes offset (cat broken.avi xag xap > jumppy.avi)
 bumppy.avi: content the rewound time stamp (cat broken.avi xar xaf > bummpy.avi)
 DejaVuSans.ttf: TTF font file
+background.jpg: an image for the background setting test, which is smaller than the canvas
+bigground.png: an image for the background setting test, which is bigger than the canvas
 
 
 #001 Generate 4x4 thumbnails, 50% screen size
@@ -43,6 +45,8 @@ ezthumb -i -d fast broken.avi
 #010 Set up the thumbnail edge
 ezthumb -e 4 small.wmv
 
+#011 Specify an output directory
+ezthumb -o ~ small.wav middle.avi
 
 #021 Test the internal font with different size:
 ezthumb -F 16:8 small.wmv
@@ -152,5 +156,66 @@ ezthumb -m gif@300 --opt-time off small.wmv
 
 #065 Generate the animation GIF outputs by key-frames:
 ezthumb -m gif@1000 -g 0 small.wmv
+
+#066 Generate GIF output and transparent background
+ezthumb -m gif --transparent small.wmv
+
+#067 Generate GIF output and transparent background with specified colour
+-    Nothing should be happened
+ezthumb -m gif -c ::ff0000 --transparent small.wmv
+
+#068 Generate PNG output and transparent background
+ezthumb -m png --transparent small.wmv
+
+#069 Generate PNG output and transparent background with specified colour
+-    Nothing should be happened
+ezthumb -m png -c ::ff0000 --transparent small.wmv
+
+#070 Specify a background picture
+ezthumb -c ::7f7f7f --background background.jpg --gap-shots 20 --gap-margin 40 small.wmv
+
+#071 Place the background picture to all places (lt,lc,lb,mt,mc,mb,rt,rc,rb)
+ezthumb -c ::7f7f7f --background background.jpg --gap-shots 20 --gap-margin 40 --pos-bg lt small.wmv
+ezthumb -c ::7f7f7f --background background.jpg --gap-shots 20 --gap-margin 40 --pos-bg mt small.wmv
+...
+
+#072 Tilt the background picture
+ezthumb -c ::7f7f7f --background background.jpg --gap-shots 20 --gap-margin 40 --pos-bg tt small.wmv
+
+#073 Enlarge or shrink the background picture to the whole canvas
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg st small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg st small.wmv
+
+#074 Enlarge or shrink the background picture to the width of the canvas while keeping proportion
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg ex small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg ex small.wmv
+
+#075 Same to #074, except to relocate the background picture to canvas center and bottom:
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg mc:ex small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg rb:ex small.wmv
+
+#076 Enlarge or shrink the background picture to the height of the canvas while keeping proportion
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg ey small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg ey small.wmv
+
+#077 Same to #076, except to relocate the background picture to canvas bottom and center:
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg rb:ey small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg mc:ey small.wmv
+
+#078 Enlarge or shrink the background picture to the width of the canvas without keeping proportion
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg sx small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg sx small.wmv
+
+#079 Same to #078, except to relocate the background picture to canvas center and bottom:
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg mc:sx small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg rb:sx small.wmv
+
+#080 Enlarge or shrink the background picture to the height of the canvas without keeping proportion
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg sy small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg sy small.wmv
+
+#081 Same to #080, except to relocate the background picture to canvas bottom and center:
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg rb:sy small.wmv
+ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg mc:sy small.wmv
 
 

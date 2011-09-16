@@ -368,7 +368,8 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int		i;
 
 	video_snap_begin(vidx, image, ENX_SS_SKIM);
-	for (i = last_key = 0; i < image->shots; i++) {
+	//for (i = last_key = 0; i < image->shots; i++) {
+	for (i = last_key = 0; i < 3; i++) {
 		dts_snap = video_snap_point(vidx, image, i);
 
 		video_seeking(vidx, dts_snap);
@@ -617,6 +618,8 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 		}
 
 		/* find a valid key frame so updating the keyframe gap */
+		printf(">>>> ");
+		dump_packet(packet);
 		video_keyframe_credit(vidx, dts);
 		return dts;
 	}
@@ -1155,6 +1158,7 @@ static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet
 
 	dts = -1;
 	do {
+		dump_packet(packet);
 		if (packet->stream_index != vidx->vsidx) {
 			av_free_packet(packet);
 			continue;
@@ -1165,17 +1169,26 @@ static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet
 
 		eznotify(vidx, EN_PACKET_RECV, 0, 0, &packet);
 		avcodec_decode_video2(vidx->codecx, frame, &ffin, packet);
-		if (ffin) {
-			/* Okey......it's not a bug!
-			 * The notification and releasing the packet will 
-			 * be done outside this function */
-			eznotify(vidx, EN_FRAME_COMPLETE, 0, 
-					(long)packet, frame);
-			break;	/* successfully decoded a frame */
+		if (ffin == 0) {
+			/* the packet is not finished */
+			eznotify(vidx, EN_FRAME_PARTIAL, 0, ffin, frame);
+			av_free_packet(packet);
+			puts("go");
+			continue;
 		}
-		/* the packet is not finished */
-		eznotify(vidx, EN_FRAME_PARTIAL, 0, ffin, frame);
-		av_free_packet(packet);
+
+		eznotify(vidx, EN_FRAME_COMPLETE, 0, ffin, frame);
+		/*if (frame->pict_type != FF_I_TYPE) {
+			av_free_packet(packet);
+			puts("more");
+			continue;
+		}*/
+
+		/* Okey......it's not a bug!
+		 * The notification and releasing the packet will 
+		 * be done outside this function */
+		break;	/* successfully decoded a frame */
+
 	} while (av_read_frame(vidx->formatx, packet) >= 0);
 	return dts;
 }
@@ -1203,7 +1216,7 @@ static int64_t video_decode_to(EZVID *vidx, AVFrame *frame, AVPacket *packet, in
 			continue;
 		}
 
-		eznotify(vidx, EN_FRAME_COMPLETE, 0, (long)&packet, frame);
+		eznotify(vidx, EN_FRAME_COMPLETE, 0, ffin, frame);
 		if (dts >= dtsto) {
 			/* Okey......it's not a bug!
 			 * The notification and releasing the packet will 

@@ -140,7 +140,8 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		break;
 	case EN_FRAME_EFFECT:
 		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
-			dump_frame_packet((AVPacket *)opt, block, param);
+			//dump_frame_packet((AVPacket *)opt, block, 1);
+			dump_frame(block, 1);
 		}
 		break;
 	case EN_SCAN_PACKET:
@@ -396,15 +397,17 @@ int dump_packet(AVPacket *p)
 {
 	/* PTS:Presentation timestamp.  DTS:Decompression timestamp */
 	printf("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
-			", Dur:%d, Siz:%d, Flag:%d\n",
-			p->pos, p->pts,	p->dts, p->duration, p->size,p->flags);
+			", Dur:%d, Siz:%d, Flag:%d, SI:%d\n",
+			p->pos, p->pts,	p->dts, p->duration, p->size,
+			p->flags, p->stream_index);
 	return 0;
 }
 
 int dump_frame(AVFrame *frame, int got_pic)
 {
-	printf("Frame Got:%d, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
-			got_pic, frame->key_frame, 
+	printf("Frame %s, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
+			got_pic == 0 ? "Partial" : "Complet", 
+			frame->key_frame, 
 			frame->coded_picture_number, 
 			frame->display_picture_number,
 			frame->reference, frame->interlaced_frame,
