@@ -245,7 +245,7 @@ int ezinfo(char *filename, EZOPT *ezopt)
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
 	EZVID	*vidx;
-	int	rc;
+	int	rc, loglvl;
 
 	/* allocate the runtime index structure of the video */
 	if ((vidx = malloc(sizeof(EZVID))) == NULL) {
@@ -258,6 +258,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	vidx->filename = filename;	/* keep a copy of the filename */
 	vidx->seekable = -1;
 	gettimeofday(&vidx->tmark, NULL);	/* get current time */
+
+	/* On second thought, the FFMPEG log is better to be enabled while 
+	 * loading codecs so we would've known if the video files buggy */
+	loglvl = av_log_get_level();
+	av_log_set_level(AV_LOG_INFO);
 
 #if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
@@ -278,6 +283,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
+
+	av_log_set_level(loglvl);
 	
 	/* find the video stream and open the codec driver */
 	if ((rc = video_find_stream(vidx, ezopt->flags)) != EZ_ERR_NONE) {
@@ -353,6 +360,9 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 
 		video_snap_update(vidx, image, frame, i, dts);
 		i++;
+		if (dts > 15000) {
+			break;
+		}
 	}
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
@@ -414,7 +424,8 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 	int		i;
 
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
-	for (i = dts = 0; i < image->shots; i++) {
+	//for (i = dts = 0; i < image->shots; i++) {
+	for (i = dts = 0; i < 4; i++) {
 		dts_snap = video_snap_point(vidx, image, i);
 
 		if (dts < dts_snap) {
@@ -433,12 +444,12 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		video_snap_update(vidx, image, frame, i, dts);
 		last_key = dts;
 	}
-	if (i < image->shots) {
+	/*if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		for ( ; (i < image->shots) && (last_key >= 0); i++) {
 			video_snap_update(vidx, image, frame, i, last_key);
 		}
-	}
+	}*/
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
 }
@@ -1154,11 +1165,10 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet)
 {
 	int64_t	dts;
-	int	ffin;
+	int	ffin = 1;
 
 	dts = -1;
 	do {
-		dump_packet(packet);
 		if (packet->stream_index != vidx->vsidx) {
 			av_free_packet(packet);
 			continue;
@@ -1167,13 +1177,14 @@ static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet
 			dts = meta_packet_timestamp(packet);
 		}
 
+		dump_packet(packet);
 		eznotify(vidx, EN_PACKET_RECV, 0, 0, &packet);
 		avcodec_decode_video2(vidx->codecx, frame, &ffin, packet);
 		if (ffin == 0) {
 			/* the packet is not finished */
 			eznotify(vidx, EN_FRAME_PARTIAL, 0, ffin, frame);
 			av_free_packet(packet);
-			puts("go");
+			puts("more");
 			continue;
 		}
 
