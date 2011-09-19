@@ -443,6 +443,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 				break;
 			}
 			eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame); 
+
 			av_free_packet(&packet);
 		}
 		video_snap_update(vidx, image, frame, i, dts);

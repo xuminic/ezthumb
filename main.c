@@ -45,6 +45,7 @@ static	struct	cliopt	clist[] = {
 	{ 'v', "verbose", 1, "*verbose mode (0)(0-7)" },
 	{ 'w', "width",   1, "the whole width of the thumbnail canvas" },
 	{ 'x', "suffix",  2, "the suffix of output filename (_thumb)" },
+	{   6, "accurate", 0, "take accurate shots including P-frames" },
 	{   7, "background", 2, "the background picture" },
 	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
 	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
@@ -56,10 +57,10 @@ static	struct	cliopt	clist[] = {
 	{  16, "pos-time", 2, "the position of the timestamp (rt)" },
 	{  17, "pos-info", 2, "the position of the media infomation (lt)" },
 	{   0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
+	{  14, "scan-onfly", 0, "the scan while decoding on fly mode" }, 
 	{  18, "time-from",2, "the time in video where begins shooting" },
 	{  19, "time-end", 2, "the time in video where ends shooting" },
-	{  23, "transparent", 0, "generate the transparent background" },
-	{  21, "accurate", 0, "take accurate shots including P-frames" },
+	{  20, "transparent", 0, "generate the transparent background" },
 	{  22, "vindex",   1, "the index of the video stream" },
 	{   1, "help",    0, "Display the help message" },
 	{   2, "version", 0, "Display the version number" },
@@ -108,6 +109,9 @@ int main(int argc, char **argv)
 		case 2:
 			printf(version, EZTHUMB_VERSION);
 			return 0;
+		case 6:	/* nonkey */
+			sysoption.flags |= EZOP_P_FRAME;
+			break;
 		case 7:
 			sysoption.background = optarg;
 			break;
@@ -176,21 +180,21 @@ int main(int argc, char **argv)
 				sysoption.mi_position = c;
 			}
 			break;
+		case 14:	/* scan-on-fly */
+			sysoption.flags |= EZOP_DEC_ONFLY;
+			break;
 		case 18:	/* time-from */
 			sysoption.time_from = para_get_time_point(optarg);
 			break;
 		case 19:	/* time-end */
 			sysoption.time_to = para_get_time_point(optarg);
 			break;
-		case 21:	/* nonkey */
-			sysoption.flags |= EZOP_P_FRAME;
+		case 20:
+			sysoption.flags |= EZOP_TRANSPARENT;
+			sysoption.canvas_color[3] = 0;
 			break;
 		case 22:	/* index */
 			sysoption.vs_idx = strtol(optarg, NULL, 0);
-			break;
-		case 23:
-			sysoption.flags |= EZOP_TRANSPARENT;
-			sysoption.canvas_color[3] = 0;
 			break;
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
 			para_get_color(&sysoption, optarg);
