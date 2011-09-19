@@ -106,6 +106,8 @@
 #define EZOP_CLI_LIST		0x40
 /* Setup the transparent background */
 #define EZOP_TRANSPARENT	0x80
+/* decoding on fly */
+#define EZOP_DEC_ONFLY		0x100
 
 /* Display the debug log in the command line. */
 #define EZOP_DEBUG_MASK		0x7000
