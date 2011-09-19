@@ -50,7 +50,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
 static int video_snap_update(EZVID *vidx, EZIMG *image, AVFrame *frame, 
 		int sn, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
-static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *);
+static int64_t video_decode_keyframe(EZVID *vidx, AVFrame *frame, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVFrame *frame, 
 		AVPacket *packet, int64_t dtsto);
 static int video_rewind(EZVID *vidx);
@@ -352,7 +352,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			break;
 		}
 
-		if (video_decode_packet(vidx, frame, &packet) < 0) {
+		if (video_decode_keyframe(vidx, frame, &packet) < 0) {
 			break;
 		}
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
@@ -360,9 +360,6 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame)
 
 		video_snap_update(vidx, image, frame, i, dts);
 		i++;
-		if (dts > 15000) {
-			break;
-		}
 	}
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
@@ -395,7 +392,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			dts = video_decode_to(vidx, frame, &packet, dts_snap);
 		} else {
 			last_key = dts;
-			dts = video_decode_packet(vidx, frame, &packet);
+			dts = video_decode_keyframe(vidx, frame, &packet);
 		}
 		if (dts < 0) {
 			break;
@@ -433,7 +430,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			if (dts < 0) {
 				break;
 			}
-			dts = video_decode_packet(vidx, frame, &packet);
+			dts = video_decode_keyframe(vidx, frame, &packet);
 			if (dts < 0) {
 				last_key = -1;
 				break;
@@ -533,7 +530,7 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		}
 
 		if (dts >= dts_snap) {
-			dts = video_decode_packet(vidx, frame, &packet);
+			dts = video_decode_keyframe(vidx, frame, &packet);
 		} else {
 			dts = video_decode_to(vidx, frame, &packet, dts_snap);
 		}
@@ -1162,7 +1159,7 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 	return 0;
 }
 
-static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet)
+static int64_t video_decode_keyframe(EZVID *vidx, AVFrame *frame, AVPacket *packet)
 {
 	int64_t	dts;
 	int	ffin = 1;
@@ -1177,23 +1174,30 @@ static int64_t video_decode_packet(EZVID *vidx, AVFrame *frame, AVPacket *packet
 			dts = meta_packet_timestamp(packet);
 		}
 
-		dump_packet(packet);
 		eznotify(vidx, EN_PACKET_RECV, 0, 0, &packet);
 		avcodec_decode_video2(vidx->codecx, frame, &ffin, packet);
 		if (ffin == 0) {
 			/* the packet is not finished */
 			eznotify(vidx, EN_FRAME_PARTIAL, 0, ffin, frame);
 			av_free_packet(packet);
-			puts("more");
 			continue;
 		}
 
 		eznotify(vidx, EN_FRAME_COMPLETE, 0, ffin, frame);
-		/*if (frame->pict_type != FF_I_TYPE) {
+
+		/* A workaroud for B-frame error when investigating the DS9 
+		 * The FFMPEG reports:
+		 *   [mpeg4 @ 0x91a6a60]Invalid and inefficient vfw-avi packed
+		 *   B frames detected
+		 * The FFMPEG can not decode this i-frame, perhaps in lack of
+		 * previous key frame information. The workabound is continuing
+		 * decoding until a proper key frame met */
+		if (frame->pict_type != FF_I_TYPE) {
+			eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, frame);
 			av_free_packet(packet);
-			puts("more");
+			dts = -1;	/* reset the dts flag */
 			continue;
-		}*/
+		}
 
 		/* Okey......it's not a bug!
 		 * The notification and releasing the packet will 
@@ -1209,6 +1213,19 @@ static int64_t video_decode_to(EZVID *vidx, AVFrame *frame, AVPacket *packet, in
 	int64_t	dts;
 	int	ffin;
 
+	/* A workaroud for B-frame error when investigating the DS9 
+	 * The FFMPEG reports:
+	 *   [mpeg4 @ 0x91a6a60]Invalid and inefficient vfw-avi packed
+	 *   B frames detected
+	 * The FFMPEG can not decode the i-frame, perhaps in lack of previous
+	 * key frame information, which caused failure of later p-frames.
+	 * The workabound is to decode an effect i-frame first then start
+	 * to decode the proper p-frames */
+	dts = video_decode_keyframe(vidx, frame, packet);
+	if ((dts < 0) || (dts >= dtsto)) {
+		return dts;
+	}
+
 	dts = -1;
 	do {
 		if (packet->stream_index != vidx->vsidx) {
@@ -1228,15 +1245,17 @@ static int64_t video_decode_to(EZVID *vidx, AVFrame *frame, AVPacket *packet, in
 		}
 
 		eznotify(vidx, EN_FRAME_COMPLETE, 0, ffin, frame);
-		if (dts >= dtsto) {
-			/* Okey......it's not a bug!
-			 * The notification and releasing the packet will 
-			 * be done outside this function */
-			break;	/* successfully decoded a frame */
+		if (dts < dtsto) {
+			eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, frame);
+			av_free_packet(packet);
+			dts = -1;	/* discard this frame */
+			continue;
 		}
 
-		dts = -1;	/* discard this frame */
-		av_free_packet(packet);
+		/* Okey......it's not a bug!
+		 * The notification and releasing the packet will 
+		 * be done outside this function */
+		break;	/* successfully decoded a frame */
 	} while (av_read_frame(vidx->formatx, packet) >= 0);
 	return dts;
 }

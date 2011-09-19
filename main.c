@@ -42,7 +42,7 @@ static	struct	cliopt	clist[] = {
 	{ 'p', "process", 1, "specify the process method (0|1|2|3|4)" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
-	{ 'v', "verbose", 0, "verbose mode" },
+	{ 'v', "verbose", 1, "verbose mode (0)(0-7)" },
 	{ 'w', "width",   1, "the whole width of the thumbnail canvas" },
 	{ 'x', "suffix",  2, "the suffix of output filename (_thumb)" },
 	{   7, "background", 2, "the background picture" },
@@ -288,7 +288,8 @@ int main(int argc, char **argv)
 			//}
 			break;
 		case 'v':
-			sysoption.flags |= EZOP_CLI_DEBUG;
+			c = strtol(optarg, NULL, 0);
+			sysoption.flags |= EZOP_DEBUG_MAKE(c);
 			break;
 		case 'w':
 			sysoption.canvas_width = strtol(optarg, NULL, 0);
@@ -312,9 +313,9 @@ int main(int argc, char **argv)
 	avcodec_register_all();
 	av_register_all();
 
-	if ((sysoption.flags & EZOP_CLI_FFM_LOG) == 0) {
+	if (EZOP_DEBUG(sysoption.flags) < EZOP_DEBUG_VERBS) {
 		av_log_set_level(0);	/* disable all complains from ffmpeg*/
-	} else if (sysoption.flags & EZOP_CLI_DEBUG) {
+	} else if (EZOP_DEBUG(sysoption.flags) == EZOP_DEBUG_FFM) {
 		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
 	}
 
@@ -328,7 +329,7 @@ int main(int argc, char **argv)
 		break;
 	default:
 		/* inject the progress report functions */
-		if ((sysoption.flags & EZOP_CLI_DEBUG) == 0) {
+		if (EZOP_DEBUG(sysoption.flags) == EZOP_DEBUG_NONE) {
 			sysoption.notify = event_cb;
 		}
 		for ( ; optind < argc; optind++) {

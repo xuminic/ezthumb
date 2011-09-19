@@ -82,13 +82,13 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 #endif
 			av_log_set_level(i);
 		}
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			printf("%s: open successed (%ld ms)\n", 
 					(char*) block, opt);
 		}
 		break;
 	case EN_MEDIA_OPEN:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
 			dump_format_context(vidx->formatx);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
@@ -109,7 +109,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_IMAGE_CREATED:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
 			dump_ezimage(block);
 		}
 		break;
@@ -128,7 +128,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		//dump_packet(block);
 		break;
 	case EN_PACKET_KEY:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
 			dump_packet(block);
 		}
 		break;
@@ -139,7 +139,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		//dump_frame(block, opt);
 		break;
 	case EN_FRAME_EFFECT:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			//dump_frame_packet((AVPacket *)opt, block, 1);
 			dump_frame(block, 1);
 		}
@@ -160,26 +160,26 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_STREAM_FORMAT:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			dump_codec_attr(block, (int)param);
 			//dump_stream(((AVFormatContext*)block)->streams
 			//	[(int)param]);
 		}
 		break;
 	case EN_TYPE_VIDEO:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			//dump_video_context(block);
 			dump_codec_video(block);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			//dump_audio_context(block);
 			dump_codec_audio(block);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			dump_other_context(block);
 		}
 		break;
@@ -189,7 +189,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 					(long long)((AVPacket*) block)->dts,
 					*((long long *) opt));
 		}
-		if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			if (param == ENX_DUR_MHEAD) {
 				printf("Duration from Media head: %ld (ms)\n",
 						opt);
@@ -211,7 +211,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 	case EN_SEEK_FRAME:
 		if (param == ENX_SEEK_BW_NO) {
 			printf("WARNING: Backward Seeking Disabled.\n");
-		} else if (vidx->sysopt->flags & EZOP_CLI_DEBUG) {
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			printf("Backward Seeking Test successed to %lld\n",
 					*((long long *) block));
 		}
@@ -236,6 +236,12 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 					(long long) vidx->keygap);
 			break;
 		}*/
+		break;
+	case EN_FRAME_EXCEPTION:
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
+			printf("Discard ");
+			dump_frame(block, 1);
+		}
 		break;
 	}
 	return event;
@@ -485,15 +491,17 @@ int dump_ezimage(EZIMG *image)
 	printf("Output file name:  %s.%s (%d)\n", 
 			image->sysopt->suffix, image->sysopt->img_format,
 			image->sysopt->img_quality);
-	printf("Flags:             %s %s %s %s %s %s %s %s\n", 
+	printf("Flags:             %s %s %s %s %s %s %s %s D%d P%d\n", 
 			image->sysopt->flags & EZOP_INFO ? "MI" : "",
 			image->sysopt->flags & EZOP_TIMEST ? "TS" : "",
 			image->sysopt->flags & EZOP_FFRAME ? "FF" : "",
 			image->sysopt->flags & EZOP_LFRAME ? "LF" : "",
 			image->sysopt->flags & EZOP_P_FRAME ? "PF" : "",
 			image->sysopt->flags & EZOP_CLI_INFO ? "CI" : "",
-			image->sysopt->flags & EZOP_CLI_DEBUG ? "CD" : "",
-			image->sysopt->flags & EZOP_CLI_FFM_LOG ? "CF" : "");
+			image->sysopt->flags & EZOP_CLI_LIST ? "CL" : "",
+			image->sysopt->flags & EZOP_TRANSPARENT ? "TP" : "",
+			EZOP_DEBUG(image->sysopt->flags) >> 12,
+			((image->sysopt->flags & EZOP_PROC_MASK) >> 16) & 15);
 	printf("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
 			gdFontGetTiny()->w, gdFontGetTiny()->h,
 			gdFontGetSmall()->w, gdFontGetSmall()->h,

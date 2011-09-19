@@ -65,6 +65,7 @@
 #define EN_MEDIA_STATIS		1023
 #define EN_STREAM_BROKEN	1024
 #define EN_IFRAME_CREDIT	1025
+#define EN_FRAME_EXCEPTION	1026
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -97,18 +98,23 @@
 /* Take shots at any frame, otherwise it only takes shots at key frames. 
  * However, if the shot's step is less than EZ_GATE_KEY_STEP millisecond, 
  * it automatically converts into EZOP_ANYFRAME mode */
-#define EZOP_P_FRAME		16	
+#define EZOP_P_FRAME		0x10	
 /* Display media information in the command line. It just displays the
  * common information, not includes the debug info */
-#define EZOP_CLI_INFO		32
-/* Display the debug log in the command line. */
-#define EZOP_CLI_DEBUG		64
-/* Display the FFMPEG debug log in the command line */
-#define EZOP_CLI_FFM_LOG	128
-/* Setup the transparent background */
-#define EZOP_TRANSPARENT	256
+#define EZOP_CLI_INFO		0x20
 /* Display a short list of the media information in the command line */
-#define EZOP_CLI_LIST		512
+#define EZOP_CLI_LIST		0x40
+/* Setup the transparent background */
+#define EZOP_TRANSPARENT	0x80
+
+/* Display the debug log in the command line. */
+#define EZOP_DEBUG_MASK		0x7000
+#define EZOP_DEBUG_NONE		0
+#define EZOP_DEBUG_BRIEF	0x1000
+#define EZOP_DEBUG_VERBS	0x2000
+#define EZOP_DEBUG_FFM		0x7000	/* the FFMPEG debug output */
+#define EZOP_DEBUG(x)		((x) & EZOP_DEBUG_MASK)
+#define EZOP_DEBUG_MAKE(x)	(((x) << 12) & EZOP_DEBUG_MASK)
 
 #define EZOP_PROC_MASK		0xf0000
 #define EZOP_PROC_AUTO		0
