@@ -139,6 +139,8 @@ int  cli_print(struct cliopt *optbl)
 
 		if (optbl->comment == NULL) {
 			printf("%s\n", tmp);
+		} else if (*optbl->comment == '*') {
+			continue;	/* hidden option */
 		} else if ((rc = strlen(tmp)) < CLI_LF_GATE) {
 			memset(tmp + rc, ' ', CLI_LF_GATE - rc);
 			tmp[CLI_LF_GATE] = 0;

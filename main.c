@@ -42,7 +42,7 @@ static	struct	cliopt	clist[] = {
 	{ 'p', "process", 1, "specify the process method (0|1|2|3|4)" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
-	{ 'v', "verbose", 1, "verbose mode (0)(0-7)" },
+	{ 'v', "verbose", 1, "*verbose mode (0)(0-7)" },
 	{ 'w', "width",   1, "the whole width of the thumbnail canvas" },
 	{ 'x', "suffix",  2, "the suffix of output filename (_thumb)" },
 	{   7, "background", 2, "the background picture" },
