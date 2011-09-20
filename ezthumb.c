@@ -342,7 +342,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	video_keyframe_credit(vidx, -1);
 	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
 		if (dts < dts_from) {
-			if (vidx->sysopt->flags & EZOP_DEC_ONFLY) {
+			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
 			}
 			av_free_packet(&packet);
@@ -486,8 +486,7 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		dts = video_decode_to(vidx, &packet, dts_snap);
-		if (dts < 0) {
+		if ((dts = video_decode_to(vidx, &packet, dts_snap)) < 0) {
 			break;
 		}
 
@@ -637,7 +636,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 			break;	/* successfully located the keyframe */
 		}
 
-		if (vidx->sysopt->flags & EZOP_DEC_ONFLY) {
+		if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
 			video_decode_next(vidx, packet);
 		}
 		av_free_packet(packet);
@@ -731,7 +730,7 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 		 * is longer than the maximum gap of key frames, we would 
 		 * expect for another key frame */
 		if ((dts_diff = dts_snap - dts) > vidx->keygap) {
-			if (vidx->sysopt->flags & EZOP_DEC_ONFLY) {
+			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, packet);
 			}
 			av_free_packet(packet);
@@ -763,7 +762,7 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 		/* if we only want to snapshot at key frames, we leap to the
 		 * next one and take sanpshot there */
 		if ((dts_diff > 0) && (keyflag == 1)) {
-			if (vidx->sysopt->flags & EZOP_DEC_ONFLY) {
+			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, packet);
 			}
 			av_free_packet(packet);
@@ -1213,6 +1212,29 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
 
+	do {
+		dts = video_decode_next(vidx, packet);
+		if ((dts < 0) || (dts >= dtsto)) {
+			/* successfully decoded a frame and the packet would
+			 * be freed outside this function */
+			return dts;
+		}
+
+		eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, vidx->frame);
+		av_free_packet(packet);
+	} while (video_load_packet(vidx, packet) >= 0);
+	return -1;
+}
+
+
+/* remove the key frame requirement in video_decode_to() because it causes
+ * inaccurate results in short video clips. the integrity now rely on
+ * the decode-on-the-fly mode */
+#if 0
+static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
+{
+	int64_t	dts;
+
 	/* A workaroud for B-frame error when investigating the DS9 
 	 * The FFMPEG reports:
 	 *   [mpeg4 @ 0x91a6a60]Invalid and inefficient vfw-avi packed
@@ -1241,6 +1263,7 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	}
 	return -1;
 }
+#endif
 
 static int video_rewind(EZVID *vidx)
 {

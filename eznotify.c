@@ -147,15 +147,17 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		//printf("Key Frame %d: %lld\n", param, *((long long *)block));
 		break;
 	case EN_SCAN_IFRAME:
-		printf("I-Frame Scanned (%ld ms):\n", opt);
-		for (i = 0; i < param; i++) {
-			printf("%9lld", ((long long *)block)[i]);
-			if ((i % 8) == 7) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+			printf("I-Frame Scanned (%ld ms):\n", opt);
+			for (i = 0; i < param; i++) {
+				printf("%9lld", ((long long *)block)[i]);
+				if ((i % 8) == 7) {
+					printf("\n");
+				}
+			}
+			if ((i % 8) != 0) {
 				printf("\n");
 			}
-		}
-		if ((i % 8) != 0) {
-			printf("\n");
 		}
 		break;
 	case EN_STREAM_FORMAT:

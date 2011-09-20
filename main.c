@@ -47,6 +47,7 @@ static	struct	cliopt	clist[] = {
 	{ 'x', "suffix",  2, "the suffix of output filename (_thumb)" },
 	{   6, "accurate", 0, "take accurate shots including P-frames" },
 	{   7, "background", 2, "the background picture" },
+	{  14, "decode-otf", 0, "decoding on the fly mode for scan process" },
 	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
 	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
 	{  10, "opt-info", 2, "the media infomation (on)" },
@@ -57,7 +58,6 @@ static	struct	cliopt	clist[] = {
 	{  16, "pos-time", 2, "the position of the timestamp (rt)" },
 	{  17, "pos-info", 2, "the position of the media infomation (lt)" },
 	{   0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
-	{  14, "scan-onfly", 0, "the scan while decoding on fly mode" }, 
 	{  18, "time-from",2, "the time in video where begins shooting" },
 	{  19, "time-end", 2, "the time in video where ends shooting" },
 	{  20, "transparent", 0, "generate the transparent background" },
@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 				sysoption.mi_position = c;
 			}
 			break;
-		case 14:	/* scan-on-fly */
-			sysoption.flags |= EZOP_DEC_ONFLY;
+		case 14:	/* decode-on-the-fly */
+			sysoption.flags |= EZOP_DECODE_OTF;
 			break;
 		case 18:	/* time-from */
 			sysoption.time_from = para_get_time_point(optarg);

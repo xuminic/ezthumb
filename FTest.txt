@@ -46,7 +46,7 @@ ezthumb -i -d fast broken.avi
 ezthumb -e 4 small.wmv
 
 #011 Specify an output directory
-ezthumb -o ~ small.wav middle.avi
+ezthumb -o ~ small.wmv middle.avi
 
 #021 Test the internal font with different size:
 ezthumb -F 16:8 small.wmv
@@ -217,5 +217,45 @@ ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --
 #081 Same to #080, except to relocate the background picture to canvas bottom and center:
 ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg rb:sy small.wmv
 ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg mc:sy small.wmv
+
+#090 Generate thumbnails via Fast Skim process 
+ezthumb -p 1 -v 1 small.wmv
+ezthumb -p 1 -v 1 --accurate small.wmv
+ezthumb -p 1 -v 1 --accurate --decode-otf small.wmv
+
+#091 Generate thumbnails via Scan process
+ezthumb -p 2 -v 1 small.wmv
+ezthumb -p 2 -v 1 --accurate small.wmv
+ezthumb -p 2 -v 1 --accurate --decode-otf small.wmv
+
+#092 Generate thumbnails via Two-pass Scan process
+ezthumb -p 3 -v 1 small.wmv
+ezthumb -p 3 -v 1 --accurate small.wmv
+ezthumb -p 3 -v 1 --accurate --decode-otf small.wmv
+
+#093 Generate thumbnails via Heuristic process
+ezthumb -p 4 -v 1 small.wmv
+ezthumb -p 4 -v 1 --accurate small.wmv
+ezthumb -p 4 -v 1 --accurate --decode-otf small.wmv
+
+#094 Generate thumbnails via Fast Skim process for B-frame error file
+ezthumb -p 1 -v 1 middle.avi
+ezthumb -p 1 -v 1 --accurate middle.avi
+ezthumb -p 1 -v 1 --accurate --decode-otf middle.avi
+
+#095 Generate thumbnails via Scan process for B-frame error file
+ezthumb -p 2 -v 1 middle.avi
+ezthumb -p 2 -v 1 --accurate middle.avi
+ezthumb -p 2 -v 1 --accurate --decode-otf middle.avi
+
+#096 Generate thumbnails via Two-pass Scan process for B-frame error file
+ezthumb -p 3 -v 1 middle.avi
+ezthumb -p 3 -v 1 --accurate middle.avi
+ezthumb -p 3 -v 1 --accurate --decode-otf middle.avi
+
+#097 Generate thumbnails via Heuristic process for B-frame error file
+ezthumb -p 4 -v 1 middle.avi
+ezthumb -p 4 -v 1 --accurate middle.avi
+ezthumb -p 4 -v 1 --accurate --decode-otf middle.avi
 
 
