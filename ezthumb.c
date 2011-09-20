@@ -84,7 +84,6 @@ static char *minfo_audio(AVStream *stream, char *buffer);
 static char *minfo_subtitle(AVStream *stream, char *buffer);
 static char *meta_bitrate(int bitrate, char *buffer);
 static char *meta_filesize(int64_t size, char *buffer);
-static char *meta_timestamp(int ms, int enms, char *buffer);
 static int meta_fontsize(int fsize, int refsize);
 static gdFont *meta_fontset(int fsize);
 static char *meta_basename(char *fname, char *buffer);
@@ -421,7 +420,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame)
 int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
 	AVPacket	packet;
-	int64_t		dts, dts_snap, last_key = -1;
+	int64_t		dts, dts_snap;
 	int		i;
 
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
@@ -432,14 +431,10 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			dts = video_keyframe_to(vidx, frame, 
 					&packet, dts_snap);
 			if (dts < 0) {
-				if (image->sysopt->flags & EZOP_DEC_ONFLY) {
-					last_key = -1;
-				}
 				break;
 			}
 			dts = video_decode_keyframe(vidx, frame, &packet);
 			if (dts < 0) {
-				last_key = -1;
 				break;
 			}
 			eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame); 
@@ -447,12 +442,11 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			av_free_packet(&packet);
 		}
 		video_snap_update(vidx, image, frame, i, dts);
-		last_key = dts;
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		for ( ; (i < image->shots) && (last_key >= 0); i++) {
-			video_snap_update(vidx, image, frame, i, last_key);
+		for ( ; i < image->shots; i++) {
+			video_snap_update(vidx, image, frame, i, -1);
 		}
 	}
 	video_snap_end(vidx, image);
@@ -465,7 +459,7 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
 	AVPacket	packet;
 	int64_t		*keylist;
-	int64_t		dts, dts_snap, last_key = -1;
+	int64_t		dts, dts_snap;
 	int		i;
 
 	if ((keylist = video_keyframe_survey(vidx, image)) == NULL) {
@@ -497,7 +491,6 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 
 		dts = video_decode_to(vidx, frame, &packet, dts_snap);
 		if (dts < 0) {
-			last_key = -1;
 			break;
 		}
 
@@ -505,12 +498,11 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 		av_free_packet(&packet);
 
 		video_snap_update(vidx, image, frame, i, dts);
-		last_key = dts;
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		for ( ; (i < image->shots) && (last_key >= 0); i++) {
-			video_snap_update(vidx, image, frame, i, last_key);
+		for ( ; i < image->shots; i++) {
+			video_snap_update(vidx, image, frame, i, -1);
 		}
 	}
 	video_snap_end(vidx, image);
@@ -521,7 +513,7 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame)
 int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame)
 {
 	AVPacket	packet;
-	int64_t		dts, dts_snap, last_key = -1;
+	int64_t		dts, dts_snap;
 	int		i;
 
 	video_snap_begin(vidx, image, ENX_SS_HEURIS);
@@ -545,19 +537,17 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame)
 			dts = video_decode_to(vidx, frame, &packet, dts_snap);
 		}
 		if (dts < 0) {
-			last_key = -1;
 			break;
 		}
 
 		eznotify(vidx, EN_FRAME_EFFECT, i, (long)&packet, frame);
 		av_free_packet(&packet);
 		video_snap_update(vidx, image, frame, i, dts);
-		last_key = dts;
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		for ( ; (i < image->shots) && (last_key >= 0); i++) {
-			video_snap_update(vidx, image, frame, i, last_key);
+		for ( ; i < image->shots; i++) {
+			video_snap_update(vidx, image, frame, i, -1);
 		}
 	}
 	video_snap_end(vidx, image);
@@ -815,19 +805,11 @@ static int64_t video_current_dts(EZVID *vidx)
 	AVPacket	packet;
 	int64_t		dts;
 
-	while (av_read_frame(vidx->formatx, &packet) >= 0) {
-		if (packet.stream_index != vidx->vsidx) {
-			av_free_packet(&packet);
-			continue;
-		}
-		if ((dts = meta_packet_timestamp(&packet)) < 0) {
-			av_free_packet(&packet);
-			continue;
-		}
+	dts = video_load_packet(vidx, &packet);
+	if (dts >= 0) {
 		av_free_packet(&packet);
-		return dts;
 	}
-	return -1;
+	return dts;
 }
 
 static int video_seekable_random(EZVID *vidx, EZIMG *image)
@@ -1104,6 +1086,14 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, AVFrame *frame, int sn, 
 {
 	char	timestamp[64];
 
+	/* the flag could be set by video_decode_next() */
+	if (dts < 0) {
+		dts = vidx->rf_dts;
+	}
+	if (dts < 0) {
+		return -1;
+	}
+
 	/* offset the PTS by the start time */
 	if (vidx->formatx->start_time) {
 		dts -= video_system_to_dts(vidx, 
@@ -1167,8 +1157,13 @@ static int64_t video_decode_next(EZVID *vidx, AVFrame *frame, AVPacket *packet)
 	int	ffin = 1;
 
 	dts = meta_packet_timestamp(packet);
+	vidx->rf_dts = dts;
+	vidx->rf_pos = packet->pos;
+	vidx->rf_size = 0;
 	do {
-		eznotify(vidx, EN_PACKET_RECV, 0, 0, &packet);
+		eznotify(vidx, EN_PACKET_RECV, 0, 0, packet);
+		vidx->rf_size += packet->size;
+
 		avcodec_decode_video2(vidx->codecx, frame, &ffin, packet);
 		if (ffin == 0) {
 			/* the packet is not finished */
@@ -1184,6 +1179,8 @@ static int64_t video_decode_next(EZVID *vidx, AVFrame *frame, AVPacket *packet)
 		 * be done outside this function */
 		return dts;	/* successfully decoded a frame */
 	} while (video_load_packet(vidx, packet) >= 0);
+	/* this function should never fail unless end of stream. */
+	vidx->rf_dts = -1;
 	return -1;
 }
 
@@ -2306,7 +2303,7 @@ static char *meta_filesize(int64_t size, char *buffer)
 	return buffer;
 }
 
-static char *meta_timestamp(int ms, int enms, char *buffer)
+char *meta_timestamp(int ms, int enms, char *buffer)
 {
 	static	char	tmp[32];
 	int	hour, min, sec, msec;

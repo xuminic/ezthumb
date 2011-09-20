@@ -313,6 +313,11 @@ typedef	struct		{
 	int		keycount;
 	int64_t		keydelta;	/* the delta DTS of snapshots */
 
+	/* for recording the last decoding status */
+	int64_t		rf_dts;
+	int64_t		rf_pos;
+	int		rf_size;
+
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */
 
@@ -359,6 +364,7 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
 int image_free(EZIMG *image);
 
 int meta_time_diff(struct timeval *tvbegin);
+char *meta_timestamp(int ms, int enms, char *buffer);
 
 
 
@@ -374,7 +380,7 @@ int dump_codec_video(AVCodecContext *codec);
 int dump_codec_audio(AVCodecContext *codec);
 int dump_packet(AVPacket *p);
 int dump_frame(AVFrame *frame, int got_pic);
-int dump_frame_packet(AVPacket *packet, AVFrame *frame, int ffin);
+int dump_frame_packet(EZVID *vidx, AVFrame *frame, int ffin);
 int dump_stream(AVStream *stream);
 int dump_ezimage(EZIMG *image);
 

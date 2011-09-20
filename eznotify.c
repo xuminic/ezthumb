@@ -140,8 +140,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		break;
 	case EN_FRAME_EFFECT:
 		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
-			//dump_frame_packet((AVPacket *)opt, block, 1);
-			dump_frame(block, 1);
+			dump_frame_packet(vidx, block, param);
 		}
 		break;
 	case EN_SCAN_PACKET:
@@ -421,16 +420,21 @@ int dump_frame(AVFrame *frame, int got_pic)
 	return 0;
 }
 
-int dump_frame_packet(AVPacket *packet, AVFrame *frame, int ffin)
+int dump_frame_packet(EZVID *vidx, AVFrame *frame, int sn)
 {
-	printf("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", Siz:%d, Flag:%d/%d",
-			packet->pos, packet->pts, packet->size, packet->flags,
-			frame->key_frame);
-	if (ffin == 0) {
-		printf("\n");
-	} else {
-		printf(" Type:%s\n", id_lookup(id_pict_type,frame->pict_type));
+	int64_t	dts;
+	char	timestamp[64];
+
+	dts = vidx->rf_dts;
+	if (vidx->formatx->start_time) {
+		dts -= video_system_to_dts(vidx,
+				vidx->formatx->start_time);
 	}
+	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
+	printf("Frame %3d: Pos:%lld DTS:%lld (%s) Size:%d Type:%s\n",
+			sn, (long long) vidx->rf_pos, (long long) vidx->rf_dts,
+			timestamp, vidx->rf_size, 
+			id_lookup(id_pict_type,frame->pict_type));
 	return 0;
 }
 
