@@ -140,7 +140,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		break;
 	case EN_FRAME_EFFECT:
 		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
-			dump_frame_packet(vidx, block, param);
+			dump_frame_packet(vidx, param);
 		}
 		break;
 	case EN_SCAN_PACKET:
@@ -420,7 +420,7 @@ int dump_frame(AVFrame *frame, int got_pic)
 	return 0;
 }
 
-int dump_frame_packet(EZVID *vidx, AVFrame *frame, int sn)
+int dump_frame_packet(EZVID *vidx, int sn)
 {
 	int64_t	dts;
 	char	timestamp[64];
@@ -431,10 +431,10 @@ int dump_frame_packet(EZVID *vidx, AVFrame *frame, int sn)
 				vidx->formatx->start_time);
 	}
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	printf("Frame %3d: Pos:%lld DTS:%lld (%s) Size:%d Type:%s\n",
-			sn, (long long) vidx->rf_pos, (long long) vidx->rf_dts,
-			timestamp, vidx->rf_size, 
-			id_lookup(id_pict_type,frame->pict_type));
+	printf("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
+			sn, (long long) vidx->rf_pos, vidx->rf_size, 
+			vidx->rf_pac, (long long) vidx->rf_dts, timestamp, 
+			id_lookup(id_pict_type, vidx->frame->pict_type));
 	return 0;
 }
 

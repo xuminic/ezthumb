@@ -302,6 +302,7 @@ typedef	struct	{
 typedef	struct		{
 	AVFormatContext	*formatx;	/* must NULL it !! */
 	AVCodecContext	*codecx;
+	AVFrame		*frame;
 	int		vsidx;
 
 	int		duration;	/* the stream duration in ms */
@@ -317,6 +318,7 @@ typedef	struct		{
 	int64_t		rf_dts;
 	int64_t		rf_pos;
 	int		rf_size;
+	int		rf_pac;
 
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */
@@ -350,11 +352,11 @@ int ezstatis(char *filename, EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
 int video_free(EZVID *vidx);
-int video_snapshot_keyframes(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_snapshot_skim(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_snapshot_scan(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_snapshot_twopass(EZVID *vidx, EZIMG *image, AVFrame *frame);
-int video_snapshot_heuristic(EZVID *vidx, EZIMG *image, AVFrame *frame);
+int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
+int video_snapshot_skim(EZVID *vidx, EZIMG *image);
+int video_snapshot_scan(EZVID *vidx, EZIMG *image);
+int video_snapshot_twopass(EZVID *vidx, EZIMG *image);
+int video_snapshot_heuristic(EZVID *vidx, EZIMG *image);
 int64_t video_dts_to_ms(EZVID *vidx, int64_t dts);
 int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
 int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
@@ -380,7 +382,7 @@ int dump_codec_video(AVCodecContext *codec);
 int dump_codec_audio(AVCodecContext *codec);
 int dump_packet(AVPacket *p);
 int dump_frame(AVFrame *frame, int got_pic);
-int dump_frame_packet(EZVID *vidx, AVFrame *frame, int ffin);
+int dump_frame_packet(EZVID *vidx, int ffin);
 int dump_stream(AVStream *stream);
 int dump_ezimage(EZIMG *image);
 
