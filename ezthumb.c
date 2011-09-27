@@ -486,7 +486,12 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		if ((dts = video_decode_to(vidx, &packet, dts_snap)) < 0) {
+		if (image->sysopt->flags & EZOP_P_FRAME) {
+			dts = video_decode_to(vidx, &packet, dts_snap);
+		} else {
+			dts = video_decode_keyframe(vidx, &packet);
+		}
+		if (dts < 0) {
 			break;
 		}
 
