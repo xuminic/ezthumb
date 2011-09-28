@@ -332,7 +332,11 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	int		i;
 
 	/* set up the border */
-	dts_from = video_system_to_dts(vidx, vidx->formatx->start_time);
+	dts_from = 0;
+	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
+		dts_from += video_system_to_dts(vidx, 
+				vidx->formatx->start_time);
+	}
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
@@ -996,7 +1000,7 @@ static int video_duration(EZVID *vidx, int scanmode)
 
 	/* the 'start_time' in the AVFormatContext should be offsetted from
 	 * the video stream's PTS */
-	if (vidx->formatx->start_time) {
+	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
 		cur_dts -= video_system_to_dts(vidx, 
 				vidx->formatx->start_time);
 	}
@@ -1052,7 +1056,10 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 	int64_t seekat;
 
 	/* setup the starting PTS and ending PTS */
-	seekat = video_system_to_dts(vidx, vidx->formatx->start_time);
+	seekat = 0;
+	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
+		seekat += video_system_to_dts(vidx, vidx->formatx->start_time);
+	}
 	if (image->time_from > 0) {
 		seekat += video_ms_to_dts(vidx, image->time_from);
 	}
@@ -1094,7 +1101,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
 	}
 
 	/* offset the PTS by the start time */
-	if (vidx->formatx->start_time) {
+	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
 		dts -= video_system_to_dts(vidx, 
 				vidx->formatx->start_time);
 	}
@@ -1274,14 +1281,18 @@ static int video_rewind(EZVID *vidx)
 {
 	/* for some reason, to rewind the stream to the head,
 	 * av_seek_frame() can not do this by AVSEEK_FLAG_BYTE to 0. */
-	av_seek_frame(vidx->formatx, vidx->vsidx, 0, AVSEEK_FLAG_ANY);
+	//av_seek_frame(vidx->formatx, vidx->vsidx, 0, AVSEEK_FLAG_ANY);
+	avformat_seek_file(vidx->formatx, vidx->vsidx, 
+			INT64_MIN, 0, INT64_MAX, 0);
 	video_keyframe_credit(vidx, -1);
 	return 0;
 }
 
 static int video_seeking(EZVID *vidx, int64_t dts)
 {
-	av_seek_frame(vidx->formatx, vidx->vsidx, dts, AVSEEK_FLAG_BACKWARD);
+	//av_seek_frame(vidx->formatx, vidx->vsidx, dts, AVSEEK_FLAG_BACKWARD);
+	avformat_seek_file(vidx->formatx, vidx->vsidx, 
+			INT64_MIN, dts, INT64_MAX, 0);
 	video_keyframe_credit(vidx, -1);
 	return 0;
 }
