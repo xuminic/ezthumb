@@ -108,6 +108,8 @@
 #define EZOP_TRANSPARENT	0x80
 /* decoding on the fly */
 #define EZOP_DECODE_OTF		0x100
+/* font test (obsolete) */
+#define EZOP_FONT_TEST		0x200
 
 /* Display the debug log in the command line. */
 #define EZOP_DEBUG_MASK		0x7000
@@ -345,10 +347,12 @@ struct	MeStat		{	/* media statistics */
 	int64_t		dts_last;
 };
 
+
+
+/* ezthumb.c */
 void ezopt_init(EZOPT *ezopt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
-int ezstatis(char *filename, EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
 int video_free(EZVID *vidx);
@@ -362,9 +366,11 @@ int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
 int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
 int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
-EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
-int image_free(EZIMG *image);
-
+char *meta_bitrate(int bitrate, char *buffer);
+char *meta_filesize(int64_t size, char *buffer);
+int meta_fontsize(int fsize, int refsize);
+char *meta_basename(char *fname, char *buffer);
+char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
 int meta_time_diff(struct timeval *tvbegin);
 char *meta_timestamp(int ms, int enms, char *buffer);
 

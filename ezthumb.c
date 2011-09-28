@@ -54,7 +54,15 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int video_rewind(EZVID *vidx);
 static int video_seeking(EZVID *vidx, int64_t dts);
+static char *video_media_video(AVStream *stream, char *buffer);
+static char *video_media_audio(AVStream *stream, char *buffer);
+static char *video_media_subtitle(AVStream *stream, char *buffer);
+static int64_t video_packet_timestamp(AVPacket *packet);
+
+static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
+static int image_free(EZIMG *image);
 static int image_scale(EZIMG *image, AVFrame *frame);
+static int image_font_test(EZIMG *image, char *filename);
 static int image_gdframe_update(EZIMG *image);
 static int image_gdframe_timestamp(EZIMG *image, char *timestamp);
 static int image_gdframe_save(EZIMG *image, char *filename, int idx);
@@ -71,21 +79,12 @@ static int image_gdcanvas_background(EZIMG *image);
 static FILE *image_gif_anim_open(EZIMG *image, char *filename);
 static int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 static int image_gif_anim_close(EZIMG *image, FILE *fout);
-static int ezopt_cal_ratio(int ratio, int refsize);
-static int ezopt_cal_shots(int duration, int tmstep, int mode);
-static int ezopt_cal_timestep(int duration, int shots, int mode);
-static int ezopt_gif_anim(EZOPT *ezopt);
-static char *minfo_video(AVStream *stream, char *buffer);
-static char *minfo_audio(AVStream *stream, char *buffer);
-static char *minfo_subtitle(AVStream *stream, char *buffer);
-static char *meta_bitrate(int bitrate, char *buffer);
-static char *meta_filesize(int64_t size, char *buffer);
-static int meta_fontsize(int fsize, int refsize);
-static gdFont *meta_fontset(int fsize);
-static char *meta_basename(char *fname, char *buffer);
-static char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx);
-static int meta_copy_image(gdImage *dst, gdImage *src, int x, int, int, int);
-static int64_t meta_packet_timestamp(AVPacket *packet);
+static int image_cal_ratio(int ratio, int refsize);
+static int image_cal_shots(int duration, int tmstep, int mode);
+static int image_cal_timestep(int duration, int shots, int mode);
+static int image_cal_gif_animix(EZOPT *ezopt);
+static gdFont *image_fontset(int fsize);
+static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
 
 void ezopt_init(EZOPT *ezopt)
@@ -219,7 +218,9 @@ int ezinfo(char *filename, EZOPT *ezopt)
 	if (EZOP_DEBUG(ezopt->flags) > EZOP_DEBUG_NONE) {
 		if ((image = image_allocate(vidx, ezopt, &rc)) != NULL) {
 			//dump_ezimage(image);
-			//image_font_test(image, vidx->filename);
+			if (ezopt->flags & EZOP_FONT_TEST) {
+				image_font_test(image, vidx->filename);
+			}
 			image_free(image);
 		}
 	}
@@ -794,7 +795,7 @@ static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 			av_free_packet(packet);
 			continue;
 		}
-		if ((dts = meta_packet_timestamp(packet)) < 0) {
+		if ((dts = video_packet_timestamp(packet)) < 0) {
 			av_free_packet(packet);
 			continue;
 		}
@@ -883,13 +884,13 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 					stream->codec->codec_type) + 11);
 		switch (stream->codec->codec_type) {
 		case CODEC_TYPE_VIDEO:
-			minfo_video(stream, buffer);
+			video_media_video(stream, buffer);
 			break;
 		case CODEC_TYPE_AUDIO:
-			minfo_audio(stream, buffer);
+			video_media_audio(stream, buffer);
 			break;
 		case CODEC_TYPE_SUBTITLE:
-			minfo_subtitle(stream, buffer);
+			video_media_subtitle(stream, buffer);
 			break;
 		default:
 			strcat(buffer, "Unknown");
@@ -1080,7 +1081,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
 	vidx->gifx_fp = NULL;
-	if ((vidx->gifx_opt = ezopt_gif_anim(image->sysopt)) > 0) {
+	if ((vidx->gifx_opt = image_cal_gif_animix(image->sysopt)) > 0) {
 		vidx->gifx_fp = image_gif_anim_open(image, vidx->filename);
 	}
 
@@ -1162,7 +1163,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	int64_t	dts;
 	int	ffin = 1;
 
-	dts = meta_packet_timestamp(packet);
+	dts = video_packet_timestamp(packet);
 	vidx->rf_dts  = dts;
 	vidx->rf_pos  = packet->pos;
 	vidx->rf_size = 0;
@@ -1238,7 +1239,6 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	return -1;
 }
 
-
 /* remove the key frame requirement in video_decode_to() because it causes
  * inaccurate results in short video clips. the integrity now rely on
  * the decode-on-the-fly mode */
@@ -1297,6 +1297,82 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 	return 0;
 }
 
+
+static char *video_media_video(AVStream *stream, char *buffer)
+{
+	AVCodec	*xcodec;
+	char	tmp[128];
+
+	xcodec = avcodec_find_decoder(stream->codec->codec_id);
+	if (xcodec == NULL) {
+		strcat(buffer, "Unknown Codec");
+	} else {
+		strcat(buffer, xcodec->long_name);
+	}
+
+	sprintf(tmp, ": %dx%d ", stream->codec->width, stream->codec->height);
+	strcat(buffer, tmp);
+	if (stream->codec->sample_aspect_ratio.num) {
+		sprintf(tmp, "AR %d:%d ", 
+				stream->codec->sample_aspect_ratio.num,
+				stream->codec->sample_aspect_ratio.den);
+		strcat(buffer, tmp);
+	}
+
+	strcat(buffer, id_lookup(id_pix_fmt, stream->codec->pix_fmt) + 8);
+	sprintf(tmp, "  %.3f FPS ", (float) stream->r_frame_rate.num / 
+			(float) stream->r_frame_rate.den);
+	strcat(buffer, tmp);
+
+	if (stream->codec->bit_rate) {
+		strcat(buffer, meta_bitrate(stream->codec->bit_rate, tmp));
+	}
+	return buffer;
+}
+
+static char *video_media_audio(AVStream *stream, char *buffer)
+{
+	AVCodec	*xcodec;
+	char	tmp[128];
+
+	xcodec = avcodec_find_decoder(stream->codec->codec_id);
+	if (xcodec == NULL) {
+		strcat(buffer, "Unknown Codec");
+	} else {
+		strcat(buffer, xcodec->long_name);
+	}
+
+	sprintf(tmp, ": %d-CH  %s %dHz ", stream->codec->channels, 
+			id_lookup(id_sam_format, stream->codec->sample_fmt),
+			stream->codec->sample_rate);
+	strcat(buffer, tmp);
+
+	if (stream->codec->bit_rate) {
+		strcat(buffer, meta_bitrate(stream->codec->bit_rate, tmp));
+	}
+	return buffer;
+}
+
+static char *video_media_subtitle(AVStream *stream, char *buffer)
+{
+	return buffer;
+}
+
+static int64_t video_packet_timestamp(AVPacket *packet)
+{
+	int64_t	dts;
+
+	dts = packet->dts;
+	if (dts == AV_NOPTS_VALUE) {
+		dts = packet->pts;
+	}
+	if (dts == AV_NOPTS_VALUE) {
+		dts = -1;
+	}
+	return dts;
+}
+
+
 /* Allocate the EZIMG structure and translate the used defined parameter
  * group, EZOPT into this structure.
  *
@@ -1354,7 +1430,7 @@ static int video_seeking(EZVID *vidx, int64_t dts)
  *   }
  * }    
  */   
-EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
+static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 {
 	EZIMG	*image;
 	int	size, shots;
@@ -1398,11 +1474,11 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	image->dst_pixfmt = PIX_FMT_RGB24;
 
 	/* calculate the expected time range */
-	image->time_from = ezopt_cal_ratio(ezopt->time_from, vidx->duration);
+	image->time_from = image_cal_ratio(ezopt->time_from, vidx->duration);
 	if (image->time_from >= vidx->duration) {
 		image->time_from = 0;
 	}
-	image->time_during = ezopt_cal_ratio(ezopt->time_to, vidx->duration);
+	image->time_during = image_cal_ratio(ezopt->time_to, vidx->duration);
 	if (image->time_during > vidx->duration) {
 		image->time_during = vidx->duration - image->time_from;
 	} else if (image->time_during <= image->time_from) {
@@ -1418,10 +1494,10 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		image->grid_row  = ezopt->grid_row;
 		image->time_step = ezopt->tm_step;
 		if ((image->grid_row < 1) && (image->time_step > 0)) {
-			image->grid_row = ezopt_cal_shots(image->time_during,
+			image->grid_row = image_cal_shots(image->time_during,
 					image->time_step, ezopt->flags);
 		} else if ((image->grid_row > 0) && (image->time_step < 1)) {
-			image->time_step = ezopt_cal_timestep(
+			image->time_step = image_cal_timestep(
 					image->time_during,
 					image->grid_row, ezopt->flags);
 
@@ -1432,7 +1508,7 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 			ezopt->grid_row = 4;	/* make it default */
 		}
 		if (ezopt->grid_row < 1) {
-			shots = ezopt_cal_shots(image->time_during, 
+			shots = image_cal_shots(image->time_during, 
 					ezopt->tm_step, ezopt->flags);
 			image->grid_row  = (shots + image->grid_col - 1) /
 					image->grid_col;
@@ -1442,7 +1518,7 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 			image->time_step = ezopt->tm_step;
 		} else {
 			image->grid_row  = ezopt->grid_row;
-			image->time_step = ezopt_cal_timestep(
+			image->time_step = image_cal_timestep(
 					image->time_during,
 					image->grid_col * image->grid_row, 
 					ezopt->flags);
@@ -1455,16 +1531,16 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 			/* it's the reference width for getting the gap size */
 			size = ezopt->canvas_width / ezopt->grid_col;
-			image->gap_width = ezopt_cal_ratio(ezopt->grid_gap_w, 
+			image->gap_width = image_cal_ratio(ezopt->grid_gap_w, 
 					size);
-			image->rim_width = ezopt_cal_ratio(ezopt->grid_rim_w, 
+			image->rim_width = image_cal_ratio(ezopt->grid_rim_w, 
 					size);
 
 			/* it's the reference height for getting the gap size*/
 			size = size * image->src_height / image->src_width;
-			image->gap_height = ezopt_cal_ratio(ezopt->grid_gap_h, 
+			image->gap_height = image_cal_ratio(ezopt->grid_gap_h, 
 					size);
-			image->rim_height = ezopt_cal_ratio(ezopt->grid_rim_h, 
+			image->rim_height = image_cal_ratio(ezopt->grid_rim_h, 
 					size);
 
 			/* now calculate the actual shot width and height */
@@ -1488,13 +1564,13 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		} else {
 			/* Otherwise the canvas_width will be calculated by 
 			 * those actual dimentions */
-			image->gap_width = ezopt_cal_ratio(ezopt->grid_gap_w, 
+			image->gap_width = image_cal_ratio(ezopt->grid_gap_w, 
 					image->dst_width);
-			image->rim_width = ezopt_cal_ratio(ezopt->grid_rim_w, 
+			image->rim_width = image_cal_ratio(ezopt->grid_rim_w, 
 					image->dst_width);
-			image->gap_height = ezopt_cal_ratio(ezopt->grid_gap_h, 
+			image->gap_height = image_cal_ratio(ezopt->grid_gap_h, 
 					image->dst_width);
-			image->rim_height = ezopt_cal_ratio(ezopt->grid_rim_h, 
+			image->rim_height = image_cal_ratio(ezopt->grid_rim_h, 
 					image->dst_width);
 			image->canvas_width = (image->rim_width * 2 + 
 				image->gap_width * (ezopt->grid_col - 1) +
@@ -1577,7 +1653,7 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 
-	if ((image->grid_col > 0) && !ezopt_gif_anim(image->sysopt)) {
+	if ((image->grid_col > 0) && !image_cal_gif_animix(image->sysopt)) {
 		/* only create the GD device for handling the canvas 
 		 * when canvas is required */
 		image->gdcanvas = gdImageCreateTrueColor(image->canvas_width,
@@ -1634,7 +1710,7 @@ EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	return image;	
 }
 
-int image_free(EZIMG *image)
+static int image_free(EZIMG *image)
 {
 	if (image->gdcanvas) {
 		gdImageDestroy(image->gdcanvas);
@@ -1663,7 +1739,7 @@ static int image_scale(EZIMG *image, AVFrame *frame)
 			image->rgb_frame->data, image->rgb_frame->linesize);
 }
 
-int image_font_test(EZIMG *image, char *filename)
+static int image_font_test(EZIMG *image, char *filename)
 {
 	gdFont	*font;
 	char	*s="1234567890ABCDEFGHIJKLMNOPQRSTUabcdefghijklmnopqrstuvwxyz";
@@ -1675,27 +1751,27 @@ int image_font_test(EZIMG *image, char *filename)
 
 	y = 20;
 
-	font = meta_fontset(EZ_FONT_TINY);
+	font = image_fontset(EZ_FONT_TINY);
 	gdImageString(image->gdcanvas, font, 20, y, (unsigned char *) s, 
 			image->color_minfo);
 	y += font->h + 2;
 	
-	font = meta_fontset(EZ_FONT_SMALL);
+	font = image_fontset(EZ_FONT_SMALL);
 	gdImageString(image->gdcanvas, font, 20, y, (unsigned char *) s, 
 			image->color_minfo);
 	y += font->h + 2;
 
-	font = meta_fontset(EZ_FONT_MEDIUM);
+	font = image_fontset(EZ_FONT_MEDIUM);
 	gdImageString(image->gdcanvas, font, 20, y, (unsigned char *) s, 
 			image->color_minfo);
 	y += font->h + 2;
 
-	font = meta_fontset(EZ_FONT_LARGE);
+	font = image_fontset(EZ_FONT_LARGE);
 	gdImageString(image->gdcanvas, font, 20, y, (unsigned char *) s, 
 			image->color_minfo);
 	y += font->h + 2;
 
-	font = meta_fontset(EZ_FONT_GIANT);
+	font = image_fontset(EZ_FONT_GIANT);
 	gdImageString(image->gdcanvas, font, 20, y, (unsigned char *) s, 
 			image->color_minfo);
 	y += font->h + 2;
@@ -1850,10 +1926,10 @@ static int image_gdframe_strlen(EZIMG *image, int fsize, char *s)
 
 	fsize = meta_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
-		font = meta_fontset(fsize);
+		font = image_fontset(fsize);
 	} else if (gdImageStringFT(NULL, brect,	0, image->sysopt->ins_font, 
 				(double) fsize, 0, 0, 0, s)) {
-		font = meta_fontset(fsize);
+		font = image_fontset(fsize);
 	} else {
 		return EZ_MK_WORD(brect[2] - brect[6], brect[3] - brect[7]);
 	}
@@ -1867,11 +1943,11 @@ static int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char
 	//printf("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", x, y, fsize, s, c);
 	fsize = meta_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
-		gdImageString(image->gdframe, meta_fontset(fsize),
+		gdImageString(image->gdframe, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);
 	} else if (gdImageStringFT(NULL, brect, 0, image->sysopt->ins_font,
 				(double) fsize, 0, 0, 0, s)) {
-		gdImageString(image->gdframe, meta_fontset(fsize),
+		gdImageString(image->gdframe, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);
 	} else {
 		gdImageStringFT(image->gdframe, brect, c, 
@@ -1941,7 +2017,7 @@ static int image_gdcanvas_update(EZIMG *image, int idx)
 	}
 	/*gdImageCopy(image->gdcanvas, image->gdframe, x, y, 0, 0, 
 			image->dst_width, image->dst_height);*/
-	meta_copy_image(image->gdcanvas, image->gdframe, x, y, 0, 0);
+	image_copy(image->gdcanvas, image->gdframe, x, y, 0, 0);
 	return EZ_ERR_NONE;
 }
 
@@ -2009,10 +2085,10 @@ static int image_gdcanvas_strlen(EZIMG *image, int fsize, char *s)
 		image->canvas_width;
 	fsize = meta_fontsize(fsize, ref);
 	if (image->sysopt->mi_font == NULL) {
-		font = meta_fontset(fsize);
+		font = image_fontset(fsize);
 	} else if (gdImageStringFT(NULL, brect,	0, image->sysopt->mi_font, 
 				(double) fsize, 0, 0, 0, s)) {
-		font = meta_fontset(fsize);
+		font = image_fontset(fsize);
 	} else {
 		return EZ_MK_WORD(brect[2] - brect[6], brect[3] - brect[7]);
 	}
@@ -2027,11 +2103,11 @@ static int image_gdcanvas_puts(EZIMG *image, int fsize, int x, int y, int c, cha
 		image->canvas_width;
 	fsize = meta_fontsize(fsize, ref);
 	if (image->sysopt->mi_font == NULL) {
-		gdImageString(image->gdcanvas, meta_fontset(fsize),
+		gdImageString(image->gdcanvas, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);
 	} else if (gdImageStringFT(NULL, brect, 0, image->sysopt->mi_font,
 				(double) fsize, 0, 0, 0, s)) {
-		gdImageString(image->gdcanvas, meta_fontset(fsize),
+		gdImageString(image->gdcanvas, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);
 	} else {
 		gdImageStringFT(image->gdcanvas, brect, c, 
@@ -2135,7 +2211,7 @@ static int image_gdcanvas_background(EZIMG *image)
 	default:	/* EZ_POS_TILE */
 		for (dy = 0; dy < image->canvas_height; dy += thei) {
 			for (dx = 0; dx < image->canvas_width; dx += twid) {
-				meta_copy_image(image->gdcanvas, bgim, 
+				image_copy(image->gdcanvas, bgim, 
 						dx, dy, twid, thei);
 			}
 		}
@@ -2143,7 +2219,7 @@ static int image_gdcanvas_background(EZIMG *image)
 		return 0;
 	}
 
-	meta_copy_image(image->gdcanvas, bgim, dx, dy, twid, thei);
+	image_copy(image->gdcanvas, bgim, dx, dy, twid, thei);
 	gdImageDestroy(bgim);
 	return 0;
 }
@@ -2203,8 +2279,7 @@ static int image_gif_anim_close(EZIMG *image, FILE *fout)
 	return 0;
 }
 
-
-static int ezopt_cal_ratio(int ratio, int refsize)
+static int image_cal_ratio(int ratio, int refsize)
 {
 	if (ratio & EZ_RATIO_OFF) {
 		return (ratio & ~EZ_RATIO_OFF) * refsize / 100;
@@ -2214,7 +2289,7 @@ static int ezopt_cal_ratio(int ratio, int refsize)
 	return 0;
 }
 
-static int ezopt_cal_shots(int duration, int tmstep, int mode)
+static int image_cal_shots(int duration, int tmstep, int mode)
 {
 	int	shots;
 
@@ -2228,7 +2303,7 @@ static int ezopt_cal_shots(int duration, int tmstep, int mode)
 	return shots;
 }
 
-static int ezopt_cal_timestep(int duration, int shots, int mode)
+static int image_cal_timestep(int duration, int shots, int mode)
 {
 	if (mode & EZOP_FFRAME) {
 		shots--;
@@ -2239,7 +2314,7 @@ static int ezopt_cal_timestep(int duration, int shots, int mode)
 	return duration / (shots + 1);
 }
 
-static int ezopt_gif_anim(EZOPT *ezopt)
+static int image_cal_gif_animix(EZOPT *ezopt)
 {
 	if (strcmp(ezopt->img_format, "gif")) {
 		return 0;
@@ -2250,67 +2325,38 @@ static int ezopt_gif_anim(EZOPT *ezopt)
 	return 0;
 }
 
-static char *minfo_video(AVStream *stream, char *buffer)
+static gdFont *image_fontset(int fsize)
 {
-	AVCodec	*xcodec;
-	char	tmp[128];
+	if (fsize <= EZ_FONT_TINY) {
+		return gdFontGetTiny();
+	} else if (fsize <= EZ_FONT_SMALL) {
+		return gdFontGetSmall();
+	} else if (fsize <= EZ_FONT_MEDIUM) {
+		return gdFontGetMediumBold();
+	} else if (fsize <= EZ_FONT_LARGE) {
+		return gdFontGetLarge();
+	}
+	return gdFontGetGiant();
+}
 
-	xcodec = avcodec_find_decoder(stream->codec->codec_id);
-	if (xcodec == NULL) {
-		strcat(buffer, "Unknown Codec");
+static int image_copy(gdImage *dst, gdImage *src, int x, int y, 
+		int wid, int hei)
+{
+	wid = (wid < 1) ? gdImageSX(src) : wid;
+	hei = (hei < 1) ? gdImageSY(src) : hei;
+	if ((gdImageSX(src) == wid) && (gdImageSY(src) == hei)) {
+		gdImageCopy(dst, src, x, y, 0, 0, wid, hei);
 	} else {
-		strcat(buffer, xcodec->long_name);
+		gdImageCopyResampled(dst, src, x, y, 0, 0, wid, hei, 
+				gdImageSX(src), gdImageSY(src));
 	}
-
-	sprintf(tmp, ": %dx%d ", stream->codec->width, stream->codec->height);
-	strcat(buffer, tmp);
-	if (stream->codec->sample_aspect_ratio.num) {
-		sprintf(tmp, "AR %d:%d ", 
-				stream->codec->sample_aspect_ratio.num,
-				stream->codec->sample_aspect_ratio.den);
-		strcat(buffer, tmp);
-	}
-
-	strcat(buffer, id_lookup(id_pix_fmt, stream->codec->pix_fmt) + 8);
-	sprintf(tmp, "  %.3f FPS ", (float) stream->r_frame_rate.num / 
-			(float) stream->r_frame_rate.den);
-	strcat(buffer, tmp);
-
-	if (stream->codec->bit_rate) {
-		strcat(buffer, meta_bitrate(stream->codec->bit_rate, tmp));
-	}
-	return buffer;
+	return 0;
 }
 
-static char *minfo_audio(AVStream *stream, char *buffer)
-{
-	AVCodec	*xcodec;
-	char	tmp[128];
 
-	xcodec = avcodec_find_decoder(stream->codec->codec_id);
-	if (xcodec == NULL) {
-		strcat(buffer, "Unknown Codec");
-	} else {
-		strcat(buffer, xcodec->long_name);
-	}
 
-	sprintf(tmp, ": %d-CH  %s %dHz ", stream->codec->channels, 
-			id_lookup(id_sam_format, stream->codec->sample_fmt),
-			stream->codec->sample_rate);
-	strcat(buffer, tmp);
 
-	if (stream->codec->bit_rate) {
-		strcat(buffer, meta_bitrate(stream->codec->bit_rate, tmp));
-	}
-	return buffer;
-}
-
-static char *minfo_subtitle(AVStream *stream, char *buffer)
-{
-	return buffer;
-}
-
-static char *meta_bitrate(int bitrate, char *buffer)
+char *meta_bitrate(int bitrate, char *buffer)
 {
 	static	char	tmp[32];
 
@@ -2321,7 +2367,7 @@ static char *meta_bitrate(int bitrate, char *buffer)
 	return buffer;
 }
 
-static char *meta_filesize(int64_t size, char *buffer)
+char *meta_filesize(int64_t size, char *buffer)
 {
 	static	char	tmp[32];
 
@@ -2363,7 +2409,7 @@ char *meta_timestamp(int ms, int enms, char *buffer)
 	return buffer;
 }
 
-static int meta_fontsize(int fsize, int refsize)
+int meta_fontsize(int fsize, int refsize)
 {
 	if (fsize == EZ_FONT_AUTO) {
 		if (refsize < 160) {
@@ -2381,22 +2427,8 @@ static int meta_fontsize(int fsize, int refsize)
 	return fsize;
 }
 
-static gdFont *meta_fontset(int fsize)
-{
-	if (fsize <= EZ_FONT_TINY) {
-		return gdFontGetTiny();
-	} else if (fsize <= EZ_FONT_SMALL) {
-		return gdFontGetSmall();
-	} else if (fsize <= EZ_FONT_MEDIUM) {
-		return gdFontGetMediumBold();
-	} else if (fsize <= EZ_FONT_LARGE) {
-		return gdFontGetLarge();
-	}
-	return gdFontGetGiant();
-}
-
 // FIXME: UTF-8 and widechar?
-static char *meta_basename(char *fname, char *buffer)
+char *meta_basename(char *fname, char *buffer)
 {
 	static	char	tmp[1024];
 	char	*p;
@@ -2414,7 +2446,7 @@ static char *meta_basename(char *fname, char *buffer)
 }
 
 // FIXME: UTF-8 and widechar?
-static char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
+char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
 {
 	static	char	tmp[1024];
 	char	*p;
@@ -2441,34 +2473,6 @@ static char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
 	}
 	strcat(buf, sfx);
 	return buf;
-}
-
-static int meta_copy_image(gdImage *dst, gdImage *src, 
-		int x, int y, int wid, int hei)
-{
-	wid = (wid < 1) ? gdImageSX(src) : wid;
-	hei = (hei < 1) ? gdImageSY(src) : hei;
-	if ((gdImageSX(src) == wid) && (gdImageSY(src) == hei)) {
-		gdImageCopy(dst, src, x, y, 0, 0, wid, hei);
-	} else {
-		gdImageCopyResampled(dst, src, x, y, 0, 0, wid, hei, 
-				gdImageSX(src), gdImageSY(src));
-	}
-	return 0;
-}
-
-static int64_t meta_packet_timestamp(AVPacket *packet)
-{
-	int64_t	dts;
-
-	dts = packet->dts;
-	if (dts == AV_NOPTS_VALUE) {
-		dts = packet->pts;
-	}
-	if (dts == AV_NOPTS_VALUE) {
-		dts = -1;
-	}
-	return dts;
 }
 
 int meta_time_diff(struct timeval *tvbegin)
