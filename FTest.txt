@@ -53,6 +53,10 @@ ezthumb -o /tmp small.wmv middle.avi
 ezthumb -x _pic small.wmv middle.avi
 ezthumb -x 123  small.wmv middle.avi
 
+#013 Specify the video stream index explicitly
+ezthumb --vindex 3  small.wmv  (should be failed)
+
+
 #021 Test the internal font with different size:
 ezthumb -F 16:8 small.wmv
 
