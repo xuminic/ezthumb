@@ -76,9 +76,9 @@ char *cli_alloc_list(struct cliopt *optbl)
 	for (p = list; (rc = cli_type(optbl)) != CLI_EOL; optbl++) {
 		if (rc & CLI_SHORT) {
 			*p++ = optbl->opt_char;
-		}
-		if (optbl->param > 0) {
-			*p++ = ':';
+			if (optbl->param > 0) {
+				*p++ = ':';
+			}
 		}
 	}
 	return list;

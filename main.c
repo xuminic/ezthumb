@@ -316,6 +316,7 @@ int main(int argc, char **argv)
 			break;
 		case 'x':
 			strncpy(sysoption.suffix, optarg, 63);
+			sysoption.suffix[63] = 0;
 			break;
 		default:
 			printf("Get 0x%x\n", c);

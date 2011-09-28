@@ -47,6 +47,11 @@ ezthumb -e 4 small.wmv
 
 #011 Specify an output directory
 ezthumb -o ~ small.wmv middle.avi
+ezthumb -o /tmp small.wmv middle.avi
+
+#012 Specify the suffix of the output files
+ezthumb -x _pic small.wmv middle.avi
+ezthumb -x 123  small.wmv middle.avi
 
 #021 Test the internal font with different size:
 ezthumb -F 16:8 small.wmv
@@ -217,6 +222,10 @@ ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --
 #081 Same to #080, except to relocate the background picture to canvas bottom and center:
 ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background background.jpg --pos-bg rb:sy small.wmv
 ezthumb -c ::7f7f7f --gap-shots 20 --gap-margin 40 --background bigground.png --pos-bg mc:sy small.wmv
+
+
+
+
 
 #090 Generate thumbnails via Fast Skim process 
 ezthumb -p 1 -v 1 small.wmv
