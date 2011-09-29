@@ -13,5 +13,21 @@ supports the transparent background. Batch processing allows.
 Install
 =======
 
+Ezthumb requires following packages:
+
+ffmpeg
+gd
+freetype
+bzip2
+
+You may need to modify the Makefile, especially the INCDIR and LIBDIR macros,
+to point to proper directories.
+
+
+Examples
+========
+
+
+
 
 

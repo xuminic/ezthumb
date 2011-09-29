@@ -12,7 +12,7 @@ is used to create thumbnails for video files. It uses the
 library as its engine so 
 .B ezthumb
 almost supports any video formats.
-Normally the screenshots would be gridded into a single canvas picture or 
+Normally the screenshots would be tiled into a single canvas picture or 
 compose a single 
 .B GIF animation 
 file.  But it can also save frames separately.
@@ -31,9 +31,9 @@ supports the transparent background. Batch processing allows.
 .BR \-c , " \-\-colour \fIMI:TM:BG\fP"
 Specify the colour of text and canvas. 
 .I MI
-is for the text of the media information.
+is the colour of the media information text.
 .I TM
-is for the time stamp in the screen shots and
+is the colour of the inset time stamp and
 .I BG
 is the canvas' background colour. These colour codes use the same form of
 .B RRGGBB
@@ -45,16 +45,18 @@ for example:
 
 .TP
 .BR \-d , " \-\-during \fIhead\fP"
-Specify the duration finding mode. Normally the video's duration can be
+Specify the method to retrieve the duration of videos. Normally the duration can be
 retrieved from the container head, which is the default mode
 .B "head" .
-However, some dodge video clips include an inaccurate time duration value
-so the best way to retrieve the duration is the
+However, some dodgy files were broken or included the inaccurate duration value.
+As an alternative the duration could be retrieved by
 .B "scan"
-mode to scan the whole video file till the last packet. Its drawback is
-too slow. The compromise mode is 
-.B "fast"
-which only fast scan the tail of the video.
+mode.
+.B ezthumb
+would scan the whole video file to locate the last packet. It is accurate but slow.
+The compromise mode is 
+.B "fast" ,
+which only scans the tail part of the video.
 .TP
 .BR \-e , " \-\-edge \fIvalue\fP"
 This option defines the thickness of the black edge around each screenshots.
@@ -62,10 +64,10 @@ The default value 0 means these's no black edge around screenshots.
 
 .TP
 .BR \-f , " \-\-font \fIfilename\fP"
-This option specifies the whole path of a TrueType font which is used to
+This option specifies the full path of a TrueType font which is used to
 render the media information and timestamp in the output picture. If this
 option is not specified, the program will use the internal fix-pixel fonts.
-Note the fontconfig patterns is also acceptable.
+Note that the fontconfig patterns is also acceptable.
 
 .TP
 .BR \-F , " \-\-fontsize \fIMI:TM\fP"
@@ -77,11 +79,21 @@ is for the size of time stamps inside the screen shots.
 
 .TP
 .BR \-g , " \-\-grid \fIcolumn x row\fP"
-This option is used to define the thumbnail grid in the canvas. The default
-value
+This option is used to define the grid of the screenshots in the canvas. 
+The default value
 .I "4x4"
-means there are 4 columns and 4 rows thumbnails in the canvas. Therefore
-there are 16 screenshots in total.
+means it is a 4 columns by 4 rows thumbnail canvas. 
+Therefore it would take 16 screen shots in total. 
+The time intervals between each shots would be calculated by the duration
+of the video and the total shots. It could be tuned by 
+.BR "\-\-timestep" ,
+.BR "\-\-time\-from" ,
+.BR "\-\-time\-end" ,
+.BR "\-\-opt\-ffr" ,
+and
+.BR "\-\-opt\-lfr"
+options.
+
 .B Note
 that there are two
 .B tricky
@@ -348,7 +360,7 @@ User can also explicitly specify this option to enforce the
 mode.
 
 .TP
-.BR "\-\-vindex" \fIvideo_stream_index\fP"
+.BR "\-\-vindex \fIvideo_stream_index\fP"
 specify the video stream index number inside the container file.
 The default behaviour of
 .B ezthumb
