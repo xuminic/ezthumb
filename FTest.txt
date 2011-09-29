@@ -238,13 +238,29 @@ ezthumb -t 1000 -g 3 -v 1 --accurate small.wmv
 #092 Take seperate screen shots by setting time steps
 ezthumb -t 1000  -g 0 -v 1 small.wmv
 
+#093 Take screen shots from the first frame
+ezthumb --opt-ffr on -v 1 middle.avi
 
+#094 Take screen shots which include the last frame
+ezthumb --opt-lfr on -v 1 middle.avi
 
+#095 Take screen shots from the specified time position
+ezthumb --time-from 30 -v 1 middle.avi
+ezthumb --time-from 5:30 -v 1 middle.avi
+ezthumb --time-from 0:5:30 -v 1 middle.avi
+ezthumb --time-from 15% -v 1 middle.avi
 
+#096 Take screen shots till the specified time position
+ezthumb --time-end 0:35:30 -v 1 middle.avi
 
+#097 Take screen shots from specified time position to the specified time position
+ezthumb --time-from 15% --time-end 0:35:30 -v 1 middle.avi
 
+#098 Take screen shots inside specified time positions with both end of frames
+ezthumb --time-from 15% --time-end 0:35:30 --opt-ffr on --opt-lfr on  -v 1 middle.avi
 
-
+#099 Take screen shots with reversed time positions (--time-end should be ignored)
+ezthumb --time-from 85% --time-end 15% -v 1 middle.avi
 
 
 
