@@ -1505,7 +1505,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	} else {
 		image->grid_col = ezopt->grid_col;
 		if ((ezopt->grid_row < 1) && (ezopt->tm_step < 1)) {
-			ezopt->grid_row = 4;	/* make it default */
+			image->grid_row = 4;	/* make it default */
 		}
 		if (ezopt->grid_row < 1) {
 			shots = image_cal_shots(image->time_during, 
@@ -1577,8 +1577,8 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 				image->dst_width * ezopt->grid_col + 1) & ~1;
 		}
 		image->canvas_height = image->rim_height * 2 + 
-			image->gap_height * (ezopt->grid_row - 1) +
-			image->dst_height * ezopt->grid_row ;
+			image->gap_height * (image->grid_row - 1) +
+			image->dst_height * image->grid_row ;
 	}
 
 	/* calculate the total shots and allocate the proposal PTS list */
