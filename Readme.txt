@@ -27,7 +27,22 @@ to point to proper directories.
 Examples
 ========
 
+You may use the command as simple as this to test it: 
 
+ezthumb *.avi
 
+However, the most used command would include a grid setting and a size setting:
+
+ezthumb -g 4x8 -s 33% *.avi
+
+It will generate the 4x8 thumbnails for all .avi files in the current 
+directory. Each screen shots inside the thumbnails are 33% of the video frame
+in width and height.
+
+This command can list the useful information of video files:
+
+ezthumb -i *.avi
+
+Please see the manpage for more examples.
 
 
