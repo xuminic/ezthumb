@@ -31,7 +31,6 @@ static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "OPTIONS:" },
 	{ 'c', "colour",  2, "the colour setting (MI:TM:BG)(RRGGBB)" },
 	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
-	{ 'e', "edge",    1, "the width of the screen shot edge (0)" },
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
 	{ 'F', "fontsize",2, "the size setting of the font" },
 	{ 'g', "grid",    2, "the thumbnail grid in the canvas.(4x4)" },
@@ -48,6 +47,7 @@ static	struct	cliopt	clist[] = {
 	{   6, "accurate", 0, "take accurate shots including P-frames" },
 	{   7, "background", 2, "the background picture" },
 	{  14, "decode-otf", 0, "decoding on the fly mode for scan process" },
+	{  21, "edge",    1, "the width of the screen shot edge (0)" },
 	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
 	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
 	{  10, "opt-info", 2, "the media infomation (on)" },
@@ -62,8 +62,8 @@ static	struct	cliopt	clist[] = {
 	{  19, "time-end", 2, "the time in video where ends shooting" },
 	{  20, "transparent", 0, "generate the transparent background" },
 	{  22, "vindex",   1, "the index of the video stream" },
-	{   1, "help",    0, "Display the help message" },
-	{   2, "version", 0, "Display the version number" },
+	{   1, "help",    0, "*Display the help message" },
+	{   2, "version", 0, "*Display the version number" },
 	{ 0, NULL, 0, NULL }
 };
 

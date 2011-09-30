@@ -29,11 +29,11 @@ supports the transparent background. Batch processing allows.
 .SH OPTIONS
 .TP
 .BR \-c , " \-\-colour \fIMI:TM:BG\fP"
-Specify the colour of text and canvas. 
+Specify the colour of texts and canvas. 
 .I MI
-is the colour of the media information text.
+is the colour of the media information.
 .I TM
-is the colour of the inset time stamp and
+is the colour of the inset timestamp and
 .I BG
 is the canvas' background colour. These colour codes use the same form of
 .B RRGGBB
@@ -47,26 +47,31 @@ for example:
 .BR \-d , " \-\-during \fIhead\fP"
 Specify the method to retrieve the duration of videos. Normally the duration can be
 retrieved from the container head, which is the default mode
-.B "head" .
+.B " 'head' " .
 However, some dodgy files were broken or included the inaccurate duration value.
 As an alternative the duration could be retrieved by
-.B "scan"
+.B " 'scan' "
 mode.
 .B ezthumb
 would scan the whole video file to locate the last packet. It is accurate but slow.
 The compromise mode is 
-.B "fast" ,
+.B "'fast'" ,
 which only scans the tail part of the video.
-.TP
-.BR \-e , " \-\-edge \fIvalue\fP"
-This option defines the thickness of the black edge around each screenshots.
-The default value 0 means these's no black edge around screenshots.
+
+If
+.B ezthumb
+took less screenshots than that expected, you may think about using the
+.B "'fast'" 
+or
+.B "'scan'"
+options.
 
 .TP
 .BR \-f , " \-\-font \fIfilename\fP"
-This option specifies the full path of a TrueType font which is used to
-render the media information and timestamp in the output picture. If this
-option is not specified, the program will use the internal fix-pixel fonts.
+This option specifies the full path of a TrueType font file, which would
+be used to render the media information and the inset timestamp in the output
+picture. If this option is not specified, the program will use the internal 
+fix-pixel fonts.
 Note that the fontconfig patterns is also acceptable.
 
 .TP
@@ -84,8 +89,8 @@ The default value
 .I "4x4"
 means it is a 4 columns by 4 rows thumbnail canvas. 
 Therefore it would take 16 screen shots in total. 
-The time intervals between each shots would be calculated by the duration
-of the video and the total shots. It could be tuned by 
+The time intervals between each shots will be calculated by the duration
+of the video and the number of total shots. It could be tuned by 
 .BR "\-\-timestep" ,
 .BR "\-\-time\-from" ,
 .BR "\-\-time\-end" ,
@@ -97,18 +102,21 @@ options.
 .B Note
 that there are two
 .B tricky
-modes. If 
+modes in this option. If 
 .I column
 is 0, 
 .B ezthumb
-will separately save screenshots into the number of
+will save screenshots into separate files. 
+The suffix of these files would be numbers like
+.B _001.jpg, _002.jpg, ...
+etc. The total number of screenshots is decidec by
+.I row .
+If
 .I row
-files. If
-.I row
-is also 0,
+is 0 too,
 .B ezthumb
 will save all key frames (I-frame) into separate files. 
-So watch out, it may be hundreds.
+So watch out, it might be hundreds.
 
 .TP
 .BR \-i , " \-\-list"
@@ -129,7 +137,7 @@ and
 .I png.
 The
 .I jpg
-can be followed by an identifier
+could be followed by an identifier
 .I @
 and a quality factor. For example, the default format is
 .I jpg@85 .
@@ -137,32 +145,77 @@ The
 .I gif
 format can also be followed by a factor. In that case, it means to generate an
 .B animated GIF 
-file. The factor is the interval in millisecond between each frames. 
+file. The factor is the time interval in millisecond between each frames. 
 For example,
 .I gif@1000
-means to generate the animated GIF file from the screenshots and the interval
-between frames is 1 second.
+means to generate the animated GIF file from the screenshots, and each frame 
+of the GIF file will be displayed by 1 second.
 
 .TP
 .BR \-o , " \-\-outdir \fIdirectory\fP"
 Specify a
 .I directory
-for storing the output thumbnail files.
+for storing the output thumbnails. 
+Normally the thumbnails would be stored into the same path of the source video.
+With this option, however, they can be stored into any directory.
+It could be helpful when generating thumbnails from 
+.B read-only 
+devices like CDROM.
 
 .TP
 .BR \-p , " \-\-process \fImethod\fP"
+This option is used to explicitly specify a method to generate thumbnails.
+.B ezthumb
+uses a seek-and-decode strategy called
+.I "'skim' (1)"
+for default cases. It will seek to the most possible position in the video 
+file and start to decode the nearest frame. 
+If the video file doesn't support seeking, 
+.B ezthumb
+will automatically switch to
+.I "'heuris' (4)" ,
+the heuristic method, where it will scan the whole video file from beginning 
+to find the proper frame to be decoded.
+.I "'heuris'"
+is a single-pass strategy which uses heuristic method to decide the position
+of the the nearest frame. 
+.I "'scan' (2)"
+is a single-pass video scanning strategy too. However, it always scans to
+and decode the next nearest key frame. What's more, 
+.I "'scan'"
+doesn't support the
+.BR "\-\-accurate"
+option. On the other hand,
+.I "'twopass' (3)"
+let
+.B ezthumb
+scan the video file twice to decide the finest position for decoding.
 
+The default setting can process most of files. However, in some quite dodgy
+situation, user might need to specify, or try, one of these strategies.
 
+Note that
+.I "'scan'" ,
+.I "'twopass'"
+and
+.I "'heuris'" 
+are all scan-based methods. If the video file requires decoding previous
+key frames, the
+.BR "\-\-decode\-otf"
+options sometimes is quite supportive. 
 
 .TP
 .BR \-s , " \-\-ssize \fIthumbnail_size\fP"
-Specify the dimension of each thumbnail. There are two methods to describe the
-dimension. One is setting the width and height explicitly like
-.I "160x120".
-Another one is setting a zoom ratio like
+Specify the width and height of each screen shot. 
+It could be defined by pixel size explicitly like
+.I "160x120"
+or by a zoom ratio like
 .I "50%".
-In that case the thumbnail would be 50% of the original frame size, such as
-160x120 thumbnail from a 320x240 video. 
+In that case the screen shot would be 50% of the video frame size 
+in either direction, such as 160x120 from a 320x240 video. 
+
+The pixel size doesn't need to follow the original video ratio so that
+it could be adjusted to any aspect ratio as you want.
 
 .B Note
 that this option would be overriden by the
@@ -170,58 +223,52 @@ that this option would be overriden by the
 option. If the
 .BR \-w
 was not specified, the dimension of the canvas would be summed up by the 
-dimension of thumbnail, the grid measurement and the gaps between thumbnails.
+size of the screen shot, the grid size and the gaps between screen shots.
 However, if the
 .BR \-w
-option was specified, the width of each thumbnails is deducted from the 
-canvas width and gap size. The height of each thumbnails is calculated by
-the aspect ratio.
+option was specified, the width of each shot is deducted from the 
+width of canvas and gaps. The height of each shot is calculated by
+the aspect ratio of the video.
+
 .TP
 .BR \-t , " \-\-timestep \fImillisecond\fP"
 Specify the time interval between each screen shots in millisecond.
 If this option was not specified, 
 .BR ezthumb
 would calculate the average interval by the duration of the video and 
-the number of screen shots.
-.TP
-.BR \-v , " \-\-verbose"
-Output verbose information.
+the number of total shots.
+
 .TP
 .BR \-w , " \-\-width \fIsize_in_pixel\fP"
-Specify the whole width of the thumbnail canvas in pixel. This option would
-override the 
+Specify the width of the thumbnail canvas in pixels. 
+This option will override the 
 .BR \-s
-option and the width of each thumbnails is deducted from the canvas width 
-and gap size. The height of each thumbnails is calculated by the aspect ratio.
+option and calculate the size of each shots automatically.
+
 .TP
 .BR \-x , " \-\-suffix \fIstring\fP"
-Set the suffix of the generated file name. For example, if a video clip names
+Specify the suffix of the output file name. For example, if a video clip names
 .I myvideo.avi
-and the default option is
-.I "_thumb",
+and this option is set to
+.B "_pic",
 the generated thumbnail picture file name would be
-.I myvideo_thumb.avi.
+.I myvideo_pic.avi.
 
 .TP
 .BR "\-\-accurate"
-disable the key-frame-only mode. The default behaviour of
+Let
 .B ezthumb
-is taking screen shots in the nearest key frame (I-Frame). 
-It is quick but inaccurate towards the specified place. With this option,
+take screen shots at more accurate locations. Normally
 .B ezthumb
-would take screen shots in all kinds of frames,  I-Frame or P-Frame, 
-It is accurate in time but slow and sometimes takes pictures within 
-.B "ghost shadow".
-.B NOTE
-that if the
-.B time step
-is less than 10 seconds, it automatically changes into the
-.I off
-mode.
+would take screen shots at the nearest key frames (I-Frame). 
+It is quick but inaccurate. With this option,
+.B ezthumb
+would take shots at both I-Frame and P-Frame.
+It is slow but accurate in time stamps. Sometimes the picture might be blurred. 
 
 .TP
 .BR " \-\-background \fIfilename\fP"
-Load a background picture for the thumbnail canvas. It supports
+Load a background picture into the thumbnail canvas. It supports
 .B JPG
 and
 .B PNG
@@ -231,8 +278,27 @@ To adjust this, see
 option for the details.
 
 .TP
+.BR "\-\-decode\-otf"
+Specify the decoding on the fly mode. In the scan mode, see the
+.BR \-p 
+option,
+.B ezthumb
+does not decode the video frame while scanning. This option, 
+on the other hand, would let
+.B ezthumb
+decode every key frames it met. The unused frame will be discarded 
+after decoding. This option is aimed at some video clips which rely
+on previous key frames to decode a proper frame.
+
+.TP
+.BR " \-\-edge \fIvalue\fP"
+Specify the thickness of the black edge around each screenshots.
+The thickness is defined by pixel size.
+The default value 0 means these's no edge.
+
+.TP
 .BR "\-\-gap\-shots \fIsize_of_gap\fP"
-define the gap size between each thumbnail. The size can be defined by pixel 
+define the gap size between each screen shots. The size can be defined by pixel 
 size or by percentage of the thumbnail width. For example,
 .I "\-\-gap\-shots 4"
 means the gap of 4 pixels between each screen shots, but

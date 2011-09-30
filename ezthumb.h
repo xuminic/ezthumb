@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.4.2"
+#define	EZTHUMB_VERSION		"1.5.0"
 
 
 #define EZ_ERR_NONE		0
