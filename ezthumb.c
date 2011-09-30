@@ -1292,7 +1292,7 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 {
 	//av_seek_frame(vidx->formatx, vidx->vsidx, dts, AVSEEK_FLAG_BACKWARD);
 	avformat_seek_file(vidx->formatx, vidx->vsidx, 
-			INT64_MIN, dts, INT64_MAX, 0);
+			INT64_MIN, dts, INT64_MAX, AVSEEK_FLAG_BACKWARD);
 	video_keyframe_credit(vidx, -1);
 	return 0;
 }
