@@ -904,6 +904,50 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 
 /* This function is used to find the video stream in the clip 
  * as well as open the related decoder driver */
+#if 1
+static int video_find_stream(EZVID *vidx, int flags)
+{
+	AVCodec	*codec = NULL;
+	int	i;
+	int	wanted_stream[AVMEDIA_TYPE_NB] = {
+		[AVMEDIA_TYPE_AUDIO]=-1,
+		[AVMEDIA_TYPE_VIDEO]=-1,
+		[AVMEDIA_TYPE_SUBTITLE]=-1,
+	};
+
+	/*for (i = 0; i < vidx->formatx->nb_streams; i++) {
+		vidx->formatx->streams[i]->discard = AVDISCARD_ALL;
+	}*/
+	if (vidx->sysopt->vs_idx >= 0) {
+		vidx->vsidx = vidx->sysopt->vs_idx;
+	} else {
+		vidx->vsidx = av_find_best_stream(vidx->formatx, 
+				AVMEDIA_TYPE_VIDEO,
+				wanted_stream[AVMEDIA_TYPE_VIDEO], 
+				-1, NULL, 0);
+	}
+	if (vidx->vsidx < 0) {
+		return EZ_ERR_VIDEOSTREAM;
+	}
+
+	vidx->codecx = vidx->formatx->streams[vidx->vsidx]->codec;
+	eznotify(vidx, EN_TYPE_VIDEO, vidx->vsidx, 0, vidx->codecx);
+
+	/* discard frames; AVDISCARD_NONKEY,AVDISCARD_BIDIR */
+	vidx->codecx->skip_frame = AVDISCARD_NONREF;
+	//vidx->codecx->hurry_up = 1; /* fast decoding mode */
+
+	/* open the codec */
+	codec = avcodec_find_decoder(vidx->codecx->codec_id);
+	if (avcodec_open(vidx->codecx, codec) < 0) {
+		eznotify(vidx, EZ_ERR_CODEC_FAIL, 
+				vidx->codecx->codec_id, 0, vidx->codecx);
+		return EZ_ERR_CODEC_FAIL;
+	}
+	printf("video index = %d\n", vidx->vsidx);
+	return EZ_ERR_NONE;
+}
+#else
 static int video_find_stream(EZVID *vidx, int flags)
 {
 	AVCodecContext	*codecx;
@@ -950,7 +994,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 	}
 	return rc;
 }
-
+#endif
 
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
