@@ -32,6 +32,7 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
+static int ezthumb_break(EZVID *vidx, EZIMG *image);
 
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
@@ -135,7 +136,7 @@ void ezopt_init(EZOPT *ezopt)
 	ezopt->vs_idx = -1;	/* default: first found video stream */
 }
 
-int ezthumb(char *filename, EZOPT *ezopt)
+int ezthumb(char *filename, EZOPT *ezopt, F_HOOK break_hook)
 {
 	EZIMG	*image;
 	EZVID	*vidx;
@@ -148,6 +149,9 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		video_free(vidx);
 		return rc;
 	}
+
+
+	break_hook((F_BRK)ezthumb_break, vidx, image);
 
 	/*************************************************************
 	 * if the expected time_step is 0, then it will save every 
@@ -227,6 +231,20 @@ int ezinfo(char *filename, EZOPT *ezopt)
 
 	video_free(vidx);
 	return rc;
+}
+
+static int ezthumb_break(EZVID *vidx, EZIMG *image)
+{
+	if (vidx && image) {
+		video_snap_end(vidx, image);
+	}
+	if (image) {
+		image_free(image);
+	}
+	if (vidx) {
+		video_free(vidx);
+	}
+	return EZ_ERR_NONE;
 }
 
 
@@ -908,16 +926,15 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 static int video_find_stream(EZVID *vidx, int flags)
 {
 	AVCodec	*codec = NULL;
-	int	i;
-	int	wanted_stream[AVMEDIA_TYPE_NB] = {
+	int	i, wanted_stream[AVMEDIA_TYPE_NB] = {
 		[AVMEDIA_TYPE_AUDIO]=-1,
 		[AVMEDIA_TYPE_VIDEO]=-1,
 		[AVMEDIA_TYPE_SUBTITLE]=-1,
 	};
 
-	/*for (i = 0; i < vidx->formatx->nb_streams; i++) {
+	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		vidx->formatx->streams[i]->discard = AVDISCARD_ALL;
-	}*/
+	}
 	if (vidx->sysopt->vs_idx >= 0) {
 		vidx->vsidx = vidx->sysopt->vs_idx;
 	} else {
@@ -944,7 +961,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 				vidx->codecx->codec_id, 0, vidx->codecx);
 		return EZ_ERR_CODEC_FAIL;
 	}
-	printf("video index = %d\n", vidx->vsidx);
+	vidx->formatx->streams[vidx->vsidx]->discard = AVDISCARD_DEFAULT;
 	return EZ_ERR_NONE;
 }
 #else

@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.5.0"
+#define	EZTHUMB_VERSION		"1.5.1"
 
 
 #define EZ_ERR_NONE		0
@@ -349,9 +349,13 @@ struct	MeStat		{	/* media statistics */
 
 
 
+typedef	int  (*F_BRK)(void*, void*);
+typedef	void (*F_HOOK)(F_BRK, void*, void*);
+
+
 /* ezthumb.c */
 void ezopt_init(EZOPT *ezopt);
-int ezthumb(char *filename, EZOPT *ezopt);
+int ezthumb(char *filename, EZOPT *ezopt, F_HOOK break_hook);
 int ezinfo(char *filename, EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
