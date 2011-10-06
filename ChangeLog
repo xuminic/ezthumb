@@ -1,4 +1,11 @@
 
+20111006: V1.5.1
+  + Fixed a bug of finding the video stream, now using av_find_best_stream().
+  + Added the signal handler. Now ezthumb can be broken in the middle.
+
+20111001: V1.5.0
+  Make fixes and ready for release
+
 20110908: V1.4.2
   Displaying the screen shot method has been moved into video_snap_begin()
 
