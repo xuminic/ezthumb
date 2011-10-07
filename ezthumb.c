@@ -55,6 +55,7 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int video_rewind(EZVID *vidx);
 static int video_seeking(EZVID *vidx, int64_t dts);
+static int64_t video_seeking_rectify(EZVID *vidx, AVPacket *packet, int64_t);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
 static char *video_media_subtitle(AVStream *stream, char *buffer);
@@ -406,18 +407,21 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 
 		video_seeking(vidx, dts_snap);
 
-		if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
+		//dts = video_keyframe_next(vidx, &packet);
+		dts = video_seeking_rectify(vidx, &packet, dts_snap);
+		if (dts < 0) {
 			break;
 		}
 
-		if (image->sysopt->flags & EZOP_P_FRAME) {
-			last_key = dts;
-			dts = video_decode_to(vidx, &packet, dts_snap);
-		} else if (dts == last_key) {
+		if (dts == last_key) {
 			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else {
 			last_key = dts;
-			dts = video_decode_keyframe(vidx, &packet);
+			if (image->sysopt->flags & EZOP_P_FRAME) {
+				dts = video_decode_to(vidx, &packet, dts_snap);
+			} else {
+				dts = video_decode_keyframe(vidx, &packet);
+			}
 		}
 		if (dts < 0) {
 			break;
@@ -922,14 +926,16 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 
 /* This function is used to find the video stream in the clip 
  * as well as open the related decoder driver */
-#if 1
 static int video_find_stream(EZVID *vidx, int flags)
 {
 	AVCodec	*codec = NULL;
-	int	i, wanted_stream[AVMEDIA_TYPE_NB] = {
-		[AVMEDIA_TYPE_AUDIO]=-1,
-		[AVMEDIA_TYPE_VIDEO]=-1,
-		[AVMEDIA_TYPE_SUBTITLE]=-1,
+	int	i;
+
+#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
+	int	wanted_stream[AVMEDIA_TYPE_NB] = {
+			[AVMEDIA_TYPE_AUDIO]=-1,
+			[AVMEDIA_TYPE_VIDEO]=-1,
+			[AVMEDIA_TYPE_SUBTITLE]=-1,
 	};
 
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
@@ -943,6 +949,33 @@ static int video_find_stream(EZVID *vidx, int flags)
 				wanted_stream[AVMEDIA_TYPE_VIDEO], 
 				-1, NULL, 0);
 	}
+#else
+	AVStream	*stream;
+	int		wanted_stream = -1;
+
+	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+		eznotify(vidx, EN_STREAM_FORMAT, i, 0, vidx->formatx);
+		stream = vidx->formatx->streams[i];
+		stream->discard = AVDISCARD_ALL;
+		switch (stream->codec->codec_type) {
+		case CODEC_TYPE_VIDEO:
+			if (vidx->sysopt->vs_idx >= 0) {
+				vidx->vsidx = vidx->sysopt->vs_idx;
+			} else if (wanted_stream < 
+					stream->codec_info_nb_frames) {
+				vidx->vsidx = i;
+				wanted_stream = stream->codec_info_nb_frames;
+			}
+			break;
+		case CODEC_TYPE_AUDIO:
+			eznotify(vidx, EN_TYPE_AUDIO, i, 0, stream->codec);
+			break;
+		default:
+			eznotify(vidx, EN_TYPE_UNKNOWN, i, 0, stream->codec);
+			break;
+		}
+	}
+#endif
 	if (vidx->vsidx < 0) {
 		return EZ_ERR_VIDEOSTREAM;
 	}
@@ -964,54 +997,6 @@ static int video_find_stream(EZVID *vidx, int flags)
 	vidx->formatx->streams[vidx->vsidx]->discard = AVDISCARD_DEFAULT;
 	return EZ_ERR_NONE;
 }
-#else
-static int video_find_stream(EZVID *vidx, int flags)
-{
-	AVCodecContext	*codecx;
-	AVCodec		*codec = NULL;
-	int		i, rc;
-
-	rc = EZ_ERR_VIDEOSTREAM;
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
-		eznotify(vidx, EN_STREAM_FORMAT, i, 0, vidx->formatx);
-		codecx = vidx->formatx->streams[i]->codec;
-		switch (codecx->codec_type) {
-		case CODEC_TYPE_VIDEO:
-			eznotify(vidx, EN_TYPE_VIDEO, i, 0, codecx);
-
-			if ((vidx->sysopt->vs_idx >= 0) && 
-					(vidx->sysopt->vs_idx != i)) {
-				break;
-			}
-
-			vidx->vsidx  = i;
-			vidx->codecx = codecx;
-
-			/* discard frames; AVDISCARD_NONKEY,AVDISCARD_BIDIR */
-			vidx->codecx->skip_frame = AVDISCARD_NONREF;
-			//vidx->codecx->hurry_up = 1; /* fast decoding mode */
-
-			/* open the codec */
-			codec = avcodec_find_decoder(vidx->codecx->codec_id);
-			if (avcodec_open(vidx->codecx, codec) < 0) {
-				rc = EZ_ERR_CODEC_FAIL;
-				eznotify(vidx, rc, codecx->codec_id, 0, codecx);
-			}
-			rc = EZ_ERR_NONE;
-			break;
-
-		case CODEC_TYPE_AUDIO:
-			eznotify(vidx, EN_TYPE_AUDIO, i, 0, codecx);
-			break;
-
-		default:
-			eznotify(vidx, EN_TYPE_UNKNOWN, i, 0, codecx);
-			break;
-		}
-	}
-	return rc;
-}
-#endif
 
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
@@ -1358,6 +1343,20 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 	return 0;
 }
 
+static int64_t video_seeking_rectify(EZVID *vidx, AVPacket *packet, 
+		int64_t dtsto)
+{
+	int64_t	dts;
+
+	dts = video_keyframe_next(vidx, packet);
+	if (dts >= dtsto) {
+		return dts;
+	}
+	if (video_dts_to_ms(vidx, dtsto - dts) < 10000) {	/* magic 10s*/
+		return dts;
+	}
+	return video_keyframe_to(vidx, packet, dtsto);
+}
 
 static char *video_media_video(AVStream *stream, char *buffer)
 {
