@@ -296,6 +296,17 @@ int main(int argc, char **argv)
 				sysoption.flags |= EZOP_PROC_HEURIS;
 				break;
 			}
+			if ((*optarg == '5') || !strncmp(optarg, "key", 3)) {
+				sysoption.flags |= EZOP_PROC_KEYRIP;
+				sysoption.grid_col = 0;
+				sysoption.grid_row = 0;
+				c = (*optarg == '5') ? 1 : 3;
+				if (optarg[c] == '@') {
+					sysoption.key_ripno = (int)
+						strtol(optarg+c+1, NULL, 0);
+				}
+				break;
+			}
 			sysoption.flags |= EZOP_PROC_AUTO;
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */

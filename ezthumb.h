@@ -25,7 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 
-#define	EZTHUMB_VERSION		"1.5.1"
+#define	EZTHUMB_VERSION		"1.5.2"
 
 
 #define EZ_ERR_NONE		0
@@ -126,6 +126,7 @@
 #define EZOP_PROC_SCAN		0x20000	/* single pass i-frame scan */
 #define EZOP_PROC_TWOPASS	0x30000	/* two pass scan support p-frame */
 #define EZOP_PROC_HEURIS	0x40000 /* heuristic scan */
+#define EZOP_PROC_KEYRIP	0x50000	/* rip key frames */
 
 
 #define EZ_POS_LEFTTOP		0
@@ -243,6 +244,7 @@ typedef	struct	{
 	int	dur_mode;	/* howto get the clip's duration */
 
 	int	vs_idx;		/* specify the stream index */
+	int	key_ripno;	/* specify the number when ripping keyframes*/
 	char	*pathout;	/* output path */
 
 	/* callback functions to indicate the progress */

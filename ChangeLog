@@ -1,3 +1,6 @@
+20111021: V1.5.2
+  + Supported the maximum number when ripping the key frames
+    Command line now support the '-p key@N' opion
 
 20111006: V1.5.1
   + Fixed a bug of finding the video stream, now using av_find_best_stream().

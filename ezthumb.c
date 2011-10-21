@@ -151,29 +151,20 @@ int ezthumb(char *filename, EZOPT *ezopt, F_HOOK break_hook)
 		return rc;
 	}
 
-
 	break_hook((F_BRK)ezthumb_break, vidx, image);
 
-	/*************************************************************
-	 * if the expected time_step is 0, then it will save every 
-	 * key frames separately. it's good for debug purpose 
-	 *************************************************************/
-	if (image->time_step < 1) {	
-		/* save every keyframe separately */
-		video_snapshot_keyframes(vidx, image);
-		image_free(image);
-		video_free(vidx);
-		return EZ_ERR_NONE;
+	/* if the expected time_step is 0, then it will save every 
+	 * key frames separately. it's good for debug purpose  */
+	if (image->time_step > 0) {	
+		rc = ezopt->flags & EZOP_PROC_MASK;
+		vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
+	} else {
+		rc = EZOP_PROC_KEYRIP;
+		vidx->keydelta = 0;
 	}
-
-	/*************************************************************
-	 * Otherwise it takes expected shots
-	 *************************************************************/
-	
-	vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
 	video_keyframe_credit(vidx, -1);
 
-	switch (ezopt->flags & EZOP_PROC_MASK) {
+	switch (rc) {
 	case EZOP_PROC_SKIM:
 		video_snapshot_skim(vidx, image);
 		break;
@@ -185,6 +176,9 @@ int ezthumb(char *filename, EZOPT *ezopt, F_HOOK break_hook)
 		break;
 	case EZOP_PROC_HEURIS:
 		video_snapshot_heuristic(vidx, image);
+		break;
+	case EZOP_PROC_KEYRIP:
+		video_snapshot_keyframes(vidx, image);
 		break;
 	default:
 		/*
@@ -387,6 +381,11 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 
 		video_snap_update(vidx, image, i, dts);
 		i++;
+
+		if (vidx->sysopt->key_ripno && 
+				(vidx->sysopt->key_ripno <= i)) {
+			break;
+		}
 	}
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
