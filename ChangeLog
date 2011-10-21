@@ -1,3 +1,6 @@
+20111021: V1.5.3
+  + Merge two branches into the new version for release
+
 20111021: V1.5.2
   + Supported the maximum number when ripping the key frames
     Command line now support the '-p key@N' opion
