@@ -36,6 +36,7 @@ static int ezthumb_break(EZVID *vidx, EZIMG *image);
 
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
+static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t *video_keyframe_survey(EZVID *vidx, EZIMG *image);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
 static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
@@ -55,7 +56,6 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int video_rewind(EZVID *vidx);
 static int video_seeking(EZVID *vidx, int64_t dts);
-static int64_t video_seeking_rectify(EZVID *vidx, AVPacket *packet, int64_t);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
 static char *video_media_subtitle(AVStream *stream, char *buffer);
@@ -407,7 +407,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 		video_seeking(vidx, dts_snap);
 
 		//dts = video_keyframe_next(vidx, &packet);
-		dts = video_seeking_rectify(vidx, &packet, dts_snap);
+		dts = video_keyframe_rectify(vidx, &packet, dts_snap);
 		if (dts < 0) {
 			break;
 		}
@@ -675,6 +675,22 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 	return dts;
 }
 
+static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, 
+		int64_t dtsto)
+{
+	int64_t	dts;
+
+	dts = video_keyframe_next(vidx, packet);
+	if (dts >= dtsto) {
+		return dts;
+	}
+	if (video_dts_to_ms(vidx, dtsto - dts) < 10000) {	/* magic 10s*/
+		return dts;
+	}
+	return video_keyframe_to(vidx, packet, dtsto);
+}
+
+
 static int64_t *video_keyframe_survey(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
@@ -930,7 +946,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 	AVCodec	*codec = NULL;
 	int	i;
 
-#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
+#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 90)
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
 			[AVMEDIA_TYPE_AUDIO]=-1,
 			[AVMEDIA_TYPE_VIDEO]=-1,
@@ -1340,21 +1356,6 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 			INT64_MIN, dts, INT64_MAX, AVSEEK_FLAG_BACKWARD);
 	video_keyframe_credit(vidx, -1);
 	return 0;
-}
-
-static int64_t video_seeking_rectify(EZVID *vidx, AVPacket *packet, 
-		int64_t dtsto)
-{
-	int64_t	dts;
-
-	dts = video_keyframe_next(vidx, packet);
-	if (dts >= dtsto) {
-		return dts;
-	}
-	if (video_dts_to_ms(vidx, dtsto - dts) < 10000) {	/* magic 10s*/
-		return dts;
-	}
-	return video_keyframe_to(vidx, packet, dtsto);
 }
 
 static char *video_media_video(AVStream *stream, char *buffer)

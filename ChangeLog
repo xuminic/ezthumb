@@ -2,6 +2,11 @@
   + Supported the maximum number when ripping the key frames
     Command line now support the '-p key@N' opion
 
+20111007: V1.5.2
+  + Added a rectify function in video_snapshot_skim() to speed up the
+    doing in the unseekable media files.
+  + Refined the video_find_stream() so it could also support 0.6.3 ffmpeg
+
 20111006: V1.5.1
   + Fixed a bug of finding the video stream, now using av_find_best_stream().
   + Added the signal handler. Now ezthumb can be broken in the middle.
