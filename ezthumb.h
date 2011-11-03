@@ -24,6 +24,7 @@
 #include "libavformat/avformat.h"
 #include "libswscale/swscale.h"
 #include "gd.h"
+#include "libsmm.h"
 
 #define	EZTHUMB_VERSION		"1.5.4"
 
@@ -249,6 +250,8 @@ typedef	struct	{
 
 	/* callback functions to indicate the progress */
 	int	(*notify)(void *vobj, int event, long param, long, void *);
+	void	*vidobj;	/* copy of the runtime EZVID point */
+	void	*imgobj;	/* copy of the runtime EZIMG point */
 } EZOPT;
 
 /* This structure is used to store the runtime parameters. Most parameters
@@ -311,7 +314,7 @@ typedef	struct		{
 
 	int		duration;	/* the stream duration in ms */
 	int		seekable;	/* video keyframe seekable flag */
-	struct timeval	tmark;		/* the beginning timestamp */
+	SMM_TIME	tmark;		/* the beginning timestamp */
 
 	int64_t		keygap;		/* maximum gap between keyframe */
 	int64_t		keylast;	/* the DTS of the last keyframe */
@@ -357,8 +360,9 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 
 /* ezthumb.c */
 void ezopt_init(EZOPT *ezopt);
-int ezthumb(char *filename, EZOPT *ezopt, F_HOOK break_hook);
+int ezthumb(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
+int ezthumb_break(EZOPT *ezopt);
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
 int video_free(EZVID *vidx);
@@ -377,7 +381,6 @@ char *meta_filesize(int64_t size, char *buffer);
 int meta_fontsize(int fsize, int refsize);
 char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
-int meta_time_diff(struct timeval *tvbegin);
 char *meta_timestamp(int ms, int enms, char *buffer);
 
 

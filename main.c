@@ -25,6 +25,7 @@
 
 #include "ezthumb.h"
 #include "cliopt.h"
+#include "libsmm.h"
 
 
 static	struct	cliopt	clist[] = {
@@ -77,13 +78,9 @@ This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
 static	EZOPT	sysoption;
-static	F_BRK	break_event;
-static	void	*break_arg1;
-static	void	*break_arg2;
 
 int signal_break(int (*handle)(int));
 int signal_handler(int sig);
-void signal_hookup(int (*func)(void *, void *), void *arg1, void *arg2);
 
 int para_get_ratio(char *s);
 int para_get_time_point(char *s);
@@ -105,6 +102,7 @@ int main(int argc, char **argv)
 	char	*p, *arglist;
 	int	c, todo = -1;
 
+	smm_init();
 	ezopt_init(&sysoption);
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
@@ -350,8 +348,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-
-	signal_break(signal_handler);
+	smm_signal_break(signal_handler);
 
 	avcodec_register_all();
 	av_register_all();
@@ -376,7 +373,7 @@ int main(int argc, char **argv)
 			sysoption.notify = event_cb;
 		}
 		for ( ; optind < argc; optind++) {
-			c = ezthumb(argv[optind], &sysoption, signal_hookup);
+			c = ezthumb(argv[optind], &sysoption);
 		}
 		break;
 	}
@@ -384,43 +381,11 @@ int main(int argc, char **argv)
 }
 
 
-int signal_break(int (*handle)(int))
-{
-	struct  sigaction       signew, sigold;
-
-	signew.sa_handler = (void(*) (int)) signal_handler;
-	sigemptyset(&signew.sa_mask);
-	signew.sa_flags = 0;
-	
-	sigaction(SIGINT, NULL, &sigold);
-	if (sigold.sa_handler != SIG_IGN) {
-		sigaction(SIGINT, &signew, NULL);
-	}
-	sigaction(SIGHUP, NULL, &sigold);
-	if (sigold.sa_handler != SIG_IGN) {
-		sigaction(SIGHUP, &signew, NULL);
-	}
-	sigaction(SIGTERM, NULL, &sigold);
-	if (sigold.sa_handler != SIG_IGN) {
-		sigaction(SIGTERM, &signew, NULL);
-	}
-	return 0;
-}
-
 int signal_handler(int sig)
 {
-	if (break_event) {
-		break_event(break_arg1, break_arg2);
-	}
-	exit(sig);
+	return ezthumb_break(&sysoption);
 }
 
-void signal_hookup(F_BRK func, void *arg1, void *arg2)
-{
-	break_event = func;
-	break_arg1  = arg1;
-	break_arg2  = arg2;
-}
 
 int para_get_ratio(char *s)
 {

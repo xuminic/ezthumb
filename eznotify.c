@@ -25,6 +25,7 @@
 
 #include "ezthumb.h"
 #include "id_lookup.h"
+#include "libsmm.h"
 
 #include "gdfontt.h"
 #include "gdfonts.h"
@@ -305,7 +306,7 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 				mestat[i].rewound, ms / 1000);
 	}
 	printf("Maximum Gap of key frames: %lld\n", (long long) vidx->keygap);
-	printf("Time used: %.3f\n", meta_time_diff(&vidx->tmark) / 1000.0);
+	printf("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0);
 	return 0;
 }
 

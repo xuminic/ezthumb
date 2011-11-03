@@ -57,6 +57,11 @@ struct	smmdir	{
 
 typedef int (*F_DIR)(void*, char*, int, void*);
 
+#ifdef	CFG_WIN32_API
+#define	SMM_TIME	FILETIME
+#else	/* CFG_UNIX_API */
+typedef	struct timeval	SMM_TIME;
+#endif
 
 extern	int	smm_error_no;
 extern	int	smm_sys_cp;
@@ -73,6 +78,8 @@ int smm_init(void);
 int smm_pathtrek(char *path, int flags, F_DIR message, void *option);
 int smm_pwuid(char *uname, long *uid, long *gid);
 int smm_signal_break(int (*handle)(int));
+int smm_time_diff(SMM_TIME *tmbuf);
+int smm_time_get_epoch(SMM_TIME *tmbuf);
 void *smm_mbstowcs(char *mbs);
 char *smm_wcstombs(void *wcs);
 
