@@ -1,4 +1,10 @@
+
+20111021: V1.5.4
+  + merged the id_*.c into id_lookup.c
+  + slightly adjusted the Makefile
+
 20111021: V1.5.3
+  + Release tag: RELEASE_1_5_3
   + Merge two branches into the new version for release
 
 20111021: V1.5.2
