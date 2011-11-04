@@ -1,3 +1,6 @@
+20111104:
+  + Revisioned this project in MinGW and made it workable in MS Windows
+  + Fixed the conditional compiling error for the FFMPEG version control
 
 20111021: V1.5.4
   + merged the id_*.c into id_lookup.c
