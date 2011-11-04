@@ -39,11 +39,6 @@ int smm_errno(void)
 
 
 #ifdef  CFG_WIN32_API
-#ifndef	UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-
 int smm_errno_update(int value)
 {
 	if (value) {

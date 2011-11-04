@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <sys/time.h>
 
 #include "ezthumb.h"
@@ -76,7 +77,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			 * disabling the av_log */
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
-#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 100)
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 100, 0))
 			av_dump_format(vidx->formatx, 0, block, 0);
 #else
 			dump_format(vidx->formatx, 0, block, 0);
@@ -151,7 +152,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
 			printf("I-Frame Scanned (%ld ms):\n", opt);
 			for (i = 0; i < param; i++) {
-				printf("%9lld", ((long long *)block)[i]);
+				SMM_PRINT("%9lld", ((long long *)block)[i]);
 				if ((i % 8) == 7) {
 					printf("\n");
 				}
@@ -187,7 +188,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		break;
 	case EN_DURATION:
 		if (param == ENX_DUR_REWIND) {
-			printf("Rewound PTS: %lld < %lld\n",
+			SMM_PRINT("Rewound PTS: %lld < %lld\n",
 					(long long)((AVPacket*) block)->dts,
 					*((long long *) opt));
 		}
@@ -196,7 +197,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 				printf("Duration from Media head: %ld (ms)\n",
 						opt);
 			} else if (param == ENX_DUR_JUMP) {
-				printf("Jump to DTS: %lld\n", 
+				SMM_PRINT("Jump to DTS: %lld\n", 
 						*((long long *)block));
 			} else if (param == ENX_DUR_SCAN) {
 				printf("Duration from scanning: %ld (ms)\n",
@@ -205,7 +206,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_BUMP_BACK:
-		printf("Bump back to %lld: %ld (%lld < %lld)\n",
+		SMM_PRINT("Bump back to %lld: %ld (%lld < %lld)\n",
 				*((long long *) block), param,
 				(long long) vidx->keydelta, 
 				(long long) vidx->keygap);
@@ -214,7 +215,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 		if (param == ENX_SEEK_BW_NO) {
 			printf("WARNING: Backward Seeking Disabled.\n");
 		} else if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
-			printf("Backward Seeking Test successed to %lld\n",
+			SMM_PRINT("Backward Seeking Test successed to %lld\n",
 					*((long long *) block));
 		}
 		break;
@@ -257,7 +258,11 @@ static int ezdump_video_info(EZVID *vidx)
 
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		codecx = vidx->formatx->streams[i]->codec;
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
+		if (codecx->codec_type == AVMEDIA_TYPE_VIDEO) {
+#else
 		if (codecx->codec_type == CODEC_TYPE_VIDEO) {
+#endif
 			/* Fixed: the video information should use the actual
 			 * duration of the clip */
 			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
@@ -286,6 +291,17 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 		}
 		
 		switch(vidx->formatx->streams[i]->codec->codec_type) {
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
+		case AVMEDIA_TYPE_VIDEO:
+			printf("VIDEO  ");
+			break;
+		case AVMEDIA_TYPE_AUDIO:
+			printf("AUDIO  ");
+			break;
+		case AVMEDIA_TYPE_SUBTITLE:
+			printf("SUBTITL");
+			break;
+#else
 		case CODEC_TYPE_VIDEO:
 			printf("VIDEO  ");
 			break;
@@ -295,6 +311,7 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 		case CODEC_TYPE_SUBTITLE:
 			printf("SUBTITL");
 			break;
+#endif
 		default:
 			printf("UNKNOWN");
 			break;
@@ -305,18 +322,19 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 				mestat[i].received, mestat[i].key, 
 				mestat[i].rewound, ms / 1000);
 	}
-	printf("Maximum Gap of key frames: %lld\n", (long long) vidx->keygap);
+	SMM_PRINT("Maximum Gap of key frames: %lld\n", 
+			(long long) vidx->keygap);
 	printf("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0);
 	return 0;
 }
 
 int dump_format_context(AVFormatContext *format)
 {
-	printf("  Format: %s, Size: %lld, Bitrate: %u\n",
+	SMM_PRINT("  Format: %s, Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			(long long) format->file_size,
 			format->bit_rate);
-	printf("  Streams: %d, Start time: %lld, Duration: %lld\n",
+	SMM_PRINT("  Streams: %d, Start time: %lld, Duration: %lld\n",
 			format->nb_streams,
 			(long long) format->start_time,
 			(long long) format->duration);
@@ -434,7 +452,7 @@ int dump_frame_packet(EZVID *vidx, int sn)
 				vidx->formatx->start_time);
 	}
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	printf("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
+	SMM_PRINT("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
 			sn, (long long) vidx->rf_pos, vidx->rf_size, 
 			vidx->rf_pac, (long long) vidx->rf_dts, timestamp, 
 			id_lookup(id_pict_type, vidx->frame->pict_type));
@@ -443,8 +461,8 @@ int dump_frame_packet(EZVID *vidx, int sn)
 
 int dump_stream(AVStream *stream)
 {
-	printf("Stream:%d, FRate:%d/%d, Time Base:%d/%d, Start Time:%" PRId64 
-			", Duration:%" PRId64 ", Lang:%s, AR:%d/%d\n",
+	SMM_PRINT("Stream:%d, FRate:%d/%d, Time Base:%d/%d, Start Time:%" 
+			PRId64 ", Duration:%" PRId64 ", Lang:%s, AR:%d/%d\n",
 			stream->id, 
 			stream->r_frame_rate.num, stream->r_frame_rate.den,
 			stream->time_base.num, stream->time_base.den,

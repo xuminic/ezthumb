@@ -269,7 +269,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	loglvl = av_log_get_level();
 	av_log_set_level(AV_LOG_INFO);
 
-#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 109)
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 109, 0))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
@@ -282,7 +282,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 	/* FIXME: what are these for? */
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 6, 0))
+	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
+#else
 	if (av_find_stream_info(vidx->formatx) < 0) {
+#endif
 		uperror(errcode, EZ_ERR_STREAM);
 		eznotify(vidx, EZ_ERR_STREAM, 0, 0, filename);
 		video_free(vidx);
@@ -642,7 +646,7 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 	int64_t		dts;
 
 	while ((dts = video_load_packet(vidx, packet)) >= 0) {
-		if (packet->flags != PKT_FLAG_KEY) {
+		if (packet->flags != AV_PKT_FLAG_KEY) {
 			av_free_packet(packet);
 			continue;
 		}
@@ -659,7 +663,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 	int64_t		dts;
 
 	while ((dts = video_load_packet(vidx, packet)) >= 0) {
-		if (packet->flags != PKT_FLAG_KEY) {
+		if (packet->flags != AV_PKT_FLAG_KEY) {
 			av_free_packet(packet);
 			continue;
 		}
@@ -923,8 +927,20 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		stream = vidx->formatx->streams[i];
 		sprintf(buffer, "%s: ", id_lookup(id_codec_type, 
 					stream->codec->codec_type) + 11);
+		/* seems higher version doesn't support CODEC_TYPE_xxx */
 		switch (stream->codec->codec_type) {
-		case CODEC_TYPE_VIDEO:
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
+		case AVMEDIA_TYPE_VIDEO:	
+			video_media_video(stream, buffer);
+			break;
+		case AVMEDIA_TYPE_AUDIO:
+			video_media_audio(stream, buffer);
+			break;
+		case AVMEDIA_TYPE_SUBTITLE:
+			video_media_subtitle(stream, buffer);
+			break;
+#else
+		case CODEC_TYPE_VIDEO:	
 			video_media_video(stream, buffer);
 			break;
 		case CODEC_TYPE_AUDIO:
@@ -933,6 +949,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		case CODEC_TYPE_SUBTITLE:
 			video_media_subtitle(stream, buffer);
 			break;
+#endif
 		default:
 			strcat(buffer, "Unknown");
 			break;
@@ -950,7 +967,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 	AVCodec	*codec = NULL;
 	int	i;
 
-#if	(LIBAVFORMAT_VERSION_MAJOR > 51) && (LIBAVFORMAT_VERSION_MINOR > 90)
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
 			[AVMEDIA_TYPE_AUDIO]=-1,
 			[AVMEDIA_TYPE_VIDEO]=-1,
@@ -1008,7 +1025,11 @@ static int video_find_stream(EZVID *vidx, int flags)
 
 	/* open the codec */
 	codec = avcodec_find_decoder(vidx->codecx->codec_id);
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 9, 0))
+	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
+#else
 	if (avcodec_open(vidx->codecx, codec) < 0) {
+#endif
 		eznotify(vidx, EZ_ERR_CODEC_FAIL, 
 				vidx->codecx->codec_id, 0, vidx->codecx);
 		return EZ_ERR_CODEC_FAIL;
@@ -1097,7 +1118,8 @@ static int64_t video_statistics(EZVID *vidx)
 		imax = i > imax ? i : imax;
 
 		mestat[i].received++;
-		if (packet.flags == PKT_FLAG_KEY) {
+		/* higher version ffmpeg doesn't support PKT_FLAG_KEY */
+		if (packet.flags == AV_PKT_FLAG_KEY) {
 			mestat[i].key++;
 			if (packet.stream_index == vidx->vsidx) {
 				video_keyframe_credit(vidx, packet.dts);
@@ -2439,13 +2461,13 @@ char *meta_filesize(int64_t size, char *buffer)
 		buffer = tmp;
 	}
 	if (size < (1ULL << 24)) {
-		sprintf(buffer, "%lld KB", (long long)(size >> 10));
+		sprintf(buffer, "%lu KB", (unsigned long)(size >> 10));
 	} else if (size < (1ULL << 34)) {
-		sprintf(buffer, "%lld.%03lld MB", (long long)(size >> 20), 
-				(long long)((size % (1 << 20)) >> 10));
+		sprintf(buffer, "%lu.%03lu MB", (unsigned long)(size >> 20), 
+				(unsigned long)((size % (1 << 20)) >> 10));
 	} else {
-		sprintf(buffer, "%lld.%03lld GB", (long long)(size >> 30), 
-				(long long)((size % (1 << 30)) >> 20));
+		sprintf(buffer, "%lu.%03lu GB", (unsigned long)(size >> 30), 
+				(unsigned long)((size % (1 << 30)) >> 20));
 	}
 	return buffer;
 }

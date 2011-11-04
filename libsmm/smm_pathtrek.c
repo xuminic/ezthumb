@@ -69,11 +69,6 @@ static int dummy_message(void *option, char *path, int type, void *info)
 
 
 #ifdef  CFG_WIN32_API
-#ifndef UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-
 static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 {
 	WIN32_FIND_DATA	ffdata;

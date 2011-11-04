@@ -18,6 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ezthumb.h"
 #include "id_lookup.h"
 
 char *id_lookup(struct idtbl *table, int id)
@@ -131,7 +132,7 @@ struct	idtbl	id_codec[] = {
 	{ CODEC_ID_VIXL, "CODEC_ID_VIXL" },
 	{ CODEC_ID_QPEG, "CODEC_ID_QPEG" },
 	{ LIBAVCODEC_VERSION_MAJOR, "LIBAVCODEC_VERSION_MAJOR" },
-#if	LIBAVCODEC_VERSION_MAJOR < 53
+#if	(LIBAVCODEC_VERSION_INT < AV_VERSION_INT(53, 0, 0))
 	{ CODEC_ID_XVID, "CODEC_ID_XVID" },
 #endif
 	{ CODEC_ID_PNG, "CODEC_ID_PNG" },
@@ -418,6 +419,18 @@ struct	idtbl	id_codec_flag[] = {
 };
 
 
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
+struct	idtbl	id_codec_type[] = {
+	{ AVMEDIA_TYPE_UNKNOWN, "CODEC_TYPE_UNKNOWN" },
+	{ AVMEDIA_TYPE_VIDEO, "CODEC_TYPE_VIDEO" },
+	{ AVMEDIA_TYPE_AUDIO, "CODEC_TYPE_AUDIO" },
+	{ AVMEDIA_TYPE_DATA, "CODEC_TYPE_DATA" },
+	{ AVMEDIA_TYPE_SUBTITLE, "CODEC_TYPE_SUBTITLE" },
+	{ AVMEDIA_TYPE_ATTACHMENT, "CODEC_TYPE_ATTACHMENT" },
+	{ AVMEDIA_TYPE_NB, "CODEC_TYPE_NB" },
+	{ 0, NULL }
+};
+#else
 struct	idtbl	id_codec_type[] = {
 	{ CODEC_TYPE_UNKNOWN, "CODEC_TYPE_UNKNOWN" },
 	{ CODEC_TYPE_VIDEO, "CODEC_TYPE_VIDEO" },
@@ -428,6 +441,7 @@ struct	idtbl	id_codec_type[] = {
 	{ CODEC_TYPE_NB, "CODEC_TYPE_NB" },
 	{ 0, NULL }
 };
+#endif
 
 
 struct	idtbl	id_pict_type[] = {

@@ -23,11 +23,6 @@
 
 
 #ifdef  CFG_WIN32_API
-#ifndef	UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-
 int smm_time_get_epoch(SMM_TIME *tmbuf)
 {
 	GetSystemTimeAsFileTime(tmbuf);

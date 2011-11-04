@@ -27,11 +27,6 @@
 static int (*sig_break)(int sig);
 
 #ifdef	CFG_WIN32_API
-#ifndef UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-
 static BOOL siegfried(DWORD signum)
 {
 	switch (signum) {

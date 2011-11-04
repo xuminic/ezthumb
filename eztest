@@ -9,7 +9,6 @@ generating_process() {
 
 	# Generate thumbnails via Scan process
 	ezthumb $DEBUG -p scan -x _scan $IFILE
-	ezthumb $DEBUG -p scan -x _scan_ha --accurate $IFILE
 	ezthumb $DEBUG -p scan -x _scan_ha_dotf --accurate --decode-otf $IFILE
 
 	# Generate thumbnails via Two-pass Scan process

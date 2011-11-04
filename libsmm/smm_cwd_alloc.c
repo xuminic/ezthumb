@@ -25,11 +25,6 @@
 #include "libsmm.h"
 
 #ifdef	CFG_WIN32_API
-#ifndef UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-
 char *smm_cwd_alloc(void)
 {
 	TCHAR	*wpath;

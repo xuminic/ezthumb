@@ -17,7 +17,17 @@ EXLIB	= -L$(FREETYPE)/objs/.libs -L$(LIBJPEG) -L$(LIBBZ2) \
 	  -L$(FFMPEG)/libavutil         \
 	  -L$(FFMPEG)/libswscale        \
 	  -L$(LIBGD)/.libs
-else
+endif
+
+ifeq	($(SYSTOOL),mingw)
+EXDIR	= ..
+FFMPEG  = $(EXDIR)/ffmpeg-git-41bf67d-win32-dev
+LIBGD   = $(EXDIR)/gd-2.0.33-1-lib/
+EXINC	= -I$(FFMPEG)/include -I$(LIBGD)/include
+EXLIB	= -L$(FFMPEG)/lib -L$(LIBGD)/lib
+endif
+
+ifeq	($(SYSTOOL),unix)
 EXDIR	= ..
 FFMPEG  = $(EXDIR)/ffmpeg-0.6.1
 EXINC	= -I$(FFMPEG)
@@ -30,8 +40,8 @@ CFLAGS	+= -D_FILE_OFFSET_BITS=64 $(INCDIR)
 
 OBJS	= main.o fixtoken.o ezthumb.o cliopt.o eznotify.o id_lookup.o 
 
-LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	 -lfreetype -lbz2 -lm
+LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd
+#	 -lfreetype -lbz2 -lm
 
 
 ifeq	($(SYSTOOL),unix)

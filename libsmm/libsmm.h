@@ -24,6 +24,15 @@
 #ifndef	_LIBSMM_H_
 #define _LIBSMM_H_
 
+
+#ifdef  CFG_WIN32_API
+#ifndef UNICODE
+#define UNICODE
+#endif
+#include <windows.h>
+#endif
+
+
 #define	SMM_VERSION		((1 << 24)| (0 << 16) | (0 << 8) | 0)
 
 #define	SMM_FSTAT_REGULAR	0
@@ -59,8 +68,10 @@ typedef int (*F_DIR)(void*, char*, int, void*);
 
 #ifdef	CFG_WIN32_API
 #define	SMM_TIME	FILETIME
+#define SMM_PRINT	__mingw_printf
 #else	/* CFG_UNIX_API */
 typedef	struct timeval	SMM_TIME;
+#define SMM_PRINT	printf
 #endif
 
 extern	int	smm_error_no;

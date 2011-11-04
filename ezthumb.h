@@ -343,6 +343,7 @@ typedef	struct		{
 #define EZ_MK_WORD(w,h)	(((w) << 16) | ((h) & 0xffff))
 
 
+
 struct	MeStat		{	/* media statistics */
 	unsigned long	received;	/* all received packets */
 	unsigned long	key;		/* key frames */
