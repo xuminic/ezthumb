@@ -9,6 +9,9 @@ compose a single GIF animation file.  But it can also save frames separately.
 The output format could be JPG, PNG, GIF or GIF animation, where PNG and GIF 
 supports the transparent background. Batch processing allows.
 
+This program was inspired by movie thumbnailer (mtn):
+http://sourceforge.net/projects/moviethumbnail/
+
 
 Install
 =======
@@ -22,6 +25,28 @@ bzip2
 
 You may need to modify the Makefile, especially the INCDIR and LIBDIR macros,
 to point to proper directories.
+
+
+
+MinGW
+=====
+
+Make.conf setting:
+
+SYSTOOL = mingw
+SYSAPI  = CFG_WIN32_API
+
+FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:
+http://ffmpeg.zeranoe.com/builds/
+
+Following Libraries were grabbed from GnuWin:
+http://sourceforge.net/projects/gnuwin32/files/
+
+gd-2.0.33-1
+jpeg-6b-4
+libiconv-1.9.2-1
+libpng-1.2.37
+zlib-1.2.3
 
 
 Examples

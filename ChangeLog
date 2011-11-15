@@ -1,3 +1,8 @@
+20111115: V1.5.5 
+  + Integrated other libraries into the mswin branch so they could 
+    be managed by git
+  + Revisioned the makefile for MinGW
+
 20111104:
   + Revisioned this project in MinGW and made it workable in MS Windows
   + Fixed the conditional compiling error for the FFMPEG version control

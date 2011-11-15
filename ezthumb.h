@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define	EZTHUMB_VERSION		"1.5.4"
+#define	EZTHUMB_VERSION		"1.5.5"
 
 
 #define EZ_ERR_NONE		0

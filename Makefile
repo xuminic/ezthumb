@@ -1,37 +1,6 @@
 
 include Make.conf
 
-ifeq    ($(SYSTOOL),cygwin)
-EXDIR	= ..
-FFMPEG  = $(EXDIR)/ffmpeg-0.6.1
-LIBGD   = $(EXDIR)/gd-2.0.35
-FREETYPE= $(EXDIR)/freetype-2.4.3
-LIBJPEG = $(EXDIR)/jpeg-6b
-LIBBZ2  = $(EXDIR)/bzip2-1.0.6
-EXINC	= -I$(FFMPEG) -I$(LIBGD) -I$(FREETYPE) -I$(LIBJPEG) -I$(LIBBZ2)
-EXLIB	= -L$(FREETYPE)/objs/.libs -L$(LIBJPEG) -L$(LIBBZ2) \
-	  -L$(FFMPEG)/libavcodec        \
-	  -L$(FFMPEG)/libavdevice       \
-	  -L$(FFMPEG)/libavfilter       \
-	  -L$(FFMPEG)/libavformat       \
-	  -L$(FFMPEG)/libavutil         \
-	  -L$(FFMPEG)/libswscale        \
-	  -L$(LIBGD)/.libs
-endif
-
-ifeq	($(SYSTOOL),mingw)
-EXDIR	= ..
-FFMPEG  = $(EXDIR)/ffmpeg-git-41bf67d-win32-dev
-LIBGD   = $(EXDIR)/gd-2.0.33-1-lib/
-EXINC	= -I$(FFMPEG)/include -I$(LIBGD)/include
-EXLIB	= -L$(FFMPEG)/lib -L$(LIBGD)/lib
-endif
-
-ifeq	($(SYSTOOL),unix)
-EXDIR	= ..
-FFMPEG  = $(EXDIR)/ffmpeg-0.6.1
-EXINC	= -I$(FFMPEG)
-endif
 
 INCDIR	= $(EXINC) -I./libsmm
 LIBDIR	= $(EXLIB) -L./libsmm
@@ -62,30 +31,19 @@ vidlen : vidlen.c
 	$(CC) -o $@ $^ $(CFLAGS) -lavformat
 
 install:
-	cp -f $(TARGET) ~/bin
+	$(CP) $(TARGET) ~/bin
 
 clean:
 	make -C libsmm clean
-	rm -f $(TARGET) $(OBJS)
+	$(RM) $(TARGET) $(OBJS)
 
 release:
 	mkdir $(RELDIR)
-	cp $(TARGET) ezthumb.1 $(RELDIR)
+	$(CP) $(TARGET) ezthumb.1 $(RELDIR)
 ifeq	($(SYSTOOL),cygwin)
-	cp /bin/cyggd-2.dll $(RELDIR)
-	cp /bin/cyggcc_s-1.dll $(RELDIR)
-	cp /bin/cygwin1.dll $(RELDIR)
-	cp /bin/cygXpm-4.dll $(RELDIR)
-	cp /bin/cygX11-6.dll $(RELDIR)
-	cp /bin/cygxcb-1.dll $(RELDIR)
-	cp /bin/cygXau-6.dll $(RELDIR)
-	cp /bin/cygXdmcp-6.dll $(RELDIR)
-	cp /bin/cygfontconfig-1.dll $(RELDIR)
-	cp /bin/cygexpat-1.dll $(RELDIR)
-	cp /bin/cygfreetype-6.dll $(RELDIR)
-	cp /bin/cygz.dll $(RELDIR)
-	cp /bin/cygiconv-2.dll $(RELDIR)
-	cp /bin/cygjpeg-7.dll $(RELDIR)
-	cp /bin/cygpng12.dll $(RELDIR)
+	$(CP) $(EXDLL) $(RELDIR)
+endif
+ifeq	($(SYSTOOL),mingw)
+	$(CP) $(EXDLL) $(RELDIR)
 endif
 

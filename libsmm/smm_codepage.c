@@ -25,11 +25,6 @@
 #include "libsmm.h"
 
 #ifdef	CFG_WIN32_API
-#ifndef UNICODE
-#define UNICODE
-#endif
-#include <windows.h>
-
 int smm_codepage(void)
 {
 	return GetConsoleOutputCP();
