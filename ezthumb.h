@@ -252,6 +252,7 @@ typedef	struct	{
 	int	(*notify)(void *vobj, int event, long param, long, void *);
 	void	*vidobj;	/* copy of the runtime EZVID point */
 	void	*imgobj;	/* copy of the runtime EZIMG point */
+	void	*gui;		/* point to the GUI structure */
 } EZOPT;
 
 /* This structure is used to store the runtime parameters. Most parameters

@@ -77,7 +77,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			 * disabling the av_log */
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 100, 0))
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
 			av_dump_format(vidx->formatx, 0, block, 0);
 #else
 			dump_format(vidx->formatx, 0, block, 0);
@@ -258,11 +258,7 @@ static int ezdump_video_info(EZVID *vidx)
 
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		codecx = vidx->formatx->streams[i]->codec;
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
 		if (codecx->codec_type == AVMEDIA_TYPE_VIDEO) {
-#else
-		if (codecx->codec_type == CODEC_TYPE_VIDEO) {
-#endif
 			/* Fixed: the video information should use the actual
 			 * duration of the clip */
 			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
@@ -291,7 +287,6 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 		}
 		
 		switch(vidx->formatx->streams[i]->codec->codec_type) {
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
 		case AVMEDIA_TYPE_VIDEO:
 			printf("VIDEO  ");
 			break;
@@ -301,17 +296,6 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 		case AVMEDIA_TYPE_SUBTITLE:
 			printf("SUBTITL");
 			break;
-#else
-		case CODEC_TYPE_VIDEO:
-			printf("VIDEO  ");
-			break;
-		case CODEC_TYPE_AUDIO:
-			printf("AUDIO  ");
-			break;
-		case CODEC_TYPE_SUBTITLE:
-			printf("SUBTITL");
-			break;
-#endif
 		default:
 			printf("UNKNOWN");
 			break;

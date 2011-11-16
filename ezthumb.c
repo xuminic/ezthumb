@@ -269,7 +269,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	loglvl = av_log_get_level();
 	av_log_set_level(AV_LOG_INFO);
 
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 109, 0))
+	/* apparently the ubuntu 10.10 still use av_open_input_file() */
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
@@ -929,7 +930,6 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 					stream->codec->codec_type) + 11);
 		/* seems higher version doesn't support CODEC_TYPE_xxx */
 		switch (stream->codec->codec_type) {
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
 		case AVMEDIA_TYPE_VIDEO:	
 			video_media_video(stream, buffer);
 			break;
@@ -939,17 +939,6 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		case AVMEDIA_TYPE_SUBTITLE:
 			video_media_subtitle(stream, buffer);
 			break;
-#else
-		case CODEC_TYPE_VIDEO:	
-			video_media_video(stream, buffer);
-			break;
-		case CODEC_TYPE_AUDIO:
-			video_media_audio(stream, buffer);
-			break;
-		case CODEC_TYPE_SUBTITLE:
-			video_media_subtitle(stream, buffer);
-			break;
-#endif
 		default:
 			strcat(buffer, "Unknown");
 			break;
@@ -967,7 +956,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 	AVCodec	*codec = NULL;
 	int	i;
 
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 90, 0))
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
 			[AVMEDIA_TYPE_AUDIO]=-1,
 			[AVMEDIA_TYPE_VIDEO]=-1,
@@ -994,7 +983,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 		stream = vidx->formatx->streams[i];
 		stream->discard = AVDISCARD_ALL;
 		switch (stream->codec->codec_type) {
-		case CODEC_TYPE_VIDEO:
+		case AVMEDIA_TYPE_VIDEO:
 			if (vidx->sysopt->vs_idx >= 0) {
 				vidx->vsidx = vidx->sysopt->vs_idx;
 			} else if (wanted_stream < 
@@ -1003,7 +992,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 				wanted_stream = stream->codec_info_nb_frames;
 			}
 			break;
-		case CODEC_TYPE_AUDIO:
+		case AVMEDIA_TYPE_AUDIO:
 			eznotify(vidx, EN_TYPE_AUDIO, i, 0, stream->codec);
 			break;
 		default:

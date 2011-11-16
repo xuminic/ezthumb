@@ -24,6 +24,7 @@
 #include <signal.h>
 
 #include "ezthumb.h"
+#include "ezgui.h"
 #include "cliopt.h"
 #include "libsmm.h"
 
@@ -36,6 +37,7 @@ static	struct	cliopt	clist[] = {
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
 	{ 'F', "fontsize",2, "the size setting of the font" },
 	{ 'g', "grid",    2, "the thumbnail grid in the canvas.(4x4)" },
+	{ 'G', "gui",     0, "enable the graphic user interface" },
 	{ 'i', "list",    0, "display the media information in list form" },
 	{ 'I', "info",    0, "display the media information" },
 	{ 'm', "format",  2, "the output format (jpg@85)" },
@@ -77,7 +79,7 @@ License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
-static	EZOPT	sysoption;
+EZOPT	sysoption;
 
 int signal_break(int (*handle)(int));
 int signal_handler(int sig);
@@ -104,6 +106,8 @@ int main(int argc, char **argv)
 
 	smm_init();
 	ezopt_init(&sysoption);
+	ezgui_init(&argc, &argv);
+
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
 	//puts(arglist);
@@ -255,6 +259,9 @@ int main(int argc, char **argv)
 				sysoption.grid_row = strtol(++p, NULL, 10);
 			}
 			break;
+		case 'G':
+			todo = c;
+			break;
 		case 'I':
 			todo = c;
 			/* make these options default */
@@ -344,8 +351,9 @@ int main(int argc, char **argv)
 	free(arglist);
 
 	if (optind >= argc) {
-		cli_print(clist);
-		return 0;
+		/*cli_print(clist);
+		return 0;*/
+		todo = 'G';
 	}
 
 	smm_signal_break(signal_handler);
@@ -367,6 +375,12 @@ int main(int argc, char **argv)
 			c = ezinfo(argv[optind], &sysoption);
 		}
 		break;
+	case 'G':
+		if ((sysoption.gui = ezgui_create()) != NULL) {
+			//cli_print(clist);
+			ezgui_run(sysoption.gui);
+		}
+		break;
 	default:
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysoption.flags) == EZOP_DEBUG_NONE) {
@@ -383,6 +397,11 @@ int main(int argc, char **argv)
 
 int signal_handler(int sig)
 {
+	if (sysoption.gui) {
+		ezgui_close(sysoption.gui);
+		free(sysoption.gui);
+		sysoption.gui = NULL;
+	}
 	return ezthumb_break(&sysoption);
 }
 
