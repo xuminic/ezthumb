@@ -27,15 +27,19 @@
 #include "libsmm.h"
 
 
-static GtkWidget *ezui_notebook_main(EZGUI *gui);
-static void ezui_choose_files(void);
-static GtkWidget *ezui_create_view_and_model(void);
+static GtkWidget *ezgui_notebook_main(EZGUI *gui);
+static GtkWidget *ezgui_profile_ratio(void);
+static GtkWidget *ezgui_create_view_and_model(void);
+static void ezgui_files_choose(EZGUI *gui, void *parent);
+static void ezgui_files_remove(EZGUI *gui, void *parent);
 
-extern EZOPT   sysoption;
 
-void ezgui_init(int *argcs, char ***argvs)
+
+
+int ezgui_init(int *argcs, char ***argvs)
 {
 	gtk_init(argcs, argvs);
+	return 0;
 }
 
 void *ezgui_create(void)
@@ -48,7 +52,7 @@ void *ezgui_create(void)
 	}
 	memset(gui, 0, sizeof(EZGUI));
 
-	gui->gw_page_main = ezui_notebook_main(gui);
+	gui->gw_page_main = ezgui_notebook_main(gui);
 
 	/* Create a new notebook, place the position of the tabs */
 	gui->gw_page = gtk_notebook_new();
@@ -61,31 +65,74 @@ void *ezgui_create(void)
 
 	/* create the top level window */
 	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), 500, 400);
+	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), 640, 480);
 	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
 	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
 	gtk_container_add(GTK_CONTAINER(gui->gw_main), gui->gw_page);
 	return gui;
 }
 
-void ezgui_run(EZGUI *gui)
+int ezgui_run(EZGUI *gui)
 {
-	gtk_widget_show_all(gui->gw_main);
-	gtk_main();
+	if (gui) {
+		gtk_widget_show_all(gui->gw_main);
+		gtk_main();
+		return 0;
+	}
+	return -1;
 }
 
-void ezgui_close(EZGUI *gui)
+int ezgui_close(EZGUI *gui)
 {
+	if (gui) {
+		gtk_main_quit();
+		return 0;
+	}
+	return -1;
 }
 
-static GtkWidget *ezui_notebook_main(EZGUI *gui)
+void *ezgui_list_append_begin(EZGUI *gui)
 {
-	GtkWidget *scroll;
-	GtkWidget *button_add, *button_run;
-	GtkWidget *hbox, *vbox;
+	GtkTreeModel	*model;
+
+	/* get the point to the model */
+	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
+	/* Make sure the model stays with us after the tree view unrefs it */
+	g_object_ref(model); 
+	/* Detach model from view */
+	gtk_tree_view_set_model(GTK_TREE_VIEW(gui->gw_listview), NULL);
+	return model;
+}
+
+int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model)
+{
+	/* Re-attach model to view */
+	gtk_tree_view_set_model(GTK_TREE_VIEW(gui->gw_listview), model);
+	/* unref it becuase it has been reference by the tree view */
+	g_object_unref(model);
+	return 0;
+}
+
+int ezgui_list_append(EZGUI *gui, GtkTreeModel *model, char *s)
+{
+	GtkTreeIter	row;
+
+	gtk_list_store_append(GTK_LIST_STORE(model), &row);
+	gtk_list_store_set(GTK_LIST_STORE(model), &row, EZUI_COL_NAME, s, -1);
+	return 0;
+}
+
+
+
+
+static GtkWidget *ezgui_notebook_main(EZGUI *gui)
+{
+	GtkWidget	*scroll;
+	GtkWidget	*button_add, *button_del, *button_run, *profile;
+	GtkWidget	*hbox, *vbox;
 
 	/* create the listview */
-	gui->gw_listview = ezui_create_view_and_model();
+	gui->gw_listview = ezgui_create_view_and_model();
 
 	/* create the scrollbars and stuffed with the listview */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -95,15 +142,28 @@ static GtkWidget *ezui_notebook_main(EZGUI *gui)
 
 	/* create the buttons */
 	button_add = gtk_button_new_with_label("Add");
-	gtk_widget_set_size_request(button_add, 60, 30);
-	g_signal_connect(button_add, "clicked", ezui_choose_files, NULL);
+	gtk_widget_set_size_request(button_add, 80, 30);
+	g_signal_connect_swapped(button_add, "clicked", 
+			G_CALLBACK(ezgui_files_choose), gui);
+
+	button_del = gtk_button_new_with_label("Remove");
+	gtk_widget_set_size_request(button_del, 80, 30);
+	g_signal_connect(button_del, "clicked", 
+			G_CALLBACK(ezgui_files_remove), gui);
+	gtk_widget_set_sensitive(button_del, FALSE);
+
 	button_run = gtk_button_new_with_label("Start");
-	gtk_widget_set_size_request(button_run, 60, 30);
+	gtk_widget_set_size_request(button_run, 80, 30);
+
+	/* create left side */
+	profile = ezgui_profile_ratio();
 
 	/* create the horizontal box and stuffed with the buttons */
 	hbox = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(hbox), button_run, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox), button_del, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(hbox), button_add, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), profile, FALSE, FALSE, 0);
 
 	/* create the vertical box and stuffed with all above */
 	vbox = gtk_vbox_new(FALSE, 0);
@@ -112,7 +172,31 @@ static GtkWidget *ezui_notebook_main(EZGUI *gui)
 	return vbox;
 }
 
-static GtkWidget *ezui_create_view_and_model(void)
+static GtkWidget *ezgui_profile_ratio(void)
+{
+	GtkWidget	*label1, *label2, *entry1, *entry2, *hbox;
+
+	label1 = gtk_label_new("Grid");
+	label2 = gtk_label_new("x");
+
+	entry1 = gtk_entry_new();
+	gtk_entry_set_max_length(entry1, 3);
+	gtk_entry_set_text(entry1, "4");
+
+	entry2 = gtk_entry_new();
+	gtk_entry_set_max_length(entry2, 3);
+	gtk_entry_set_text(entry2, "8");
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
+
+	return hbox;
+}
+
+static GtkWidget *ezgui_create_view_and_model(void)
 {
 	GtkWidget		*view;
 	GtkTreeViewColumn	*col;
@@ -123,9 +207,11 @@ static GtkWidget *ezui_create_view_and_model(void)
 
 	/* --- Column #1 --- */
 	renderer = gtk_cell_renderer_text_new();
+	//g_object_set(renderer, "width", 300, NULL);
 	col = gtk_tree_view_column_new_with_attributes("Name", 
 			renderer, "text", EZUI_COL_NAME, NULL);
 	gtk_tree_view_column_set_resizable(col, TRUE);
+	//g_object_set(col, "width", 300, NULL);
 	gtk_tree_view_column_set_min_width(col, 300);
 	/* Nope, we autosize it later after file names been read */
 	//gtk_tree_view_column_set_min_width(col, -1);
@@ -168,12 +254,12 @@ static GtkWidget *ezui_create_view_and_model(void)
 	return view;
 }
 
-static void ezui_choose_files(void)
+static void ezgui_files_choose(EZGUI *gui, void *parent)
 {
 	GtkWidget 	*dialog;
 	GtkTreeModel	*model;
-	GtkTreeIter	newrow;
-	GtkFileFilter	*filter[4];
+	GtkFileFilter	*filter;
+	GSList		*flist, *p;
 
 	dialog = gtk_file_chooser_dialog_new ("Open File", NULL,
 			GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -182,42 +268,39 @@ static void ezui_choose_files(void)
 			NULL);
 	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);
 
-	filter[0] = gtk_file_filter_new();
-	gtk_file_filter_set_name(filter[0], "All Videos");
-	gtk_file_filter_add_mime_type(filter[0], "video/*");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter[0]);
-	filter[1] = gtk_file_filter_new();
-	gtk_file_filter_set_name(filter[1], "*.avi");
-	gtk_file_filter_add_pattern(filter[1], "*.avi");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter[1]);
-	filter[2] = gtk_file_filter_new();
-	gtk_file_filter_set_name(filter[2], "All Files");
-	gtk_file_filter_add_pattern(filter[2], "*");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter[2]);
+	filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "All Videos");
+	gtk_file_filter_add_mime_type(filter, "video/*");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+	filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "*.avi");
+	gtk_file_filter_add_pattern(filter, "*.avi");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+	filter = gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "All Files");
+	gtk_file_filter_add_pattern(filter, "*");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
-		/*
-		char *filename;
-		filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
-		puts (filename);
-		g_free (filename);
-		*/
-		GSList	*flist, *p;
-		EZGUI	*gui = sysoption.gui;
-	
-		model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
+		model = ezgui_list_append_begin(gui);
 
-		flist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
+		flist = gtk_file_chooser_get_filenames(
+				GTK_FILE_CHOOSER(dialog));
 		for (p = flist; p != NULL; p = p->next) {
-			gtk_list_store_append(GTK_LIST_STORE(model), &newrow);
-			gtk_list_store_set(GTK_LIST_STORE(model), &newrow, EZUI_COL_NAME, p->data, -1);
+			ezgui_list_append(gui, model, p->data);
 			//puts(p->data);
 			g_free(p->data);
 		}
 		g_slist_free(flist);
+
+		ezgui_list_append_end(gui, model);
 	}
 	gtk_widget_destroy(dialog);
+}
 
-	/* FIXME: HOW to free the filter[] */
+static void ezgui_files_remove(EZGUI *gui, void *parent)
+{
 }
 

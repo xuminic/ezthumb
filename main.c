@@ -102,6 +102,7 @@ int main(int argc, char **argv)
 {
 	struct	option	*argtbl;
 	char	*p, *arglist;
+	void	*model;
 	int	c, todo = -1;
 
 	smm_init();
@@ -376,10 +377,16 @@ int main(int argc, char **argv)
 		}
 		break;
 	case 'G':
-		if ((sysoption.gui = ezgui_create()) != NULL) {
-			//cli_print(clist);
-			ezgui_run(sysoption.gui);
+		if ((sysoption.gui = ezgui_create()) == NULL) {
+			break;
 		}
+
+		model = ezgui_list_append_begin(sysoption.gui);
+		for ( ; optind < argc; optind++) {
+			ezgui_list_append(sysoption.gui, model, argv[optind]);
+		}
+		ezgui_list_append_end(sysoption.gui, model);
+		ezgui_run(sysoption.gui);
 		break;
 	default:
 		/* inject the progress report functions */

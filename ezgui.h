@@ -41,9 +41,13 @@ enum	{
 
 
 
-void ezgui_init(int *argc, char ***argv);
+int ezgui_init(int *argc, char ***argv);
 void *ezgui_create(void);
-void ezgui_run(EZGUI *gui);
+int ezgui_run(EZGUI *gui);
+int ezgui_close(EZGUI *gui);
+void *ezgui_list_append_begin(EZGUI *gui);
+int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model);
+int ezgui_list_append(EZGUI *gui, GtkTreeModel *model, char *s);
 
 #endif	/* _EZGUI_H_ */
 
