@@ -1,3 +1,8 @@
+20111122: 
+  + Release tag: RELEASE_1_5_5
+  + All .a files were missing under the mswin/ directory because of the 
+    wrong setting of the .gitignore file. Now retrieved them.
+
 20111115: V1.5.5 
   + Integrated other libraries into the mswin branch so they could 
     be managed by git

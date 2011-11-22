@@ -48,6 +48,9 @@ libiconv-1.9.2-1
 libpng-1.2.37
 zlib-1.2.3
 
+NOTE that these libraries are not part of Ezthumb. 
+They were grabbed to here just for conveniece of building.
+
 
 Examples
 ========
