@@ -174,12 +174,14 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 
 static GtkWidget *ezgui_profile_ratio(void)
 {
-	GtkWidget	*label1, *label2, *label3, *entry1, *entry2, *entry3;
-	GtkWidget	*hbox;
+	GtkWidget	*label1, *label2, *label3, *label4;
+	GtkWidget	*hbox, *entry1, *entry2, *entry3;
+	GtkAdjustment	*adjust;
 
 	label1 = gtk_label_new("Grid");
 	label2 = gtk_label_new("x");
-	label3 = gtk_label_new("Zoom(%)");
+	label3 = gtk_label_new("  Zoom");
+	label4 = gtk_label_new("%");
 
 	entry1 = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
@@ -191,10 +193,10 @@ static GtkWidget *ezgui_profile_ratio(void)
 	gtk_entry_set_text(GTK_ENTRY(entry2), "8");
 	gtk_widget_set_size_request(entry2, 30, -1);
 
-	entry3 = gtk_combo_box_entry_new();
-	gtk_combo_box_insert_text(entry3, 0, "10");
-	gtk_combo_box_insert_text(entry3, 1, "20");
-
+	adjust = (GtkAdjustment *) gtk_adjustment_new(50.0, 5.0, 200.0, 
+			5.0, 25.0, 0.0);
+	entry3 = gtk_spin_button_new (adjust, 0, 0);
+	gtk_widget_set_size_request(entry3, 50, -1);
 
 	hbox = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
@@ -203,6 +205,7 @@ static GtkWidget *ezgui_profile_ratio(void)
 	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
 
 	return hbox;
 }
