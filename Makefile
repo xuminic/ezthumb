@@ -38,12 +38,12 @@ clean:
 	$(RM) $(TARGET) $(OBJS)
 
 release:
+ifeq	($(SYSTOOL),unix)
+	./release.sh
+else
 	mkdir $(RELDIR)
 	$(CP) $(TARGET) ezthumb.1 $(RELDIR)
-ifeq	($(SYSTOOL),cygwin)
 	$(CP) $(EXDLL) $(RELDIR)
-endif
-ifeq	($(SYSTOOL),mingw)
-	$(CP) $(EXDLL) $(RELDIR)
+	./release.sh win
 endif
 
