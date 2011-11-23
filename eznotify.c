@@ -77,7 +77,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			 * disabling the av_log */
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 100, 0))
 			av_dump_format(vidx->formatx, 0, block, 0);
 #else
 			dump_format(vidx->formatx, 0, block, 0);

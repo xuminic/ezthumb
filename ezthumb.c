@@ -270,7 +270,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	loglvl = av_log_get_level();
 	av_log_set_level(AV_LOG_INFO);
 
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
+#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 109, 0))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
