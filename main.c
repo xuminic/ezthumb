@@ -41,6 +41,7 @@ static	struct	cliopt	clist[] = {
 	{ 'm', "format",  2, "the output format (jpg@85)" },
 	{ 'o', "outdir",  2, "the directory for storing output images" },
 	{ 'p', "process", 1, "specify the process method (0|1|2|3|4)" },
+	{ 'P', "profile", 2, "specify the profile string" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
 	{ 'v', "verbose", 1, "*verbose mode (0)(0-7)" },
@@ -77,18 +78,35 @@ License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
+
+/* predefined profiles */
+static	char	*sysprof[] = {
+	NULL,	/* for command line/environment/configure files */
+	"12M4x4:20M4x6:30M4x8:40M4x10:60M4x12:90M4x16:120M4x20:180M4x24:"
+		"160w200%:400w100%:640w50%:720w40%:1280w25%:1600w20%",
+	"12M3x4:20M3x6:30M3x8:40M3x10:60M3x12:90M3x16:120M3x20:180M3x24:"
+		"160w200%:400w100%:640w50%:720w40%:1280w25%:1600w20%",
+	"12M6x4:20M6x6:30M6x8:40M6x10:60M6x12:90M6x16:120M6x20:180M6x24:"
+		"160w125%:400w50%:640w35%:720w30%:1280w15%:1600w10%"
+};
+
+#define PROFLIST	(sizeof(sysprof)/sizeof(int*))
+
 static	EZOPT	sysoption;
 
 int signal_break(int (*handle)(int));
 int signal_handler(int sig);
 
-int para_get_ratio(char *s);
-int para_get_time_point(char *s);
-int para_get_position(char *s);
-int para_make_postition(char *s);
-int para_get_color(EZOPT *opt, char *s);
-int para_get_fontsize(EZOPT *opt, char *s);
-
+static int para_get_ratio(char *s);
+static int para_get_time_point(char *s);
+static int para_get_position(char *s);
+static int para_make_postition(char *s);
+static int para_get_color(EZOPT *opt, char *s);
+static int para_get_fontsize(EZOPT *opt, char *s);
+static int para_profile(EZOPT *opt, char *s);
+static int prof_append(EZOPT *ezopt, char *ps);
+static void prof_reset(void);
+static EZPROF *prof_insert_new(EZPROF *root, int wei, int x, int y);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
 
@@ -103,7 +121,13 @@ int main(int argc, char **argv)
 	int	c, todo = -1;
 
 	smm_init();
+	prof_reset();
 	ezopt_init(&sysoption);
+	sysprof[0] = sysprof[1];	/* set the default profile */
+
+	/* load configure file */
+	/* load environment variables */
+
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
 	//puts(arglist);
@@ -254,6 +278,7 @@ int main(int argc, char **argv)
 			} else {
 				sysoption.grid_row = strtol(++p, NULL, 10);
 			}
+			sysoption.pro_index = -1;	/* disable the profile */
 			break;
 		case 'I':
 			todo = c;
@@ -307,6 +332,18 @@ int main(int argc, char **argv)
 			}
 			sysoption.flags |= EZOP_PROC_AUTO;
 			break;
+		case 'P':
+			c = strtol(optarg, &p, 10);
+			if (sysoption.pro_index == -1) {
+				break;	/* disabled by other option */
+			} else if (*p != 0) {	/* command line profiles */
+				sysprof[0] = optarg;
+			} else if ((c > 0) && (c < PROFLIST)) {
+				sysoption.pro_index = c;
+			} else {	/* wrong profile index */
+				sysoption.pro_index = -1;	/* disable it */
+			}
+			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
 			c = strtol(optarg, &p, 0);
 			if (p == NULL) {
@@ -317,6 +354,7 @@ int main(int argc, char **argv)
 				sysoption.tn_width  = c;
 				sysoption.tn_height = strtol(++p, NULL, 0);
 			}
+			sysoption.pro_index = -1;	/* disable the profile */
 			break;
 		case 't':
 			sysoption.tm_step = strtol(optarg, NULL, 0);
@@ -342,6 +380,11 @@ int main(int argc, char **argv)
 	}
 	free(argtbl);
 	free(arglist);
+
+	if ((sysoption.pro_index >= 0) && 
+			(sysprof[sysoption.pro_index] != NULL)) {
+		para_profile(&sysoption, sysprof[sysoption.pro_index]);
+	}
 
 	if (optind >= argc) {
 		cli_print(clist);
@@ -387,7 +430,8 @@ int signal_handler(int sig)
 }
 
 
-int para_get_ratio(char *s)
+
+static int para_get_ratio(char *s)
 {
 	int	val;
 
@@ -403,7 +447,7 @@ int para_get_ratio(char *s)
  * for example: 1:23:32 or 33%. In the timestamp format, it accepts 1 to 4
  * sections, each means second only, minute:second, hour:minute:second
  * and hour:minute:second:millisecond */
-int para_get_time_point(char *s)
+static int para_get_time_point(char *s)
 {
 	char	*argvs[8];
 	int	argcs, val = 0;
@@ -419,7 +463,7 @@ int para_get_time_point(char *s)
 	argcs = ziptoken(s, argvs, 8, ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
-		puts("Incorrect time format. Try HH:MM:SS or NN% please.");
+		puts("Incorrect time format. Try HH:MM:SS or NN%.");
 		break;
 	case 1:
 		val = strtol(argvs[0], NULL, 0);
@@ -447,7 +491,7 @@ int para_get_time_point(char *s)
  * The qualifications are: st, ex, ey, sx, sy
  * The position and qualification are seperated by ':'.
  * For example: "lt", "lt:st" */
-int para_get_position(char *s)
+static int para_get_position(char *s)
 {
 	char	*argvs[4];
 	int	argcs;
@@ -459,7 +503,7 @@ int para_get_position(char *s)
 	return para_make_postition(argvs[0]) | para_make_postition(argvs[1]);
 }
 
-int para_make_postition(char *s)
+static int para_make_postition(char *s)
 {
 	int	rc = 0;
 
@@ -499,7 +543,7 @@ int para_make_postition(char *s)
 	return rc;
 }
 
-int para_get_color(EZOPT *opt, char *s)
+static int para_get_color(EZOPT *opt, char *s)
 {
 	unsigned long	rc;
 	char	*clist[3];
@@ -527,7 +571,7 @@ int para_get_color(EZOPT *opt, char *s)
 	return EZ_ERR_NONE;
 }
 
-int para_get_fontsize(EZOPT *opt, char *s)
+static int para_get_fontsize(EZOPT *opt, char *s)
 {
 	char	*clist[3];
 
@@ -540,6 +584,125 @@ int para_get_fontsize(EZOPT *opt, char *s)
 		opt->ins_size = (int) strtol(clist[1], NULL, 0);
 	}
 	return EZ_ERR_NONE;
+}
+
+static int para_profile(EZOPT *opt, char *s)
+{
+	//EZPROF	*seg;
+	char	*tmp, *plist[64];	/* hope that's big enough */
+	int	i, len;
+
+	if ((tmp = malloc(strlen(s)+4)) == NULL) {
+		return -1;
+	}
+	strcpy(tmp, s);
+	len = ziptoken(tmp, plist, 64, ":");
+	for (i = 0; i < len; i++) {
+		prof_append(opt, plist[i]);
+	}
+	free(tmp);
+
+	/* for debug purpose */
+	/*printf("Grid: ");
+	for (seg = opt->pro_grid; seg != NULL; seg = seg->next) {
+		printf("%d ", seg->weight);
+	}
+	printf("\n");
+	printf("Size: ");
+	for (seg = opt->pro_size; seg != NULL; seg = seg->next) {
+		printf("%d ", seg->weight);
+	}
+	printf("\n");
+	*/
+	return 0;
+}
+
+/* available profile field example:
+ * 12M4x6, 720s4x6, 720S4
+ * 160w200%, 320w100%, 320w160x120, 320w160 */
+static int prof_append(EZOPT *ezopt, char *ps)
+{
+	char	*type, *flag;
+	int	wei, x, y;
+
+	wei = (int) strtol(ps, &type, 10);
+	if ((wei == 0) || (type == NULL)) {
+		return -1;
+	}
+
+	x = (int) strtol(type + 1, &flag, 10);
+	if (flag) {
+		if (*flag == '%') {
+			y = x;
+			x = -1;
+		} else {
+			y = (int) strtol(++flag, NULL, 10);
+		}
+	}
+	//printf("prof_append: %s [%d:%d:%d]\n", ps, wei, x, y);
+
+	switch (*type) {
+	case 'm':
+	case 'M':
+		wei *= 60;
+		/* falling down */
+	case 's':
+	case 'S':
+		ezopt->pro_grid = prof_insert_new(ezopt->pro_grid, wei, x, y);
+		return 0;
+	case 'w':
+	case 'W':
+		ezopt->pro_size = prof_insert_new(ezopt->pro_size, wei, x, y);
+		return 1;
+	}
+	return -2;
+}
+
+
+static	EZPROF	prof_pool[48];
+static	int	prof_idx = 0;
+
+static void prof_reset(void)
+{
+	memset(prof_pool, 0, sizeof(prof_pool));
+	prof_idx = 0;
+}
+
+static EZPROF *prof_insert_new(EZPROF *root, int wei, int x, int y)
+{
+	EZPROF	*prev, *now, *leaf;
+
+	if (prof_idx >= 48) {
+		return root;	/* list full so do nothing */
+	}
+
+	prof_pool[prof_idx].next = NULL;
+	prof_pool[prof_idx].weight = wei;
+	prof_pool[prof_idx].x = x;
+	prof_pool[prof_idx].y = y;
+	leaf = &prof_pool[prof_idx];
+	prof_idx++;
+
+	if (root == NULL) {
+		return leaf;
+	}
+	if (root->weight > leaf->weight) {
+		leaf->next = root;
+		return leaf;
+	}
+	prev = root;
+	for (now = root->next; now != NULL; prev = now, now = now->next) {
+		if (now->weight > leaf->weight) {
+			break;			
+		}
+	}
+	if (now == NULL) {
+		prev->next = leaf;
+	} else {
+		leaf->next = prev->next;
+		prev->next = leaf;
+	}
+	return root;
 }
 
 

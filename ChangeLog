@@ -1,3 +1,9 @@
+
+20111123: V1.5.6
+  + Merged partly from guidev about the LIBAVFORMAT_VERSION macro to 
+    make the makefile workable in archlinux, ubuntu 10.10 and mingw
+  + Implemented a simple build-in profile.
+
 20111122: 
   + Release tag: RELEASE_1_5_5
   + All .a files were missing under the mswin/ directory because of the 
