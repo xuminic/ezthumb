@@ -1,4 +1,10 @@
 
+20111124:
+  + I've got sick off the endless guess work about the FFMPEG's API version
+    changes so I downloaded the 0.7.8 to revise the proper version macro.
+    I believe most parts are fine except the av_dump_format(). There's no clue
+    of when it was introduced.
+
 20111123: V1.5.6
   + Merged partly from guidev about the LIBAVFORMAT_VERSION macro to 
     make the makefile workable in archlinux, ubuntu 10.10 and mingw

@@ -19,10 +19,13 @@ else
 	TARGET	= ezthumb.exe
 endif
 
-all: smm $(TARGET) install
+all: version smm $(TARGET) install
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+
+version: version.c
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
 
 smm:
 	make -C libsmm
@@ -35,7 +38,7 @@ install:
 
 clean:
 	make -C libsmm clean
-	$(RM) $(TARGET) $(OBJS)
+	$(RM) $(TARGET) version $(OBJS)
 
 release:
 ifeq	($(SYSTOOL),unix)

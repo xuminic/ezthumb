@@ -270,7 +270,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	loglvl = av_log_get_level();
 	av_log_set_level(AV_LOG_INFO);
 
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(51, 109, 0))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
@@ -283,7 +283,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 	/* FIXME: what are these for? */
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 6, 0))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
 	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
 #else
 	if (av_find_stream_info(vidx->formatx) < 0) {
@@ -956,7 +956,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 	AVCodec	*codec = NULL;
 	int	i;
 
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
 			[AVMEDIA_TYPE_AUDIO]=-1,
 			[AVMEDIA_TYPE_VIDEO]=-1,
@@ -1014,7 +1014,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 
 	/* open the codec */
 	codec = avcodec_find_decoder(vidx->codecx->codec_id);
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 9, 0))
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
 	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
 #else
 	if (avcodec_open(vidx->codecx, codec) < 0) {
