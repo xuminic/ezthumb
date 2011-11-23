@@ -273,7 +273,7 @@ int main(int argc, char **argv)
 			break;
 		case 'g':	/* Examples: 4, 4x8, 0x8 */
 			sysoption.grid_col = strtol(optarg, &p, 10);
-			if (p == NULL) {
+			if (*p == 0) {
 				sysoption.grid_row = 0;
 			} else {
 				sysoption.grid_row = strtol(++p, NULL, 10);
@@ -346,7 +346,7 @@ int main(int argc, char **argv)
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
 			c = strtol(optarg, &p, 0);
-			if (p == NULL) {
+			if (*p == 0) {
 				sysoption.tn_facto = c;
 			} else if (*p == '%') {
 				sysoption.tn_facto = c;
@@ -626,18 +626,18 @@ static int prof_append(EZOPT *ezopt, char *ps)
 	int	wei, x, y;
 
 	wei = (int) strtol(ps, &type, 10);
-	if ((wei == 0) || (type == NULL)) {
+	if ((wei == 0) || (*type == 0)) {
 		return -1;
 	}
 
 	x = (int) strtol(type + 1, &flag, 10);
-	if (flag) {
-		if (*flag == '%') {
-			y = x;
-			x = -1;
-		} else {
-			y = (int) strtol(++flag, NULL, 10);
-		}
+	if (*flag == '%') {
+		y = x;
+		x = -1;
+	} else if (*flag == 0) {
+		y = 0;
+	} else {
+		y = (int) strtol(++flag, NULL, 10);
 	}
 	//printf("prof_append: %s [%d:%d:%d]\n", ps, wei, x, y);
 
