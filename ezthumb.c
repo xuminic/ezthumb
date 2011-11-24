@@ -270,7 +270,10 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	loglvl = av_log_get_level();
 	av_log_set_level(AV_LOG_INFO);
 
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0))
+	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
+	 * since 53.2.0. Apparently it is wrong. It is at least appeared in
+	 * my archlinux 64-bit box by 52.110.0 */
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {

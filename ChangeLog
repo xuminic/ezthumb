@@ -4,6 +4,9 @@
     changes so I downloaded the 0.7.8 to revise the proper version macro.
     I believe most parts are fine except the av_dump_format(). There's no clue
     of when it was introduced.
+  + Apparently the FFMPEG's APIChanges.txt has something wrong about the 
+    version and avformat_open_input(). Defer to current FFMPEG lib
+  + Made up the missing freetype6.dll in the Windows release
 
 20111123: V1.5.6
   + Merged partly from guidev about the LIBAVFORMAT_VERSION macro to 
