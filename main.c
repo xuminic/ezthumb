@@ -107,6 +107,7 @@ static int para_profile(EZOPT *opt, char *s);
 static int prof_append(EZOPT *ezopt, char *ps);
 static void prof_reset(void);
 static EZPROF *prof_insert_new(EZPROF *root, int wei, int x, int y);
+static int prof_list(void);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
 
@@ -342,6 +343,8 @@ int main(int argc, char **argv)
 				sysoption.pro_index = c;
 			} else {	/* wrong profile index */
 				sysoption.pro_index = -1;	/* disable it */
+				prof_list();
+				return 0;
 			}
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
@@ -705,6 +708,16 @@ static EZPROF *prof_insert_new(EZPROF *root, int wei, int x, int y)
 	return root;
 }
 
+static int prof_list(void)
+{
+	int	i;
+
+	for (i = 0; i < PROFLIST; i++) {
+		printf("%2d: %s\n", i,
+				sysprof[i] ? sysprof[i] : "null");
+	}
+	return i;
+}
 
 static int event_cb(void *vobj, int event, long param, long opt, void *block)
 {

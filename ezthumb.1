@@ -206,6 +206,46 @@ key frames, the
 options sometimes is quite supportive. 
 
 .TP
+.BR \-P , " \-\-profile \fIprofile_string\fP"
+Specify a string of profiles for defining the size of grid and screen shots. 
+In simple, it can be treated as the combination of 
+.BR \-g
+and
+.BR \-s
+options. There are two types of profiles, for example,
+.I 60m4x12
+for the
+.BR \-g
+option and
+.I 640w35%
+for the
+.BR \-s
+option. In this example, 
+.I 60m
+means if a video file is smaller than or equal to 60 minutes,
+.B ezthumb 
+would generate a
+.I 4x12
+grid of screen shots. The
+.I 640w
+means if the width of the video display is smaller than or equal to 640 pixels,
+it would take 
+.I 35%
+of screen size for each shots. The profiles could be combined by ':' like
+.I "12m4x4:30m4x8:90m4x16:320w100%:640w240x180:1280w20%".
+
+The
+.BR \-P
+option could also accept an index number for its predefine profiles.
+The first predefined profile is also the default profile of 
+.B ezthumb.
+However, the profile could be overriden by the
+.BR \-g
+and
+.BR \-s
+options.
+
+.TP
 .BR \-s , " \-\-ssize \fIthumbnail_size\fP"
 Specify the width and height of each screen shot. 
 It could be defined by pixel like

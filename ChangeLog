@@ -1,4 +1,18 @@
 
+20111125: FFMPEG version list
+  + Finally found the culprit. There were two FFMPEG installs in my 
+    ubuntu 10.10. One was 0.6.x. Another one appeared as 0.8.x. 
+    By removing the latter the problem is gone.
+
+Library:        libavformat  libavcodec  libavdevice  libavutil  libswscale  libavfilter
+ffmpeg-0.6.1:   52.64.2      52.72.2     52.2.0       50.15.1    0.11.0      1.19.0
+ffmpeg-0.6.3:   52.64.2      52.72.2     52.2.0       50.15.1    0.11.0      1.19.0
+ffmpeg-0.7.8:   52.111.0     52.123.0    52.5.0       50.43.0    0.14.1      1.80.0
+ubuntu 10.10:   52.64.2      52.72.2     52.2.0       50.15.1    0.11.0
+ubuntu extra:   53.0.3       53.1.1      53.0.0       51.1.0     0.14.0
+
+
+
 20111124:
   + I've got sick off the endless guess work about the FFMPEG's API version
     changes so I downloaded the 0.7.8 to revise the proper version macro.
