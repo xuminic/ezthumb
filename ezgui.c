@@ -318,3 +318,34 @@ static void ezgui_files_remove(EZGUI *gui, void *parent)
 {
 }
 
+
+static void ezgui_cfg_init(void)
+{
+	GKeyFile	cfgkeys;
+	GError		*gerr = NULL;
+	char		*cfgpath;
+
+	/* Make sure the path to the configure file existed */
+	if (!g_file_test(g_get_user_config_dir(), G_FILE_TEST_EXISTS)) {
+		g_mkdir(g_get_user_config_dir(), 0755);
+	}
+
+	cfgpath = g_build_filename(g_get_user_config_dir(), "ezthumb", NULL);
+	if (!g_file_test(cfgpath, G_FILE_TEST_EXISTS)) {
+		g_mkdir(cfgpath, 0755);
+	}
+	g_free(cfgpath);
+
+	/* If the configure file exists, try to read it */
+	cfgpath = g_build_filename(g_get_user_config_dir(), 
+			"ezthumb", "ezthumb.conf", NULL);
+	
+	cfgkeys = g_key_file_new();
+	if (!g_key_file_load_from_file(cfgkeys, cfgpath, 0, NULL)) {
+		return;
+	}
+
+}
+
+
+
