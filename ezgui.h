@@ -21,13 +21,32 @@
 #ifndef	_EZGUI_H_
 #define _EZGUI_H_
 
+#include <glib.h>
+#include <glib/gstdio.h>
 #include <gtk/gtk.h>
+
+#define	CFG_SUBPATH	"ezthumb"
+#define CFG_FILENAME	"ezthumb.conf"
+
+#define CFG_GRP_MAIN	"main"
+
+#define CFG_KEY_WIN_WIDTH	"window_width"
+#define CFG_KEY_WIN_HEIGHT	"window_height"
+
 
 typedef	struct		{
 	GtkWidget	*gw_main;
 	GtkWidget	*gw_page;
 	GtkWidget	*gw_page_main;
 	GtkWidget	*gw_listview;
+
+	/* GUI parameters */
+	char		*cfg_filename;	/* the path of the configure file */
+	GKeyFile	*cfg_keys;	/* key entry of the configure file */
+	int		mod_counter;	/* modify counter >0 mean to save */
+	int		gui_width;	/* the width of the GUI interface */
+	int		gui_height;	/* the height of the GUI interface */
+
 } EZGUI;
 
 enum	{

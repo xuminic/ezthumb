@@ -406,8 +406,6 @@ int signal_handler(int sig)
 {
 	if (sysoption.gui) {
 		ezgui_close(sysoption.gui);
-		free(sysoption.gui);
-		sysoption.gui = NULL;
 	}
 	return ezthumb_break(&sysoption);
 }

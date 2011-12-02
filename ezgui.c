@@ -33,6 +33,12 @@ static GtkWidget *ezgui_create_view_and_model(void);
 static void ezgui_files_choose(EZGUI *gui, void *parent);
 static void ezgui_files_remove(EZGUI *gui, void *parent);
 
+static int ezgui_cfg_init(EZGUI *gui);
+static char *ezgui_cfg_read_string(EZGUI *gui, char *key, char *def);
+static int ezgui_cfg_read_int(EZGUI *gui, char *key, int def);
+static void ezgui_cfg_write_string(EZGUI *gui, char *key, char *s);
+static void ezgui_cfg_write_int(EZGUI *gui, char *key, int val);
+static int ezgui_cfg_flush(EZGUI *gui);
 
 
 
@@ -46,11 +52,14 @@ void *ezgui_create(void)
 {
 	EZGUI		*gui;
 	GtkWidget	*label;
+	int		w_wid, w_hei;
 
 	if ((gui = malloc(sizeof(EZGUI))) == NULL) {
 		return NULL;
 	}
 	memset(gui, 0, sizeof(EZGUI));
+
+	ezgui_cfg_init(gui);
 
 	gui->gw_page_main = ezgui_notebook_main(gui);
 
@@ -65,7 +74,9 @@ void *ezgui_create(void)
 
 	/* create the top level window */
 	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), 640, 480);
+	w_wid = ezgui_cfg_read_int(gui, CFG_KEY_WIN_WIDTH, 640);
+	w_hei = ezgui_cfg_read_int(gui, CFG_KEY_WIN_HEIGHT, 480);
+	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), w_wid, w_hei);
 	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
 	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
 	gtk_container_add(GTK_CONTAINER(gui->gw_main), gui->gw_page);
@@ -77,6 +88,7 @@ int ezgui_run(EZGUI *gui)
 	if (gui) {
 		gtk_widget_show_all(gui->gw_main);
 		gtk_main();
+		ezgui_close(gui);
 		return 0;
 	}
 	return -1;
@@ -84,11 +96,19 @@ int ezgui_run(EZGUI *gui)
 
 int ezgui_close(EZGUI *gui)
 {
-	if (gui) {
-		gtk_main_quit();
-		return 0;
+	if (gui == NULL) {
+		return -1;
 	}
-	return -1;
+
+	ezgui_cfg_flush(gui);
+
+	if (gui->cfg_filename) {
+		g_free(gui->cfg_filename);
+		gui->cfg_filename = NULL;
+	}
+	
+	free(gui);
+	return 0;
 }
 
 void *ezgui_list_append_begin(EZGUI *gui)
@@ -319,33 +339,99 @@ static void ezgui_files_remove(EZGUI *gui, void *parent)
 }
 
 
-static void ezgui_cfg_init(void)
+static int ezgui_cfg_init(EZGUI *gui)
 {
-	GKeyFile	cfgkeys;
-	GError		*gerr = NULL;
-	char		*cfgpath;
+	char		*path;
 
 	/* Make sure the path to the configure file existed */
 	if (!g_file_test(g_get_user_config_dir(), G_FILE_TEST_EXISTS)) {
 		g_mkdir(g_get_user_config_dir(), 0755);
 	}
 
-	cfgpath = g_build_filename(g_get_user_config_dir(), "ezthumb", NULL);
-	if (!g_file_test(cfgpath, G_FILE_TEST_EXISTS)) {
-		g_mkdir(cfgpath, 0755);
+	path = g_build_filename(g_get_user_config_dir(), CFG_SUBPATH, NULL);
+	if (!g_file_test(path, G_FILE_TEST_EXISTS)) {
+		g_mkdir(path, 0755);
 	}
-	g_free(cfgpath);
+	g_free(path);
 
 	/* If the configure file exists, try to read it */
-	cfgpath = g_build_filename(g_get_user_config_dir(), 
-			"ezthumb", "ezthumb.conf", NULL);
+	gui->cfg_filename = g_build_filename(g_get_user_config_dir(), 
+			CFG_SUBPATH, CFG_FILENAME, NULL);
 	
-	cfgkeys = g_key_file_new();
-	if (!g_key_file_load_from_file(cfgkeys, cfgpath, 0, NULL)) {
-		return;
+	gui->cfg_keys = g_key_file_new();
+	if (g_file_test(gui->cfg_filename, G_FILE_TEST_EXISTS)) {
+		g_key_file_load_from_file(gui->cfg_keys, 
+				gui->cfg_filename, 0, NULL);
 	}
-
+	return 0;
 }
 
+static char *ezgui_cfg_read_string(EZGUI *gui, char *key, char *def)
+{
+	if (!g_key_file_has_key(gui->cfg_keys, CFG_GRP_MAIN, key, NULL)) {
+		ezgui_cfg_write_string(gui, key, def);
+	}
+	return g_key_file_get_value(gui->cfg_keys, CFG_GRP_MAIN, key, NULL);
+}
+
+static int ezgui_cfg_read_int(EZGUI *gui, char *key, int def)
+{
+	if (!g_key_file_has_key(gui->cfg_keys, CFG_GRP_MAIN, key, NULL)) {
+		ezgui_cfg_write_int(gui, key, def);
+	}
+	return g_key_file_get_integer(gui->cfg_keys, CFG_GRP_MAIN, key, NULL);
+}
+
+static void ezgui_cfg_write_string(EZGUI *gui, char *key, char *s)
+{
+	g_key_file_set_value(gui->cfg_keys, CFG_GRP_MAIN, key, s);
+	gui->mod_counter++;
+}
+
+static void ezgui_cfg_write_int(EZGUI *gui, char *key, int val)
+{
+	g_key_file_set_integer(gui->cfg_keys, CFG_GRP_MAIN, key, val);
+	gui->mod_counter++;
+}
+
+static int ezgui_cfg_flush(EZGUI *gui)
+{
+	gchar	*cfgdata;
+	gsize	len = 0;
+	FILE	*fp;
+	
+	if (gui->mod_counter == 0) {
+		return 0;
+	}
+
+	cfgdata = g_key_file_to_data(gui->cfg_keys, &len, NULL);
+
+	if ((fp = fopen(gui->cfg_filename, "w")) != NULL) {
+		fwrite(cfgdata, 1, len, fp);
+		fclose(fp);
+	}
+
+	g_free(cfgdata);
+	gui->mod_counter = 0;
+	return 0;
+}
+
+/*
+static int ezgui_cfg_set_monitor(EZGUI *gui)
+{
+	GFileMonitor	*mon_file;
+	GFile 		*cfg_file;
+
+	cfg_file = g_file_new_for_path(gui->cfg_filename);
+	mon_file = g_file_monitor_file(cfg_file, 0, NULL, NULL);
+	g_signal_connect(G_OBJECT(mon_file), "changed", 
+			G_CALLBACK(ezgui_cfg_external_change), gui);
+	return 0;
+}
+
+static int ezgui_cfg_external_change(EZGUI *gui)
+{
+}
+*/
 
 
