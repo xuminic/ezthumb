@@ -1,3 +1,6 @@
+20111204: V1.5.7
+  + smm_signal_break.c: Fixed a bug that the custom signal callback was not
+  hooked indeed.
 
 20111125: FFMPEG version list
   + Finally found the culprit. There were two FFMPEG installs in my 

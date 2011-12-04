@@ -66,6 +66,8 @@ int smm_signal_break(int (*handle)(int))
 {
 	struct	sigaction	signew, sigold;
 
+	sig_break = handle;
+
 	signew.sa_handler = siegfried;
 	sigemptyset(&signew.sa_mask);
 	signew.sa_flags = 0;
