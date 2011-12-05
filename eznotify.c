@@ -77,7 +77,7 @@ int ezdefault(void *vobj, int event, long param, long opt, void *block)
 			 * disabling the av_log */
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
 			av_dump_format(vidx->formatx, 0, block, 0);
 #else
 			dump_format(vidx->formatx, 0, block, 0);
@@ -459,6 +459,8 @@ int dump_stream(AVStream *stream)
 
 int dump_ezimage(EZIMG *image)
 {
+	EZPROF	*seg;
+
 	printf("\n>>>>>>>>>>>>>>>>>>\n");
 	printf("Source frame size: %dx%dx%d\n", 
 			image->src_width, image->src_height, image->src_pixfmt);
@@ -519,6 +521,16 @@ int dump_ezimage(EZIMG *image)
 			gdFontGetGiant()->w, gdFontGetGiant()->h);
 	printf("Background Image:  %s (0x%x)\n", image->sysopt->background,
 			image->sysopt->bg_position);
+	printf("Profile of Grid:   ");
+	for (seg = image->sysopt->pro_grid; seg != NULL; seg = seg->next) {
+		printf("%d/%d/%d ", seg->weight, seg->x, seg->y);
+	}
+	printf("\n");
+	printf("Profile of Shots:  ");
+	for (seg = image->sysopt->pro_size; seg != NULL; seg = seg->next) {
+		printf("%d/%d/%d ", seg->weight, seg->x, seg->y);
+	}
+	printf("\n");
 	printf("<<<<<<<<<<<<<<<<<<\n");
 	return 0;
 }

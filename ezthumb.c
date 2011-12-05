@@ -62,6 +62,7 @@ static int64_t video_packet_timestamp(AVPacket *packet);
 
 static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
 static int image_free(EZIMG *image);
+static int image_user_profile(EZIMG *image, int *, int *, int *, int *, int *);
 static int image_scale(EZIMG *image, AVFrame *frame);
 static int image_font_test(EZIMG *image, char *filename);
 static int image_gdframe_update(EZIMG *image);
@@ -270,7 +271,10 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	av_log_set_level(AV_LOG_INFO);
 
 	/* apparently the ubuntu 10.10 still use av_open_input_file() */
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
+	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
+	 * since 53.2.0. Apparently it is wrong. It is at least appeared in
+	 * my archlinux 64-bit box by 52.110.0 */
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
 	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
@@ -283,7 +287,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 	/* FIXME: what are these for? */
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 6, 0))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
 	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
 #else
 	if (av_find_stream_info(vidx->formatx) < 0) {
@@ -927,7 +931,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		sprintf(buffer, "%s: ", id_lookup(id_codec_type, 
-					stream->codec->codec_type) + 11);
+					stream->codec->codec_type) + 13);
 		/* seems higher version doesn't support CODEC_TYPE_xxx */
 		switch (stream->codec->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:	
@@ -956,7 +960,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 	AVCodec	*codec = NULL;
 	int	i;
 
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 0, 3))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
 			[AVMEDIA_TYPE_AUDIO]=-1,
 			[AVMEDIA_TYPE_VIDEO]=-1,
@@ -1014,7 +1018,7 @@ static int video_find_stream(EZVID *vidx, int flags)
 
 	/* open the codec */
 	codec = avcodec_find_decoder(vidx->codecx->codec_id);
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 9, 0))
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
 	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
 #else
 	if (avcodec_open(vidx->codecx, codec) < 0) {
@@ -1447,7 +1451,6 @@ static int64_t video_packet_timestamp(AVPacket *packet)
 	return dts;
 }
 
-
 /* Allocate the EZIMG structure and translate the used defined parameter
  * group, EZOPT into this structure.
  *
@@ -1509,6 +1512,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 {
 	EZIMG	*image;
 	int	size, shots;
+	int	pro_col, pro_row, pro_width, pro_height, pro_facto;
 
 	// FIXME: the filename could be utf-8 or widebytes
 	size = sizeof(EZIMG) + strlen(vidx->filename) + 128;
@@ -1521,32 +1525,6 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	image->src_width  = vidx->codecx->width;
 	image->src_height = vidx->codecx->height;
 	image->src_pixfmt = vidx->codecx->pix_fmt;
-	
-	/* calculate the expected size of each screen shots.
-	 * Note that the result will be overriden by canvas_width */
-	if ((ezopt->tn_width < 1) && (ezopt->tn_height < 1)) {
-		if (ezopt->tn_facto < 1) {
-			image->dst_width  = image->src_width;
-			image->dst_height = image->src_height;
-		} else {
-			image->dst_width  = ((image->src_width * 
-						ezopt->tn_facto) / 100) & ~1;
-			image->dst_height = ((image->src_height *
-						ezopt->tn_facto) / 100) & ~1;
-		}
-	} else if ((ezopt->tn_width > 0) && (ezopt->tn_height > 0)) {
-		image->dst_width  = ezopt->tn_width & ~1;
-		image->dst_height = ezopt->tn_height & ~1;
-	} else if (ezopt->tn_width > 0) {
-		image->dst_width  = ezopt->tn_width & ~1;
-		image->dst_height = (ezopt->tn_width * image->src_height /
-				image->src_width) & ~1;
-	} else {
-		image->dst_width  = (ezopt->tn_height * image->src_width /
-				image->src_height) & ~1;
-		image->dst_height = ezopt->tn_height;
-	}
-	image->dst_pixfmt = PIX_FMT_RGB24;
 
 	/* calculate the expected time range */
 	image->time_from = image_cal_ratio(ezopt->time_from, vidx->duration);
@@ -1562,11 +1540,45 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		image->time_during -= image->time_from;
 	}
 
+	/* initialize the user defined profile */
+	pro_col    = ezopt->grid_col;
+	pro_row    = ezopt->grid_row;
+	pro_width  = ezopt->tn_width;
+	pro_height = ezopt->tn_height;
+	pro_facto  = ezopt->tn_facto;
+	image_user_profile(image, &pro_col, &pro_row, 
+			&pro_width, &pro_height, &pro_facto);
+	
+	/* calculate the expected size of each screen shots.
+	 * Note that the result will be overriden by canvas_width */
+	if ((pro_width < 1) && (pro_height < 1)) {
+		if (pro_facto < 1) {
+			image->dst_width  = image->src_width;
+			image->dst_height = image->src_height;
+		} else {
+			image->dst_width  = ((image->src_width * pro_facto)
+					/ 100) & ~1;
+			image->dst_height = ((image->src_height * pro_facto) 
+					/ 100) & ~1;
+		}
+	} else if ((pro_width > 0) && (pro_height > 0)) {
+		image->dst_width  = pro_width & ~1;
+		image->dst_height = pro_height & ~1;
+	} else if (pro_width > 0) {
+		image->dst_width  = pro_width & ~1;
+		image->dst_height = (pro_width * image->src_height /
+				image->src_width) & ~1;
+	} else {
+		image->dst_width  = (pro_height * image->src_width /
+				image->src_height) & ~1;
+		image->dst_height = pro_height;
+	}
+	image->dst_pixfmt = PIX_FMT_RGB24;
 
 	/* calculte the canvas, the screenshots, timestep and the gaps */
-	if (ezopt->grid_col < 1) {	/* we want separated screen shots */
-		image->grid_col  = ezopt->grid_col;
-		image->grid_row  = ezopt->grid_row;
+	if (pro_col < 1) {	/* we want separated screen shots */
+		image->grid_col  = pro_col;
+		image->grid_row  = pro_row;
 		image->time_step = ezopt->tm_step;
 		if ((image->grid_row < 1) && (image->time_step > 0)) {
 			image->grid_row = image_cal_shots(image->time_during,
@@ -1578,21 +1590,21 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 		}
 	} else {
-		image->grid_col = ezopt->grid_col;
-		if ((ezopt->grid_row < 1) && (ezopt->tm_step < 1)) {
+		image->grid_col = pro_col;
+		if ((pro_row < 1) && (ezopt->tm_step < 1)) {
 			image->grid_row = 4;	/* make it default */
 		}
-		if (ezopt->grid_row < 1) {
+		if (pro_row < 1) {
 			shots = image_cal_shots(image->time_during, 
 					ezopt->tm_step, ezopt->flags);
 			image->grid_row  = (shots + image->grid_col - 1) /
 					image->grid_col;
 			image->time_step = ezopt->tm_step;
 		} else if (ezopt->tm_step > 0) {
-			image->grid_row  = ezopt->grid_row;
+			image->grid_row  = pro_row;
 			image->time_step = ezopt->tm_step;
 		} else {
-			image->grid_row  = ezopt->grid_row;
+			image->grid_row  = pro_row;
 			image->time_step = image_cal_timestep(
 					image->time_during,
 					image->grid_col * image->grid_row, 
@@ -1605,7 +1617,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 			image->canvas_width = ezopt->canvas_width & ~1;
 
 			/* it's the reference width for getting the gap size */
-			size = ezopt->canvas_width / ezopt->grid_col;
+			size = ezopt->canvas_width / pro_col;
 			image->gap_width = image_cal_ratio(ezopt->grid_gap_w, 
 					size);
 			image->rim_width = image_cal_ratio(ezopt->grid_rim_w, 
@@ -1620,15 +1632,14 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 			/* now calculate the actual shot width and height */
 			image->dst_width = (image->canvas_width - 
-				image->rim_width * 2 -
-				image->gap_width * (ezopt->grid_col - 1)) /
-				ezopt->grid_col;
+				image->rim_width * 2 - image->gap_width * 
+				(pro_col - 1)) / pro_col;
 			/* the dst_height is a little bit tricky. We would
 			 * honor the user specified proportion. 
 			 * See FTest#036 */
-			if ((ezopt->tn_width > 0) && (ezopt->tn_height > 0)) {
+			if ((pro_width > 0) && (pro_height > 0)) {
 				image->dst_height = image->dst_width * 
-					ezopt->tn_height / ezopt->tn_width;
+					pro_height / pro_width;
 			} else {
 				image->dst_height = image->dst_width * 
 					image->src_height / image->src_width;
@@ -1648,8 +1659,8 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 			image->rim_height = image_cal_ratio(ezopt->grid_rim_h, 
 					image->dst_width);
 			image->canvas_width = (image->rim_width * 2 + 
-				image->gap_width * (ezopt->grid_col - 1) +
-				image->dst_width * ezopt->grid_col + 1) & ~1;
+				image->gap_width * (pro_col - 1) +
+				image->dst_width * pro_col + 1) & ~1;
 		}
 		image->canvas_height = image->rim_height * 2 + 
 			image->gap_height * (image->grid_row - 1) +
@@ -1806,6 +1817,44 @@ static int image_free(EZIMG *image)
 	return EZ_ERR_NONE;
 }
 
+static int image_user_profile(EZIMG *image, int *col, int *row,
+		int *width, int *height, int *facto)
+{
+	EZPROF	*pf;
+
+	if (image->sysopt->pro_index == -1) {
+		return -1;
+	}
+	for (pf = image->sysopt->pro_grid; pf; pf = pf->next) {
+		if ((image->time_during / 1000) <= pf->weight) {
+			if (col) {
+				*col = pf->x;
+			}
+			if (row) {
+				*row = pf->y;
+			}
+			break;
+		}
+	}
+	for (pf = image->sysopt->pro_size; pf; pf = pf->next) {
+		if (image->src_width <= pf->weight) {
+			if (pf->x < 0) {
+				if (facto) {
+					*facto = pf->y;
+				}
+			} else {
+				if (width) {
+					*width = pf->x;
+				}
+				if (height) {
+					*height = pf->y;
+				}
+			}
+			break;
+		}
+	}
+	return 0;
+}
 
 static int image_scale(EZIMG *image, AVFrame *frame)
 {

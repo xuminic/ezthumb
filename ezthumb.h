@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define	EZTHUMB_VERSION		"1.5.5"
+#define	EZTHUMB_VERSION		"1.5.7"
 
 
 #define EZ_ERR_NONE		0
@@ -171,6 +171,17 @@
 
 #define BYTE	unsigned char
 
+
+
+typedef	struct	{
+	void	*next;
+	int	weight;
+
+	int	x;
+	int	y;	/* or being ratio, if x < 0 */
+} EZPROF;
+
+
 /* This structure is used to store the user defined parameters.
  * These parameters are globally avaiable so they affect all video clips. 
  * Most parameters are raw which means the program only uses them indirectly.*/
@@ -212,9 +223,9 @@ typedef	struct	{
 	 * factor for scaling the original image, for example, 50 means 50%
 	 * and 150 means 150%. If tn_factor is enabled, ie > 0, it overwrites
 	 * tn_width and tn_height. */
-	int	tn_width;	/* width of a thumbshot */
-	int	tn_height;	/* height of a thumbshot */
-	int	tn_facto;	/* scale facto of a thumbshot (0=disable) */
+	int	tn_width;	/* width of a thumbnail */
+	int	tn_height;	/* height of a thumbnail */
+	int	tn_facto;	/* scale facto of a thumbnail (0=disable) */
 
 	/* specify the freetype font and its size. If only one set parameter
 	 * is specified, the other one will be copied automatically. 
@@ -253,6 +264,11 @@ typedef	struct	{
 	void	*vidobj;	/* copy of the runtime EZVID point */
 	void	*imgobj;	/* copy of the runtime EZIMG point */
 	void	*gui;		/* point to the GUI structure */
+
+	/* predefined profile structure */
+	int	pro_index;	/* -1: disable -2: command line profile */
+	EZPROF	*pro_grid;	/* profile of the canvas grid */
+	EZPROF	*pro_size;	/* profile of the size of each snapshots */
 } EZOPT;
 
 /* This structure is used to store the runtime parameters. Most parameters

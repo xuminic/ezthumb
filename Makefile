@@ -19,10 +19,13 @@ else
 	TARGET	= ezthumb.exe
 endif
 
-all: smm $(TARGET) install
+all: version smm $(TARGET) install
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+
+version: version.c
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
 
 smm:
 	make -C libsmm
@@ -35,15 +38,15 @@ install:
 
 clean:
 	make -C libsmm clean
-	$(RM) $(TARGET) $(OBJS)
+	$(RM) $(TARGET) version $(OBJS)
 
 release:
+ifeq	($(SYSTOOL),unix)
+	./release.sh
+else
 	mkdir $(RELDIR)
 	$(CP) $(TARGET) ezthumb.1 $(RELDIR)
-ifeq	($(SYSTOOL),cygwin)
 	$(CP) $(EXDLL) $(RELDIR)
-endif
-ifeq	($(SYSTOOL),mingw)
-	$(CP) $(EXDLL) $(RELDIR)
+	./release.sh win
 endif
 

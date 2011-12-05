@@ -47,6 +47,10 @@ jpeg-6b-4
 libiconv-1.9.2-1
 libpng-1.2.37
 zlib-1.2.3
+freetype-2.3.5-1
+
+NOTE that these libraries are not part of Ezthumb. 
+They were grabbed to here just for the conveniece of building.
 
 
 Examples
@@ -56,7 +60,8 @@ You may use the command as simple as this to test it:
 
 ezthumb *.avi
 
-However, the most used command would include a grid setting and a size setting:
+It will generate thumbnails for all .avi files by the default profile.
+Another common usage is including a grid setting and a size setting:
 
 ezthumb -g 4x8 -s 33% *.avi
 
