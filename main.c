@@ -83,7 +83,6 @@ There is NO WARRANTY, to the extent permitted by law.\n";
 
 /* predefined profiles */
 static	char	*sysprof[] = {
-	NULL,	/* for command line/environment/configure files */
 	"12M4x4:20M4x6:30M4x8:40M4x10:60M4x12:90M4x16:120M4x20:180M4x24:"
 		"160w200%:400w100%:640w50%:720w40%:1280w25%:1600w20%",
 	"12M3x4:20M3x6:30M3x8:40M3x10:60M3x12:90M3x16:120M3x20:180M3x24:"
@@ -105,11 +104,6 @@ static int para_get_position(char *s);
 static int para_make_postition(char *s);
 static int para_get_color(EZOPT *opt, char *s);
 static int para_get_fontsize(EZOPT *opt, char *s);
-static int para_profile(EZOPT *opt, char *s);
-static int prof_append(EZOPT *ezopt, char *ps);
-static void prof_reset(void);
-static EZPROF *prof_insert_new(EZPROF *root, int wei, int x, int y);
-static int prof_list(void);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
 
@@ -123,15 +117,15 @@ int main(int argc, char **argv)
 	char	*p, *arglist;
 	void	*model;
 	int	c, todo = -1;
+	int	prof_grid, prof_size;
 
 	smm_init();
-	prof_reset();
+	
+	prof_grid = prof_size = 1;	/* enable the profile */
 	ezopt_init(&sysoption);
-	ezgui_init(&argc, &argv);
-	sysprof[0] = sysprof[1];	/* set the default profile */
+	ezopt_profile_setup(&sysoption, sysprof[0]);
 
-	/* load configure file */
-	/* load environment variables */
+	ezgui_init(&argc, &argv);
 
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
@@ -283,7 +277,7 @@ int main(int argc, char **argv)
 			} else {
 				sysoption.grid_row = strtol(++p, NULL, 10);
 			}
-			sysoption.pro_index = -1;	/* disable the profile */
+			prof_grid = 0;	/* disable the profile */
 			break;
 		case 'G':
 			todo = c;
@@ -342,15 +336,14 @@ int main(int argc, char **argv)
 			break;
 		case 'P':
 			c = strtol(optarg, &p, 10);
-			if (sysoption.pro_index == -1) {
-				break;	/* disabled by other option */
-			} else if (*p != 0) {	/* command line profiles */
-				sysprof[0] = optarg;
-			} else if ((c > 0) && (c < PROFLIST)) {
-				sysoption.pro_index = c;
+			if (*p != 0) {	/* command line profiles */
+				ezopt_profile_setup(&sysoption, optarg);
+			} else if ((c >= 0) && (c < PROFLIST)) {
+				ezopt_profile_setup(&sysoption, sysprof[c]);
 			} else {	/* wrong profile index */
-				sysoption.pro_index = -1;	/* disable it */
-				prof_list();
+				for (c = 0; c < PROFLIST; c++) {
+					printf("%2d: %s\n", c, sysprof[c]);
+				}
 				return 0;
 			}
 			break;
@@ -364,7 +357,7 @@ int main(int argc, char **argv)
 				sysoption.tn_width  = c;
 				sysoption.tn_height = strtol(++p, NULL, 0);
 			}
-			sysoption.pro_index = -1;	/* disable the profile */
+			prof_size = 0;	/* disable the profile */
 			break;
 		case 't':
 			sysoption.tm_step = strtol(optarg, NULL, 0);
@@ -391,14 +384,16 @@ int main(int argc, char **argv)
 	free(argtbl);
 	free(arglist);
 
-	if ((sysoption.pro_index >= 0) && 
-			(sysprof[sysoption.pro_index] != NULL)) {
-		para_profile(&sysoption, sysprof[sysoption.pro_index]);
+	/* disable the unwanted profiles */
+	if (prof_grid == 0) {
+		sysoption.pro_grid = NULL;
+	}
+	if (prof_size == 0) {
+		sysoption.pro_size = NULL;
 	}
 
+	/* if no video file was specified, the ezthumb starts in GUI mode */
 	if (optind >= argc) {
-		/*cli_print(clist);
-		return 0;*/
 		todo = 'G';
 	}
 
@@ -610,136 +605,6 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 		opt->ins_size = (int) strtol(clist[1], NULL, 0);
 	}
 	return EZ_ERR_NONE;
-}
-
-static int para_profile(EZOPT *opt, char *s)
-{
-	//EZPROF	*seg;
-	char	*tmp, *plist[64];	/* hope that's big enough */
-	int	i, len;
-
-	if ((tmp = malloc(strlen(s)+4)) == NULL) {
-		return -1;
-	}
-	strcpy(tmp, s);
-	len = ziptoken(tmp, plist, 64, ":");
-	for (i = 0; i < len; i++) {
-		prof_append(opt, plist[i]);
-	}
-	free(tmp);
-
-	/* for debug purpose */
-	/*printf("Grid: ");
-	for (seg = opt->pro_grid; seg != NULL; seg = seg->next) {
-		printf("%d ", seg->weight);
-	}
-	printf("\n");
-	printf("Size: ");
-	for (seg = opt->pro_size; seg != NULL; seg = seg->next) {
-		printf("%d ", seg->weight);
-	}
-	printf("\n");
-	*/
-	return 0;
-}
-
-/* available profile field example:
- * 12M4x6, 720s4x6, 720S4
- * 160w200%, 320w100%, 320w160x120, 320w160 */
-static int prof_append(EZOPT *ezopt, char *ps)
-{
-	char	*type, *flag;
-	int	wei, x, y;
-
-	wei = (int) strtol(ps, &type, 10);
-	if ((wei == 0) || (*type == 0)) {
-		return -1;
-	}
-
-	x = (int) strtol(type + 1, &flag, 10);
-	if (*flag == '%') {
-		y = x;
-		x = -1;
-	} else if (*flag == 0) {
-		y = 0;
-	} else {
-		y = (int) strtol(++flag, NULL, 10);
-	}
-	//printf("prof_append: %s [%d:%d:%d]\n", ps, wei, x, y);
-
-	switch (*type) {
-	case 'm':
-	case 'M':
-		wei *= 60;
-		/* falling down */
-	case 's':
-	case 'S':
-		ezopt->pro_grid = prof_insert_new(ezopt->pro_grid, wei, x, y);
-		return 0;
-	case 'w':
-	case 'W':
-		ezopt->pro_size = prof_insert_new(ezopt->pro_size, wei, x, y);
-		return 1;
-	}
-	return -2;
-}
-
-
-static	EZPROF	prof_pool[48];
-static	int	prof_idx = 0;
-
-static void prof_reset(void)
-{
-	memset(prof_pool, 0, sizeof(prof_pool));
-	prof_idx = 0;
-}
-
-static EZPROF *prof_insert_new(EZPROF *root, int wei, int x, int y)
-{
-	EZPROF	*prev, *now, *leaf;
-
-	if (prof_idx >= 48) {
-		return root;	/* list full so do nothing */
-	}
-
-	prof_pool[prof_idx].next = NULL;
-	prof_pool[prof_idx].weight = wei;
-	prof_pool[prof_idx].x = x;
-	prof_pool[prof_idx].y = y;
-	leaf = &prof_pool[prof_idx];
-	prof_idx++;
-
-	if (root == NULL) {
-		return leaf;
-	}
-	if (root->weight > leaf->weight) {
-		leaf->next = root;
-		return leaf;
-	}
-	prev = root;
-	for (now = root->next; now != NULL; prev = now, now = now->next) {
-		if (now->weight > leaf->weight) {
-			break;			
-		}
-	}
-	if (now == NULL) {
-		prev->next = leaf;
-	} else {
-		leaf->next = prev->next;
-		prev->next = leaf;
-	}
-	return root;
-}
-
-static int prof_list(void)
-{
-	int	i;
-
-	for (i = 0; i < PROFLIST; i++) {
-		printf("%2d: %s\n", i,
-				sysprof[i] ? sysprof[i] : "null");
-	}
-	return i;
 }
 
 static int event_cb(void *vobj, int event, long param, long opt, void *block)

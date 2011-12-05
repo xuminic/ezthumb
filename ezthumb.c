@@ -32,6 +32,11 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
+#define EZOPT_MAX_PROFILE	64
+
+static	EZPROF	prof_pool[EZOPT_MAX_PROFILE];
+static	int	prof_idx = 0;
+
 
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
@@ -88,6 +93,11 @@ static int image_cal_gif_animix(EZOPT *ezopt);
 static gdFont *image_fontset(int fsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
+static int ezopt_profile_append(EZOPT *ezopt, char *ps);
+static EZPROF *ezopt_profile_new(EZPROF *root, int wei, int x, int y);
+
+extern int ziptoken(char *sour, char **idx, int ids, char *delim);
+
 
 void ezopt_init(EZOPT *ezopt)
 {
@@ -135,6 +145,44 @@ void ezopt_init(EZOPT *ezopt)
 
 	ezopt->bg_position = EZ_POS_MIDCENTER;
 	ezopt->vs_idx = -1;	/* default: first found video stream */
+}
+
+int ezopt_profile_setup(EZOPT *opt, char *s)
+{
+	//EZPROF	*seg;
+	char	*tmp, *plist[64];	/* hope that's big enough */
+	int	i, len;
+
+	/* duplicate the input profile string */
+	if ((tmp = malloc(strlen(s)+4)) == NULL) {
+		return -1;
+	}
+	strcpy(tmp, s);
+	
+	/* Reset the profile control block pool */
+	memset(prof_pool, 0, sizeof(prof_pool));
+	prof_idx = 0;
+
+	len = ziptoken(tmp, plist, 64, ":");
+	for (i = 0; i < len; i++) {
+		ezopt_profile_append(opt, plist[i]);
+	}
+	
+	free(tmp);
+
+	/* for debug purpose */
+	/*printf("Grid: ");
+	for (seg = opt->pro_grid; seg != NULL; seg = seg->next) {
+		printf("%d ", seg->weight);
+	}
+	printf("\n");
+	printf("Size: ");
+	for (seg = opt->pro_size; seg != NULL; seg = seg->next) {
+		printf("%d ", seg->weight);
+	}
+	printf("\n");
+	*/
+	return 0;
 }
 
 int ezthumb(char *filename, EZOPT *ezopt)
@@ -1822,9 +1870,6 @@ static int image_user_profile(EZIMG *image, int *col, int *row,
 {
 	EZPROF	*pf;
 
-	if (image->sysopt->pro_index == -1) {
-		return -1;
-	}
 	for (pf = image->sysopt->pro_grid; pf; pf = pf->next) {
 		if ((image->time_during / 1000) <= pf->weight) {
 			if (col) {
@@ -2477,6 +2522,87 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
 	return 0;
 }
 
+
+/* available profile field example:
+ * 12M4x6, 720s4x6, 720S4
+ * 160w200%, 320w100%, 320w160x120, 320w160 */
+static int ezopt_profile_append(EZOPT *ezopt, char *ps)
+{
+	char	*type, *flag;
+	int	wei, x, y;
+
+	wei = (int) strtol(ps, &type, 10);
+	if ((wei == 0) || (*type == 0)) {
+		return -1;
+	}
+
+	x = (int) strtol(type + 1, &flag, 10);
+	if (*flag == '%') {
+		y = x;
+		x = -1;
+	} else if (*flag == 0) {
+		y = 0;
+	} else {
+		y = (int) strtol(++flag, NULL, 10);
+	}
+	//printf("prof_append: %s [%d:%d:%d]\n", ps, wei, x, y);
+
+	switch (*type) {
+	case 'm':
+	case 'M':
+		wei *= 60;
+		/* falling down */
+	case 's':
+	case 'S':
+		ezopt->pro_grid = 
+			ezopt_profile_new(ezopt->pro_grid, wei, x, y);
+		return 0;
+	case 'w':
+	case 'W':
+		ezopt->pro_size = 
+			ezopt_profile_new(ezopt->pro_size, wei, x, y);
+		return 1;
+	}
+	return -2;
+}
+
+
+static EZPROF *ezopt_profile_new(EZPROF *root, int wei, int x, int y)
+{
+	EZPROF	*prev, *now, *leaf;
+
+	if (prof_idx >= EZOPT_MAX_PROFILE) {
+		return root;	/* list full so do nothing */
+	}
+
+	prof_pool[prof_idx].next = NULL;
+	prof_pool[prof_idx].weight = wei;
+	prof_pool[prof_idx].x = x;
+	prof_pool[prof_idx].y = y;
+	leaf = &prof_pool[prof_idx];
+	prof_idx++;
+
+	if (root == NULL) {
+		return leaf;
+	}
+	if (root->weight > leaf->weight) {
+		leaf->next = root;
+		return leaf;
+	}
+	prev = root;
+	for (now = root->next; now != NULL; prev = now, now = now->next) {
+		if (now->weight > leaf->weight) {
+			break;			
+		}
+	}
+	if (now == NULL) {
+		prev->next = leaf;
+	} else {
+		leaf->next = prev->next;
+		prev->next = leaf;
+	}
+	return root;
+}
 
 
 

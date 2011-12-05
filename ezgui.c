@@ -42,9 +42,10 @@ static int ezgui_cfg_flush(EZGUI *gui);
 
 
 
-int ezgui_init(int *argcs, char ***argvs)
+int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
 	gtk_init(argcs, argvs);
+	ezgui_cfg_init(ezopt);
 	return 0;
 }
 
@@ -58,8 +59,6 @@ void *ezgui_create(void)
 		return NULL;
 	}
 	memset(gui, 0, sizeof(EZGUI));
-
-	ezgui_cfg_init(gui);
 
 	gui->gw_page_main = ezgui_notebook_main(gui);
 
@@ -339,7 +338,7 @@ static void ezgui_files_remove(EZGUI *gui, void *parent)
 }
 
 
-static int ezgui_cfg_init(EZGUI *gui)
+static int ezgui_cfg_init(EZOPT *ezopt)
 {
 	char		*path;
 
@@ -355,13 +354,13 @@ static int ezgui_cfg_init(EZGUI *gui)
 	g_free(path);
 
 	/* If the configure file exists, try to read it */
-	gui->cfg_filename = g_build_filename(g_get_user_config_dir(), 
+	ezopt->cfg_fname = g_build_filename(g_get_user_config_dir(), 
 			CFG_SUBPATH, CFG_FILENAME, NULL);
 	
-	gui->cfg_keys = g_key_file_new();
-	if (g_file_test(gui->cfg_filename, G_FILE_TEST_EXISTS)) {
-		g_key_file_load_from_file(gui->cfg_keys, 
-				gui->cfg_filename, 0, NULL);
+	ezopt->cfg_key = g_key_file_new();
+	if (g_file_test(ezopt->cfg_fname, G_FILE_TEST_EXISTS)) {
+		g_key_file_load_from_file(ezopt->cfg_key, 
+				ezopt->cfg_fname, 0, NULL);
 	}
 	return 0;
 }
