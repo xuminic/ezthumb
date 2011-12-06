@@ -168,6 +168,8 @@
 #define EZ_ST_OFF		3
 #define EZ_ST_MAX_REC		16	/* maximum monited streams */
 
+#define EZ_MAX_PROFILE		64
+
 
 #define BYTE	unsigned char
 
@@ -273,6 +275,8 @@ typedef	struct	{
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
 	EZPROF	*pro_size;	/* profile of the size of each snapshots */
+	EZPROF	pro_pool[EZ_MAX_PROFILE];
+	int	pro_idx;
 } EZOPT;
 
 /* This structure is used to store the runtime parameters. Most parameters

@@ -84,7 +84,7 @@ There is NO WARRANTY, to the extent permitted by law.\n";
 /* predefined profiles */
 static	char	*sysprof[] = {
 	"12M4x4:20M4x6:30M4x8:40M4x10:60M4x12:90M4x16:120M4x20:180M4x24:"
-		"160w200%:400w100%:640w50%:720w40%:1280w25%:1600w20%",
+		"160w200%:400w100%:640w50%:720w40%:1280w25%:1600w20%:",
 	"12M3x4:20M3x6:30M3x8:40M3x10:60M3x12:90M3x16:120M3x20:180M3x24:"
 		"160w200%:400w100%:640w50%:720w40%:1280w25%:1600w20%",
 	"12M6x4:20M6x6:30M6x8:40M6x10:60M6x12:90M6x16:120M6x20:180M6x24:"
@@ -442,6 +442,7 @@ int main(int argc, char **argv)
 
 int signal_handler(int sig)
 {
+	printf("Signal %d\n", sig);
 	if (sysoption.gui) {
 		ezgui_close(sysoption.gui);
 	}

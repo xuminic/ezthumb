@@ -31,7 +31,8 @@ static GtkWidget *ezgui_create_view_and_model(void);
 static void ezgui_files_choose(EZGUI *gui, void *parent);
 static void ezgui_files_remove(EZGUI *gui, void *parent);
 
-static int ezgui_cfg_init(EZOPT *ezopt);
+static EZCFG *ezgui_cfg_init(EZOPT *ezopt);
+static int  ezgui_cfg_free(EZCFG *cfg);
 static char *ezgui_cfg_read_string(EZCFG *cfg, char *key, char *def);
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
 static void ezgui_cfg_write_string(EZCFG *cfg, char *key, char *s);
@@ -103,12 +104,7 @@ int ezgui_close(EZGUI *gui)
 		return -1;
 	}
 
-	ezgui_cfg_flush(gui->config);
-
-	if (gui->config->fname) {
-		g_free(gui->config->fname);
-	}
-	
+	ezgui_cfg_free(gui->config);
 	free(gui);
 	return 0;
 }
@@ -341,13 +337,13 @@ static void ezgui_files_remove(EZGUI *gui, void *parent)
 }
 
 
-static int ezgui_cfg_init(EZOPT *ezopt)
+static EZCFG *ezgui_cfg_init(EZOPT *ezopt)
 {
 	EZCFG	*cfg;
 	char	*path;
 
 	if ((cfg = malloc(sizeof(EZCFG))) == NULL) {
-		return -1;
+		return NULL;
 	}
 	memset(cfg, 0, sizeof(EZCFG));
 
@@ -370,16 +366,32 @@ static int ezgui_cfg_init(EZOPT *ezopt)
 	if (g_file_test(cfg->fname, G_FILE_TEST_EXISTS)) {
 		g_key_file_load_from_file(cfg->ckey, cfg->fname, 0, NULL);
 	}
-
 	/* setup the simple profile */
 	if ((path = ezopt_profile_readout(ezopt)) != NULL) {
 		char 	*tmp = ezgui_cfg_read_string(cfg, 
 				CFG_KEY_PROF_SIMPLE, path);
-		puts(tmp);
 		ezopt_profile_setup(ezopt, tmp);
 		free(path);
 	}
 	ezopt->config = cfg;
+	return cfg;
+}
+
+static int  ezgui_cfg_free(EZCFG *cfg)
+{
+	if (cfg == NULL) {
+		return -1;
+	}
+
+	ezgui_cfg_flush(cfg);
+
+	if (cfg->fname) {
+		g_free(cfg->fname);
+	}
+	if (cfg->ckey) {
+		g_free(cfg->ckey);
+	}
+	free(cfg);
 	return 0;
 }
 

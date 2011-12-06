@@ -32,10 +32,6 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
-#define EZOPT_MAX_PROFILE	64
-
-static	EZPROF	prof_pool[EZOPT_MAX_PROFILE];
-static	int	prof_idx = 0;
 
 
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
@@ -94,7 +90,8 @@ static gdFont *image_fontset(int fsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
 static int ezopt_profile_append(EZOPT *ezopt, char *ps);
-static EZPROF *ezopt_profile_new(EZPROF *root, int wei, int x, int y);
+static EZPROF *ezopt_profile_new(EZOPT *opt, int wei, int x, int y);
+static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
 
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
 
@@ -153,7 +150,6 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 
 int ezopt_profile_setup(EZOPT *opt, char *s)
 {
-	//EZPROF	*seg;
 	char	*tmp, *plist[64];	/* hope that's big enough */
 	int	i, len;
 
@@ -164,8 +160,9 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	strcpy(tmp, s);
 	
 	/* Reset the profile control block pool */
-	memset(prof_pool, 0, sizeof(prof_pool));
-	prof_idx = 0;
+	memset(opt->pro_pool, 0, sizeof(EZPROF) * EZ_MAX_PROFILE);
+	opt->pro_grid = opt->pro_size = NULL;
+	opt->pro_idx  = 0;
 
 	len = ziptoken(tmp, plist, 64, ":");
 	for (i = 0; i < len; i++) {
@@ -217,6 +214,7 @@ char *ezopt_profile_readout(EZOPT *ezopt)
 		}
 		strcat(buf, tmp);
 	}
+	//printf("ezopt_profile_readout: %s\n", buf);
 	return buf;
 }
 
@@ -2563,6 +2561,7 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
  * 160w200%, 320w100%, 320w160x120, 320w160 */
 static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 {
+	EZPROF	*node;
 	char	*type, *flag;
 	int	wei, x, y;
 
@@ -2589,32 +2588,41 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 		/* falling down */
 	case 's':
 	case 'S':
-		ezopt->pro_grid = 
-			ezopt_profile_new(ezopt->pro_grid, wei, x, y);
+		node = ezopt_profile_new(ezopt, wei, x, y);
+		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
 		return 0;
 	case 'w':
 	case 'W':
-		ezopt->pro_size = 
-			ezopt_profile_new(ezopt->pro_size, wei, x, y);
+		node = ezopt_profile_new(ezopt, wei, x, y);
+		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
 		return 1;
 	}
 	return -2;
 }
 
-static EZPROF *ezopt_profile_new(EZPROF *root, int wei, int x, int y)
+static EZPROF *ezopt_profile_new(EZOPT *opt, int wei, int x, int y)
 {
-	EZPROF	*prev, *now, *leaf;
-
-	if (prof_idx >= EZOPT_MAX_PROFILE) {
-		return root;	/* list full so do nothing */
+	if (opt->pro_idx >= EZ_MAX_PROFILE) {
+		return NULL;
 	}
 
-	prof_pool[prof_idx].next = NULL;
-	prof_pool[prof_idx].weight = wei;
-	prof_pool[prof_idx].x = x;
-	prof_pool[prof_idx].y = y;
-	leaf = &prof_pool[prof_idx];
-	prof_idx++;
+	opt->pro_pool[opt->pro_idx].next = NULL;
+	opt->pro_pool[opt->pro_idx].weight = wei;
+	opt->pro_pool[opt->pro_idx].x = x;
+	opt->pro_pool[opt->pro_idx].y = y;
+
+	x = opt->pro_idx;
+	opt->pro_idx++;
+	return &opt->pro_pool[x];
+}
+
+static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
+{
+	EZPROF	*prev, *now;
+
+	if (leaf == NULL) {
+		return root;	/* do nothing */
+	}
 
 	if (root == NULL) {
 		return leaf;
