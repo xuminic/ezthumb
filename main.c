@@ -119,13 +119,11 @@ int main(int argc, char **argv)
 	int	c, todo = -1;
 	int	prof_grid, prof_size;
 
-	smm_init();
-	
 	prof_grid = prof_size = 1;	/* enable the profile */
-	ezopt_init(&sysoption);
-	ezopt_profile_setup(&sysoption, sysprof[0]);
 
-	ezgui_init(&argc, &argv);
+	smm_init();				/* initialize the libsmm */
+	ezopt_init(&sysoption, sysprof[0]);	/* the default setting */
+	ezgui_init(&sysoption, &argc, &argv);	/* the config file */
 
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
@@ -417,7 +415,7 @@ int main(int argc, char **argv)
 		}
 		break;
 	case 'G':
-		if ((sysoption.gui = ezgui_create()) == NULL) {
+		if (ezgui_create(&sysoption) == NULL) {
 			break;
 		}
 

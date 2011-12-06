@@ -265,10 +265,10 @@ typedef	struct	{
 	void	*imgobj;	/* copy of the runtime EZIMG point */
 	
 	/* GUI related structures. These pointers were hooked here only.
-	 * We don't free them along with this structure */
+	 * We don't free them along with this structure because they should
+	 * be freed in the GUI related functions */
 	void	*gui;		/* point to the GUI structure */
-	char	*cfg_fname;	/* the name of the configure file */
-	void	*cfg_key;	/* the configure key structure */
+	void	*config;	/* point to the configure structure */
 
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
@@ -381,8 +381,9 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 
 
 /* ezthumb.c */
-void ezopt_init(EZOPT *ezopt);
+void ezopt_init(EZOPT *ezopt, char *profile);
 int ezopt_profile_setup(EZOPT *opt, char *s);
+char *ezopt_profile_readout(EZOPT *ezopt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
 int ezthumb_break(EZOPT *ezopt);

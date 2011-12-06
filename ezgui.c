@@ -22,9 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "ezthumb.h"
 #include "ezgui.h"
-#include "libsmm.h"
 
 
 static GtkWidget *ezgui_notebook_main(EZGUI *gui);
@@ -33,12 +31,12 @@ static GtkWidget *ezgui_create_view_and_model(void);
 static void ezgui_files_choose(EZGUI *gui, void *parent);
 static void ezgui_files_remove(EZGUI *gui, void *parent);
 
-static int ezgui_cfg_init(EZGUI *gui);
-static char *ezgui_cfg_read_string(EZGUI *gui, char *key, char *def);
-static int ezgui_cfg_read_int(EZGUI *gui, char *key, int def);
-static void ezgui_cfg_write_string(EZGUI *gui, char *key, char *s);
-static void ezgui_cfg_write_int(EZGUI *gui, char *key, int val);
-static int ezgui_cfg_flush(EZGUI *gui);
+static int ezgui_cfg_init(EZOPT *ezopt);
+static char *ezgui_cfg_read_string(EZCFG *cfg, char *key, char *def);
+static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
+static void ezgui_cfg_write_string(EZCFG *cfg, char *key, char *s);
+static void ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
+static int ezgui_cfg_flush(EZCFG *cfg);
 
 
 
@@ -49,7 +47,7 @@ int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	return 0;
 }
 
-void *ezgui_create(void)
+EZGUI *ezgui_create(EZOPT *ezopt)
 {
 	EZGUI		*gui;
 	GtkWidget	*label;
@@ -60,6 +58,12 @@ void *ezgui_create(void)
 	}
 	memset(gui, 0, sizeof(EZGUI));
 
+	/* hook the GUI related pointers from EZOPT so we won't use
+	 * through EZOPT any longer */
+	ezopt->gui = gui;
+	gui->config = ezopt->config;
+
+	/* Create the first page of notebook */
 	gui->gw_page_main = ezgui_notebook_main(gui);
 
 	/* Create a new notebook, place the position of the tabs */
@@ -73,8 +77,8 @@ void *ezgui_create(void)
 
 	/* create the top level window */
 	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	w_wid = ezgui_cfg_read_int(gui, CFG_KEY_WIN_WIDTH, 640);
-	w_hei = ezgui_cfg_read_int(gui, CFG_KEY_WIN_HEIGHT, 480);
+	w_wid = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_WIDTH, 640);
+	w_hei = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_HEIGHT, 480);
 	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), w_wid, w_hei);
 	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
 	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
@@ -99,11 +103,10 @@ int ezgui_close(EZGUI *gui)
 		return -1;
 	}
 
-	ezgui_cfg_flush(gui);
+	ezgui_cfg_flush(gui->config);
 
-	if (gui->cfg_filename) {
-		g_free(gui->cfg_filename);
-		gui->cfg_filename = NULL;
+	if (gui->config->fname) {
+		g_free(gui->config->fname);
 	}
 	
 	free(gui);
@@ -340,7 +343,13 @@ static void ezgui_files_remove(EZGUI *gui, void *parent)
 
 static int ezgui_cfg_init(EZOPT *ezopt)
 {
-	char		*path;
+	EZCFG	*cfg;
+	char	*path;
+
+	if ((cfg = malloc(sizeof(EZCFG))) == NULL) {
+		return -1;
+	}
+	memset(cfg, 0, sizeof(EZCFG));
 
 	/* Make sure the path to the configure file existed */
 	if (!g_file_test(g_get_user_config_dir(), G_FILE_TEST_EXISTS)) {
@@ -354,64 +363,73 @@ static int ezgui_cfg_init(EZOPT *ezopt)
 	g_free(path);
 
 	/* If the configure file exists, try to read it */
-	ezopt->cfg_fname = g_build_filename(g_get_user_config_dir(), 
+	cfg->fname = g_build_filename(g_get_user_config_dir(), 
 			CFG_SUBPATH, CFG_FILENAME, NULL);
 	
-	ezopt->cfg_key = g_key_file_new();
-	if (g_file_test(ezopt->cfg_fname, G_FILE_TEST_EXISTS)) {
-		g_key_file_load_from_file(ezopt->cfg_key, 
-				ezopt->cfg_fname, 0, NULL);
+	cfg->ckey = g_key_file_new();
+	if (g_file_test(cfg->fname, G_FILE_TEST_EXISTS)) {
+		g_key_file_load_from_file(cfg->ckey, cfg->fname, 0, NULL);
 	}
+
+	/* setup the simple profile */
+	if ((path = ezopt_profile_readout(ezopt)) != NULL) {
+		char 	*tmp = ezgui_cfg_read_string(cfg, 
+				CFG_KEY_PROF_SIMPLE, path);
+		puts(tmp);
+		ezopt_profile_setup(ezopt, tmp);
+		free(path);
+	}
+	ezopt->config = cfg;
 	return 0;
 }
 
-static char *ezgui_cfg_read_string(EZGUI *gui, char *key, char *def)
+static char *ezgui_cfg_read_string(EZCFG *cfg, char *key, char *def)
 {
-	if (!g_key_file_has_key(gui->cfg_keys, CFG_GRP_MAIN, key, NULL)) {
-		ezgui_cfg_write_string(gui, key, def);
+	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
+		ezgui_cfg_write_string(cfg, key, def);
 	}
-	return g_key_file_get_value(gui->cfg_keys, CFG_GRP_MAIN, key, NULL);
+	return g_key_file_get_value(cfg->ckey, CFG_GRP_MAIN, key, NULL);
 }
 
-static int ezgui_cfg_read_int(EZGUI *gui, char *key, int def)
+static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def)
 {
-	if (!g_key_file_has_key(gui->cfg_keys, CFG_GRP_MAIN, key, NULL)) {
-		ezgui_cfg_write_int(gui, key, def);
+	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
+		ezgui_cfg_write_int(cfg, key, def);
 	}
-	return g_key_file_get_integer(gui->cfg_keys, CFG_GRP_MAIN, key, NULL);
+	return g_key_file_get_integer(cfg->ckey, CFG_GRP_MAIN, key, NULL);
 }
 
-static void ezgui_cfg_write_string(EZGUI *gui, char *key, char *s)
+static void ezgui_cfg_write_string(EZCFG *cfg, char *key, char *s)
 {
-	g_key_file_set_value(gui->cfg_keys, CFG_GRP_MAIN, key, s);
-	gui->mod_counter++;
+	g_key_file_set_value(cfg->ckey, CFG_GRP_MAIN, key, s);
+	cfg->mcount++;
 }
 
-static void ezgui_cfg_write_int(EZGUI *gui, char *key, int val)
+static void ezgui_cfg_write_int(EZCFG *cfg, char *key, int val)
 {
-	g_key_file_set_integer(gui->cfg_keys, CFG_GRP_MAIN, key, val);
-	gui->mod_counter++;
+	g_key_file_set_integer(cfg->ckey, CFG_GRP_MAIN, key, val);
+	cfg->mcount++;
 }
 
-static int ezgui_cfg_flush(EZGUI *gui)
+static int ezgui_cfg_flush(EZCFG *cfg)
 {
 	gchar	*cfgdata;
 	gsize	len = 0;
 	FILE	*fp;
 	
-	if (gui->mod_counter == 0) {
+	if (cfg->mcount == 0) {
 		return 0;
 	}
 
-	cfgdata = g_key_file_to_data(gui->cfg_keys, &len, NULL);
+	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
 
-	if ((fp = fopen(gui->cfg_filename, "w")) != NULL) {
+	if ((fp = fopen(cfg->fname, "w")) != NULL) {
 		fwrite(cfgdata, 1, len, fp);
 		fclose(fp);
 	}
 
 	g_free(cfgdata);
-	gui->mod_counter = 0;
+	cfg->mcount = 0;
 	return 0;
 }
 
@@ -421,7 +439,7 @@ static int ezgui_cfg_set_monitor(EZGUI *gui)
 	GFileMonitor	*mon_file;
 	GFile 		*cfg_file;
 
-	cfg_file = g_file_new_for_path(gui->cfg_filename);
+	cfg_file = g_file_new_for_path(gui->cfg_fname);
 	mon_file = g_file_monitor_file(cfg_file, 0, NULL, NULL);
 	g_signal_connect(G_OBJECT(mon_file), "changed", 
 			G_CALLBACK(ezgui_cfg_external_change), gui);

@@ -99,7 +99,7 @@ static EZPROF *ezopt_profile_new(EZPROF *root, int wei, int x, int y);
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
 
 
-void ezopt_init(EZOPT *ezopt)
+void ezopt_init(EZOPT *ezopt, char *profile)
 {
 	memset(ezopt, 0, sizeof(EZOPT));
 	ezopt->grid_col = 4;	/* the default thumbnail is a 4x4 array */
@@ -145,6 +145,10 @@ void ezopt_init(EZOPT *ezopt)
 
 	ezopt->bg_position = EZ_POS_MIDCENTER;
 	ezopt->vs_idx = -1;	/* default: first found video stream */
+
+	if (profile) {
+		ezopt_profile_setup(ezopt, profile);
+	}
 }
 
 int ezopt_profile_setup(EZOPT *opt, char *s)
@@ -183,6 +187,37 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	printf("\n");
 	*/
 	return 0;
+}
+
+char *ezopt_profile_readout(EZOPT *ezopt)
+{
+	EZPROF	*p;
+	char	*buf, tmp[64];
+	int	n = 0;
+
+	for (p = ezopt->pro_grid; p; p = p->next, n++);
+	for (p = ezopt->pro_size; p; p = p->next, n++);
+	if ((buf = malloc(n * 64)) == NULL) {
+		return NULL;
+	}
+	buf[0] = 0;
+	for (p = ezopt->pro_grid; p; p = p->next) {
+		if ((p->weight % 60) == 0) {
+			sprintf(tmp, "%dM%dx%d:", p->weight / 60, p->x, p->y);
+		} else {
+			sprintf(tmp, "%dS%dx%d:", p->weight, p->x, p->y);
+		}
+		strcat(buf, tmp);
+	}
+	for (p = ezopt->pro_size; p; p = p->next) {
+		if (p->x < 0) {
+			sprintf(tmp, "%dW%d%%:", p->weight, p->y);
+		} else {
+			sprintf(tmp, "%dW%dx%d:", p->weight, p->x, p->y);
+		}
+		strcat(buf, tmp);
+	}
+	return buf;
 }
 
 int ezthumb(char *filename, EZOPT *ezopt)
@@ -2565,7 +2600,6 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 	}
 	return -2;
 }
-
 
 static EZPROF *ezopt_profile_new(EZPROF *root, int wei, int x, int y)
 {

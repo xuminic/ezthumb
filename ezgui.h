@@ -25,6 +25,10 @@
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
 
+#include "libsmm.h"
+#include "ezthumb.h"
+
+
 #define	CFG_SUBPATH	"ezthumb"
 #define CFG_FILENAME	"ezthumb.conf"
 
@@ -32,7 +36,15 @@
 
 #define CFG_KEY_WIN_WIDTH	"window_width"
 #define CFG_KEY_WIN_HEIGHT	"window_height"
+#define CFG_KEY_PROF_SIMPLE	"simple_profile"
 
+
+typedef	struct		{
+	char		*fname;		/* the path of the configure file */
+	GKeyFile	*ckey;		/* key entry of the configure file */
+	int		mcount;		/* modify counter >0 mean to save */
+} EZCFG;
+	
 
 typedef	struct		{
 	GtkWidget	*gw_main;
@@ -41,12 +53,7 @@ typedef	struct		{
 	GtkWidget	*gw_listview;
 
 	/* GUI parameters */
-	char		*cfg_filename;	/* the path of the configure file */
-	GKeyFile	*cfg_keys;	/* key entry of the configure file */
-	int		mod_counter;	/* modify counter >0 mean to save */
-	int		gui_width;	/* the width of the GUI interface */
-	int		gui_height;	/* the height of the GUI interface */
-
+	EZCFG		*config;
 } EZGUI;
 
 enum	{
@@ -60,8 +67,8 @@ enum	{
 
 
 
-int ezgui_init(int *argc, char ***argv);
-void *ezgui_create(void);
+int ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
+EZGUI *ezgui_create(EZOPT *ezopt);
 int ezgui_run(EZGUI *gui);
 int ezgui_close(EZGUI *gui);
 void *ezgui_list_append_begin(EZGUI *gui);
