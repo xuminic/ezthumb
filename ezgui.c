@@ -26,10 +26,13 @@
 
 
 static GtkWidget *ezgui_notebook_main(EZGUI *gui);
+static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui);
+static void ezgui_selection_list(GtkTreeModel *model, GtkTreePath *path,
+		GtkTreeIter *iter, gpointer userdata);
 static GtkWidget *ezgui_profile_ratio(void);
 static GtkWidget *ezgui_create_view_and_model(void);
-static void ezgui_files_choose(EZGUI *gui, void *parent);
-static void ezgui_files_remove(EZGUI *gui, void *parent);
+static void ezgui_files_choose(void *parent, EZGUI *gui);
+static void ezgui_files_remove(void *parent, EZGUI *gui);
 
 static void *ezgui_list_append_begin(EZGUI *gui);
 static int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model);
@@ -142,11 +145,16 @@ int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum)
 static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 {
 	GtkWidget	*scroll;
-	GtkWidget	*button_add, *button_del, *button_run, *profile;
+	GtkWidget	*button_add, *button_run, *profile;
 	GtkWidget	*hbox, *vbox;
+	GtkTreeSelection	*tsel;
 
 	/* create the listview */
 	gui->gw_listview = ezgui_create_view_and_model();
+	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
+	gtk_tree_selection_set_mode(tsel, GTK_SELECTION_MULTIPLE);
+	g_signal_connect(tsel, "changed", 
+			G_CALLBACK(ezgui_selection_change), gui);
 
 	/* create the scrollbars and stuffed with the listview */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -157,14 +165,14 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	/* create the buttons */
 	button_add = gtk_button_new_with_label("Add");
 	gtk_widget_set_size_request(button_add, 80, 30);
-	g_signal_connect_swapped(button_add, "clicked", 
+	g_signal_connect(button_add, "clicked", 
 			G_CALLBACK(ezgui_files_choose), gui);
 
-	button_del = gtk_button_new_with_label("Remove");
-	gtk_widget_set_size_request(button_del, 80, 30);
-	g_signal_connect(button_del, "clicked", 
+	gui->button_del = gtk_button_new_with_label("Remove");
+	gtk_widget_set_size_request(gui->button_del, 80, 30);
+	gtk_widget_set_sensitive(gui->button_del, FALSE);
+	g_signal_connect(gui->button_del, "clicked", 
 			G_CALLBACK(ezgui_files_remove), gui);
-	gtk_widget_set_sensitive(button_del, FALSE);
 
 	button_run = gtk_button_new_with_label("Start");
 	gtk_widget_set_size_request(button_run, 80, 30);
@@ -175,7 +183,7 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	/* create the horizontal box and stuffed with the buttons */
 	hbox = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(hbox), button_run, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox), button_del, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox), gui->button_del, FALSE, FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(hbox), button_add, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), profile, FALSE, FALSE, 0);
 
@@ -184,6 +192,25 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 	return vbox;
+}
+
+static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui)
+{
+	if (gtk_tree_selection_count_selected_rows(tsel) > 0) {
+		gtk_widget_set_sensitive(gui->button_del, TRUE);
+	} else {
+		gtk_widget_set_sensitive(gui->button_del, FALSE);
+	}
+}
+
+static void ezgui_selection_list(GtkTreeModel *model, GtkTreePath *path,
+		GtkTreeIter *iter, gpointer userdata)
+{
+	GtkTreeIter	**ilist = (GtkTreeIter **) userdata;
+	int		*idx = (int*) userdata;
+
+	ilist[1 + *idx] = iter;
+	(*idx)++;
 }
 
 static GtkWidget *ezgui_profile_ratio(void)
@@ -261,7 +288,7 @@ static GtkWidget *ezgui_create_view_and_model(void)
 
 	/* --- Column #4 --- */
 	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Screen",
+	col = gtk_tree_view_column_new_with_attributes("Resolution",
 			renderer, "text", EZUI_COL_SCREEN, NULL);
 	gtk_tree_view_column_set_resizable(col, TRUE);          
 	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
@@ -282,7 +309,7 @@ static GtkWidget *ezgui_create_view_and_model(void)
 	return view;
 }
 
-static void ezgui_files_choose(EZGUI *gui, void *parent)
+static void ezgui_files_choose(void *parent, EZGUI *gui)
 {
 	GtkWidget 	*dialog;
 	GtkTreeModel	*model;
@@ -328,8 +355,24 @@ static void ezgui_files_choose(EZGUI *gui, void *parent)
 	gtk_widget_destroy(dialog);
 }
 
-static void ezgui_files_remove(EZGUI *gui, void *parent)
+static void ezgui_files_remove(void *parent, EZGUI *gui)
 {
+	GtkTreeSelection	*tsel;
+	GtkTreeModel	*model;
+	GtkTreeIter 	iter;
+	GList		*rows, *node;
+
+	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
+	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
+	node = rows = gtk_tree_selection_get_selected_rows(tsel, &model);
+
+	while (node) {
+		gtk_tree_model_get_iter(model, &iter, node->data);
+		gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
+		node = g_list_next(node);
+	}
+	g_list_foreach(rows, (GFunc) gtk_tree_path_free, NULL);
+	g_list_free(rows);
 }
 
 

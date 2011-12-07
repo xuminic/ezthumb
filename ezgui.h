@@ -52,6 +52,8 @@ typedef	struct		{
 	GtkWidget	*gw_page_main;
 	GtkWidget	*gw_listview;
 
+	GtkWidget	*button_del;	/* the delete button on main page */
+
 	/* GUI parameters */
 	EZCFG		*config;
 } EZGUI;
