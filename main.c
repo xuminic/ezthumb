@@ -115,7 +115,6 @@ int main(int argc, char **argv)
 {
 	struct	option	*argtbl;
 	char	*p, *arglist;
-	void	*model;
 	int	c, todo = -1;
 	int	prof_grid, prof_size;
 
@@ -415,16 +414,14 @@ int main(int argc, char **argv)
 		}
 		break;
 	case 'G':
-		if (ezgui_create(&sysoption) == NULL) {
-			break;
+		if ((sysoption.gui = ezgui_create(sysoption.config)) !=NULL) {
+			if (argc > optind) {
+				ezgui_list_add_file(sysoption.gui,
+						argv + optind, argc - optind);
+			}
+			ezgui_run(sysoption.gui);
+			ezgui_close(sysoption.gui);
 		}
-
-		model = ezgui_list_append_begin(sysoption.gui);
-		for ( ; optind < argc; optind++) {
-			ezgui_list_append(sysoption.gui, model, argv[optind]);
-		}
-		ezgui_list_append_end(sysoption.gui, model);
-		ezgui_run(sysoption.gui);
 		break;
 	default:
 		/* inject the progress report functions */

@@ -31,7 +31,11 @@ static GtkWidget *ezgui_create_view_and_model(void);
 static void ezgui_files_choose(EZGUI *gui, void *parent);
 static void ezgui_files_remove(EZGUI *gui, void *parent);
 
-static EZCFG *ezgui_cfg_init(EZOPT *ezopt);
+static void *ezgui_list_append_begin(EZGUI *gui);
+static int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model);
+static int ezgui_list_append(EZGUI *gui, GtkTreeModel *model, char *s);
+
+static EZCFG *ezgui_cfg_init(void);
 static int  ezgui_cfg_free(EZCFG *cfg);
 static char *ezgui_cfg_read_string(EZCFG *cfg, char *key, char *def);
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
@@ -43,26 +47,59 @@ static int ezgui_cfg_flush(EZCFG *cfg);
 
 int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
+	char	*pdef, *pnow;
+
 	gtk_init(argcs, argvs);
-	ezgui_cfg_init(ezopt);
+
+	if ((ezopt->config = ezgui_cfg_init()) == NULL) {
+		return -1;
+	}
+	
+	/* setup the simple profile */
+	if ((pdef = ezopt_profile_readout(ezopt)) != NULL) {
+		pnow = ezgui_cfg_read_string(ezopt->config, 
+				CFG_KEY_PROF_SIMPLE, pdef);
+		ezopt_profile_setup(ezopt, pnow);
+		free(pdef);
+	}
 	return 0;
 }
 
-EZGUI *ezgui_create(EZOPT *ezopt)
+int ezgui_run(EZGUI *gui)
+{
+	if (gui == NULL) {
+		return -1;
+	}
+	
+	gtk_widget_show_all(gui->gw_main);
+	gtk_main();
+	return 0;
+}
+
+int ezgui_close(EZGUI *gui)
+{
+	if (gui == NULL) {
+		return -1;
+	}
+
+	ezgui_cfg_free(gui->config);
+	free(gui);
+	return 0;
+}
+
+EZGUI *ezgui_create(EZCFG *config)
 {
 	EZGUI		*gui;
 	GtkWidget	*label;
 	int		w_wid, w_hei;
 
-	if ((gui = malloc(sizeof(EZGUI))) == NULL) {
+	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
 		return NULL;
 	}
-	memset(gui, 0, sizeof(EZGUI));
 
 	/* hook the GUI related pointers from EZOPT so we won't use
 	 * through EZOPT any longer */
-	ezopt->gui = gui;
-	gui->config = ezopt->config;
+	gui->config = config;
 
 	/* Create the first page of notebook */
 	gui->gw_page_main = ezgui_notebook_main(gui);
@@ -87,59 +124,18 @@ EZGUI *ezgui_create(EZOPT *ezopt)
 	return gui;
 }
 
-int ezgui_run(EZGUI *gui)
-{
-	if (gui) {
-		gtk_widget_show_all(gui->gw_main);
-		gtk_main();
-		ezgui_close(gui);
-		return 0;
-	}
-	return -1;
-}
-
-int ezgui_close(EZGUI *gui)
-{
-	if (gui == NULL) {
-		return -1;
-	}
-
-	ezgui_cfg_free(gui->config);
-	free(gui);
-	return 0;
-}
-
-void *ezgui_list_append_begin(EZGUI *gui)
+int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum)
 {
 	GtkTreeModel	*model;
+	int		i;
 
-	/* get the point to the model */
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
-	/* Make sure the model stays with us after the tree view unrefs it */
-	g_object_ref(model); 
-	/* Detach model from view */
-	gtk_tree_view_set_model(GTK_TREE_VIEW(gui->gw_listview), NULL);
-	return model;
+	model = ezgui_list_append_begin(gui);
+	for (i = 0; i < fnum; i++) {
+		ezgui_list_append(gui, model, flist[i]);
+	}
+	ezgui_list_append_end(gui, model);
+	return i;
 }
-
-int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model)
-{
-	/* Re-attach model to view */
-	gtk_tree_view_set_model(GTK_TREE_VIEW(gui->gw_listview), model);
-	/* unref it becuase it has been reference by the tree view */
-	g_object_unref(model);
-	return 0;
-}
-
-int ezgui_list_append(EZGUI *gui, GtkTreeModel *model, char *s)
-{
-	GtkTreeIter	row;
-
-	gtk_list_store_append(GTK_LIST_STORE(model), &row);
-	gtk_list_store_set(GTK_LIST_STORE(model), &row, EZUI_COL_NAME, s, -1);
-	return 0;
-}
-
 
 
 
@@ -337,15 +333,46 @@ static void ezgui_files_remove(EZGUI *gui, void *parent)
 }
 
 
-static EZCFG *ezgui_cfg_init(EZOPT *ezopt)
+static void *ezgui_list_append_begin(EZGUI *gui)
+{
+	GtkTreeModel	*model;
+
+	/* get the point to the model */
+	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
+	/* Make sure the model stays with us after the tree view unrefs it */
+	g_object_ref(model); 
+	/* Detach model from view */
+	gtk_tree_view_set_model(GTK_TREE_VIEW(gui->gw_listview), NULL);
+	return model;
+}
+
+static int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model)
+{
+	/* Re-attach model to view */
+	gtk_tree_view_set_model(GTK_TREE_VIEW(gui->gw_listview), model);
+	/* unref it becuase it has been reference by the tree view */
+	g_object_unref(model);
+	return 0;
+}
+
+static int ezgui_list_append(EZGUI *gui, GtkTreeModel *model, char *s)
+{
+	GtkTreeIter	row;
+
+	gtk_list_store_append(GTK_LIST_STORE(model), &row);
+	gtk_list_store_set(GTK_LIST_STORE(model), &row, EZUI_COL_NAME, s, -1);
+	return 0;
+}
+
+
+static EZCFG *ezgui_cfg_init(void)
 {
 	EZCFG	*cfg;
 	char	*path;
 
-	if ((cfg = malloc(sizeof(EZCFG))) == NULL) {
+	if ((cfg = calloc(sizeof(EZCFG), 1)) == NULL) {
 		return NULL;
 	}
-	memset(cfg, 0, sizeof(EZCFG));
 
 	/* Make sure the path to the configure file existed */
 	if (!g_file_test(g_get_user_config_dir(), G_FILE_TEST_EXISTS)) {
@@ -366,14 +393,6 @@ static EZCFG *ezgui_cfg_init(EZOPT *ezopt)
 	if (g_file_test(cfg->fname, G_FILE_TEST_EXISTS)) {
 		g_key_file_load_from_file(cfg->ckey, cfg->fname, 0, NULL);
 	}
-	/* setup the simple profile */
-	if ((path = ezopt_profile_readout(ezopt)) != NULL) {
-		char 	*tmp = ezgui_cfg_read_string(cfg, 
-				CFG_KEY_PROF_SIMPLE, path);
-		ezopt_profile_setup(ezopt, tmp);
-		free(path);
-	}
-	ezopt->config = cfg;
 	return cfg;
 }
 
@@ -388,9 +407,9 @@ static int  ezgui_cfg_free(EZCFG *cfg)
 	if (cfg->fname) {
 		g_free(cfg->fname);
 	}
-	if (cfg->ckey) {
+	/*if (cfg->ckey) {
 		g_free(cfg->ckey);
-	}
+	}*/
 	free(cfg);
 	return 0;
 }

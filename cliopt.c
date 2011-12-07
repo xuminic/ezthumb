@@ -67,11 +67,9 @@ char *cli_alloc_list(struct cliopt *optbl)
 	char	*list, *p;
 	int	rc;
 
-	rc = (cli_table_size(optbl) + 1) << 1;
-	if ((list = malloc(rc)) == NULL) {
+	if ((list = calloc(cli_table_size(optbl) + 1, 2)) == NULL) {
 		return NULL;
 	}
-	memset(list, 0, rc);
 
 	for (p = list; (rc = cli_type(optbl)) != CLI_EOL; optbl++) {
 		if (rc & CLI_SHORT) {
@@ -89,11 +87,10 @@ void *cli_alloc_table(struct cliopt *optbl)
 	struct	option	*table, *p;
 	int	rc;
 
-	rc = sizeof(struct option) * (cli_table_size(optbl) + 1);
-	if ((table = malloc(rc)) == NULL) {
+	table = calloc(cli_table_size(optbl) + 1, sizeof(struct option));
+	if (table == NULL) {
 		return NULL;
 	}
-	memset(table, 0, rc);
 
 	for (p = table; (rc = cli_type(optbl)) != CLI_EOL; optbl++) {
 		if (rc & CLI_LONG) {

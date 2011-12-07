@@ -68,12 +68,10 @@ enum	{
 
 
 int ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
-EZGUI *ezgui_create(EZOPT *ezopt);
 int ezgui_run(EZGUI *gui);
 int ezgui_close(EZGUI *gui);
-void *ezgui_list_append_begin(EZGUI *gui);
-int ezgui_list_append_end(EZGUI *gui, GtkTreeModel *model);
-int ezgui_list_append(EZGUI *gui, GtkTreeModel *model, char *s);
+EZGUI *ezgui_create(EZCFG *config);
+int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum);
 
 #endif	/* _EZGUI_H_ */
 

@@ -154,7 +154,7 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	int	i, len;
 
 	/* duplicate the input profile string */
-	if ((tmp = malloc(strlen(s)+4)) == NULL) {
+	if ((tmp = calloc(strlen(s)+4, 1)) == NULL) {
 		return -1;
 	}
 	strcpy(tmp, s);
@@ -194,7 +194,7 @@ char *ezopt_profile_readout(EZOPT *ezopt)
 
 	for (p = ezopt->pro_grid; p; p = p->next, n++);
 	for (p = ezopt->pro_size; p; p = p->next, n++);
-	if ((buf = malloc(n * 64)) == NULL) {
+	if ((buf = calloc(n, 64)) == NULL) {
 		return NULL;
 	}
 	buf[0] = 0;
@@ -335,12 +335,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	int	rc, loglvl;
 
 	/* allocate the runtime index structure of the video */
-	if ((vidx = malloc(sizeof(EZVID))) == NULL) {
+	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
 	}
 
-	memset(vidx, 0, sizeof(EZVID));
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;	/* keep a copy of the filename */
 	vidx->seekable = -1;
@@ -793,7 +792,7 @@ static int64_t *video_keyframe_survey(EZVID *vidx, EZIMG *image)
 	int		i;
 	SMM_TIME	tmstart; 
 
-	if ((keylist = malloc(sizeof(int64_t) * image->shots)) == NULL) {
+	if ((keylist = calloc(sizeof(int64_t), image->shots)) == NULL) {
 		return NULL;
 	}
 
@@ -1597,11 +1596,11 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 	// FIXME: the filename could be utf-8 or widebytes
 	size = sizeof(EZIMG) + strlen(vidx->filename) + 128;
-	if ((image = av_malloc(size)) == NULL) {
+	if ((image = calloc(size, 1)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
 	}
-	memset(image, 0, size);
+	
 	image->sysopt = ezopt;
 	image->src_width  = vidx->codecx->width;
 	image->src_height = vidx->codecx->height;
@@ -1894,7 +1893,7 @@ static int image_free(EZIMG *image)
 	if (image->rgb_frame) {
 		av_free(image->rgb_frame);
 	}
-	av_free(image);
+	free(image);
 	return EZ_ERR_NONE;
 }
 
