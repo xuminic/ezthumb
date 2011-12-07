@@ -27,8 +27,7 @@
 
 static GtkWidget *ezgui_notebook_main(EZGUI *gui);
 static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui);
-static void ezgui_selection_list(GtkTreeModel *model, GtkTreePath *path,
-		GtkTreeIter *iter, gpointer userdata);
+static void ezgui_selection_undo(GtkTreeSelection *tsel, EZGUI *gui);
 static GtkWidget *ezgui_profile_ratio(void);
 static GtkWidget *ezgui_create_view_and_model(void);
 static void ezgui_files_choose(void *parent, EZGUI *gui);
@@ -155,6 +154,8 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	gtk_tree_selection_set_mode(tsel, GTK_SELECTION_MULTIPLE);
 	g_signal_connect(tsel, "changed", 
 			G_CALLBACK(ezgui_selection_change), gui);
+	g_signal_connect(gui->gw_listview, "button-press-event", 
+			G_CALLBACK(ezgui_selection_undo), gui);
 
 	/* create the scrollbars and stuffed with the listview */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -203,14 +204,9 @@ static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui)
 	}
 }
 
-static void ezgui_selection_list(GtkTreeModel *model, GtkTreePath *path,
-		GtkTreeIter *iter, gpointer userdata)
+static void ezgui_selection_undo(GtkTreeSelection *tsel, EZGUI *gui)
 {
-	GtkTreeIter	**ilist = (GtkTreeIter **) userdata;
-	int		*idx = (int*) userdata;
-
-	ilist[1 + *idx] = iter;
-	(*idx)++;
+	puts("hello");
 }
 
 static GtkWidget *ezgui_profile_ratio(void)
