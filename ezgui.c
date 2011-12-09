@@ -26,7 +26,9 @@
 
 
 static GtkWidget *ezgui_notebook_main(EZGUI *gui);
-static GtkWidget *ezgui_profile_ratio(void);
+static GtkWidget *ezgui_profile_ratio(EZGUI *gui);
+static GtkWidget *ezgui_profile_resize(EZGUI *gui);
+static GtkWidget *ezgui_profile_resolution(EZGUI *gui);
 static GtkWidget *ezgui_create_view_and_model(EZGUI *gui);
 static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui);
 static void ezgui_selection_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui);
@@ -43,18 +45,18 @@ static int ezgui_list_append_end(GtkWidget *view, GtkTreeModel *model);
 static int ezgui_list_append(GtkTreeModel *model, char *s);
 
 static EZCFG *ezgui_cfg_init(void);
-static int  ezgui_cfg_free(EZCFG *cfg);
-static char *ezgui_cfg_read_string(EZCFG *cfg, char *key, char *def);
+static int ezgui_cfg_free(EZCFG *cfg);
+static char *ezgui_cfg_read(EZCFG *cfg, char *key);
+static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s);
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
-static void ezgui_cfg_write_string(EZCFG *cfg, char *key, char *s);
-static void ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
+static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
 static int ezgui_cfg_flush(EZCFG *cfg);
 
 
 
 int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
-	char	*pdef, *pnow;
+	char	*p;
 
 	gtk_init(argcs, argvs);
 
@@ -63,12 +65,13 @@ int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	}
 	
 	/* setup the simple profile */
-	if ((pdef = ezopt_profile_readout(ezopt)) != NULL) {
-		pnow = ezgui_cfg_read_string(ezopt->config, 
-				CFG_KEY_PROF_SIMPLE, pdef);
-		ezopt_profile_setup(ezopt, pnow);
-		free(pdef);
+	if ((p = ezgui_cfg_read(ezopt->config, CFG_KEY_PROF_SIMPLE))) {
+		ezopt_profile_setup(ezopt, p);
+	} else {
+		p = ezopt_profile_readout(ezopt);
+		ezgui_cfg_write(ezopt->config, CFG_KEY_PROF_SIMPLE, p);
 	}
+	free(p);
 	return 0;
 }
 
@@ -94,7 +97,7 @@ int ezgui_close(EZGUI *gui)
 	return 0;
 }
 
-EZGUI *ezgui_create(EZCFG *config)
+EZGUI *ezgui_create(EZOPT *ezopt)
 {
 	EZGUI		*gui;
 	GtkWidget	*label;
@@ -106,7 +109,8 @@ EZGUI *ezgui_create(EZCFG *config)
 
 	/* hook the GUI related pointers from EZOPT so we won't use
 	 * through EZOPT any longer */
-	gui->config = config;
+	gui->config = ezopt->config;
+	gui->sysopt = ezopt;
 
 	/* Create the first page of notebook */
 	gui->gw_page_main = ezgui_notebook_main(gui);
@@ -179,7 +183,9 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 			G_CALLBACK(ezgui_files_running), gui);
 
 	/* create left side */
-	profile = ezgui_profile_ratio();
+	//profile = ezgui_profile_ratio(gui);
+	//profile = ezgui_profile_resize(gui);
+	profile = ezgui_profile_resolution(gui);
 
 	/* create the horizontal box and stuffed with the buttons */
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -195,11 +201,14 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	return vbox;
 }
 
-static GtkWidget *ezgui_profile_ratio(void)
+
+/* Grid 4x4  Zoom 50% */
+static GtkWidget *ezgui_profile_ratio(EZGUI *gui)
 {
 	GtkWidget	*label1, *label2, *label3, *label4;
 	GtkWidget	*hbox, *entry1, *entry2, *entry3;
 	GtkAdjustment	*adjust;
+	char		tmp[8];
 
 	label1 = gtk_label_new("Grid");
 	label2 = gtk_label_new("x");
@@ -208,16 +217,18 @@ static GtkWidget *ezgui_profile_ratio(void)
 
 	entry1 = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
-	gtk_entry_set_text(GTK_ENTRY(entry1), "4");
+	sprintf(tmp, "%d", gui->sysopt->grid_col);
+	gtk_entry_set_text(GTK_ENTRY(entry1), tmp);
 	gtk_widget_set_size_request(entry1, 30, -1);
 
 	entry2 = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry2), 3);
-	gtk_entry_set_text(GTK_ENTRY(entry2), "8");
+	sprintf(tmp, "%d", gui->sysopt->grid_row);
+	gtk_entry_set_text(GTK_ENTRY(entry2), tmp);
 	gtk_widget_set_size_request(entry2, 30, -1);
 
-	adjust = (GtkAdjustment *) gtk_adjustment_new(50.0, 5.0, 200.0, 
-			5.0, 25.0, 0.0);
+	adjust = (GtkAdjustment *) gtk_adjustment_new(gui->sysopt->tn_facto, 
+			5.0, 200.0, 5.0, 25.0, 0.0);
 	entry3 = gtk_spin_button_new (adjust, 0, 0);
 	gtk_widget_set_size_request(entry3, 50, -1);
 
@@ -230,6 +241,93 @@ static GtkWidget *ezgui_profile_ratio(void)
 	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
 
+	return hbox;
+}
+
+/* Grid 4x4  Zoom 320x240 */
+static GtkWidget *ezgui_profile_resize(EZGUI *gui)
+{
+	GtkWidget	*label1, *label2, *label3, *label4;
+	GtkWidget	*hbox, *entry1, *entry2, *entry3, *entry4;
+	char		tmp[8];
+
+	label1 = gtk_label_new("Grid");
+	label2 = gtk_label_new("x");
+	label3 = gtk_label_new("  Zoom");
+	label4 = gtk_label_new("x");
+
+	entry1 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
+	sprintf(tmp, "%d", gui->sysopt->grid_col);
+	gtk_entry_set_text(GTK_ENTRY(entry1), tmp);
+	gtk_widget_set_size_request(entry1, 30, -1);
+
+	entry2 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry2), 3);
+	sprintf(tmp, "%d", gui->sysopt->grid_row);
+	gtk_entry_set_text(GTK_ENTRY(entry2), tmp);
+	gtk_widget_set_size_request(entry2, 30, -1);
+
+	entry3 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry3), 4);
+	sprintf(tmp, "%d", gui->sysopt->tn_width);
+	gtk_entry_set_text(GTK_ENTRY(entry3), tmp);
+	gtk_widget_set_size_request(entry3, 50, -1);
+
+	entry4 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry4), 4);
+	sprintf(tmp, "%d", gui->sysopt->tn_height);
+	gtk_entry_set_text(GTK_ENTRY(entry4), tmp);
+	gtk_widget_set_size_request(entry4, 50, -1);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry4, FALSE, FALSE, 0);
+	return hbox;
+}
+
+/* Grid 4x4  Res 1024 */
+static GtkWidget *ezgui_profile_resolution(EZGUI *gui)
+{
+	GtkWidget	*label1, *label2, *label3;
+	GtkWidget	*hbox, *entry1, *entry2, *entry3;
+	char		tmp[8];
+
+	label1 = gtk_label_new("Grid");
+	label2 = gtk_label_new("x");
+	label3 = gtk_label_new("  Res");
+
+	entry1 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
+	sprintf(tmp, "%d", gui->sysopt->grid_col);
+	gtk_entry_set_text(GTK_ENTRY(entry1), tmp);
+	gtk_widget_set_size_request(entry1, 30, -1);
+
+	entry2 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry2), 3);
+	sprintf(tmp, "%d", gui->sysopt->grid_row);
+	gtk_entry_set_text(GTK_ENTRY(entry2), tmp);
+	gtk_widget_set_size_request(entry2, 30, -1);
+
+	entry3 = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry3), 4);
+	sprintf(tmp, "%d", gui->sysopt->canvas_width);
+	gtk_entry_set_text(GTK_ENTRY(entry3), tmp);
+	gtk_widget_set_size_request(entry3, 60, -1);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry1, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
 	return hbox;
 }
 
@@ -370,35 +468,42 @@ static void ezgui_files_choose(void *parent, EZGUI *gui)
 	GtkWidget 	*dialog;
 	GtkTreeModel	*model;
 	GtkFileFilter	*filter;
+	GtkFileChooser	*chooser;
 	GSList		*flist, *p;
+	char		*dir;
 
-	dialog = gtk_file_chooser_dialog_new ("Open File", NULL,
+	dialog = gtk_file_chooser_dialog_new ("Choose File", NULL,
 			GTK_FILE_CHOOSER_ACTION_OPEN,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 			GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
 			NULL);
-	gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);
+	chooser = GTK_FILE_CHOOSER(dialog);
+
+	gtk_file_chooser_set_select_multiple(chooser, TRUE);
+	if ((dir = ezgui_cfg_read(gui->config, CFG_KEY_DIRECTORY)) != NULL) {
+		gtk_file_chooser_set_current_folder(chooser, dir);
+		g_free(dir);
+	}
 
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Videos");
 	gtk_file_filter_add_mime_type(filter, "video/*");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+	gtk_file_chooser_add_filter(chooser, filter);
 
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "*.avi");
 	gtk_file_filter_add_pattern(filter, "*.avi");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+	gtk_file_chooser_add_filter(chooser, filter);
 
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Files");
 	gtk_file_filter_add_pattern(filter, "*");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+	gtk_file_chooser_add_filter(chooser, filter);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
 		model = ezgui_list_append_begin(gui->gw_listview);
 
-		flist = gtk_file_chooser_get_filenames(
-				GTK_FILE_CHOOSER(dialog));
+		flist = gtk_file_chooser_get_filenames(chooser);
 		for (p = flist; p != NULL; p = p->next) {
 			ezgui_list_append(model, p->data);
 			//puts(p->data);
@@ -407,6 +512,11 @@ static void ezgui_files_choose(void *parent, EZGUI *gui)
 		g_slist_free(flist);
 
 		ezgui_list_append_end(gui->gw_listview, model);
+
+		if ((dir = gtk_file_chooser_get_current_folder(chooser))) {
+			ezgui_cfg_write(gui->config, CFG_KEY_DIRECTORY, dir);
+			g_free(dir);
+		}
 	}
 	gtk_widget_destroy(dialog);
 }
@@ -544,32 +654,55 @@ static int  ezgui_cfg_free(EZCFG *cfg)
 	return 0;
 }
 
-static char *ezgui_cfg_read_string(EZCFG *cfg, char *key, char *def)
+static char *ezgui_cfg_read(EZCFG *cfg, char *key)
 {
 	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
-		ezgui_cfg_write_string(cfg, key, def);
+		return NULL;
 	}
 	return g_key_file_get_value(cfg->ckey, CFG_GRP_MAIN, key, NULL);
+}
+
+static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s)
+{
+	char	*p;
+
+	if (s == NULL) {
+		return 0;
+	}
+	if (g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
+		p = g_key_file_get_value(cfg->ckey, CFG_GRP_MAIN, key, NULL);
+		if (!strcmp(s, p)) {
+			g_free(p);
+			return 0;
+		}
+		g_free(p);
+	}
+	g_key_file_set_value(cfg->ckey, CFG_GRP_MAIN, key, s);
+	cfg->mcount++;
+	return cfg->mcount;
 }
 
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def)
 {
 	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
-		ezgui_cfg_write_int(cfg, key, def);
+		g_key_file_set_integer(cfg->ckey, CFG_GRP_MAIN, key, def);
+		cfg->mcount++;
+		return def;
 	}
 	return g_key_file_get_integer(cfg->ckey, CFG_GRP_MAIN, key, NULL);
 }
 
-static void ezgui_cfg_write_string(EZCFG *cfg, char *key, char *s)
+static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val)
 {
-	g_key_file_set_value(cfg->ckey, CFG_GRP_MAIN, key, s);
-	cfg->mcount++;
-}
-
-static void ezgui_cfg_write_int(EZCFG *cfg, char *key, int val)
-{
+	if (g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
+		if (g_key_file_get_integer(cfg->ckey, CFG_GRP_MAIN, key, NULL)
+				== val) {
+			return 0;
+		}
+	}
 	g_key_file_set_integer(cfg->ckey, CFG_GRP_MAIN, key, val);
 	cfg->mcount++;
+	return cfg->mcount;
 }
 
 static int ezgui_cfg_flush(EZCFG *cfg)

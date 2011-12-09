@@ -37,6 +37,7 @@
 #define CFG_KEY_WIN_WIDTH	"window_width"
 #define CFG_KEY_WIN_HEIGHT	"window_height"
 #define CFG_KEY_PROF_SIMPLE	"simple_profile"
+#define CFG_KEY_DIRECTORY	"last_directory"
 
 
 typedef	struct		{
@@ -55,6 +56,7 @@ typedef	struct		{
 	GtkWidget	*button_del;	/* the delete button on main page */
 
 	/* GUI parameters */
+	EZOPT		*sysopt;
 	EZCFG		*config;
 } EZGUI;
 
@@ -72,7 +74,7 @@ enum	{
 int ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
 int ezgui_run(EZGUI *gui);
 int ezgui_close(EZGUI *gui);
-EZGUI *ezgui_create(EZCFG *config);
+EZGUI *ezgui_create(EZOPT *ezopt);
 int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum);
 
 #endif	/* _EZGUI_H_ */

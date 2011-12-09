@@ -414,7 +414,7 @@ int main(int argc, char **argv)
 		}
 		break;
 	case 'G':
-		if ((sysoption.gui = ezgui_create(sysoption.config)) !=NULL) {
+		if ((sysoption.gui = ezgui_create(&sysoption)) !=NULL) {
 			if (argc > optind) {
 				ezgui_list_add_file(sysoption.gui,
 						argv + optind, argc - optind);
