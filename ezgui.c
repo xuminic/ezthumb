@@ -26,9 +26,7 @@
 
 
 static GtkWidget *ezgui_notebook_main(EZGUI *gui);
-static GtkWidget *ezgui_profile_ratio(EZGUI *gui);
-static GtkWidget *ezgui_profile_resize(EZGUI *gui);
-static GtkWidget *ezgui_profile_resolution(EZGUI *gui);
+static GtkWidget *ezgui_profile_box(EZGUI *gui);
 static GtkWidget *ezgui_create_view_and_model(EZGUI *gui);
 static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui);
 static void ezgui_selection_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui);
@@ -183,9 +181,7 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 			G_CALLBACK(ezgui_files_running), gui);
 
 	/* create left side */
-	//profile = ezgui_profile_ratio(gui);
-	//profile = ezgui_profile_resize(gui);
-	profile = ezgui_profile_resolution(gui);
+	profile = ezgui_profile_box(gui);
 
 	/* create the horizontal box and stuffed with the buttons */
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -201,135 +197,160 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	return vbox;
 }
 
-
-/* Grid 4x4  Zoom 50% */
-static GtkWidget *ezgui_profile_ratio(EZGUI *gui)
+/* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)(DC I-Frame)
+ * Zoom: (Zoom Auto)(Zoom 50%)(Zoom 320x240)(Res 1024) */
+static GtkWidget *ezgui_profile_box(EZGUI *gui)
 {
-	GtkWidget	*label1, *label2, *label3, *label4;
-	GtkWidget	*hbox, *entry1, *entry2, *entry3;
+	GtkWidget	*hbox, *label1, *label2, *label3, *label4;
 	GtkAdjustment	*adjust;
-	char		tmp[8];
-
-	label1 = gtk_label_new("Grid");
-	label2 = gtk_label_new("x");
-	label3 = gtk_label_new("  Zoom");
-	label4 = gtk_label_new("%");
-
-	entry1 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
-	sprintf(tmp, "%d", gui->sysopt->grid_col);
-	gtk_entry_set_text(GTK_ENTRY(entry1), tmp);
-	gtk_widget_set_size_request(entry1, 30, -1);
-
-	entry2 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry2), 3);
-	sprintf(tmp, "%d", gui->sysopt->grid_row);
-	gtk_entry_set_text(GTK_ENTRY(entry2), tmp);
-	gtk_widget_set_size_request(entry2, 30, -1);
-
-	adjust = (GtkAdjustment *) gtk_adjustment_new(gui->sysopt->tn_facto, 
-			5.0, 200.0, 5.0, 25.0, 0.0);
-	entry3 = gtk_spin_button_new (adjust, 0, 0);
-	gtk_widget_set_size_request(entry3, 50, -1);
+	char		*pic, tmp[8];
 
 	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
 
+	if ((pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID)) == NULL) {
+		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
+		label1 = gtk_label_new("Grid Auto ");
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
+		label1 = gtk_label_new("Grid");
+		label2 = gtk_label_new("x");
+	
+		gui->entry_col = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_col), 3);
+		sprintf(tmp, "%d", gui->sysopt->grid_col);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_col), tmp);
+		gtk_widget_set_size_request(gui->entry_col, 30, -1);
+			
+		gui->entry_row = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_row), 3);
+		sprintf(tmp, "%d", gui->sysopt->grid_row);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_row), tmp);
+		gtk_widget_set_size_request(gui->entry_row, 30, -1);
+			
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_col, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_row, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_GRID_STEP)) {
+		label1 = gtk_label_new("Grid");
+		label2 = gtk_label_new("Step");
+	
+		gui->entry_col = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_col), 3);
+		sprintf(tmp, "%d", gui->sysopt->grid_col);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_col), tmp);
+		gtk_widget_set_size_request(gui->entry_col, 30, -1);
+			
+		gui->entry_step = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_step), 3);
+		sprintf(tmp, "%d", gui->sysopt->tm_step / 1000);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_step), tmp);
+		gtk_widget_set_size_request(gui->entry_step, 50, -1);
+			
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_col, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_step, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_DIS_NUM)) {
+		label1 = gtk_label_new("DSS No ");
+
+		gui->entry_row = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_row), 3);
+		sprintf(tmp, "%d", gui->sysopt->grid_row);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_row), tmp);
+		gtk_widget_set_size_request(gui->entry_row, 30, -1);
+		
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_row, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_DIS_STEP)) {
+		label1 = gtk_label_new("DSS Step ");
+
+		gui->entry_step = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_step), 3);
+		sprintf(tmp, "%d", gui->sysopt->tm_step / 1000);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_step), tmp);
+		gtk_widget_set_size_request(gui->entry_step, 50, -1);
+
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_step, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_DIS_KEY)) {
+		label1 = gtk_label_new("DSS I-Frame");
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	} else {
+		label1 = gtk_label_new("Grid Auto");
+		gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
+	}
+	if (pic) {
+		g_free(pic);
+	}
+
+	if ((pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM)) == NULL) {
+		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
+		label3 = gtk_label_new("  Zoom Auto ");
+		gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_ZOOM_RATIO)) {
+		label3 = gtk_label_new("  Zoom");
+		label4 = gtk_label_new("%");
+	
+		adjust = (GtkAdjustment *) gtk_adjustment_new(
+			gui->sysopt->tn_facto, 5.0, 200.0, 5.0, 25.0, 0.0);
+		gui->entry_zoom_ratio = gtk_spin_button_new(adjust, 0, 0);
+		gtk_widget_set_size_request(gui->entry_zoom_ratio, 50, -1);
+
+		gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), gui->entry_zoom_ratio, 
+				FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_ZOOM_DEFINE)) {
+		label3 = gtk_label_new("  Zoom");
+		label4 = gtk_label_new("x");
+
+		gui->entry_zoom_wid = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_zoom_wid), 3);
+		sprintf(tmp, "%d", gui->sysopt->tn_width);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_zoom_wid), tmp);
+		gtk_widget_set_size_request(gui->entry_zoom_wid, 50, -1);
+
+		gui->entry_zoom_hei = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_zoom_hei), 3);
+		sprintf(tmp, "%d", gui->sysopt->tn_height);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_zoom_hei), tmp);
+		gtk_widget_set_size_request(gui->entry_zoom_hei, 50, -1);
+
+		gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_zoom_wid, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_zoom_hei, FALSE, FALSE, 0);
+	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
+		label3 = gtk_label_new("  Res");
+
+		gui->entry_width = gtk_entry_new();
+		gtk_entry_set_max_length(GTK_ENTRY(gui->entry_width), 4);
+		sprintf(tmp, "%d", gui->sysopt->canvas_width);
+		gtk_entry_set_text(GTK_ENTRY(gui->entry_width), tmp);
+		gtk_widget_set_size_request(gui->entry_width, 50, -1);
+
+		gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), 
+				gui->entry_width, FALSE, FALSE, 0);
+	} else {
+		label3 = gtk_label_new("  Zoom Auto");
+		gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
+	}
+	if (pic) {
+		g_free(pic);
+	}
 	return hbox;
 }
 
-/* Grid 4x4  Zoom 320x240 */
-static GtkWidget *ezgui_profile_resize(EZGUI *gui)
-{
-	GtkWidget	*label1, *label2, *label3, *label4;
-	GtkWidget	*hbox, *entry1, *entry2, *entry3, *entry4;
-	char		tmp[8];
-
-	label1 = gtk_label_new("Grid");
-	label2 = gtk_label_new("x");
-	label3 = gtk_label_new("  Zoom");
-	label4 = gtk_label_new("x");
-
-	entry1 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
-	sprintf(tmp, "%d", gui->sysopt->grid_col);
-	gtk_entry_set_text(GTK_ENTRY(entry1), tmp);
-	gtk_widget_set_size_request(entry1, 30, -1);
-
-	entry2 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry2), 3);
-	sprintf(tmp, "%d", gui->sysopt->grid_row);
-	gtk_entry_set_text(GTK_ENTRY(entry2), tmp);
-	gtk_widget_set_size_request(entry2, 30, -1);
-
-	entry3 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry3), 4);
-	sprintf(tmp, "%d", gui->sysopt->tn_width);
-	gtk_entry_set_text(GTK_ENTRY(entry3), tmp);
-	gtk_widget_set_size_request(entry3, 50, -1);
-
-	entry4 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry4), 4);
-	sprintf(tmp, "%d", gui->sysopt->tn_height);
-	gtk_entry_set_text(GTK_ENTRY(entry4), tmp);
-	gtk_widget_set_size_request(entry4, 50, -1);
-
-	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label4, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry4, FALSE, FALSE, 0);
-	return hbox;
-}
-
-/* Grid 4x4  Res 1024 */
-static GtkWidget *ezgui_profile_resolution(EZGUI *gui)
-{
-	GtkWidget	*label1, *label2, *label3;
-	GtkWidget	*hbox, *entry1, *entry2, *entry3;
-	char		tmp[8];
-
-	label1 = gtk_label_new("Grid");
-	label2 = gtk_label_new("x");
-	label3 = gtk_label_new("  Res");
-
-	entry1 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry1), 3);
-	sprintf(tmp, "%d", gui->sysopt->grid_col);
-	gtk_entry_set_text(GTK_ENTRY(entry1), tmp);
-	gtk_widget_set_size_request(entry1, 30, -1);
-
-	entry2 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry2), 3);
-	sprintf(tmp, "%d", gui->sysopt->grid_row);
-	gtk_entry_set_text(GTK_ENTRY(entry2), tmp);
-	gtk_widget_set_size_request(entry2, 30, -1);
-
-	entry3 = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry3), 4);
-	sprintf(tmp, "%d", gui->sysopt->canvas_width);
-	gtk_entry_set_text(GTK_ENTRY(entry3), tmp);
-	gtk_widget_set_size_request(entry3, 60, -1);
-
-	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label2, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry2, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label3, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), entry3, FALSE, FALSE, 0);
-	return hbox;
-}
 
 static GtkWidget *ezgui_create_view_and_model(EZGUI *gui)
 {

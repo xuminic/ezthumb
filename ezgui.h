@@ -38,6 +38,18 @@
 #define CFG_KEY_WIN_HEIGHT	"window_height"
 #define CFG_KEY_PROF_SIMPLE	"simple_profile"
 #define CFG_KEY_DIRECTORY	"last_directory"
+#define CFG_KEY_GRID		"grid_define"
+#define CFG_KEY_ZOOM		"zoom_define"
+
+#define	CFG_PIC_GRID_DIM	"column and row"	/* Grid 4x4 */
+#define CFG_PIC_GRID_STEP	"column and step"	/* Grid 4 Step 15 */
+#define CFG_PIC_DIS_NUM		"discrete by number"	/* DSS No 20 */
+#define CFG_PIC_DIS_STEP	"discrete by step"	/* DSS Step 15 */
+#define CFG_PIC_DIS_KEY		"discrete I-Frame"	/* DSS I-Frame */
+#define CFG_PIC_ZOOM_RATIO	"zoom by ratio"		/* Zoom 50% */
+#define CFG_PIC_ZOOM_DEFINE	"zoom by size"		/* Zoom 320x240 */
+#define CFG_PIC_ZOOM_SCREEN	"zoom by screen"	/* Res 1024 */
+#define CFG_PIC_AUTO		"auto"			/* Grid/Zoom Auto */
 
 
 typedef	struct		{
@@ -54,6 +66,14 @@ typedef	struct		{
 	GtkWidget	*gw_listview;
 
 	GtkWidget	*button_del;	/* the delete button on main page */
+
+	GtkWidget	*entry_col;
+	GtkWidget	*entry_row;
+	GtkWidget	*entry_step;
+	GtkWidget	*entry_zoom_ratio;
+	GtkWidget	*entry_zoom_wid;
+	GtkWidget	*entry_zoom_hei;
+	GtkWidget	*entry_width;
 
 	/* GUI parameters */
 	EZOPT		*sysopt;
