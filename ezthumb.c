@@ -251,7 +251,15 @@ int ezthumb_break(EZOPT *ezopt)
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
 	EZVID	*vidx;
+	FILE	*fp;
 	int	rc, loglvl;
+
+	/* check if the nominated file existed */
+	if ((fp = fopen(filename, "r")) == NULL) {
+		return NULL;
+	} else {
+		fclose(fp);
+	}
 
 	/* allocate the runtime index structure of the video */
 	if ((vidx = malloc(sizeof(EZVID))) == NULL) {
@@ -329,6 +337,19 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
+
+	/* 20111213: It seems detecting media length could not block some 
+	 * unwanted files. For example, in guidev branch, the ezthumb.o
+	 * was treated as a 3 seconds long MP3 file. Thus I set another
+	 * filter to check the media's resolution. */
+	if (!vidx->formatx->streams[vidx->vsidx]->codec->width ||
+			!vidx->formatx->streams[vidx->vsidx]->codec->height) {
+		uperror(errcode, EZ_ERR_FILE);
+		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
+		video_free(vidx);
+		return NULL;
+	}
+
 	eznotify(vidx, EN_MEDIA_OPEN, 0, 
 			smm_time_diff(&vidx->tmark), filename);
 	return vidx;
