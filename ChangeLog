@@ -1,3 +1,7 @@
+20111213:
+  + ezthumb.c: checked video resolution when opening a file; 
+  checked the video existance
+
 20111204: V1.5.7
   + smm_signal_break.c: Fixed a bug that the custom signal callback was not
   hooked indeed.
