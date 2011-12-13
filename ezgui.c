@@ -38,9 +38,10 @@ static void ezgui_files_choose(void *parent, EZGUI *gui);
 static void ezgui_files_remove(void *parent, EZGUI *gui);
 static void ezgui_files_running(void *parent, EZGUI *gui);
 
-static GtkTreeModel *ezgui_list_append_begin(GtkWidget *view);
-static int ezgui_list_append_end(GtkWidget *view, GtkTreeModel *model);
-static int ezgui_list_append(GtkTreeModel *model, char *s);
+static EZADD *ezgui_list_append_begin(GtkWidget *view);
+static int ezgui_list_append_end(GtkWidget *view, EZADD *ezadd);
+static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s);
+static void ezgui_dialog_invalid_files(EZADD *ezadd);
 
 static EZCFG *ezgui_cfg_init(void);
 static int ezgui_cfg_free(EZCFG *cfg);
@@ -135,14 +136,14 @@ EZGUI *ezgui_create(EZOPT *ezopt)
 
 int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum)
 {
-	GtkTreeModel	*model;
-	int		i;
+	EZADD	*ezadd;
+	int	i;
 
-	model = ezgui_list_append_begin(gui->gw_listview);
+	ezadd = ezgui_list_append_begin(gui->gw_listview);
 	for (i = 0; i < fnum; i++) {
-		ezgui_list_append(model, flist[i]);
+		ezgui_list_append(gui, ezadd, flist[i]);
 	}
-	ezgui_list_append_end(gui->gw_listview, model);
+	ezgui_list_append_end(gui->gw_listview, ezadd);
 	return i;
 }
 
@@ -457,14 +458,14 @@ static void ezgui_selection_dragdrop(GtkWidget *view, GdkDragContext *context,
 		int x, int y, GtkSelectionData *seldata, 
 		guint info, guint time, EZGUI *gui)
 {
-	GtkTreeModel	*model;
-	char		*dndl, *head, *tail, *tmp;
+	EZADD	*ezadd;
+	char	*dndl, *head, *tail, *tmp;
 
 	if ((dndl = (char*)gtk_selection_data_get_text(seldata)) == NULL) {
 		return;
 	}
 
-	model = ezgui_list_append_begin(gui->gw_listview);
+	ezadd = ezgui_list_append_begin(gui->gw_listview);
 
 	for (head = dndl; head; head = tail + 1) {
 		if ((tail = strchr(head, '\n')) == NULL) {
@@ -476,10 +477,10 @@ static void ezgui_selection_dragdrop(GtkWidget *view, GdkDragContext *context,
 		if ((tmp = strchr(head, '\r')) != NULL) {
 			*tmp = 0;
 		}
-		ezgui_list_append(model, head);
+		ezgui_list_append(gui, ezadd, head);
 	}
 
-	ezgui_list_append_end(gui->gw_listview, model);
+	ezgui_list_append_end(gui->gw_listview, ezadd);
 	g_free(dndl);
 }
 
@@ -487,10 +488,10 @@ static void ezgui_selection_dragdrop(GtkWidget *view, GdkDragContext *context,
 static void ezgui_files_choose(void *parent, EZGUI *gui)
 {
 	GtkWidget 	*dialog;
-	GtkTreeModel	*model;
 	GtkFileFilter	*filter;
 	GtkFileChooser	*chooser;
 	GSList		*flist, *p;
+	EZADD		*ezadd;
 	char		*dir;
 
 	dialog = gtk_file_chooser_dialog_new ("Choose File", NULL,
@@ -522,17 +523,17 @@ static void ezgui_files_choose(void *parent, EZGUI *gui)
 	gtk_file_chooser_add_filter(chooser, filter);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
-		model = ezgui_list_append_begin(gui->gw_listview);
+		ezadd = ezgui_list_append_begin(gui->gw_listview);
 
 		flist = gtk_file_chooser_get_filenames(chooser);
 		for (p = flist; p != NULL; p = p->next) {
-			ezgui_list_append(model, p->data);
+			ezgui_list_append(gui, ezadd, p->data);
 			//puts(p->data);
 			g_free(p->data);
 		}
 		g_slist_free(flist);
 
-		ezgui_list_append_end(gui->gw_listview, model);
+		ezgui_list_append_end(gui->gw_listview, ezadd);
 
 		if ((dir = gtk_file_chooser_get_current_folder(chooser))) {
 			ezgui_cfg_write(gui->config, CFG_KEY_DIRECTORY, dir);
@@ -578,51 +579,117 @@ static void ezgui_files_running(void *parent, EZGUI *gui)
 	}
 }
 
-static GtkTreeModel *ezgui_list_append_begin(GtkWidget *view)
+static EZADD *ezgui_list_append_begin(GtkWidget *view)
 {
-	GtkTreeModel	*model;
+	EZADD	*ezadd;
+
+	if ((ezadd = calloc(sizeof(EZADD), 1)) == NULL) {
+		return NULL;
+	}
 
 	/* get the point to the model */
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
+	ezadd->app_model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
 	/* Make sure the model stays with us after the tree view unrefs it */
-	g_object_ref(model); 
+	g_object_ref(ezadd->app_model); 
 	/* Detach model from view */
 	gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
-	return model;
+	
+	/* create the text frame for discarded files */
+	ezadd->discarded = gtk_text_buffer_new(NULL);
+	return ezadd;
 }
 
-static int ezgui_list_append_end(GtkWidget *view, GtkTreeModel *model)
+static int ezgui_list_append_end(GtkWidget *view, EZADD *ezadd)
 {
+	if (ezadd == NULL) {
+		return -1;
+	}
+
 	/* Re-attach model to view */
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), model);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(view), ezadd->app_model);
 	/* unref it becuase it has been reference by the tree view */
-	g_object_unref(model);
+	g_object_unref(ezadd->app_model);
+
+	if (ezadd->dis_count) {
+		ezgui_dialog_invalid_files(ezadd);
+	}
+	g_object_unref(ezadd->discarded);
+	free(ezadd);
 	return 0;
 }
 
-static int ezgui_list_append(GtkTreeModel *model, char *s)
+static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s)
 {
 	GtkTreeIter	row;
-	char		*fname;
+	EZVID		*vidx;
+	char		*fname, tmark[32], res[16], tsize[16];
 
-	if (!s || !*s) {
+	if (!s || !*s || !ezadd) {
 		return 0;
 	}
-	if (gtk_tree_model_get_iter_first(model, &row)) {
+
+	/* check if there is the same file in the list */
+	if (gtk_tree_model_get_iter_first(ezadd->app_model, &row)) {
 		do {
-			gtk_tree_model_get(model, &row, 
+			gtk_tree_model_get(ezadd->app_model, &row, 
 					EZUI_COL_NAME, &fname, -1);
 			if (!strcmp(fname, s)) {
 				g_free(fname);
 				return 0;
 			}
 			g_free(fname);
-		} while (gtk_tree_model_iter_next(model, &row));
+		} while (gtk_tree_model_iter_next(ezadd->app_model, &row));
 	}
 
-	gtk_list_store_append(GTK_LIST_STORE(model), &row);
-	gtk_list_store_set(GTK_LIST_STORE(model), &row, EZUI_COL_NAME, s, -1);
+	if ((vidx = video_allocate(s, gui->sysopt, NULL)) == NULL) {
+		ezadd->dis_count++;
+		gtk_text_buffer_insert_at_cursor(ezadd->discarded, s, -1);
+		gtk_text_buffer_insert_at_cursor(ezadd->discarded, "\n", -1);
+		return 0;
+
+	}
+	meta_timestamp(vidx->duration, 0, tmark);
+	meta_filesize(vidx->formatx->file_size, tsize);
+	sprintf(res, "%dx%d", 
+			vidx->formatx->streams[vidx->vsidx]->codec->width, 
+			vidx->formatx->streams[vidx->vsidx]->codec->height);
+	video_free(vidx);
+
+	gtk_list_store_append(GTK_LIST_STORE(ezadd->app_model), &row);
+	gtk_list_store_set(GTK_LIST_STORE(ezadd->app_model), &row, 
+			EZUI_COL_NAME, s, EZUI_COL_SIZE, tsize, 
+			EZUI_COL_LENGTH, tmark, EZUI_COL_SCREEN, res, -1);
 	return 1;
+}
+
+static void ezgui_dialog_invalid_files(EZADD *ezadd)
+{
+	GtkWidget	*dialog, *vbox, *text, *scroll;
+
+	dialog = gtk_message_dialog_new(NULL,	//GTK_WINDOW(), 
+			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, 
+			GTK_BUTTONS_CLOSE, "Failed to load following files");
+	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
+			"The following files could not be loaded because of "
+			"unsupported format or file corrupted");
+	gtk_window_set_title(GTK_WINDOW(dialog), "Loading files");
+	//gtk_widget_set_size_request(dialog, 500, 300);
+
+	text = gtk_text_view_new_with_buffer(ezadd->discarded);
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
+
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_widget_set_size_request(scroll, 300, 150);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_container_add(GTK_CONTAINER(scroll), text);
+
+	vbox = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
+	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
+	gtk_widget_show_all(vbox);
+
+	gtk_dialog_run(GTK_DIALOG(dialog));
+	gtk_widget_destroy(dialog);
 }
 
 

@@ -58,6 +58,12 @@ typedef	struct		{
 	int		mcount;		/* modify counter >0 mean to save */
 } EZCFG;
 	
+typedef	struct		{
+	GtkTreeModel	*app_model;
+	
+	GtkTextBuffer	*discarded;
+	int		dis_count;
+} EZADD;
 
 typedef	struct		{
 	GtkWidget	*gw_main;
