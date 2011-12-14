@@ -738,7 +738,7 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 			printf("Building (Heur)      ");
 			break;
 		case ENX_SS_IFRAMES:
-			printf("Building (iFrame) ");
+			printf("Building (iFrame)      ");
 			break;
 		case ENX_SS_SKIM:
 		default:

@@ -1192,6 +1192,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
 {
 	char	timestamp[64];
+	int	dtms;
 
 	/* the flag could be set by video_decode_next() */
 	if (dts < 0) {
@@ -1209,7 +1210,8 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
 
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
-	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
+	dtms = (int) video_dts_to_ms(vidx, dts);
+	meta_timestamp(dtms, 1, timestamp);
 
 	/* write the timestamp into the shot */
 	image_scale(image, vidx->frame);
@@ -1228,7 +1230,11 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
 	}
 
 	/* display the on-going information */
-	eznotify(vidx, EN_PROC_CURRENT, image->shots, sn+1, &dts);
+	if (image->shots) {
+		eznotify(vidx, EN_PROC_CURRENT, image->shots, sn+1, &dts);
+	} else {	/* i-frame ripping */
+		eznotify(vidx, EN_PROC_CURRENT, vidx->duration, dtms, &dts);
+	}
 	return 0;
 }
 
