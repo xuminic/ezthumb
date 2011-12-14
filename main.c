@@ -439,7 +439,7 @@ int main(int argc, char **argv)
 
 int signal_handler(int sig)
 {
-	printf("Signal %d\n", sig);
+	//printf("Signal %d\n", sig);
 	if (sysoption.gui) {
 		ezgui_close(sysoption.gui);
 	}
