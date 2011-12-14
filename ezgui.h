@@ -81,6 +81,10 @@ typedef	struct		{
 	GtkWidget	*entry_zoom_hei;
 	GtkWidget	*entry_width;
 
+	/* feed to progress */
+	GtkTreeModel	*pro_model;
+	GtkTreeIter	*pro_iter;
+
 	/* GUI parameters */
 	EZOPT		*sysopt;
 	EZCFG		*config;
