@@ -398,15 +398,16 @@ static GtkWidget *ezgui_create_view_and_model(EZGUI *gui)
 	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
 
 	/* --- Column #5 --- */
-	renderer = gtk_cell_renderer_text_new();
+	renderer = gtk_cell_renderer_progress_new();
+	//gtk_object_set(renderer, "text", "", "value", 100, NULL);
 	col = gtk_tree_view_column_new_with_attributes("Progress",
-			renderer, "text", EZUI_COL_PROGRESS, NULL);
+			renderer, "value", EZUI_COL_PROGRESS, NULL);
 	gtk_tree_view_column_set_resizable(col, TRUE);          
 	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
 
 	/* setup the model */
 	liststore = gtk_list_store_new(EZUI_COL_MAX, G_TYPE_STRING, G_TYPE_STRING,
-			G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+			G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(liststore));
 
 	/* setup the tree selection */
@@ -416,8 +417,8 @@ static GtkWidget *ezgui_create_view_and_model(EZGUI *gui)
 			G_CALLBACK(ezgui_selection_change), gui);
 
 	/* bind the signal */
-	g_signal_connect(view, "button-release-event",
-			G_CALLBACK(ezgui_selection_undo), gui);
+	//g_signal_connect(view, "button-release-event",
+	//		G_CALLBACK(ezgui_selection_undo), gui);
 	g_signal_connect(view, "row-activated",
 			G_CALLBACK(ezgui_selection_enter), gui);
 
@@ -659,6 +660,8 @@ static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s)
 	gtk_list_store_set(GTK_LIST_STORE(ezadd->app_model), &row, 
 			EZUI_COL_NAME, s, EZUI_COL_SIZE, tsize, 
 			EZUI_COL_LENGTH, tmark, EZUI_COL_SCREEN, res, -1);
+	gtk_list_store_set(GTK_LIST_STORE(ezadd->app_model), &row,
+			EZUI_COL_PROGRESS, 80, -1);
 	return 1;
 }
 
