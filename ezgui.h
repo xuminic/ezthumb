@@ -39,16 +39,24 @@
 #define CFG_KEY_PROF_SIMPLE	"simple_profile"
 #define CFG_KEY_DIRECTORY	"last_directory"
 #define CFG_KEY_GRID		"grid_define"
+#define CFG_KEY_GRID_COLUMN	"grid_column"
+#define CFG_KEY_GRID_ROW	"grid_row"
 #define CFG_KEY_ZOOM		"zoom_define"
+#define CFG_KEY_ZOOM_RATIO	"zoom_ratio"
+#define CFG_KEY_ZOOM_WIDTH	"zoom_width"
+#define CFG_KEY_ZOOM_HEIGHT	"zoom_height"
+#define CFG_KEY_CANVAS_WIDTH	"canvas_width"
+#define CFG_KEY_TIME_STEP	"time_step"
 
-#define	CFG_PIC_GRID_DIM	"column and row"	/* Grid 4x4 */
-#define CFG_PIC_GRID_STEP	"column and step"	/* Grid 4 Step 15 */
-#define CFG_PIC_DIS_NUM		"discrete by number"	/* DSS No 20 */
-#define CFG_PIC_DIS_STEP	"discrete by step"	/* DSS Step 15 */
-#define CFG_PIC_DIS_KEY		"discrete I-Frame"	/* DSS I-Frame */
-#define CFG_PIC_ZOOM_RATIO	"zoom by ratio"		/* Zoom 50% */
-#define CFG_PIC_ZOOM_DEFINE	"zoom by size"		/* Zoom 320x240 */
-#define CFG_PIC_ZOOM_SCREEN	"zoom by screen"	/* Res 1024 */
+
+#define	CFG_PIC_GRID_DIM	"column_and_row"	/* Grid 4x4 */
+#define CFG_PIC_GRID_STEP	"column_and_step"	/* Grid 4 Step 15 */
+#define CFG_PIC_DIS_NUM		"discrete_by_number"	/* DSS No 20 */
+#define CFG_PIC_DIS_STEP	"discrete_by_step"	/* DSS Step 15 */
+#define CFG_PIC_DIS_KEY		"discrete_I_Frame"	/* DSS I-Frame */
+#define CFG_PIC_ZOOM_RATIO	"zoom_by_ratio"		/* Zoom 50% */
+#define CFG_PIC_ZOOM_DEFINE	"zoom_by_size"		/* Zoom 320x240 */
+#define CFG_PIC_ZOOM_SCREEN	"zoom_by_screen"	/* Res 1024 */
 #define CFG_PIC_AUTO		"auto"			/* Grid/Zoom Auto */
 
 

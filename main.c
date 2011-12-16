@@ -274,6 +274,8 @@ int main(int argc, char **argv)
 			} else {
 				sysoption.grid_row = strtol(++p, NULL, 10);
 			}
+			ezgui_cfg_write_int(sysoption.config, CFG_KEY_GRID_COLUMN, sysoption.grid_col);
+			ezgui_cfg_write_int(sysoption.config, CFG_KEY_GRID_ROW, sysoption.grid_row);
 			prof_grid = 0;	/* disable the profile */
 			break;
 		case 'G':
