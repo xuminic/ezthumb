@@ -24,9 +24,12 @@
 #include <signal.h>
 
 #include "ezthumb.h"
-#include "ezgui.h"
 #include "cliopt.h"
 #include "libsmm.h"
+
+#ifdef	CFG_GUI_ON
+#include "ezgui.h"
+#endif
 
 
 static	struct	cliopt	clist[] = {
@@ -37,7 +40,9 @@ static	struct	cliopt	clist[] = {
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
 	{ 'F', "fontsize",2, "the size setting of the font" },
 	{ 'g', "grid",    2, "the thumbnail grid in the canvas.(4x4)" },
+#ifdef	CFG_GUI_ON
 	{ 'G', "gui",     0, "enable the graphic user interface" },
+#endif
 	{ 'i', "list",    0, "display the media information in list form" },
 	{ 'I', "info",    0, "display the media information" },
 	{ 'm', "format",  2, "the output format (jpg@85)" },
@@ -94,10 +99,11 @@ static	char	*sysprof[] = {
 #define PROFLIST	(sizeof(sysprof)/sizeof(int*))
 
 static	EZOPT	sysoption;
+#ifdef	CFG_GUI_ON
+EZGUI	*sysgui;
+#endif
 
-int signal_break(int (*handle)(int));
-int signal_handler(int sig);
-
+static int signal_handler(int sig);
 static int para_get_ratio(char *s);
 static int para_get_time_point(char *s);
 static int para_get_position(char *s);
@@ -122,8 +128,9 @@ int main(int argc, char **argv)
 
 	smm_init();				/* initialize the libsmm */
 	ezopt_init(&sysoption, sysprof[0]);	/* the default setting */
-	ezgui_init(&sysoption, &argc, &argv);	/* the config file */
-
+#ifdef	CFG_GUI_ON
+	sysgui = ezgui_init(&sysoption, &argc, &argv);	/* the config file */
+#endif
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
 	//puts(arglist);
@@ -274,8 +281,6 @@ int main(int argc, char **argv)
 			} else {
 				sysoption.grid_row = strtol(++p, NULL, 10);
 			}
-			ezgui_cfg_write_int(sysoption.config, CFG_KEY_GRID_COLUMN, sysoption.grid_col);
-			ezgui_cfg_write_int(sysoption.config, CFG_KEY_GRID_ROW, sysoption.grid_row);
 			prof_grid = 0;	/* disable the profile */
 			break;
 		case 'G':
@@ -299,6 +304,7 @@ int main(int argc, char **argv)
 				sysoption.img_quality = 80;
 			}
 			strncpy(sysoption.img_format, optarg, 7);
+			sysoption.img_format[7] = 0;
 			break;
 		case 'o':
 			sysoption.pathout = optarg;
@@ -393,7 +399,12 @@ int main(int argc, char **argv)
 
 	/* if no video file was specified, the ezthumb starts in GUI mode */
 	if (optind >= argc) {
+#ifdef	CFG_GUI_ON
 		todo = 'G';
+#else
+		cli_print(clist);
+		return 0;
+#endif
 	}
 
 	smm_signal_break(signal_handler);
@@ -415,16 +426,20 @@ int main(int argc, char **argv)
 			c = ezinfo(argv[optind], &sysoption);
 		}
 		break;
+#ifdef	CFG_GUI_ON
 	case 'G':
-		if ((sysoption.gui = ezgui_create(&sysoption)) !=NULL) {
-			if (argc > optind) {
-				ezgui_list_add_file(sysoption.gui,
-						argv + optind, argc - optind);
-			}
-			ezgui_run(sysoption.gui);
-			ezgui_close(sysoption.gui);
+		if (sysgui == NULL) {
+			break;
 		}
+
+		ezgui_create(sysgui);
+		if (argc > optind) {
+			ezgui_list_add_file(sysgui, 
+					argv + optind, argc - optind);
+		}
+		ezgui_run(sysgui);
 		break;
+#endif
 	default:
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysoption.flags) == EZOP_DEBUG_NONE) {
@@ -435,16 +450,21 @@ int main(int argc, char **argv)
 		}
 		break;
 	}
+#ifdef	CFG_GUI_ON
+	ezgui_close(sysgui);
+#endif
 	return c;
 }
 
 
-int signal_handler(int sig)
+static int signal_handler(int sig)
 {
 	//printf("Signal %d\n", sig);
-	if (sysoption.gui) {
-		ezgui_close(sysoption.gui);
+#ifdef	CFG_GUI_ON
+	if (sysgui) {
+		ezgui_close(sysgui);
 	}
+#endif
 	return ezthumb_break(&sysoption);
 }
 

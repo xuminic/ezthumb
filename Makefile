@@ -5,9 +5,15 @@ include Make.conf
 INCDIR	= $(EXINC) -I./libsmm
 LIBDIR	= $(EXLIB) -L./libsmm
 
-CFLAGS	+= -D_FILE_OFFSET_BITS=64 $(INCDIR) `pkg-config gtk+-2.0 --cflags --libs`
+CFLAGS	+= -D_FILE_OFFSET_BITS=64 $(INCDIR)
+ifeq	($(SYSGUI),CFG_GUI_ON)
+CFLAGS	+= `pkg-config gtk+-2.0 --cflags --libs`
+endif
 
-OBJS	= main.o fixtoken.o ezthumb.o cliopt.o eznotify.o id_lookup.o ezgui.o
+OBJS	= main.o fixtoken.o ezthumb.o cliopt.o eznotify.o id_lookup.o
+ifeq	($(SYSGUI),CFG_GUI_ON)
+OBJS	+= ezgui.o
+endif
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd
 #	 -lfreetype -lbz2 -lm

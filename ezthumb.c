@@ -186,7 +186,7 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	return 0;
 }
 
-char *ezopt_profile_readout(EZOPT *ezopt)
+char *ezopt_profile_export(EZOPT *ezopt)
 {
 	EZPROF	*p;
 	char	*buf, tmp[64];
@@ -214,7 +214,7 @@ char *ezopt_profile_readout(EZOPT *ezopt)
 		}
 		strcat(buf, tmp);
 	}
-	//printf("ezopt_profile_readout: %s\n", buf);
+	//printf("ezopt_profile_export: %s\n", buf);
 	return buf;
 }
 
