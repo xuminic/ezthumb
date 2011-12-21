@@ -396,12 +396,7 @@ int main(int argc, char **argv)
 
 	/* if no video file was specified, the ezthumb starts in GUI mode */
 	if (optind >= argc) {
-#ifdef	CFG_GUI_ON
 		todo = 'G';
-#else
-		cli_print(clist);
-		return 0;
-#endif
 	}
 
 	smm_signal_break(signal_handler);
@@ -423,20 +418,21 @@ int main(int argc, char **argv)
 			c = ezinfo(argv[optind], &sysopt);
 		}
 		break;
-#ifdef	CFG_GUI_ON
 	case 'G':
 		if (sysopt.gui == NULL) {
+			cli_print(clist);
 			break;
 		}
 
+#ifdef	CFG_GUI_ON
 		ezgui_create(sysopt.gui);
 		if (argc > optind) {
 			ezgui_list_add_file(sysopt.gui, 
 					argv + optind, argc - optind);
 		}
 		ezgui_run(sysopt.gui);
-		break;
 #endif
+		break;
 	default:
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysopt.flags) == EZOP_DEBUG_NONE) {

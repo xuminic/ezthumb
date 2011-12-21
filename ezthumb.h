@@ -26,8 +26,11 @@
 #include "gd.h"
 #include "libsmm.h"
 
+#ifdef	CFG_GUI_ON
+#define EZTHUMB_VERSION		"2.0.0"
+#else
 #define	EZTHUMB_VERSION		"1.5.8"
-
+#endif
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_FILE		-1	/* can not open the video file */
