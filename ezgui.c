@@ -679,10 +679,9 @@ static int ezgui_option_commit(EZGUI *gui)
 	return 0;
 }
 
-extern EZGUI	*sysgui;
-
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 {
+	EZGUI	*gui = ((EZVID*) v)->sysopt->gui;
 	int	val;
 
 	switch (eid) {
@@ -696,12 +695,12 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 		} else {
 			val = opt * 100 / param;
 		}
-		gtk_list_store_set(GTK_LIST_STORE(sysgui->pro_model), 
-				sysgui->pro_iter, EZUI_COL_PROGRESS, val, -1);
+		gtk_list_store_set(GTK_LIST_STORE(gui->pro_model), 
+				gui->pro_iter, EZUI_COL_PROGRESS, val, -1);
 		break;
 
 	default:
-		return ezdefault(v, eid, param, opt, b);
+		return EN_EVENT_PASSTHROUGH;
 	}
 	return eid;
 }

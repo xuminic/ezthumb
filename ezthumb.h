@@ -41,6 +41,7 @@
 #define EZ_ERR_FORMAT		-9	/* wrong video format */
 #define EZ_ERR_VIDEOSTREAM	-10	/* no viden stream */
 
+
 #define EN_FILE_OPEN		1000	/* successfully open a video file */
 #define EN_MEDIA_OPEN		1001	/* successfully open the media file */
 #define EN_IMAGE_CREATED	1002	/* successfully created the EZIMG */
@@ -67,6 +68,7 @@
 #define EN_STREAM_BROKEN	1024
 #define EN_IFRAME_CREDIT	1025
 #define EN_FRAME_EXCEPTION	1026
+#define EN_EVENT_PASSTHROUGH	1027
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -262,15 +264,14 @@ typedef	struct	{
 	char	*pathout;	/* output path */
 
 	/* callback functions to indicate the progress */
-	int	(*notify)(void *vobj, int event, long param, long, void *);
+	int	(*notify)(void *nobj, int event, long param, long, void *);
+
+	/* copy of runtime objects for signal breaking */
 	void	*vidobj;	/* copy of the runtime EZVID point */
 	void	*imgobj;	/* copy of the runtime EZIMG point */
 	
-	/* GUI related structures. These pointers were hooked here only.
-	 * We don't free them along with this structure because they should
-	 * be freed in the GUI related functions */
-	//void	*gui;		/* point to the GUI structure */
-	//void	*config;	/* point to the configure structure */
+	/* GUI pointer */
+	void	*gui;
 
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
@@ -414,8 +415,7 @@ char *meta_timestamp(int ms, int enms, char *buffer);
 
 
 /* eznotify.c */
-int eznotify(void *vobj, int event, long param, long opt, void *block);
-int ezdefault(void *vobj, int event, long param, long opt, void *block);
+int eznotify(EZVID *vidx, int event, long param, long opt, void *block);
 int dump_format_context(AVFormatContext *format);
 int dump_video_context(AVCodecContext *codec);
 int dump_audio_context(AVCodecContext *codec);

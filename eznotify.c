@@ -35,23 +35,28 @@
 #include "gdfontg.h"
 
 
+static int ezdefault(EZVID *vidx, int event, long param, long opt, void *);
 static int ezdump_video_info(EZVID *vidx);
 static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx);
 
 
-int eznotify(void *vobj, int event, long param, long opt, void *block)
+int eznotify(EZVID *vidx, int event, long param, long opt, void *block)
 {
-	EZVID	*vidx = vobj;
+	int	rc;
 
-	if (vidx && vidx->sysopt->notify) {
-		return vidx->sysopt->notify(vidx, event, param, opt, block);
+	if ((vidx == NULL) || (vidx->sysopt->notify == NULL)) {
+		return ezdefault(vidx, event, param, opt, block);
 	}
-	return ezdefault(vidx, event, param, opt, block);
+
+	rc = vidx->sysopt->notify(vidx, event, param, opt, block);
+	if (rc == EN_EVENT_PASSTHROUGH) {
+		return ezdefault(vidx, event, param, opt, block);
+	}
+	return rc;
 }
 
-int ezdefault(void *vobj, int event, long param, long opt, void *block)
+static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 {
-	EZVID	*vidx = vobj;
 	int	i;
 
 	switch (event) {
