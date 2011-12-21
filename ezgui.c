@@ -163,7 +163,7 @@ int ezgui_create(EZGUI *gui)
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(gui->gw_page), GTK_POS_TOP);
 	label1 = gtk_label_new("Generate");
 	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_main, label1);
-	label2 = gtk_label_new("Setup");
+	label2 = gtk_label_new(" Setup  ");
 	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_setup, label2);
 
 	gtk_notebook_set_current_page(GTK_NOTEBOOK(gui->gw_page), 0);
@@ -243,61 +243,94 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	return vbox;
 }
 
+static	char	*prof_list_grid[] = {
+	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
+	CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
+};
+static	char	*prof_list_zoom[] = {
+	CFG_PIC_AUTO, CFG_PIC_ZOOM_RATIO, CFG_PIC_ZOOM_DEFINE,
+	CFG_PIC_ZOOM_SCREEN, NULL
+};
+
 static GtkWidget *ezgui_notebook_setup(EZGUI *gui)
 {
-	GtkWidget	*hbox_prof, *vbox;
-	GtkWidget	*label1, *label2;
-	char		*pic;
+	GtkWidget	*hbox_prof, *hbox_button, *vbox;
+	GtkWidget	*butt_cancel, *butt_apply;
 	int		i;
 	
-	static	char	*list_grid[] = {
-		CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
-		CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
-	};
-	static	char	*list_zoom[] = {
-		CFG_PIC_AUTO, CFG_PIC_ZOOM_RATIO, CFG_PIC_ZOOM_DEFINE,
-		CFG_PIC_ZOOM_SCREEN, NULL
-	};
-
 	gui->prof_grid = gtk_combo_box_new_text();
-	for (i = 0; list_grid[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), list_grid[i]);
-	}
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
-	for (i = 0; list_grid[i]; i++) {
-		if (!strcmp(pic, list_grid[i])) {
-			break;
-		}
-	}
-	if (list_grid[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
+	for (i = 0; prof_list_grid[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), 
+				prof_list_grid[i]);
 	}
 
 	gui->prof_zoom = gtk_combo_box_new_text();
-	for (i = 0; list_zoom[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), list_zoom[i]);
+	for (i = 0; prof_list_zoom[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), 
+				prof_list_zoom[i]);
 	}
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
-	for (i = 0; list_zoom[i]; i++) {
-		if (!strcmp(pic, list_zoom[i])) {
+
+	hbox_prof = gtk_hbox_new(FALSE, 0);
+	//gtk_widget_set_size_request(hbox_prof, -1, 30);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), 
+			gtk_label_new("Profile Grid: "), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), 
+			gtk_label_new("Profile Zoom: "), FALSE, FALSE, 0);
+
+	/* create the buttons */
+	butt_cancel = gtk_button_new_with_label("Cancel");
+	gtk_widget_set_size_request(butt_cancel, 80, 30);
+	//g_signal_connect(button_add, "clicked", 
+	//		G_CALLBACK(ezgui_files_choose), gui);
+
+	butt_apply = gtk_button_new_with_label("Apply");
+	gtk_widget_set_size_request(butt_apply, 80, 30);
+
+	hbox_button = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_button), butt_apply, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_button), butt_cancel, FALSE, FALSE, 0);
+
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox_prof, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(vbox), hbox_button, FALSE, FALSE, 0);
+
+	return vbox;
+}
+
+static int ezgui_notebook_setup_reset(EZGUI *gui)
+{
+	char	*pic;
+	int	i;
+
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
+	for (i = 0; prof_list_grid[i]; i++) {
+		if (!strcmp(pic, prof_list_grid[i])) {
 			break;
 		}
 	}
-	if (list_zoom[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
+	if (prof_list_grid[i]) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
+	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
 	}
+	g_free(pic);
 
-	label1 = gtk_label_new("Profile Grid ");
-	label2 = gtk_label_new("Profile Zoom ");
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
+	for (i = 0; prof_list_zoom[i]; i++) {
+		if (!strcmp(pic, prof_list_zoom[i])) {
+			break;
+		}
+	}
+	if (prof_list_zoom[i]) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
+	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
+	}
+	g_free(pic);
 
-	hbox_prof = gtk_hbox_new(FALSE, 0);
-	gtk_widget_set_size_request(hbox_prof, -1, 30);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), label1, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), label2, FALSE, FALSE, 0);
-
-	return hbox_prof;
+	return 0;
 }
 
 /* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)(DC I-Frame)
@@ -344,6 +377,7 @@ static GtkWidget *ezgui_profile_box(EZGUI *gui)
 		label1 = gtk_label_new("DSS I-Frame");
 		ezgui_profile_pack(hbox, label1, NULL, NULL, NULL);
 	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
 		label1 = gtk_label_new("Grid Auto");
 		ezgui_profile_pack(hbox, label1, NULL, NULL, NULL);
 	}
@@ -381,6 +415,7 @@ static GtkWidget *ezgui_profile_box(EZGUI *gui)
 		ezgui_profile_pack(hbox, label3, gui->entry_width,
 				NULL, NULL);
 	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
 		label3 = gtk_label_new("  Zoom Auto");
 		ezgui_profile_pack(hbox, label3, NULL, NULL, NULL);
 	}
