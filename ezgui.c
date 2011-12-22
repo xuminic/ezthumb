@@ -25,8 +25,17 @@
 #include "ezgui.h"
 
 
+static	const	char	*prof_list_grid[] = {
+	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
+	CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
+};
+
+static	const	char	*prof_list_zoom[] = {
+	CFG_PIC_AUTO, CFG_PIC_ZOOM_RATIO, CFG_PIC_ZOOM_DEFINE,
+	CFG_PIC_ZOOM_SCREEN, NULL
+};
+
 static GtkWidget *ezgui_notebook_main(EZGUI *gui);
-static GtkWidget *ezgui_notebook_setup(EZGUI *gui);
 static GtkWidget *ezgui_profile_box(EZGUI *gui);
 static int ezgui_profile_read(EZGUI *gui);
 static int ezgui_profile_write(EZGUI *gui);
@@ -53,6 +62,12 @@ static EZADD *ezgui_list_append_begin(GtkWidget *view);
 static int ezgui_list_append_end(GtkWidget *view, EZADD *ezadd);
 static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s);
 static void ezgui_dialog_invalid_files(EZADD *ezadd);
+
+static GtkWidget *ezgui_notebook_setup(EZGUI *gui);
+static int ezgui_notebook_setup_sensible(void *parent, EZGUI *gui);
+static int ezgui_notebook_setup_insensible(void *parent, EZGUI *gui);
+static int ezgui_notebook_setup_reset(void *parent, EZGUI *gui);
+static int ezgui_notebook_setup_update(void *parent, EZGUI *gui);
 
 static EZCFG *ezgui_cfg_init(void);
 static int ezgui_cfg_free(EZCFG *cfg);
@@ -241,96 +256,6 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
 	return vbox;
-}
-
-static	char	*prof_list_grid[] = {
-	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
-	CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
-};
-static	char	*prof_list_zoom[] = {
-	CFG_PIC_AUTO, CFG_PIC_ZOOM_RATIO, CFG_PIC_ZOOM_DEFINE,
-	CFG_PIC_ZOOM_SCREEN, NULL
-};
-
-static GtkWidget *ezgui_notebook_setup(EZGUI *gui)
-{
-	GtkWidget	*hbox_prof, *hbox_button, *vbox;
-	GtkWidget	*butt_cancel, *butt_apply;
-	int		i;
-	
-	gui->prof_grid = gtk_combo_box_new_text();
-	for (i = 0; prof_list_grid[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), 
-				prof_list_grid[i]);
-	}
-
-	gui->prof_zoom = gtk_combo_box_new_text();
-	for (i = 0; prof_list_zoom[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), 
-				prof_list_zoom[i]);
-	}
-
-	hbox_prof = gtk_hbox_new(FALSE, 0);
-	//gtk_widget_set_size_request(hbox_prof, -1, 30);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), 
-			gtk_label_new("Profile Grid: "), FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), 
-			gtk_label_new("Profile Zoom: "), FALSE, FALSE, 0);
-
-	/* create the buttons */
-	butt_cancel = gtk_button_new_with_label("Cancel");
-	gtk_widget_set_size_request(butt_cancel, 80, 30);
-	//g_signal_connect(button_add, "clicked", 
-	//		G_CALLBACK(ezgui_files_choose), gui);
-
-	butt_apply = gtk_button_new_with_label("Apply");
-	gtk_widget_set_size_request(butt_apply, 80, 30);
-
-	hbox_button = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_button), butt_apply, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_button), butt_cancel, FALSE, FALSE, 0);
-
-	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox_prof, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_button, FALSE, FALSE, 0);
-
-	return vbox;
-}
-
-static int ezgui_notebook_setup_reset(EZGUI *gui)
-{
-	char	*pic;
-	int	i;
-
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
-	for (i = 0; prof_list_grid[i]; i++) {
-		if (!strcmp(pic, prof_list_grid[i])) {
-			break;
-		}
-	}
-	if (prof_list_grid[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
-	}
-	g_free(pic);
-
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
-	for (i = 0; prof_list_zoom[i]; i++) {
-		if (!strcmp(pic, prof_list_zoom[i])) {
-			break;
-		}
-	}
-	if (prof_list_zoom[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
-	}
-	g_free(pic);
-
-	return 0;
 }
 
 /* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)(DC I-Frame)
@@ -930,6 +855,137 @@ static void ezgui_dialog_invalid_files(EZADD *ezadd)
 
 	gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);
+}
+
+
+static GtkWidget *ezgui_notebook_setup(EZGUI *gui)
+{
+	GtkWidget	*hbox_prof, *hbox_button, *vbox;
+	int		i;
+	
+	/* create the buttons */
+	gui->butt_setup_cancel = gtk_button_new_with_label("Cancel");
+	gtk_widget_set_size_request(gui->butt_setup_cancel, 80, 30);
+	g_signal_connect(gui->butt_setup_cancel, "clicked", 
+			G_CALLBACK(ezgui_notebook_setup_reset), gui);
+
+	gui->butt_setup_apply = gtk_button_new_with_label("OK");
+	gtk_widget_set_size_request(gui->butt_setup_apply, 80, 30);
+	g_signal_connect(gui->butt_setup_apply, "clicked", 
+			G_CALLBACK(ezgui_notebook_setup_update), gui);
+
+	hbox_button = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_button), 
+			gui->butt_setup_apply, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_button), 
+			gui->butt_setup_cancel, FALSE, FALSE, 0);
+
+	/* create the combo box for the profile setting */
+	gui->prof_grid = gtk_combo_box_new_text();
+	for (i = 0; prof_list_grid[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), 
+				prof_list_grid[i]);
+	}
+	g_signal_connect(gui->prof_grid, "changed",
+			G_CALLBACK(ezgui_notebook_setup_sensible), gui);
+
+	gui->prof_zoom = gtk_combo_box_new_text();
+	for (i = 0; prof_list_zoom[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), 
+				prof_list_zoom[i]);
+	}
+	g_signal_connect(gui->prof_zoom, "changed",
+			G_CALLBACK(ezgui_notebook_setup_sensible), gui);
+
+	hbox_prof = gtk_hbox_new(FALSE, 0);
+	//gtk_widget_set_size_request(hbox_prof, -1, 30);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), 
+			gtk_label_new("Profile Grid: "), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), 
+			gtk_label_new("Profile Zoom: "), FALSE, FALSE, 0);
+
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox_prof, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(vbox), hbox_button, FALSE, FALSE, 0);
+
+	//ezgui_notebook_setup_reset(NULL, gui);
+	return vbox;
+}
+
+static int ezgui_notebook_setup_sensible(void *parent, EZGUI *gui)
+{
+	gtk_widget_set_sensitive(gui->butt_setup_apply, TRUE);
+	gtk_widget_set_sensitive(gui->butt_setup_cancel, TRUE);
+	return 0;
+}
+
+static int ezgui_notebook_setup_insensible(void *parent, EZGUI *gui)
+{
+	gtk_widget_set_sensitive(gui->butt_setup_apply, FALSE);
+	gtk_widget_set_sensitive(gui->butt_setup_cancel, FALSE);
+	return 0;
+}
+
+static int ezgui_notebook_setup_reset(void *parent, EZGUI *gui)
+{
+	char	*pic;
+	int	i;
+
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
+	for (i = 0; prof_list_grid[i]; i++) {
+		if (!strcmp(pic, prof_list_grid[i])) {
+			break;
+		}
+	}
+	if (prof_list_grid[i]) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
+	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
+	}
+	g_free(pic);
+
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
+	for (i = 0; prof_list_zoom[i]; i++) {
+		if (!strcmp(pic, prof_list_zoom[i])) {
+			break;
+		}
+	}
+	if (prof_list_zoom[i]) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
+	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
+	}
+	g_free(pic);
+
+	ezgui_notebook_setup_insensible(parent, gui);
+	return 0;
+}
+
+static int ezgui_notebook_setup_update(void *parent, EZGUI *gui)
+{
+	gchar	*pic;
+	int	rc = 0;
+
+	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_grid));
+	if (pic) {
+		rc = ezgui_cfg_write(gui->config, CFG_KEY_GRID, pic);
+		g_free(pic);
+	}
+
+	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_zoom));
+	if (pic) {
+		rc = ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, pic);
+		g_free(pic);
+	}
+
+	if (rc) {
+		/* updated */
+	}
+
+	ezgui_notebook_setup_insensible(parent, gui);
+	return 0;
 }
 
 

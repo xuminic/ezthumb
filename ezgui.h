@@ -92,6 +92,8 @@ typedef	struct		{
 	/* page setup */
 	GtkWidget	*prof_grid;
 	GtkWidget	*prof_zoom;
+	GtkWidget	*butt_setup_apply;
+	GtkWidget	*butt_setup_cancel;
 
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
