@@ -427,7 +427,7 @@ int main(int argc, char **argv)
 #ifdef	CFG_GUI_ON
 		ezgui_create(sysopt.gui);
 		if (argc > optind) {
-			ezgui_list_add_file(sysopt.gui, 
+			ezgui_append_file(sysopt.gui, 
 					argv + optind, argc - optind);
 		}
 		ezgui_run(sysopt.gui);
@@ -444,7 +444,10 @@ int main(int argc, char **argv)
 		break;
 	}
 #ifdef	CFG_GUI_ON
-	ezgui_close(sysopt.gui);
+	if (sysopt.gui) {
+		ezgui_close(sysopt.gui);
+		sysopt.gui = NULL;
+	}
 #endif
 	return c;
 }
@@ -456,6 +459,7 @@ static int signal_handler(int sig)
 #ifdef	CFG_GUI_ON
 	if (sysopt.gui) {
 		ezgui_close(sysopt.gui);
+		sysopt.gui = NULL;
 	}
 #endif
 	return ezthumb_break(&sysopt);

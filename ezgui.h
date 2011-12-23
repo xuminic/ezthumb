@@ -80,6 +80,8 @@ typedef	struct		{
 	GtkWidget	*gw_listview;
 
 	GtkWidget	*button_del;	/* the delete button on main page */
+	GtkWidget	*button_box;
+	GtkWidget	*prof_group;
 
 	GtkWidget	*entry_col;
 	GtkWidget	*entry_row;
@@ -119,7 +121,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
 int ezgui_run(EZGUI *gui);
 int ezgui_close(EZGUI *gui);
 int ezgui_create(EZGUI *gui);
-int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum);
+int ezgui_append_file(EZGUI *gui, char *flist[], int fnum);
 
 #endif	/* _EZGUI_H_ */
 

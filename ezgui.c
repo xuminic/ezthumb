@@ -35,41 +35,42 @@ static	const	char	*prof_list_zoom[] = {
 	CFG_PIC_ZOOM_SCREEN, NULL
 };
 
-static GtkWidget *ezgui_notebook_main(EZGUI *gui);
-static GtkWidget *ezgui_profile_box(EZGUI *gui);
+static GtkWidget *ezgui_page_main_create(EZGUI *gui);
+static GtkWidget *ezgui_page_main_profile_box(EZGUI *gui);
+static GtkWidget *ezgui_page_main_profile_pack(GtkWidget *box, 
+		GtkWidget *w1, GtkWidget *w2, GtkWidget *w3, GtkWidget *w4);
+static GtkWidget *ezgui_page_main_profile_entry(EZGUI *gui, char *key, 
+		int def, int digitw, int boxw);
 static int ezgui_profile_read(EZGUI *gui);
 static int ezgui_profile_write(EZGUI *gui);
-static GtkWidget *ezgui_profile_pack(GtkWidget *box, 
-		GtkWidget *w1, GtkWidget *w2, GtkWidget *w3, GtkWidget *w4);
-static GtkWidget *ezgui_profile_entry(EZGUI *gui, char *key, int def, 
-		int digitw, int boxw);
 
-static GtkWidget *ezgui_create_view_and_model(EZGUI *gui);
-static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui);
-static void ezgui_selection_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui);
-static void ezgui_selection_enter(GtkWidget *view, GtkTreePath *path,
-		GtkTreeViewColumn *column, EZGUI *gui);
-static void ezgui_selection_dragdrop(GtkWidget *view, GdkDragContext *context,
-		int x, int y, GtkSelectionData *seldata, 
-		guint info, guint time, EZGUI *gui);
-static void ezgui_files_choose(void *parent, EZGUI *gui);
-static void ezgui_files_remove(void *parent, EZGUI *gui);
-static void ezgui_files_generate(void *parent, EZGUI *gui);
+static void ezgui_signal_file_choose(void *parent, EZGUI *gui);
+static void ezgui_signal_file_remove(void *parent, EZGUI *gui);
+static void ezgui_signal_run(void *parent, EZGUI *gui);
 static int ezgui_option_commit(EZGUI *gui);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
-static EZADD *ezgui_list_append_begin(GtkWidget *view);
-static int ezgui_list_append_end(GtkWidget *view, EZADD *ezadd);
-static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s);
-static void ezgui_dialog_invalid_files(EZADD *ezadd);
 
-static GtkWidget *ezgui_notebook_setup(EZGUI *gui);
-static int ezgui_notebook_setup_sensible(void *parent, EZGUI *gui);
-static int ezgui_notebook_setup_insensible(void *parent, EZGUI *gui);
-static int ezgui_notebook_setup_reset(void *parent, EZGUI *gui);
-static int ezgui_notebook_setup_update(void *parent, EZGUI *gui);
+static GtkWidget *ezgui_page_setup_create(EZGUI *gui);
+static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui);
+static int ezgui_signal_setup_insensible(void *parent, EZGUI *gui);
+static int ezgui_signal_setup_reset(void *parent, EZGUI *gui);
+static int ezgui_signal_setup_update(void *parent, EZGUI *gui);
 
-static EZCFG *ezgui_cfg_init(void);
+static GtkWidget *ezgui_listview_create(EZGUI *gui);
+static EZADD *ezgui_listview_append_begin(GtkWidget *view);
+static int ezgui_listview_append_end(GtkWidget *view, EZADD *ezadd);
+static int ezgui_listview_append(EZGUI *gui, EZADD *ezadd, char *s);
+static void ezgui_listview_dialog_invalid_files(EZADD *ezadd);
+static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui);
+static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui);
+static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
+		GtkTreeViewColumn *column, EZGUI *gui);
+static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
+		int x, int y, GtkSelectionData *seldata, 
+		guint info, guint time, EZGUI *gui);
+
+static EZCFG *ezgui_cfg_create(void);
 static int ezgui_cfg_free(EZCFG *cfg);
 static char *ezgui_cfg_read(EZCFG *cfg, char *key);
 static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s);
@@ -92,7 +93,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
 		return NULL;
 	}
-	if ((gui->config = ezgui_cfg_init()) == NULL) {
+	if ((gui->config = ezgui_cfg_create()) == NULL) {
 		free(gui);
 		return NULL;
 	}
@@ -139,10 +140,6 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 
 int ezgui_run(EZGUI *gui)
 {
-	if (gui == NULL) {
-		return -1;
-	}
-
 	/* update the configure file because some options may be changed
 	 * by command line options */
 	ezgui_profile_write(gui);
@@ -154,14 +151,24 @@ int ezgui_run(EZGUI *gui)
 
 int ezgui_close(EZGUI *gui)
 {
-	if (gui == NULL) {
-		return -1;
-	}
-
 	ezgui_cfg_free(gui->config);
 	free(gui);
 	return 0;
 }
+
+int ezgui_append_file(EZGUI *gui, char *flist[], int fnum)
+{
+	EZADD	*ezadd;
+	int	i;
+
+	ezadd = ezgui_listview_append_begin(gui->gw_listview);
+	for (i = 0; i < fnum; i++) {
+		ezgui_listview_append(gui, ezadd, flist[i]);
+	}
+	ezgui_listview_append_end(gui->gw_listview, ezadd);
+	return i;
+}
+
 
 int ezgui_create(EZGUI *gui)
 {
@@ -170,8 +177,8 @@ int ezgui_create(EZGUI *gui)
 	int		w_wid, w_hei;
 
 	/* Create the pages of notebook */
-	page_main = ezgui_notebook_main(gui);
-	page_setup = ezgui_notebook_setup(gui);
+	page_main = ezgui_page_main_create(gui);
+	page_setup = ezgui_page_setup_create(gui);
 
 	/* Create a new notebook, place the position of the tabs */
 	gui->gw_page = gtk_notebook_new();
@@ -194,29 +201,15 @@ int ezgui_create(EZGUI *gui)
 	return 0;
 }
 
-int ezgui_list_add_file(EZGUI *gui, char *flist[], int fnum)
-{
-	EZADD	*ezadd;
-	int	i;
 
-	ezadd = ezgui_list_append_begin(gui->gw_listview);
-	for (i = 0; i < fnum; i++) {
-		ezgui_list_append(gui, ezadd, flist[i]);
-	}
-	ezgui_list_append_end(gui->gw_listview, ezadd);
-	return i;
-}
-
-
-
-static GtkWidget *ezgui_notebook_main(EZGUI *gui)
+static GtkWidget *ezgui_page_main_create(EZGUI *gui)
 {
 	GtkWidget	*scroll;
-	GtkWidget	*button_add, *button_run, *profile;
-	GtkWidget	*hbox, *vbox;
+	GtkWidget	*button_add, *button_run;
+	GtkWidget	*vbox;
 
 	/* create the listview */
-	gui->gw_listview = ezgui_create_view_and_model(gui);
+	gui->gw_listview = ezgui_listview_create(gui);
 
 	/* create the scrollbars and stuffed with the listview */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -228,39 +221,43 @@ static GtkWidget *ezgui_notebook_main(EZGUI *gui)
 	button_add = gtk_button_new_with_label("Add");
 	gtk_widget_set_size_request(button_add, 80, 30);
 	g_signal_connect(button_add, "clicked", 
-			G_CALLBACK(ezgui_files_choose), gui);
+			G_CALLBACK(ezgui_signal_file_choose), gui);
 
 	gui->button_del = gtk_button_new_with_label("Remove");
 	gtk_widget_set_size_request(gui->button_del, 80, 30);
 	gtk_widget_set_sensitive(gui->button_del, FALSE);
 	g_signal_connect(gui->button_del, "clicked", 
-			G_CALLBACK(ezgui_files_remove), gui);
+			G_CALLBACK(ezgui_signal_file_remove), gui);
 
 	button_run = gtk_button_new_with_label("Start");
 	gtk_widget_set_size_request(button_run, 80, 30);
 	g_signal_connect(button_run, "clicked", 
-			G_CALLBACK(ezgui_files_generate), gui);
+			G_CALLBACK(ezgui_signal_run), gui);
 
 	/* create left side */
-	profile = ezgui_profile_box(gui);
+	gui->prof_group = ezgui_page_main_profile_box(gui);
 
 	/* create the horizontal box and stuffed with the buttons */
-	hbox = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox), button_run, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox), gui->button_del, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox), button_add, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox), profile, FALSE, FALSE, 0);
+	gui->button_box = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(gui->button_box), 
+			button_run, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(gui->button_box), 
+			gui->button_del, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(gui->button_box), 
+			button_add, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(gui->button_box), 
+			gui->prof_group, FALSE, FALSE, 0);
 
 	/* create the vertical box and stuffed with all above */
 	vbox = gtk_vbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), gui->button_box, FALSE, FALSE, 0);
 	return vbox;
 }
 
 /* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)(DC I-Frame)
  * Zoom: (Zoom Auto)(Zoom 50%)(Zoom 320x240)(Res 1024) */
-static GtkWidget *ezgui_profile_box(EZGUI *gui)
+static GtkWidget *ezgui_page_main_profile_box(EZGUI *gui)
 {
 	GtkWidget	*hbox, *label1, *label2, *label3, *label4;
 	char		*pic;
@@ -271,40 +268,40 @@ static GtkWidget *ezgui_profile_box(EZGUI *gui)
 	if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
 		label1 = gtk_label_new("Grid");
 		label2 = gtk_label_new("x");
-		gui->entry_col = ezgui_profile_entry(gui, CFG_KEY_GRID_COLUMN,
-				gui->sysopt->grid_col, 3, 30);
-		gui->entry_row = ezgui_profile_entry(gui, CFG_KEY_GRID_ROW,
+		gui->entry_col = ezgui_page_main_profile_entry(gui, 
+				CFG_KEY_GRID_COLUMN, gui->sysopt->grid_col, 3, 30);
+		gui->entry_row = ezgui_page_main_profile_entry(gui, CFG_KEY_GRID_ROW,
 				gui->sysopt->grid_row, 3, 30);
-		ezgui_profile_pack(hbox, label1, gui->entry_col, 
+		ezgui_page_main_profile_pack(hbox, label1, gui->entry_col, 
 				label2, gui->entry_row);
 	} else if (!strcmp(pic, CFG_PIC_GRID_STEP)) {
 		label1 = gtk_label_new("Grid");
 		label2 = gtk_label_new("Step");
-		gui->entry_col = ezgui_profile_entry(gui, CFG_KEY_GRID_COLUMN,
+		gui->entry_col = ezgui_page_main_profile_entry(gui, CFG_KEY_GRID_COLUMN,
 				gui->sysopt->grid_col, 3, 30);
-		gui->entry_step = ezgui_profile_entry(gui, CFG_KEY_TIME_STEP,
+		gui->entry_step = ezgui_page_main_profile_entry(gui, CFG_KEY_TIME_STEP,
 				gui->sysopt->tm_step / 1000, 3, 50);
-		ezgui_profile_pack(hbox, label1, gui->entry_col,
+		ezgui_page_main_profile_pack(hbox, label1, gui->entry_col,
 				label2, gui->entry_step);
 	} else if (!strcmp(pic, CFG_PIC_DIS_NUM)) {
 		label1 = gtk_label_new("DSS No ");
-		gui->entry_row = ezgui_profile_entry(gui, CFG_KEY_GRID_ROW,
+		gui->entry_row = ezgui_page_main_profile_entry(gui, CFG_KEY_GRID_ROW,
 				gui->sysopt->grid_row, 3, 30);
-		ezgui_profile_pack(hbox, label1, gui->entry_row, 
+		ezgui_page_main_profile_pack(hbox, label1, gui->entry_row, 
 				NULL, NULL);
 	} else if (!strcmp(pic, CFG_PIC_DIS_STEP)) {
 		label1 = gtk_label_new("DSS Step ");
-		gui->entry_step = ezgui_profile_entry(gui, CFG_KEY_TIME_STEP,
+		gui->entry_step = ezgui_page_main_profile_entry(gui, CFG_KEY_TIME_STEP,
 				gui->sysopt->tm_step / 1000, 3, 50);
-		ezgui_profile_pack(hbox, label1, gui->entry_step,
+		ezgui_page_main_profile_pack(hbox, label1, gui->entry_step,
 				NULL, NULL);
 	} else if (!strcmp(pic, CFG_PIC_DIS_KEY)) {
 		label1 = gtk_label_new("DSS I-Frame");
-		ezgui_profile_pack(hbox, label1, NULL, NULL, NULL);
+		ezgui_page_main_profile_pack(hbox, label1, NULL, NULL, NULL);
 	} else {
 		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
 		label1 = gtk_label_new("Grid Auto");
-		ezgui_profile_pack(hbox, label1, NULL, NULL, NULL);
+		ezgui_page_main_profile_pack(hbox, label1, NULL, NULL, NULL);
 	}
 	g_free(pic);
 
@@ -322,33 +319,33 @@ static GtkWidget *ezgui_profile_box(EZGUI *gui)
 
 		label3 = gtk_label_new("  Zoom");
 		label4 = gtk_label_new("%");
-		ezgui_profile_pack(hbox, label3, gui->entry_zoom_ratio, 
+		ezgui_page_main_profile_pack(hbox, label3, gui->entry_zoom_ratio, 
 				label4, NULL);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_DEFINE)) {
 		label3 = gtk_label_new("  Zoom");
 		label4 = gtk_label_new("x");
-		gui->entry_zoom_wid = ezgui_profile_entry(gui, CFG_KEY_ZOOM_WIDTH,
+		gui->entry_zoom_wid = ezgui_page_main_profile_entry(gui, CFG_KEY_ZOOM_WIDTH,
 				gui->sysopt->tn_width, 3, 50);
-		gui->entry_zoom_hei = ezgui_profile_entry(gui, CFG_KEY_ZOOM_HEIGHT,
+		gui->entry_zoom_hei = ezgui_page_main_profile_entry(gui, CFG_KEY_ZOOM_HEIGHT,
 				gui->sysopt->tn_height, 3, 50);
-		ezgui_profile_pack(hbox, label3, gui->entry_zoom_wid, 
+		ezgui_page_main_profile_pack(hbox, label3, gui->entry_zoom_wid, 
 				label4, gui->entry_zoom_hei);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
 		label3 = gtk_label_new("  Res");
-		gui->entry_width = ezgui_profile_entry(gui, CFG_KEY_CANVAS_WIDTH,
+		gui->entry_width = ezgui_page_main_profile_entry(gui, CFG_KEY_CANVAS_WIDTH,
 				gui->sysopt->canvas_width, 4, 50);
-		ezgui_profile_pack(hbox, label3, gui->entry_width,
+		ezgui_page_main_profile_pack(hbox, label3, gui->entry_width,
 				NULL, NULL);
 	} else {
 		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
 		label3 = gtk_label_new("  Zoom Auto");
-		ezgui_profile_pack(hbox, label3, NULL, NULL, NULL);
+		ezgui_page_main_profile_pack(hbox, label3, NULL, NULL, NULL);
 	}
 	g_free(pic);
 	return hbox;
 }
 
-static GtkWidget *ezgui_profile_pack(GtkWidget *box, 
+static GtkWidget *ezgui_page_main_profile_pack(GtkWidget *box, 
 		GtkWidget *w1, GtkWidget *w2, GtkWidget *w3, GtkWidget *w4)
 {
 	if (w1) {
@@ -364,6 +361,19 @@ static GtkWidget *ezgui_profile_pack(GtkWidget *box,
 		gtk_box_pack_start(GTK_BOX(box), w4, FALSE, FALSE, 0);
 	}
 	return box;
+}
+
+static GtkWidget *ezgui_page_main_profile_entry(EZGUI *gui, char *key, 
+		int def, int digitw, int boxw)
+{
+	GtkWidget	*entry;
+
+	entry = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry), digitw);
+	gtk_widget_set_size_request(entry, boxw, -1);
+
+	ezgui_entry_set_int(entry, ezgui_cfg_read_int(gui->config, key, def));
+	return entry;
 }
 
 static int ezgui_profile_read(EZGUI *gui)
@@ -445,167 +455,7 @@ static int ezgui_profile_write(EZGUI *gui)
 	return 0;
 }
 
-static GtkWidget *ezgui_profile_entry(EZGUI *gui, char *key, int def, 
-		int digitw, int boxw)
-{
-	GtkWidget	*entry;
-
-	entry = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry), digitw);
-	gtk_widget_set_size_request(entry, boxw, -1);
-
-	ezgui_entry_set_int(entry, ezgui_cfg_read_int(gui->config, key, def));
-	return entry;
-}
-
-static GtkWidget *ezgui_create_view_and_model(EZGUI *gui)
-{
-	static	GtkTargetEntry	targets[] = { { "STRING", 0, 0 } };
-	GtkWidget		*view;
-	GtkTreeViewColumn	*col;
-	GtkTreeSelection	*tsel;
-	GtkCellRenderer		*renderer;
-	GtkListStore		*liststore;
-
-	view = gtk_tree_view_new();
-
-	/* --- Column #1 --- */
-	renderer = gtk_cell_renderer_text_new();
-	//g_object_set(renderer, "width", 300, NULL);
-	col = gtk_tree_view_column_new_with_attributes("Name", 
-			renderer, "text", EZUI_COL_NAME, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);
-	//g_object_set(col, "width", 300, NULL);
-	gtk_tree_view_column_set_min_width(col, 300);
-	/* Nope, we autosize it later after file names been read */
-	//gtk_tree_view_column_set_min_width(col, -1);
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #2 --- */
-	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Size",
-			renderer, "text", EZUI_COL_SIZE, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);	
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #3 --- */
-	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Length",
-			renderer, "text", EZUI_COL_LENGTH, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #4 --- */
-	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Resolution",
-			renderer, "text", EZUI_COL_SCREEN, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);          
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #5 --- */
-	renderer = gtk_cell_renderer_progress_new();
-	//gtk_object_set(renderer, "text", "", "value", 100, NULL);
-	col = gtk_tree_view_column_new_with_attributes("Progress",
-			renderer, "value", EZUI_COL_PROGRESS, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);          
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* setup the model */
-	liststore = gtk_list_store_new(EZUI_COL_MAX, G_TYPE_STRING, G_TYPE_STRING,
-			G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(liststore));
-
-	/* setup the tree selection */
-	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
-	gtk_tree_selection_set_mode(tsel, GTK_SELECTION_MULTIPLE);
-	g_signal_connect(tsel, "changed", 
-			G_CALLBACK(ezgui_selection_change), gui);
-
-	/* bind the signal */
-	//g_signal_connect(view, "button-release-event",
-	//		G_CALLBACK(ezgui_selection_undo), gui);
-	g_signal_connect(view, "row-activated",
-			G_CALLBACK(ezgui_selection_enter), gui);
-
-	/* Make tree view a destination for Drag'n'Drop */
-	gtk_drag_dest_set(view, GTK_DEST_DEFAULT_ALL, 
-			targets, 1, GDK_ACTION_COPY);
-	g_signal_connect(view, "drag_data_received",
-			G_CALLBACK(ezgui_selection_dragdrop), gui);
-	return view;
-}
-
-static void ezgui_selection_change(GtkTreeSelection *tsel, EZGUI *gui)
-{
-	if (gtk_tree_selection_count_selected_rows(tsel) > 0) {
-		gtk_widget_set_sensitive(gui->button_del, TRUE);
-	} else {
-		gtk_widget_set_sensitive(gui->button_del, FALSE);
-	}
-}
-
-static void ezgui_selection_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui)
-{
-	GtkTreeSelection	*tsel;
-
-	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
-	if (((GdkEventButton*)event)->button == 3) {	/* right button */
-		gtk_widget_set_sensitive(gui->button_del, FALSE);
-		gtk_tree_selection_unselect_all(tsel);
-	}
-}
-
-static void ezgui_selection_enter(GtkWidget *view, GtkTreePath *path,
-		GtkTreeViewColumn *column, EZGUI *gui)
-{
-	GtkTreeModel	*model;
-	GtkTreeIter	iter;
-	char	*s;
-
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	if (gtk_tree_model_get_iter(model, &iter, path)) {
-		gtk_tree_model_get(model, &iter, EZUI_COL_NAME, &s, -1);
-
-		ezgui_option_commit(gui);
-		gui->pro_model = model;
-		gui->pro_iter  = &iter;
-		ezthumb(s, gui->sysopt);
-		//puts(s);
-	}
-}
-
-static void ezgui_selection_dragdrop(GtkWidget *view, GdkDragContext *context,
-		int x, int y, GtkSelectionData *seldata, 
-		guint info, guint time, EZGUI *gui)
-{
-	EZADD	*ezadd;
-	char	*dndl, *head, *tail, *tmp;
-
-	if ((dndl = (char*)gtk_selection_data_get_text(seldata)) == NULL) {
-		return;
-	}
-
-	ezadd = ezgui_list_append_begin(gui->gw_listview);
-
-	for (head = dndl; head; head = tail + 1) {
-		if ((tail = strchr(head, '\n')) == NULL) {
-			tail = (char*) -1;
-		} else {
-			*tail = 0;
-		}
-		head += 7;	/* skip the leading 'file://' */
-		if ((tmp = strchr(head, '\r')) != NULL) {
-			*tmp = 0;
-		}
-		ezgui_list_append(gui, ezadd, head);
-	}
-
-	ezgui_list_append_end(gui->gw_listview, ezadd);
-	g_free(dndl);
-}
-
-
-static void ezgui_files_choose(void *parent, EZGUI *gui)
+static void ezgui_signal_file_choose(void *parent, EZGUI *gui)
 {
 	GtkWidget 	*dialog;
 	GtkFileFilter	*filter;
@@ -643,17 +493,17 @@ static void ezgui_files_choose(void *parent, EZGUI *gui)
 	gtk_file_chooser_add_filter(chooser, filter);
 
 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
-		ezadd = ezgui_list_append_begin(gui->gw_listview);
+		ezadd = ezgui_listview_append_begin(gui->gw_listview);
 
 		flist = gtk_file_chooser_get_filenames(chooser);
 		for (p = flist; p != NULL; p = p->next) {
-			ezgui_list_append(gui, ezadd, p->data);
+			ezgui_listview_append(gui, ezadd, p->data);
 			//puts(p->data);
 			g_free(p->data);
 		}
 		g_slist_free(flist);
 
-		ezgui_list_append_end(gui->gw_listview, ezadd);
+		ezgui_listview_append_end(gui->gw_listview, ezadd);
 
 		if ((dir = gtk_file_chooser_get_current_folder(chooser))) {
 			ezgui_cfg_write(gui->config, CFG_KEY_DIRECTORY, dir);
@@ -663,7 +513,7 @@ static void ezgui_files_choose(void *parent, EZGUI *gui)
 	gtk_widget_destroy(dialog);
 }
 
-static void ezgui_files_remove(void *parent, EZGUI *gui)
+static void ezgui_signal_file_remove(void *parent, EZGUI *gui)
 {
 	GtkTreeSelection	*tsel;
 	GtkTreeModel	*model;
@@ -683,7 +533,7 @@ static void ezgui_files_remove(void *parent, EZGUI *gui)
 	g_list_free(rows);
 }
 
-static void ezgui_files_generate(void *parent, EZGUI *gui)
+static void ezgui_signal_run(void *parent, EZGUI *gui)
 {
 	GtkTreeModel	*model;
 	GtkTreeIter	row;
@@ -744,7 +594,222 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 	return eid;
 }
 
-static EZADD *ezgui_list_append_begin(GtkWidget *view)
+
+static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
+{
+	GtkWidget	*hbox_prof, *hbox_button, *vbox;
+	int		i;
+	
+	/* create the buttons */
+	gui->butt_setup_cancel = gtk_button_new_with_label("Cancel");
+	gtk_widget_set_size_request(gui->butt_setup_cancel, 80, 30);
+	g_signal_connect(gui->butt_setup_cancel, "clicked", 
+			G_CALLBACK(ezgui_signal_setup_reset), gui);
+
+	gui->butt_setup_apply = gtk_button_new_with_label("OK");
+	gtk_widget_set_size_request(gui->butt_setup_apply, 80, 30);
+	g_signal_connect(gui->butt_setup_apply, "clicked", 
+			G_CALLBACK(ezgui_signal_setup_update), gui);
+
+	hbox_button = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_button), 
+			gui->butt_setup_apply, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_button), 
+			gui->butt_setup_cancel, FALSE, FALSE, 0);
+
+	/* create the combo box for the profile setting */
+	gui->prof_grid = gtk_combo_box_new_text();
+	for (i = 0; prof_list_grid[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), 
+				prof_list_grid[i]);
+	}
+	g_signal_connect(gui->prof_grid, "changed",
+			G_CALLBACK(ezgui_signal_setup_sensible), gui);
+
+	gui->prof_zoom = gtk_combo_box_new_text();
+	for (i = 0; prof_list_zoom[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), 
+				prof_list_zoom[i]);
+	}
+	g_signal_connect(gui->prof_zoom, "changed",
+			G_CALLBACK(ezgui_signal_setup_sensible), gui);
+
+	hbox_prof = gtk_hbox_new(FALSE, 0);
+	//gtk_widget_set_size_request(hbox_prof, -1, 30);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), 
+			gtk_label_new("Profile Grid: "), FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), 
+			gtk_label_new("Profile Zoom: "), FALSE, FALSE, 0);
+
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), hbox_prof, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(vbox), hbox_button, FALSE, FALSE, 0);
+
+	ezgui_signal_setup_reset(NULL, gui);
+	return vbox;
+}
+
+static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui)
+{
+	gtk_widget_set_sensitive(gui->butt_setup_apply, TRUE);
+	gtk_widget_set_sensitive(gui->butt_setup_cancel, TRUE);
+	return 0;
+}
+
+static int ezgui_signal_setup_insensible(void *parent, EZGUI *gui)
+{
+	gtk_widget_set_sensitive(gui->butt_setup_apply, FALSE);
+	gtk_widget_set_sensitive(gui->butt_setup_cancel, FALSE);
+	return 0;
+}
+
+static int ezgui_signal_setup_reset(void *parent, EZGUI *gui)
+{
+	char	*pic;
+	int	i;
+
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
+	for (i = 0; prof_list_grid[i]; i++) {
+		if (!strcmp(pic, prof_list_grid[i])) {
+			break;
+		}
+	}
+	if (prof_list_grid[i]) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
+	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
+	}
+	g_free(pic);
+
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
+	for (i = 0; prof_list_zoom[i]; i++) {
+		if (!strcmp(pic, prof_list_zoom[i])) {
+			break;
+		}
+	}
+	if (prof_list_zoom[i]) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
+	} else {
+		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
+	}
+	g_free(pic);
+
+	ezgui_signal_setup_insensible(parent, gui);
+	return 0;
+}
+
+static int ezgui_signal_setup_update(void *parent, EZGUI *gui)
+{
+	gchar	*pic;
+	int	rc = 0;
+
+	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_grid));
+	if (pic) {
+		rc += ezgui_cfg_write(gui->config, CFG_KEY_GRID, pic);
+		g_free(pic);
+	}
+	//printf("ezgui_signal_setup_update: grid %d\n", rc);
+
+	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_zoom));
+	if (pic) {
+		rc += ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, pic);
+		g_free(pic);
+	}
+	//printf("ezgui_signal_setup_update: zoom %d\n", rc);
+
+	if (rc) {
+		gtk_widget_destroy(gui->prof_group);
+		gui->prof_group = ezgui_page_main_profile_box(gui);
+		gtk_box_pack_start(GTK_BOX(gui->button_box),
+				gui->prof_group, FALSE, FALSE, 0);
+		gtk_widget_show_all(gui->button_box);
+	}
+
+	ezgui_signal_setup_insensible(parent, gui);
+	return 0;
+}
+
+
+static GtkWidget *ezgui_listview_create(EZGUI *gui)
+{
+	static	GtkTargetEntry	targets[] = { { "STRING", 0, 0 } };
+	GtkWidget		*view;
+	GtkTreeViewColumn	*col;
+	GtkTreeSelection	*tsel;
+	GtkCellRenderer		*renderer;
+	GtkListStore		*liststore;
+
+	view = gtk_tree_view_new();
+
+	/* --- Column #1 --- */
+	renderer = gtk_cell_renderer_text_new();
+	//g_object_set(renderer, "width", 300, NULL);
+	col = gtk_tree_view_column_new_with_attributes("Name", 
+			renderer, "text", EZUI_COL_NAME, NULL);
+	gtk_tree_view_column_set_resizable(col, TRUE);
+	//g_object_set(col, "width", 300, NULL);
+	gtk_tree_view_column_set_min_width(col, 300);
+	/* Nope, we autosize it later after file names been read */
+	//gtk_tree_view_column_set_min_width(col, -1);
+	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
+
+	/* --- Column #2 --- */
+	renderer = gtk_cell_renderer_text_new();
+	col = gtk_tree_view_column_new_with_attributes("Size",
+			renderer, "text", EZUI_COL_SIZE, NULL);
+	gtk_tree_view_column_set_resizable(col, TRUE);	
+	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
+
+	/* --- Column #3 --- */
+	renderer = gtk_cell_renderer_text_new();
+	col = gtk_tree_view_column_new_with_attributes("Length",
+			renderer, "text", EZUI_COL_LENGTH, NULL);
+	gtk_tree_view_column_set_resizable(col, TRUE);
+	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
+
+	/* --- Column #4 --- */
+	renderer = gtk_cell_renderer_text_new();
+	col = gtk_tree_view_column_new_with_attributes("Resolution",
+			renderer, "text", EZUI_COL_SCREEN, NULL);
+	gtk_tree_view_column_set_resizable(col, TRUE);          
+	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
+
+	/* --- Column #5 --- */
+	renderer = gtk_cell_renderer_progress_new();
+	//gtk_object_set(renderer, "text", "", "value", 100, NULL);
+	col = gtk_tree_view_column_new_with_attributes("Progress",
+			renderer, "value", EZUI_COL_PROGRESS, NULL);
+	gtk_tree_view_column_set_resizable(col, TRUE);          
+	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
+
+	/* setup the model */
+	liststore = gtk_list_store_new(EZUI_COL_MAX, G_TYPE_STRING, G_TYPE_STRING,
+			G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(liststore));
+
+	/* setup the tree selection */
+	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
+	gtk_tree_selection_set_mode(tsel, GTK_SELECTION_MULTIPLE);
+	g_signal_connect(tsel, "changed", 
+			G_CALLBACK(ezgui_signal_select_change), gui);
+
+	/* bind the signal */
+	//g_signal_connect(view, "button-release-event",
+	//		G_CALLBACK(ezgui_signal_select_undo), gui);
+	g_signal_connect(view, "row-activated",
+			G_CALLBACK(ezgui_signal_select_enter), gui);
+
+	/* Make tree view a destination for Drag'n'Drop */
+	gtk_drag_dest_set(view, GTK_DEST_DEFAULT_ALL, 
+			targets, 1, GDK_ACTION_COPY);
+	g_signal_connect(view, "drag_data_received",
+			G_CALLBACK(ezgui_signal_select_dragdrop), gui);
+	return view;
+}
+
+static EZADD *ezgui_listview_append_begin(GtkWidget *view)
 {
 	EZADD	*ezadd;
 
@@ -764,7 +829,7 @@ static EZADD *ezgui_list_append_begin(GtkWidget *view)
 	return ezadd;
 }
 
-static int ezgui_list_append_end(GtkWidget *view, EZADD *ezadd)
+static int ezgui_listview_append_end(GtkWidget *view, EZADD *ezadd)
 {
 	if (ezadd == NULL) {
 		return -1;
@@ -776,14 +841,14 @@ static int ezgui_list_append_end(GtkWidget *view, EZADD *ezadd)
 	g_object_unref(ezadd->app_model);
 
 	if (ezadd->dis_count) {
-		ezgui_dialog_invalid_files(ezadd);
+		ezgui_listview_dialog_invalid_files(ezadd);
 	}
 	g_object_unref(ezadd->discarded);
 	free(ezadd);
 	return 0;
 }
 
-static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s)
+static int ezgui_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 {
 	GtkTreeIter	row;
 	EZVID		*vidx;
@@ -827,7 +892,7 @@ static int ezgui_list_append(EZGUI *gui, EZADD *ezadd, char *s)
 	return 1;
 }
 
-static void ezgui_dialog_invalid_files(EZADD *ezadd)
+static void ezgui_listview_dialog_invalid_files(EZADD *ezadd)
 {
 	GtkWidget	*dialog, *vbox, *text, *scroll;
 
@@ -857,139 +922,77 @@ static void ezgui_dialog_invalid_files(EZADD *ezadd)
 	gtk_widget_destroy(dialog);
 }
 
-
-static GtkWidget *ezgui_notebook_setup(EZGUI *gui)
+static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui)
 {
-	GtkWidget	*hbox_prof, *hbox_button, *vbox;
-	int		i;
-	
-	/* create the buttons */
-	gui->butt_setup_cancel = gtk_button_new_with_label("Cancel");
-	gtk_widget_set_size_request(gui->butt_setup_cancel, 80, 30);
-	g_signal_connect(gui->butt_setup_cancel, "clicked", 
-			G_CALLBACK(ezgui_notebook_setup_reset), gui);
-
-	gui->butt_setup_apply = gtk_button_new_with_label("OK");
-	gtk_widget_set_size_request(gui->butt_setup_apply, 80, 30);
-	g_signal_connect(gui->butt_setup_apply, "clicked", 
-			G_CALLBACK(ezgui_notebook_setup_update), gui);
-
-	hbox_button = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_button), 
-			gui->butt_setup_apply, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_button), 
-			gui->butt_setup_cancel, FALSE, FALSE, 0);
-
-	/* create the combo box for the profile setting */
-	gui->prof_grid = gtk_combo_box_new_text();
-	for (i = 0; prof_list_grid[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), 
-				prof_list_grid[i]);
-	}
-	g_signal_connect(gui->prof_grid, "changed",
-			G_CALLBACK(ezgui_notebook_setup_sensible), gui);
-
-	gui->prof_zoom = gtk_combo_box_new_text();
-	for (i = 0; prof_list_zoom[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), 
-				prof_list_zoom[i]);
-	}
-	g_signal_connect(gui->prof_zoom, "changed",
-			G_CALLBACK(ezgui_notebook_setup_sensible), gui);
-
-	hbox_prof = gtk_hbox_new(FALSE, 0);
-	//gtk_widget_set_size_request(hbox_prof, -1, 30);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), 
-			gtk_label_new("Profile Grid: "), FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), 
-			gtk_label_new("Profile Zoom: "), FALSE, FALSE, 0);
-
-	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox_prof, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_button, FALSE, FALSE, 0);
-
-	//ezgui_notebook_setup_reset(NULL, gui);
-	return vbox;
-}
-
-static int ezgui_notebook_setup_sensible(void *parent, EZGUI *gui)
-{
-	gtk_widget_set_sensitive(gui->butt_setup_apply, TRUE);
-	gtk_widget_set_sensitive(gui->butt_setup_cancel, TRUE);
-	return 0;
-}
-
-static int ezgui_notebook_setup_insensible(void *parent, EZGUI *gui)
-{
-	gtk_widget_set_sensitive(gui->butt_setup_apply, FALSE);
-	gtk_widget_set_sensitive(gui->butt_setup_cancel, FALSE);
-	return 0;
-}
-
-static int ezgui_notebook_setup_reset(void *parent, EZGUI *gui)
-{
-	char	*pic;
-	int	i;
-
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
-	for (i = 0; prof_list_grid[i]; i++) {
-		if (!strcmp(pic, prof_list_grid[i])) {
-			break;
-		}
-	}
-	if (prof_list_grid[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
+	if (gtk_tree_selection_count_selected_rows(tsel) > 0) {
+		gtk_widget_set_sensitive(gui->button_del, TRUE);
 	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
+		gtk_widget_set_sensitive(gui->button_del, FALSE);
 	}
-	g_free(pic);
-
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
-	for (i = 0; prof_list_zoom[i]; i++) {
-		if (!strcmp(pic, prof_list_zoom[i])) {
-			break;
-		}
-	}
-	if (prof_list_zoom[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
-	}
-	g_free(pic);
-
-	ezgui_notebook_setup_insensible(parent, gui);
-	return 0;
 }
 
-static int ezgui_notebook_setup_update(void *parent, EZGUI *gui)
+static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui)
 {
-	gchar	*pic;
-	int	rc = 0;
+	GtkTreeSelection	*tsel;
 
-	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_grid));
-	if (pic) {
-		rc = ezgui_cfg_write(gui->config, CFG_KEY_GRID, pic);
-		g_free(pic);
+	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
+	if (((GdkEventButton*)event)->button == 3) {	/* right button */
+		gtk_widget_set_sensitive(gui->button_del, FALSE);
+		gtk_tree_selection_unselect_all(tsel);
+	}
+}
+
+static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
+		GtkTreeViewColumn *column, EZGUI *gui)
+{
+	GtkTreeModel	*model;
+	GtkTreeIter	iter;
+	char	*s;
+
+	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
+	if (gtk_tree_model_get_iter(model, &iter, path)) {
+		gtk_tree_model_get(model, &iter, EZUI_COL_NAME, &s, -1);
+
+		ezgui_option_commit(gui);
+		gui->pro_model = model;
+		gui->pro_iter  = &iter;
+		ezthumb(s, gui->sysopt);
+		//puts(s);
+	}
+}
+
+static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
+		int x, int y, GtkSelectionData *seldata, 
+		guint info, guint time, EZGUI *gui)
+{
+	EZADD	*ezadd;
+	char	*dndl, *head, *tail, *tmp;
+
+	if ((dndl = (char*)gtk_selection_data_get_text(seldata)) == NULL) {
+		return;
 	}
 
-	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_zoom));
-	if (pic) {
-		rc = ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, pic);
-		g_free(pic);
+	ezadd = ezgui_listview_append_begin(gui->gw_listview);
+
+	for (head = dndl; head; head = tail + 1) {
+		if ((tail = strchr(head, '\n')) == NULL) {
+			tail = (char*) -1;
+		} else {
+			*tail = 0;
+		}
+		head += 7;	/* skip the leading 'file://' */
+		if ((tmp = strchr(head, '\r')) != NULL) {
+			*tmp = 0;
+		}
+		ezgui_listview_append(gui, ezadd, head);
 	}
 
-	if (rc) {
-		/* updated */
-	}
-
-	ezgui_notebook_setup_insensible(parent, gui);
-	return 0;
+	ezgui_listview_append_end(gui->gw_listview, ezadd);
+	g_free(dndl);
 }
 
 
-static EZCFG *ezgui_cfg_init(void)
+static EZCFG *ezgui_cfg_create(void)
 {
 	EZCFG	*cfg;
 	char	*path;
@@ -1095,6 +1098,8 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 	gsize	len = 0;
 	FILE	*fp;
 	
+	printf("ezgui_cfg_flush: %d\n", cfg->mcount);
+
 	if (cfg->mcount == 0) {
 		return 0;
 	}
