@@ -25,12 +25,12 @@
 #include "ezgui.h"
 
 
-static	const	char	*prof_list_grid[] = {
+static	char	*prof_list_grid[] = {
 	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
 	CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
 };
 
-static	const	char	*prof_list_zoom[] = {
+static	char	*prof_list_zoom[] = {
 	CFG_PIC_AUTO, CFG_PIC_ZOOM_RATIO, CFG_PIC_ZOOM_DEFINE,
 	CFG_PIC_ZOOM_SCREEN, NULL
 };
@@ -80,7 +80,11 @@ static int ezgui_cfg_flush(EZCFG *cfg);
 
 static int ezgui_entry_get_int(GtkWidget *entry);
 static int ezgui_entry_set_int(GtkWidget *entry, int val);
-
+static GtkWidget *ezgui_page_label(gchar *s);
+static GtkWidget *ezgui_setup_label(gchar *s);
+static GtkWidget *ezgui_setup_idname(gchar *s);
+static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler);
+static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -172,7 +176,6 @@ int ezgui_append_file(EZGUI *gui, char *flist[], int fnum)
 
 int ezgui_create(EZGUI *gui)
 {
-	GtkWidget	*label1, *label2;
 	GtkWidget	*page_main, *page_setup;
 	int		w_wid, w_hei;
 
@@ -183,10 +186,10 @@ int ezgui_create(EZGUI *gui)
 	/* Create a new notebook, place the position of the tabs */
 	gui->gw_page = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(gui->gw_page), GTK_POS_TOP);
-	label1 = gtk_label_new("Generate");
-	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_main, label1);
-	label2 = gtk_label_new(" Setup  ");
-	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_setup, label2);
+	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_main, 
+			ezgui_page_label("Generate"));
+	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_setup, 
+			ezgui_page_label("Setup"));
 
 	gtk_notebook_set_current_page(GTK_NOTEBOOK(gui->gw_page), 0);
 
@@ -218,21 +221,14 @@ static GtkWidget *ezgui_page_main_create(EZGUI *gui)
 	gtk_container_add(GTK_CONTAINER(scroll), gui->gw_listview);
 
 	/* create the buttons */
-	button_add = gtk_button_new_with_label("Add");
-	gtk_widget_set_size_request(button_add, 80, 30);
-	g_signal_connect(button_add, "clicked", 
-			G_CALLBACK(ezgui_signal_file_choose), gui);
+	button_add = ezgui_button(gui, "Add", 
+			G_CALLBACK(ezgui_signal_file_choose));
+	gui->button_del = ezgui_button(gui, "Remove",
+			G_CALLBACK(ezgui_signal_file_remove));
+	button_run = ezgui_button(gui, "Start", 
+			G_CALLBACK(ezgui_signal_run));
 
-	gui->button_del = gtk_button_new_with_label("Remove");
-	gtk_widget_set_size_request(gui->button_del, 80, 30);
 	gtk_widget_set_sensitive(gui->button_del, FALSE);
-	g_signal_connect(gui->button_del, "clicked", 
-			G_CALLBACK(ezgui_signal_file_remove), gui);
-
-	button_run = gtk_button_new_with_label("Start");
-	gtk_widget_set_size_request(button_run, 80, 30);
-	g_signal_connect(button_run, "clicked", 
-			G_CALLBACK(ezgui_signal_run), gui);
 
 	/* create left side */
 	gui->prof_group = ezgui_page_main_profile_box(gui);
@@ -597,19 +593,45 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 {
-	GtkWidget	*hbox_prof, *hbox_button, *vbox;
-	int		i;
+	GtkWidget	*hbox_prof, *hbox_button, *vbox_setup, *vbox_page;
+	GtkWidget	*scroll;
 	
-	/* create the buttons */
-	gui->butt_setup_cancel = gtk_button_new_with_label("Cancel");
-	gtk_widget_set_size_request(gui->butt_setup_cancel, 80, 30);
-	g_signal_connect(gui->butt_setup_cancel, "clicked", 
-			G_CALLBACK(ezgui_signal_setup_reset), gui);
+	/* create the combo box for the profile setting */
+	gui->prof_grid = ezgui_combo(gui, prof_list_grid,
+			G_CALLBACK(ezgui_signal_setup_sensible));
+	gui->prof_zoom = ezgui_combo(gui, prof_list_zoom,
+			G_CALLBACK(ezgui_signal_setup_sensible));
 
-	gui->butt_setup_apply = gtk_button_new_with_label("OK");
-	gtk_widget_set_size_request(gui->butt_setup_apply, 80, 30);
-	g_signal_connect(gui->butt_setup_apply, "clicked", 
-			G_CALLBACK(ezgui_signal_setup_update), gui);
+	hbox_prof = gtk_hbox_new(FALSE, 0);
+	//gtk_widget_set_size_request(hbox_prof, -1, 30);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), 
+			ezgui_setup_idname("Profile Grid:"), 
+			FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_prof), 
+			gui->prof_grid, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), 
+			gui->prof_zoom, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(hbox_prof), 
+			ezgui_setup_idname("Profile Zoom:"), FALSE, FALSE, 0);
+
+	vbox_setup = gtk_vbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox_setup), 
+			ezgui_setup_label("<b>Profile Selection:</b>"), 
+			FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox_setup), hbox_prof, FALSE, FALSE, 0);
+
+	/* create a scroll container for the setup page */
+	scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
+			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), 
+			vbox_setup);
+
+	/* create the "OK" and "Cancel" buttons in the bottom of the page */
+	gui->butt_setup_cancel = ezgui_button(gui, "Cancel",
+			G_CALLBACK(ezgui_signal_setup_reset));
+	gui->butt_setup_apply = ezgui_button(gui, "OK",
+			G_CALLBACK(ezgui_signal_setup_update));
 
 	hbox_button = gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_end(GTK_BOX(hbox_button), 
@@ -617,38 +639,14 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 	gtk_box_pack_end(GTK_BOX(hbox_button), 
 			gui->butt_setup_cancel, FALSE, FALSE, 0);
 
-	/* create the combo box for the profile setting */
-	gui->prof_grid = gtk_combo_box_new_text();
-	for (i = 0; prof_list_grid[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_grid), 
-				prof_list_grid[i]);
-	}
-	g_signal_connect(gui->prof_grid, "changed",
-			G_CALLBACK(ezgui_signal_setup_sensible), gui);
+	/* create the vbox container for the whole page */
+	vbox_page = gtk_vbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox_page), scroll, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox_page), hbox_button, FALSE, FALSE, 0);
 
-	gui->prof_zoom = gtk_combo_box_new_text();
-	for (i = 0; prof_list_zoom[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(gui->prof_zoom), 
-				prof_list_zoom[i]);
-	}
-	g_signal_connect(gui->prof_zoom, "changed",
-			G_CALLBACK(ezgui_signal_setup_sensible), gui);
-
-	hbox_prof = gtk_hbox_new(FALSE, 0);
-	//gtk_widget_set_size_request(hbox_prof, -1, 30);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), 
-			gtk_label_new("Profile Grid: "), FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), gui->prof_grid, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), gui->prof_zoom, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), 
-			gtk_label_new("Profile Zoom: "), FALSE, FALSE, 0);
-
-	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox_prof, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(vbox), hbox_button, FALSE, FALSE, 0);
-
+	/* reset the setup page by the options in the config file */
 	ezgui_signal_setup_reset(NULL, gui);
-	return vbox;
+	return vbox_page;
 }
 
 static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui)
@@ -1151,4 +1149,58 @@ static int ezgui_entry_set_int(GtkWidget *entry, int val)
 	return 0;
 }
 
+static GtkWidget *ezgui_page_label(gchar *s)
+{
+	GtkWidget	*label;
+
+	label = gtk_label_new(s);
+	gtk_widget_set_size_request(label, 80, -1);
+	return label;
+}
+
+static GtkWidget *ezgui_setup_label(gchar *s)
+{
+	GtkWidget	*label;
+
+	label = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(label), s);
+	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+	gtk_misc_set_padding(GTK_MISC(label), 10, 10);
+	return label;
+}
+
+static GtkWidget *ezgui_setup_idname(gchar *s)
+{
+	GtkWidget	*idname;
+
+	idname = gtk_label_new(NULL);
+	gtk_label_set_markup(GTK_LABEL(idname), s);
+	gtk_widget_set_size_request(idname, 120, 30);
+	return idname;
+}
+
+static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler)
+{
+	GtkWidget	*button;
+
+	button = gtk_button_new_with_label(s);
+	gtk_widget_set_size_request(button, 80, 30);
+	g_signal_connect(button, "clicked", c_handler, gui);
+	return button;
+}
+
+static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler)
+{
+	GtkWidget	*combo;
+	int		i;
+
+	combo = gtk_combo_box_new_text();
+	for (i = 0; sopt[i]; i++) {
+		gtk_combo_box_append_text(GTK_COMBO_BOX(combo), sopt[i]);
+	}
+	gtk_widget_set_size_request(combo, 160, 30);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+	g_signal_connect(combo, "changed", c_handler, gui);
+	return combo;
+}
 
