@@ -47,6 +47,7 @@
 #define CFG_KEY_ZOOM_HEIGHT	"zoom_height"
 #define CFG_KEY_CANVAS_WIDTH	"canvas_width"
 #define CFG_KEY_TIME_STEP	"time_step"
+#define CFG_KEY_DURATION	"duration_mode"
 
 
 #define	CFG_PIC_GRID_DIM	"column and row"	/* Grid 4x4 */
@@ -91,11 +92,18 @@ typedef	struct		{
 	GtkWidget	*entry_zoom_hei;
 	GtkWidget	*entry_width;
 
-	/* page setup */
-	GtkWidget	*prof_grid;
-	GtkWidget	*prof_zoom;
+	/* Setup Page: the two main buttons in the bottom */
 	GtkWidget	*butt_setup_apply;
 	GtkWidget	*butt_setup_cancel;
+
+	/* Setup Page: the choise of profiles */
+	GtkWidget	*prof_grid;
+	GtkWidget	*prof_zoom;
+	
+	/* Setup Page: the duration finding mode */
+	GtkWidget	*dfm_head;	/* no scan */
+	GtkWidget	*dfm_fast;	/* fast tail scan */
+	GtkWidget	*dfm_slow;	/* slow full scan */
 
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
@@ -116,12 +124,9 @@ enum	{
 };
 
 
-
 EZGUI *ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
-int ezgui_run(EZGUI *gui);
+int ezgui_run(EZGUI *gui, char *flist[], int fnum);
 int ezgui_close(EZGUI *gui);
-int ezgui_create(EZGUI *gui);
-int ezgui_append_file(EZGUI *gui, char *flist[], int fnum);
 
 #endif	/* _EZGUI_H_ */
 

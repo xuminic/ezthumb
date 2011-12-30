@@ -421,16 +421,11 @@ int main(int argc, char **argv)
 	case 'G':
 		if (sysopt.gui == NULL) {
 			cli_print(clist);
-			break;
 		}
-
 #ifdef	CFG_GUI_ON
-		ezgui_create(sysopt.gui);
-		if (argc > optind) {
-			ezgui_append_file(sysopt.gui, 
-					argv + optind, argc - optind);
+		else {
+			ezgui_run(sysopt.gui, argv + optind, argc - optind);
 		}
-		ezgui_run(sysopt.gui);
 #endif
 		break;
 	default:
