@@ -172,8 +172,10 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 
 int ezgui_close(EZGUI *gui)
 {
-	ezgui_cfg_free(gui->config);
-	free(gui);
+	if (gui) {
+		ezgui_cfg_free(gui->config);
+		free(gui);
+	}
 	return 0;
 }
 

@@ -33,16 +33,17 @@
 #endif
 
 #define EZ_ERR_NONE		0
-#define EZ_ERR_FILE		-1	/* can not open the video file */
+#define EZ_ERR_EOP		-1	/* End Of Process */
 #define EZ_ERR_STREAM		-2	/* wrong stream */
 #define EZ_ERR_CODEC_FAIL	-3	/* wrong codec */
 #define EZ_ERR_CODEC_NONE	-4	/* unsupported codec */
 #define EZ_ERR_LOWMEM		-5
 #define EZ_ERR_SWSCALE		-6	/* failed to initial swscale */
-#define EZ_ERR_IMG_FORMAT	-7
-#define EZ_ERR_PARAM		-8
+#define EZ_ERR_IMG_FORMAT	-7	/* unknown wallpaper format */
+#define EZ_ERR_PARAM		-8	/* invalid command line parameter */
 #define EZ_ERR_FORMAT		-9	/* wrong video format */
 #define EZ_ERR_VIDEOSTREAM	-10	/* no viden stream */
+#define EZ_ERR_FILE		-11	/* can not open the video file */
 
 
 #define EN_FILE_OPEN		1000	/* successfully open a video file */

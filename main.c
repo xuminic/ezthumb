@@ -135,7 +135,8 @@ int main(int argc, char **argv)
 		switch (c) {
 		case 1:
 			cli_print(clist);
-			return 0;
+			todo = 'E';	/* END PROCESS */
+			break;
 		case 2:
 			printf(version, EZTHUMB_VERSION);
 			printf("FFMPEG: libavcodec %d.%d.%d; ", 
@@ -154,7 +155,8 @@ int main(int argc, char **argv)
 					LIBSWSCALE_VERSION_MAJOR,
 					LIBSWSCALE_VERSION_MINOR,
 					LIBSWSCALE_VERSION_MICRO);
-			return 0;
+			todo = 'E';	/* END PROCESS */
+			break;
 		case 6:	/* nonkey */
 			sysopt.flags |= EZOP_P_FRAME;
 			break;
@@ -162,6 +164,10 @@ int main(int argc, char **argv)
 			sysopt.background = optarg;
 			break;
 		case 8:	/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+				break;
+			}
 			sysopt.grid_gap_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
 				sysopt.grid_gap_h = sysopt.grid_gap_w;
@@ -170,6 +176,10 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 9:	/* gap-margin: Examples: 5, 5%, 5x8, 5%x8% */
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+				break;
+			}
 			sysopt.grid_rim_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
 				sysopt.grid_rim_h = sysopt.grid_rim_w;
@@ -182,6 +192,8 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_INFO;
 			} else if (!strcmp(optarg, "off")) {
 				sysopt.flags &= ~EZOP_INFO;
+			} else {
+				todo = 'B';	/* BREAK */
 			}
 			break;
 		case 11:	/* opt-time */
@@ -189,6 +201,8 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_TIMEST;
 			} else if (!strcmp(optarg, "off")) {
 				sysopt.flags &= ~EZOP_TIMEST;
+			} else {
+				todo = 'B';	/* BREAK */
 			}
 			break;
 		case 12:	/* opt-ffr */
@@ -196,6 +210,8 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_FFRAME;
 			} else if (!strcmp(optarg, "off")) {
 				sysopt.flags &= ~EZOP_FFRAME;
+			} else {
+				todo = 'B';	/* BREAK */
 			}
 			break;
 		case 13:	/* opt-lfr */
@@ -203,25 +219,27 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_LFRAME;
 			} else if (!strcmp(optarg, "off")) {
 				sysopt.flags &= ~EZOP_LFRAME;
+			} else {
+				todo = 'B';	/* BREAK */
 			}
 			break;
 		case 15:	/* "pos-bg" */
 			if ((c = para_get_position(optarg)) == -1) {
-				printf("Error position code!\n");
+				todo = 'B';	/* BREAK */
 			} else {
 				sysopt.bg_position = c;
 			}
 			break;
 		case 16:	/* "pos-time" */
 			if ((c = para_get_position(optarg)) == -1) {
-				printf("Error position code!\n");
+				todo = 'B';	/* BREAK */
 			} else {
 				sysopt.ins_position = c;
 			}
 			break;
 		case 17:	/* "pos-info" */
 			if ((c = para_get_position(optarg)) == -1) {
-				printf("Error position code!\n");
+				todo = 'B';	/* BREAK */
 			} else {
 				sysopt.mi_position = c;
 			}
@@ -230,20 +248,34 @@ int main(int argc, char **argv)
 			sysopt.flags |= EZOP_DECODE_OTF;
 			break;
 		case 18:	/* time-from */
-			sysopt.time_from = para_get_time_point(optarg);
+			if (isdigit(*optarg)) {
+				sysopt.time_from = para_get_time_point(optarg);
+			} else {
+				todo = 'B';	/* BREAK */
+			}
 			break;
 		case 19:	/* time-end */
-			sysopt.time_to = para_get_time_point(optarg);
+			if (isdigit(*optarg)) {
+				sysopt.time_to = para_get_time_point(optarg);
+			} else {
+				todo = 'B';	/* BREAK */
+			}
 			break;
 		case 20:
 			sysopt.flags |= EZOP_TRANSPARENT;
 			sysopt.canvas_color[3] = 0;
 			break;
 		case 22:	/* index */
-			sysopt.vs_idx = strtol(optarg, NULL, 0);
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+			} else {
+				sysopt.vs_idx = strtol(optarg, NULL, 0);
+			}
 			break;
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
-			para_get_color(&sysopt, optarg);
+			if (para_get_color(&sysopt, optarg) != EZ_ERR_NONE) {
+				todo = 'B';	/* BREAK */
+			}
 			break;
 		case 'd':	/* Examples: 0,1,quick,skim,scan */
 			if (isdigit((int) optarg[0])) {
@@ -252,12 +284,18 @@ int main(int argc, char **argv)
 				sysopt.dur_mode = EZ_DUR_QK_SCAN;
 			} else if (!strcmp(optarg, "scan")) {
 				sysopt.dur_mode = EZ_DUR_FULLSCAN;
-			} else {
+			} else if (!strcmp(optarg, "head")) {
 				sysopt.dur_mode = EZ_DUR_CLIPHEAD;
+			} else {
+				todo = 'B';	/* BREAK */
 			}
 			break;
 		case 'e':
-			sysopt.edge_width = strtol(optarg, NULL, 0);
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+			} else {
+				sysopt.edge_width = strtol(optarg, NULL, 0);
+			}
 			break;
 		case 'f':
 			sysopt.mi_font = sysopt.ins_font = optarg;
@@ -269,9 +307,15 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'F':	/* MI:TM */
-			para_get_fontsize(&sysopt, optarg);
+			if (para_get_fontsize(&sysopt, optarg) != EZ_ERR_NONE) {
+				todo = 'B';	/* BREAK */
+			}
 			break;
 		case 'g':	/* Examples: 4, 4x8, 0x8 */
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+				break;
+			}
 			sysopt.grid_col = strtol(optarg, &p, 10);
 			if (*p == 0) {
 				sysopt.grid_row = 0;
@@ -307,6 +351,10 @@ int main(int argc, char **argv)
 			sysopt.pathout = optarg;
 			break;
 		case 'p':
+			if ((*optarg == '0') || !strcmp(optarg, "auto")) {
+				sysopt.flags |= EZOP_PROC_AUTO;
+				break;
+			}
 			if ((*optarg == '1') || !strcmp(optarg, "skim")) {
 				sysopt.flags |= EZOP_PROC_SKIM;
 				break;
@@ -334,7 +382,7 @@ int main(int argc, char **argv)
 				}
 				break;
 			}
-			sysopt.flags |= EZOP_PROC_AUTO;
+			todo = 'B';	/* BREAK */
 			break;
 		case 'P':
 			c = strtol(optarg, &p, 10);
@@ -346,10 +394,14 @@ int main(int argc, char **argv)
 				for (c = 0; c < PROFLIST; c++) {
 					printf("%2d: %s\n", c, sysprof[c]);
 				}
-				return 0;
+				todo = 'E';	/* END PROCESS */
 			}
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+				break;
+			}
 			c = strtol(optarg, &p, 0);
 			if (*p == 0) {
 				sysopt.tn_facto = c;
@@ -362,29 +414,56 @@ int main(int argc, char **argv)
 			prof_size = 0;	/* disable the profile */
 			break;
 		case 't':
-			sysopt.tm_step = strtol(optarg, NULL, 0);
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+			} else {
+				sysopt.tm_step = strtol(optarg, NULL, 0);
+			}
 			//if (sysopt.tm_step < 1000) {/* at least 1 sec */
 			//	sysopt.tm_step = 0;
 			//}
 			break;
 		case 'v':
-			c = strtol(optarg, NULL, 0);
-			sysopt.flags |= EZOP_DEBUG_MAKE(c);
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+			} else {
+				c = strtol(optarg, NULL, 0);
+				sysopt.flags |= EZOP_DEBUG_MAKE(c);
+			}
 			break;
 		case 'w':
-			sysopt.canvas_width = strtol(optarg, NULL, 0);
+			if (!isdigit(*optarg)) {
+				todo = 'B';	/* BREAK */
+			} else {
+				sysopt.canvas_width = strtol(optarg, NULL, 0);
+			}
 			break;
 		case 'x':
 			strncpy(sysopt.suffix, optarg, 63);
 			sysopt.suffix[63] = 0;
 			break;
 		default:
-			printf("Get 0x%x\n", c);
+			todo = 'B';	/* BREAK */
+			break;
+		}
+		if ((todo == 'E') || (todo == 'B')) {
 			break;
 		}
 	}
 	free(argtbl);
 	free(arglist);
+
+	if ((todo == 'E') || (todo == 'B')) {
+#ifdef	CFG_GUI_ON
+		ezgui_close(sysopt.gui);
+#endif
+		if (todo == 'E') {
+			return EZ_ERR_EOP;	/* END OF PROCESS */
+		} else {
+			printf("Invalid parameters.\n");
+			return EZ_ERR_PARAM;
+		}
+	}
 
 	/* disable the unwanted profiles */
 	if (prof_grid == 0) {
@@ -419,12 +498,13 @@ int main(int argc, char **argv)
 		}
 		break;
 	case 'G':
+		c = EZ_ERR_EOP;
 		if (sysopt.gui == NULL) {
 			cli_print(clist);
 		}
 #ifdef	CFG_GUI_ON
 		else {
-			ezgui_run(sysopt.gui, argv + optind, argc - optind);
+			c = ezgui_run(sysopt.gui, argv+optind, argc-optind);
 		}
 #endif
 		break;
@@ -438,11 +518,10 @@ int main(int argc, char **argv)
 		}
 		break;
 	}
+
 #ifdef	CFG_GUI_ON
-	if (sysopt.gui) {
-		ezgui_close(sysopt.gui);
-		sysopt.gui = NULL;
-	}
+	ezgui_close(sysopt.gui);
+	sysopt.gui = NULL;
 #endif
 	return c;
 }
@@ -452,10 +531,8 @@ static int signal_handler(int sig)
 {
 	//printf("Signal %d\n", sig);
 #ifdef	CFG_GUI_ON
-	if (sysopt.gui) {
-		ezgui_close(sysopt.gui);
-		sysopt.gui = NULL;
-	}
+	ezgui_close(sysopt.gui);
+	sysopt.gui = NULL;
 #endif
 	return ezthumb_break(&sysopt);
 }
@@ -582,18 +659,27 @@ static int para_get_color(EZOPT *opt, char *s)
 	fixtoken(s, clist, 3, ":");
 
 	if (clist[0] && *clist[0]) {
+		if (!isxdigit(*clist[0])) {
+			return EZ_ERR_PARAM;
+		}
 		rc = strtoul(clist[0], NULL, 16);
 		opt->mi_color[0] = (unsigned char)((rc >> 16) & 0xff);
 		opt->mi_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->mi_color[2] = (unsigned char)(rc & 0xff);
 	}
 	if (clist[1] && *clist[1]) {
+		if (!isxdigit(*clist[1])) {
+			return EZ_ERR_PARAM;
+		}
 		rc = strtoul(clist[1], NULL, 16);
 		opt->ins_color[0] = (unsigned char)((rc >> 16) & 0xff);
 		opt->ins_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->ins_color[2] = (unsigned char)(rc & 0xff);
 	}
 	if (clist[2] && *clist[2]) {
+		if (!isxdigit(*clist[2])) {
+			return EZ_ERR_PARAM;
+		}
 		rc = strtoul(clist[2], NULL, 16);
 		opt->canvas_color[0] = (unsigned char)((rc >> 16) & 0xff);
 		opt->canvas_color[1] = (unsigned char)((rc >> 8) & 0xff);
@@ -609,10 +695,18 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 	fixtoken(s, clist, 2, ":");
 
 	if (clist[0] && *clist[0]) {
-		opt->mi_size = (int) strtol(clist[0], NULL, 0);
+		if (isdigit(*clist[0])) {
+			opt->mi_size = (int) strtol(clist[0], NULL, 0);
+		} else {
+			return EZ_ERR_PARAM;
+		}
 	}
 	if (clist[1] && *clist[1]) {
-		opt->ins_size = (int) strtol(clist[1], NULL, 0);
+		if (isdigit(*clist[0])) {
+			opt->ins_size = (int) strtol(clist[1], NULL, 0);
+		} else {
+			return EZ_ERR_PARAM;
+		}
 	}
 	return EZ_ERR_NONE;
 }
