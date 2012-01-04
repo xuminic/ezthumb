@@ -53,6 +53,7 @@ static int ezgui_option_commit(EZGUI *gui);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui);
+static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int);
 static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui);
 static int ezgui_signal_setup_insensible(void *parent, EZGUI *gui);
 static int ezgui_signal_setup_reset(void *parent, EZGUI *gui);
@@ -88,6 +89,8 @@ static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler);
 static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler);
 static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s, 
 		GCallback c_handler);
+static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y);
+static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -600,26 +603,25 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 {
-	GtkWidget	*hbox_button, *vbox_setup, *vbox_page, *scroll;
-	GtkWidget	*hbox_prof;
-	GtkWidget	*hbox_dfm;
+	GtkWidget	*hbox_button, *vbox_page, *scroll, *table;
 	
+	/* create the table for all settings */
+	table = gtk_table_new(5, 9, FALSE);
+	//gtk_table_set_row_spacings(GTK_TABLE(table), 2);
+	//gtk_table_set_col_spacings(GTK_TABLE(table), 2);
+
 	/* create the combo box for the profile setting */
 	gui->prof_grid = ezgui_combo(gui, prof_list_grid,
 			G_CALLBACK(ezgui_signal_setup_sensible));
 	gui->prof_zoom = ezgui_combo(gui, prof_list_zoom,
 			G_CALLBACK(ezgui_signal_setup_sensible));
 
-	hbox_prof = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), 
-			ezgui_setup_idname("Grid Setting:"), 
-			FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_prof), 
-			gui->prof_grid, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), 
-			gui->prof_zoom, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_prof), 
-			ezgui_setup_idname("Zoom Setting:"), FALSE, FALSE, 0);
+	table_fill(table, ezgui_setup_label("<b>Profile Selection:</b>"), 0, 0, 5);
+	table_insert(table, gtk_label_new("  "), 0, 1);	/* dummy column */
+	table_insert(table, ezgui_setup_idname("Grid Setting:"), 1, 1);
+	table_insert(table, gui->prof_grid, 2, 1);
+	table_insert(table, ezgui_setup_idname("Zoom Setting:"), 3, 1);
+	table_insert(table, gui->prof_zoom, 4, 1);
 
 	/* create the radio button for the Duration finding mode */
 	gui->dfm_head = ezgui_rabutton(gui, NULL, "File Head  ",
@@ -628,31 +630,26 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 			G_CALLBACK(ezgui_signal_setup_sensible));
 	gui->dfm_slow = ezgui_rabutton(gui, gui->dfm_fast, "Full scan  ",
 			G_CALLBACK(ezgui_signal_setup_sensible));
-	hbox_dfm = gtk_hbox_new(FALSE, 0);
-	//gtk_container_set_border_width(GTK_CONTAINER(hbox_dfm), 10);
-	gtk_box_pack_start(GTK_BOX(hbox_dfm), gui->dfm_head, FALSE, FALSE, 10);
-	gtk_box_pack_start(GTK_BOX(hbox_dfm), gui->dfm_fast, FALSE, FALSE, 10);
-	gtk_box_pack_start(GTK_BOX(hbox_dfm), gui->dfm_slow, FALSE, FALSE, 10);
+
+	table_fill(table, ezgui_setup_label("<b>Duration Finding Mode:</b>"),
+			0, 2, 5);
+	table_insert(table, gui->dfm_head, 1, 3);
+	table_insert(table, gui->dfm_fast, 2, 3);
+	table_insert(table, gui->dfm_slow, 3, 3);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->dfm_head), TRUE);
 
-	/* create the vertical box for all the setup widgets */
-	vbox_setup = gtk_vbox_new(FALSE, 0);
-	gtk_container_set_border_width(GTK_CONTAINER(vbox_setup), 10);
-	gtk_box_pack_start(GTK_BOX(vbox_setup), 
-			ezgui_setup_label("<b>Profile Selection:</b>"), 
-			FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox_setup), hbox_prof, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox_setup),
-			ezgui_setup_label("<b>Duration finding mode:</b>"),
-			FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox_setup), hbox_dfm, FALSE, FALSE, 0);
+	/* create the radio button group for the output format */
+	table_fill(table, ezgui_setup_label("<b>Output File Format:</b>"),
+			0, 4, 5);
+	ezgui_page_setup_output_format(gui, table, 5);
+
 
 	/* create a scroll container for the setup page */
 	scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), 
-			vbox_setup);
+			table);
 
 	/* create the "OK" and "Cancel" buttons in the bottom of the page */
 	gui->butt_setup_cancel = ezgui_button(gui, "Cancel",
@@ -674,6 +671,53 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 	/* reset the setup page by the options in the config file */
 	ezgui_signal_setup_reset(NULL, gui);
 	return vbox_page;
+}
+
+static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
+{
+	GtkWidget	*hbox_jpg, *hbox_gifa;
+
+	gui->off_jpg = ezgui_rabutton(gui, NULL, "JPEG",
+			G_CALLBACK(ezgui_signal_setup_sensible));
+	gui->off_gif = ezgui_rabutton(gui, gui->off_jpg, "GIF",
+			G_CALLBACK(ezgui_signal_setup_sensible));
+	gui->off_gifa = ezgui_rabutton(gui, gui->off_gif, "GIF anim",
+			G_CALLBACK(ezgui_signal_setup_sensible));
+	gui->off_png = ezgui_rabutton(gui, gui->off_gifa, "PNG",
+			G_CALLBACK(ezgui_signal_setup_sensible));
+
+	gui->off_jpg_qf = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(gui->off_jpg_qf), 3);
+	gtk_widget_set_size_request(gui->off_jpg_qf, 80, -1);
+	hbox_jpg = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_jpg), gtk_label_new("Quality: "),
+			FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_jpg), gui->off_jpg_qf,
+			FALSE, FALSE, 0);
+
+	gui->off_gifa_fr = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(gui->off_gifa_fr), 4);
+	gtk_widget_set_size_request(gui->off_gifa_fr, 80, -1);
+	hbox_gifa = gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_gifa), gtk_label_new("Speed: "),
+			FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_gifa), gui->off_gifa_fr,
+			FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(hbox_gifa), gtk_label_new("(ms)"),
+			FALSE, FALSE, 0);
+
+	gui->off_gif_trsp  = gtk_check_button_new_with_label("Transparent");
+	gui->off_png_trasp = gtk_check_button_new_with_label("Transparent");
+
+	table_insert(table, gui->off_jpg,  1, row);
+	table_insert(table, hbox_jpg, 2, row);
+	table_insert(table, gui->off_gif, 1, row+1);
+	table_insert(table, gui->off_gif_trsp, 2, row+1);
+	table_insert(table, gui->off_gifa,  1, row+2);
+	table_insert(table, hbox_gifa, 2, row+2);
+	table_insert(table, gui->off_png, 1, row+3);
+	table_insert(table, gui->off_png_trasp, 2, row+3);
+	return row+4;
 }
 
 static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui)
@@ -1271,5 +1315,17 @@ static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s,
 	//gtk_widget_set_size_request(rab, 180, -1);
 	g_signal_connect(rab, "toggled", c_handler, gui);
 	return rab;
+}
+
+static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y)
+{
+	gtk_table_attach(GTK_TABLE(table), w, x, x+1, y, y+1, 
+			GTK_FILL, 0, 0, 0);
+}
+
+static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n)
+{
+	gtk_table_attach(GTK_TABLE(table), w, x, x+n, y, y+1, 
+			GTK_FILL, 0, 0, 0);
 }
 

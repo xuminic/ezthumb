@@ -105,6 +105,16 @@ typedef	struct		{
 	GtkWidget	*dfm_fast;	/* fast tail scan */
 	GtkWidget	*dfm_slow;	/* slow full scan */
 
+	/* Setup Page: the output file format */
+	GtkWidget	*off_jpg;
+	GtkWidget	*off_jpg_qf;	/* quality fact */
+	GtkWidget	*off_gif;
+	GtkWidget	*off_gif_trsp;	/* transparent */
+	GtkWidget	*off_gifa;
+	GtkWidget	*off_gifa_fr;	/* frame rate */
+	GtkWidget	*off_png;
+	GtkWidget	*off_png_trasp;	/* transparent */
+
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
 	GtkTreeIter	*pro_iter;
