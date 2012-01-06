@@ -58,6 +58,7 @@ static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui);
 static int ezgui_signal_setup_insensible(void *parent, EZGUI *gui);
 static int ezgui_signal_setup_reset(void *parent, EZGUI *gui);
 static int ezgui_signal_setup_update(void *parent, EZGUI *gui);
+static int ezgui_signal_setup_format(void *parent, EZGUI *gui);
 
 static GtkWidget *ezgui_listview_create(EZGUI *gui);
 static EZADD *ezgui_listview_append_begin(GtkWidget *view);
@@ -147,6 +148,36 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 			CFG_KEY_CANVAS_WIDTH, ezopt->canvas_width);
 	ezopt->dur_mode = ezgui_cfg_read_int(gui->config,
 			CFG_KEY_DURATION, ezopt->dur_mode);
+
+	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_FILE_FORMAT)) == NULL) {
+		ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, 
+				ezopt->img_format);
+	} else {
+		if (!strcmp(p, CFG_FFMT_JPEG)) {
+			strcpy(ezopt->img_format, "jpg");
+		} else if (!strcmp(p, CFG_FFMT_PNG)) {
+			strcpy(ezopt->img_format, "png");
+		} else if (!strcmp(p, CFG_FFMT_GIF)) {
+			strcpy(ezopt->img_format, "gif");
+		} else if (!strcmp(p, CFG_FFMT_AGIF)) {
+			strcpy(ezopt->img_format, "gif");
+		}
+		free(p);
+	}
+	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_TRANSPARENCY)) == NULL) {
+		ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
+				ezopt->flags & EZOP_TRANSPARENT ? "yes":"no");
+	} else {
+		if (!strcmp(p, "yes")) {
+			ezopt->flags |= EZOP_TRANSPARENT;
+		} else {
+			ezopt->flags &= ~EZOP_TRANSPARENT;
+		}
+		free(p);
+	}
+	ezopt->img_quality = ezgui_cfg_read_int(gui->config,
+			CFG_KEY_FILE_QUALITY, ezopt->img_quality);
+
 	return gui;
 }
 
@@ -233,6 +264,26 @@ static int ezgui_option_save(EZGUI *gui)
 			CFG_KEY_CANVAS_WIDTH, opt->canvas_width);
 	ezgui_cfg_write_int(gui->config,
 			CFG_KEY_DURATION, opt->dur_mode);
+
+	if (!strcmp(opt->img_format, "jpg")) {
+		ezgui_cfg_write(gui->config, 
+				CFG_KEY_FILE_FORMAT, CFG_FFMT_JPEG);
+	} else if (!strcmp(opt->img_format, "png")) {
+		ezgui_cfg_write(gui->config,
+				CFG_KEY_FILE_FORMAT, CFG_FFMT_PNG);
+	} else if (!strcmp(opt->img_format, "gif")) {
+		if (opt->img_quality) {
+			ezgui_cfg_write(gui->config,
+					CFG_KEY_FILE_FORMAT, CFG_FFMT_AGIF);
+		} else {
+			ezgui_cfg_write(gui->config,
+					CFG_KEY_FILE_FORMAT, CFG_FFMT_GIF);
+		}
+	}
+	ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
+			opt->flags & EZOP_TRANSPARENT ? "yes" : "no");
+	ezgui_cfg_write_int(gui->config,
+			CFG_KEY_FILE_QUALITY, opt->img_quality);
 
 	/* save to the configure file */
 	ezgui_cfg_flush(gui->config);
@@ -607,8 +658,9 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 	
 	/* create the table for all settings */
 	table = gtk_table_new(5, 9, FALSE);
-	//gtk_table_set_row_spacings(GTK_TABLE(table), 2);
-	//gtk_table_set_col_spacings(GTK_TABLE(table), 2);
+	gtk_table_set_row_spacings(GTK_TABLE(table), 2);
+	gtk_table_set_col_spacings(GTK_TABLE(table), 2);
+	gtk_table_set_col_spacing(GTK_TABLE(table), 0, 20);
 
 	/* create the combo box for the profile setting */
 	gui->prof_grid = ezgui_combo(gui, prof_list_grid,
@@ -617,7 +669,6 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 			G_CALLBACK(ezgui_signal_setup_sensible));
 
 	table_fill(table, ezgui_setup_label("<b>Profile Selection:</b>"), 0, 0, 5);
-	table_insert(table, gtk_label_new("  "), 0, 1);	/* dummy column */
 	table_insert(table, ezgui_setup_idname("Grid Setting:"), 1, 1);
 	table_insert(table, gui->prof_grid, 2, 1);
 	table_insert(table, ezgui_setup_idname("Zoom Setting:"), 3, 1);
@@ -675,49 +726,62 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 
 static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
 {
-	GtkWidget	*hbox_jpg, *hbox_gifa;
+	GtkWidget	*hbox_gifa;
 
-	gui->off_jpg = ezgui_rabutton(gui, NULL, "JPEG",
-			G_CALLBACK(ezgui_signal_setup_sensible));
-	gui->off_gif = ezgui_rabutton(gui, gui->off_jpg, "GIF",
-			G_CALLBACK(ezgui_signal_setup_sensible));
-	gui->off_gifa = ezgui_rabutton(gui, gui->off_gif, "GIF anim",
-			G_CALLBACK(ezgui_signal_setup_sensible));
-	gui->off_png = ezgui_rabutton(gui, gui->off_gifa, "PNG",
-			G_CALLBACK(ezgui_signal_setup_sensible));
+	/* PNG button */
+	gui->off_png = ezgui_rabutton(gui, NULL, "PNG",
+			G_CALLBACK(ezgui_signal_setup_format));
+	gui->off_png_trsp = gtk_check_button_new_with_label("Transparent");
+	gtk_widget_set_sensitive(gui->off_png_trsp, FALSE);
 
-	gui->off_jpg_qf = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(gui->off_jpg_qf), 3);
-	gtk_widget_set_size_request(gui->off_jpg_qf, 80, -1);
-	hbox_jpg = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_jpg), gtk_label_new("Quality: "),
-			FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_jpg), gui->off_jpg_qf,
-			FALSE, FALSE, 0);
+	table_insert(table, gui->off_png, 1, row);
+	table_insert(table, gui->off_png_trsp, 3, row);
+	row++;
+
+	/* GIF button */
+	gui->off_gif = ezgui_rabutton(gui, gui->off_png, "GIF",
+			G_CALLBACK(ezgui_signal_setup_format));
+	gui->off_gif_trsp  = gtk_check_button_new_with_label("Transparent");
+	gtk_widget_set_sensitive(gui->off_gif_trsp, FALSE);
+	table_insert(table, gui->off_gif, 1, row);
+	table_insert(table, gui->off_gif_trsp, 3, row);
+	row++;
+
+	/* GIF Animated button */
+	gui->off_gifa = ezgui_rabutton(gui, gui->off_gif, "Animated GIF",
+			G_CALLBACK(ezgui_signal_setup_format));
 
 	gui->off_gifa_fr = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(gui->off_gifa_fr), 4);
 	gtk_widget_set_size_request(gui->off_gifa_fr, 80, -1);
+	gtk_widget_set_sensitive(gui->off_gifa_fr, FALSE);
+
 	hbox_gifa = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_gifa), gtk_label_new("Speed: "),
-			FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox_gifa), gui->off_gifa_fr,
 			FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(hbox_gifa), gtk_label_new("(ms)"),
 			FALSE, FALSE, 0);
 
-	gui->off_gif_trsp  = gtk_check_button_new_with_label("Transparent");
-	gui->off_png_trasp = gtk_check_button_new_with_label("Transparent");
+	table_insert(table, gui->off_gifa,  1, row);
+	table_insert(table, gtk_label_new("Speed: "), 2, row);
+	table_insert(table, hbox_gifa, 3, row);
+	row++;
+
+	/* JPEG button */
+	gui->off_jpg = ezgui_rabutton(gui, gui->off_gifa, "JPEG",
+			G_CALLBACK(ezgui_signal_setup_format));
+
+	gui->off_jpg_qf = gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(gui->off_jpg_qf), 3);
+	gtk_widget_set_size_request(gui->off_jpg_qf, 80, -1);
+	gtk_widget_set_sensitive(gui->off_jpg_qf, FALSE);
 
 	table_insert(table, gui->off_jpg,  1, row);
-	table_insert(table, hbox_jpg, 2, row);
-	table_insert(table, gui->off_gif, 1, row+1);
-	table_insert(table, gui->off_gif_trsp, 2, row+1);
-	table_insert(table, gui->off_gifa,  1, row+2);
-	table_insert(table, hbox_gifa, 2, row+2);
-	table_insert(table, gui->off_png, 1, row+3);
-	table_insert(table, gui->off_png_trasp, 2, row+3);
-	return row+4;
+	table_insert(table, gtk_label_new("Quality: "), 2, row);
+	table_insert(table, gui->off_jpg_qf, 3, row);
+	row++;
+
+	return row;
 }
 
 static int ezgui_signal_setup_sensible(void *parent, EZGUI *gui)
@@ -781,6 +845,29 @@ static int ezgui_signal_setup_reset(void *parent, EZGUI *gui)
 		break;
 	}
 	
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_TRANSPARENCY);
+	if (pic) {
+		if (!strcmp(pic, "yes")) {
+			gui->sysopt->flags |= EZOP_TRANSPARENT;
+		} else {
+			gui->sysopt->flags  &= ~EZOP_TRANSPARENT;
+		}
+		free(pic);
+	}
+	gui->sysopt->img_quality = ezgui_cfg_read_int(gui->config,
+			CFG_KEY_FILE_QUALITY, gui->sysopt->img_quality);
+	pic = ezgui_cfg_read(gui->config, CFG_KEY_FILE_FORMAT);
+	if (!strcmp(pic, CFG_FFMT_JPEG)) {
+		ezgui_signal_setup_format(gui->off_jpg, gui);
+	} else if (!strcmp(pic, CFG_FFMT_PNG)) {
+		ezgui_signal_setup_format(gui->off_png, gui);
+	} else if (!strcmp(pic, CFG_FFMT_GIF)) {
+		ezgui_signal_setup_format(gui->off_gif, gui);
+	} else if (!strcmp(pic, CFG_FFMT_AGIF)) {
+		ezgui_signal_setup_format(gui->off_gifa, gui);
+	}
+	free(pic);
+
 	ezgui_signal_setup_insensible(parent, gui);
 	return 0;
 }
@@ -819,13 +906,75 @@ static int ezgui_signal_setup_update(void *parent, EZGUI *gui)
 	} else {
 		gui->sysopt->dur_mode = EZ_DUR_FULLSCAN;
 	}
-	ezgui_cfg_write_int(gui->config, CFG_KEY_DURATION, 
-			gui->sysopt->dur_mode);
 
+	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_jpg))) {
+		strcpy(gui->sysopt->img_format, "jpg");
+		gui->sysopt->img_quality = ezgui_entry_get_int(gui->off_jpg_qf);
+	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gif))) {
+		strcpy(gui->sysopt->img_format, "gif");
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gif_trsp)) == TRUE) {
+			gui->sysopt->flags |= EZOP_TRANSPARENT;
+		} else {
+			gui->sysopt->flags &= ~EZOP_TRANSPARENT;
+		}
+	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gifa))) {
+		strcpy(gui->sysopt->img_format, "gif");
+		gui->sysopt->img_quality = ezgui_entry_get_int(gui->off_gifa_fr);
+		if (gui->sysopt->img_quality == 0) {
+			gui->sysopt->img_quality = 1000;
+		}
+	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_png))) {
+		strcpy(gui->sysopt->img_format, "png");
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_png_trsp)) == TRUE) {
+			gui->sysopt->flags |= EZOP_TRANSPARENT;
+		} else {
+			gui->sysopt->flags &= ~EZOP_TRANSPARENT;
+
+		}
+	}
+
+	ezgui_option_save(gui);
 	ezgui_signal_setup_insensible(parent, gui);
 	return 0;
 }
 
+static int ezgui_signal_setup_format(void *parent, EZGUI *gui)
+{
+	gtk_widget_set_sensitive(gui->off_png_trsp, FALSE);
+	gtk_widget_set_sensitive(gui->off_gif_trsp, FALSE);
+	gtk_widget_set_sensitive(gui->off_gifa_fr, FALSE);
+	gtk_widget_set_sensitive(gui->off_jpg_qf, FALSE);
+	gtk_entry_set_text(GTK_ENTRY(gui->off_gifa_fr), "");
+	gtk_entry_set_text(GTK_ENTRY(gui->off_jpg_qf), "");
+
+	if (parent == gui->off_png) {
+		gtk_widget_set_sensitive(gui->off_png_trsp, TRUE);
+		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
+			gtk_toggle_button_set_active(
+					GTK_TOGGLE_BUTTON(gui->off_png_trsp), TRUE);
+		} else {
+			gtk_toggle_button_set_active(
+					GTK_TOGGLE_BUTTON(gui->off_png_trsp), FALSE);
+		}
+	} else if (parent == gui->off_gif) {
+		gtk_widget_set_sensitive(gui->off_gif_trsp, TRUE);
+		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
+			gtk_toggle_button_set_active(
+					GTK_TOGGLE_BUTTON(gui->off_gif_trsp), TRUE);
+		} else {
+			gtk_toggle_button_set_active(
+					GTK_TOGGLE_BUTTON(gui->off_gif_trsp), FALSE);
+		}
+	} else if (parent == gui->off_gifa) {
+		gtk_widget_set_sensitive(gui->off_gifa_fr, TRUE);
+		ezgui_entry_set_int(gui->off_gifa_fr, gui->sysopt->img_quality);
+	} else if (parent == gui->off_jpg) {
+		gtk_widget_set_sensitive(gui->off_jpg_qf, TRUE);
+		ezgui_entry_set_int(gui->off_jpg_qf, gui->sysopt->img_quality);
+	}
+	ezgui_signal_setup_sensible(parent, gui);
+	return 0;
+}
 
 static GtkWidget *ezgui_listview_create(EZGUI *gui)
 {

@@ -48,7 +48,9 @@
 #define CFG_KEY_CANVAS_WIDTH	"canvas_width"
 #define CFG_KEY_TIME_STEP	"time_step"
 #define CFG_KEY_DURATION	"duration_mode"
-
+#define CFG_KEY_FILE_FORMAT	"file_format"
+#define CFG_KEY_FILE_QUALITY	"quality_fact"
+#define CFG_KEY_TRANSPARENCY	"transparency"
 
 #define	CFG_PIC_GRID_DIM	"column and row"	/* Grid 4x4 */
 #define CFG_PIC_GRID_STEP	"column and step"	/* Grid 4 Step 15 */
@@ -60,6 +62,10 @@
 #define CFG_PIC_ZOOM_SCREEN	"zoom by canvas"	/* Res 1024 */
 #define CFG_PIC_AUTO		"auto"			/* Grid/Zoom Auto */
 
+#define CFG_FFMT_JPEG		"JPEG"
+#define CFG_FFMT_PNG		"PNG"
+#define CFG_FFMT_GIF		"GIF"
+#define CFG_FFMT_AGIF		"Animated GIF"
 
 typedef	struct		{
 	char		*fname;		/* the path of the configure file */
@@ -113,7 +119,7 @@ typedef	struct		{
 	GtkWidget	*off_gifa;
 	GtkWidget	*off_gifa_fr;	/* frame rate */
 	GtkWidget	*off_png;
-	GtkWidget	*off_png_trasp;	/* transparent */
+	GtkWidget	*off_png_trsp;	/* transparent */
 
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
