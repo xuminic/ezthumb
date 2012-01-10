@@ -109,15 +109,12 @@ typedef	struct		{
 	GtkWidget	*off_jpg;
 	GtkWidget	*off_jpg_qf;	/* quality fact */
 	GtkWidget	*off_gif;
-	GtkWidget	*off_gif_trsp;	/* transparent */
 	GtkWidget	*off_gifa;
 	GtkWidget	*off_gifa_fr;	/* frame rate */
 	GtkWidget	*off_png;
-	GtkWidget	*off_png_trsp;	/* transparent */
+	GtkWidget	*off_transp;	/* transparent */
 	int		tmp_jpg_qf;
 	int		tmp_gifa_fr;
-	int		tmp_gif_trsp;
-	int		tmp_png_trsp;
 
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
