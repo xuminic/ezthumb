@@ -100,6 +100,8 @@ static	char	*sysprof[] = {
 
 static	EZOPT	sysopt;
 
+int para_get_format(char *arg, char *fmt, int flen);
+
 static int signal_handler(int sig);
 static int para_get_ratio(char *s);
 static int para_get_time_point(char *s);
@@ -337,15 +339,8 @@ int main(int argc, char **argv)
 			sysopt.flags |= EZOP_CLI_LIST;
 			break;
 		case 'm':	/* Examples: png, jpg@90, gif, gif@1000 */
-			sysopt.img_quality = 0;
-			if ((p = strchr(optarg, '@')) != NULL) {
-				*p++ = 0;
-				sysopt.img_quality = strtol(p, NULL, 0);
-			} else if (!strcmp(optarg, "jpg")) {
-				sysopt.img_quality = 80;
-			}
-			strncpy(sysopt.img_format, optarg, 7);
-			sysopt.img_format[7] = 0;
+			sysopt.img_quality = para_get_format(optarg, 
+					sysopt.img_format, 8);
 			break;
 		case 'o':
 			sysopt.pathout = optarg;
@@ -463,6 +458,11 @@ int main(int argc, char **argv)
 			printf("Invalid parameters.\n");
 			return EZ_ERR_PARAM;
 		}
+	}
+
+	/* foolproof the right transparent setting */
+	if (!strcmp(sysopt.img_format, "jpg")) {
+		sysopt.flags &= ~EZOP_TRANSPARENT;
 	}
 
 	/* disable the unwanted profiles */
@@ -709,6 +709,36 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 		}
 	}
 	return EZ_ERR_NONE;
+}
+
+int para_get_format(char *arg, char *fmt, int flen)
+{
+	char	*p;
+	int	quality = 0;
+
+	if ((p = strchr(arg, '@')) != NULL) {
+		*p++ = 0;
+		quality = strtol(p, NULL, 0);
+	}
+	strncpy(fmt, arg, flen - 1);
+	fmt[flen-1] = 0;
+
+	/* foolproof */
+	if (!strcmp(fmt, "jpg")) {
+		if ((quality < 5) || (quality > 100)) {
+			quality = 85;	/* as default */
+		}
+	} else if (!strcmp(fmt, "png")) {
+		quality = 0;
+	} else if (!strcmp(fmt, "gif")) {
+		if (quality && (quality < 15)) {
+			quality = 1000;	/* 1 second as default */
+		}
+	} else {
+		strcpy(fmt, "jpg");	/* as default */
+		quality = 85;
+	}
+	return quality;
 }
 
 static int event_cb(void *vobj, int event, long param, long opt, void *block)

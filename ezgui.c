@@ -90,8 +90,11 @@ static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler);
 static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler);
 static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s, 
 		GCallback c_handler);
+static int ezgui_format_reset(EZGUI *gui, int rwcfg);
 static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y);
 static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n);
+
+extern int para_get_format(char *arg, char *fmt, int flen);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -149,35 +152,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	ezopt->dur_mode = ezgui_cfg_read_int(gui->config,
 			CFG_KEY_DURATION, ezopt->dur_mode);
 
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_FILE_FORMAT)) == NULL) {
-		ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, 
-				ezopt->img_format);
-	} else {
-		if (!strcmp(p, CFG_FFMT_JPEG)) {
-			strcpy(ezopt->img_format, "jpg");
-		} else if (!strcmp(p, CFG_FFMT_PNG)) {
-			strcpy(ezopt->img_format, "png");
-		} else if (!strcmp(p, CFG_FFMT_GIF)) {
-			strcpy(ezopt->img_format, "gif");
-		} else if (!strcmp(p, CFG_FFMT_AGIF)) {
-			strcpy(ezopt->img_format, "gif");
-		}
-		free(p);
-	}
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_TRANSPARENCY)) == NULL) {
-		ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
-				ezopt->flags & EZOP_TRANSPARENT ? "yes":"no");
-	} else {
-		if (!strcmp(p, "yes")) {
-			ezopt->flags |= EZOP_TRANSPARENT;
-		} else {
-			ezopt->flags &= ~EZOP_TRANSPARENT;
-		}
-		free(p);
-	}
-	ezopt->img_quality = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_FILE_QUALITY, ezopt->img_quality);
-
+	ezgui_format_reset(gui, EZUI_FMR_RDWR);
 	return gui;
 }
 
@@ -247,6 +222,7 @@ static int ezgui_create_window(EZGUI *gui)
 static int ezgui_option_save(EZGUI *gui)
 {
 	EZOPT	*opt = gui->sysopt;
+	char	tmp[32];
 
 	ezgui_cfg_write_int(gui->config, 
 			CFG_KEY_GRID_COLUMN, opt->grid_col);
@@ -265,25 +241,11 @@ static int ezgui_option_save(EZGUI *gui)
 	ezgui_cfg_write_int(gui->config,
 			CFG_KEY_DURATION, opt->dur_mode);
 
-	if (!strcmp(opt->img_format, "jpg")) {
-		ezgui_cfg_write(gui->config, 
-				CFG_KEY_FILE_FORMAT, CFG_FFMT_JPEG);
-	} else if (!strcmp(opt->img_format, "png")) {
-		ezgui_cfg_write(gui->config,
-				CFG_KEY_FILE_FORMAT, CFG_FFMT_PNG);
-	} else if (!strcmp(opt->img_format, "gif")) {
-		if (opt->img_quality) {
-			ezgui_cfg_write(gui->config,
-					CFG_KEY_FILE_FORMAT, CFG_FFMT_AGIF);
-		} else {
-			ezgui_cfg_write(gui->config,
-					CFG_KEY_FILE_FORMAT, CFG_FFMT_GIF);
-		}
-	}
+	sprintf(tmp, "%s@%d", opt->img_format, opt->img_quality);
+	ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, tmp);
+
 	ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
 			opt->flags & EZOP_TRANSPARENT ? "yes" : "no");
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_FILE_QUALITY, opt->img_quality);
 
 	/* save to the configure file */
 	ezgui_cfg_flush(gui->config);
@@ -732,6 +694,8 @@ static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
 	gui->off_png = ezgui_rabutton(gui, NULL, "PNG",
 			G_CALLBACK(ezgui_signal_setup_format));
 	gui->off_png_trsp = gtk_check_button_new_with_label("Transparent");
+	//gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png_trsp), 
+	//		gui->tmp_png_trsp);
 	gtk_widget_set_sensitive(gui->off_png_trsp, FALSE);
 
 	table_insert(table, gui->off_png, 1, row);
@@ -742,6 +706,8 @@ static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
 	gui->off_gif = ezgui_rabutton(gui, gui->off_png, "GIF",
 			G_CALLBACK(ezgui_signal_setup_format));
 	gui->off_gif_trsp  = gtk_check_button_new_with_label("Transparent");
+	//gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_gif_trsp), 
+	//		gui->tmp_gif_trsp);
 	gtk_widget_set_sensitive(gui->off_gif_trsp, FALSE);
 	table_insert(table, gui->off_gif, 1, row);
 	table_insert(table, gui->off_gif_trsp, 3, row);
@@ -753,6 +719,7 @@ static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
 
 	gui->off_gifa_fr = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(gui->off_gifa_fr), 4);
+	//ezgui_entry_set_int(gui->off_gifa_fr, gui->tmp_gifa_fr);
 	gtk_widget_set_size_request(gui->off_gifa_fr, 80, -1);
 	gtk_widget_set_sensitive(gui->off_gifa_fr, FALSE);
 
@@ -773,6 +740,7 @@ static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
 
 	gui->off_jpg_qf = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(gui->off_jpg_qf), 3);
+	//ezgui_entry_set_int(gui->off_jpg_qf, gui->tmp_jpg_qf);
 	gtk_widget_set_size_request(gui->off_jpg_qf, 80, -1);
 	gtk_widget_set_sensitive(gui->off_jpg_qf, FALSE);
 
@@ -781,6 +749,7 @@ static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
 	table_insert(table, gui->off_jpg_qf, 3, row);
 	row++;
 
+	ezgui_format_reset(gui, EZUI_FMR_RDRSET);
 	return row;
 }
 
@@ -845,28 +814,30 @@ static int ezgui_signal_setup_reset(void *parent, EZGUI *gui)
 		break;
 	}
 	
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_TRANSPARENCY);
-	if (pic) {
-		if (!strcmp(pic, "yes")) {
-			gui->sysopt->flags |= EZOP_TRANSPARENT;
+	/* reset the output file format control group */
+	ezgui_format_reset(gui, EZUI_FMR_RDONLY);
+	
+	/* dummy toggling */
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_jpg), TRUE);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
+	
+	if (!strcmp(gui->sysopt->img_format, "jpg")) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_jpg), TRUE);
+	} else if (!strcmp(gui->sysopt->img_format, "png")) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
+	} else if (!strcmp(gui->sysopt->img_format, "gif")) {
+		if (gui->sysopt->img_quality == 0) {
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_gif), TRUE);
 		} else {
-			gui->sysopt->flags  &= ~EZOP_TRANSPARENT;
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_gifa), TRUE);
 		}
-		free(pic);
 	}
-	gui->sysopt->img_quality = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_FILE_QUALITY, gui->sysopt->img_quality);
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_FILE_FORMAT);
-	if (!strcmp(pic, CFG_FFMT_JPEG)) {
-		ezgui_signal_setup_format(gui->off_jpg, gui);
-	} else if (!strcmp(pic, CFG_FFMT_PNG)) {
-		ezgui_signal_setup_format(gui->off_png, gui);
-	} else if (!strcmp(pic, CFG_FFMT_GIF)) {
-		ezgui_signal_setup_format(gui->off_gif, gui);
-	} else if (!strcmp(pic, CFG_FFMT_AGIF)) {
-		ezgui_signal_setup_format(gui->off_gifa, gui);
-	}
-	free(pic);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_gif_trsp), 
+			gui->tmp_gif_trsp);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png_trsp), 
+			gui->tmp_png_trsp);
+	ezgui_entry_set_int(gui->off_jpg_qf, gui->tmp_jpg_qf);
+	ezgui_entry_set_int(gui->off_gifa_fr, gui->tmp_gifa_fr);
 
 	ezgui_signal_setup_insensible(parent, gui);
 	return 0;
@@ -907,29 +878,40 @@ static int ezgui_signal_setup_update(void *parent, EZGUI *gui)
 		gui->sysopt->dur_mode = EZ_DUR_FULLSCAN;
 	}
 
+	/* receive the output file format setting group */
+	gui->tmp_jpg_qf   = ezgui_entry_get_int(gui->off_jpg_qf);
+	gui->tmp_gifa_fr  = ezgui_entry_get_int(gui->off_gifa_fr);
+	gui->tmp_gif_trsp = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gif_trsp));
+	gui->tmp_png_trsp = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_png_trsp));
+
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_jpg))) {
+		if ((gui->tmp_jpg_qf < 5) || (gui->tmp_jpg_qf > 100)) {
+			gui->tmp_jpg_qf = 85;
+		}
 		strcpy(gui->sysopt->img_format, "jpg");
-		gui->sysopt->img_quality = ezgui_entry_get_int(gui->off_jpg_qf);
+		gui->sysopt->img_quality = gui->tmp_jpg_qf;
+		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
 	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gif))) {
 		strcpy(gui->sysopt->img_format, "gif");
-		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gif_trsp)) == TRUE) {
+		gui->sysopt->img_quality = 0;
+		if (gui->tmp_gif_trsp) {
 			gui->sysopt->flags |= EZOP_TRANSPARENT;
 		} else {
 			gui->sysopt->flags &= ~EZOP_TRANSPARENT;
 		}
 	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gifa))) {
-		strcpy(gui->sysopt->img_format, "gif");
-		gui->sysopt->img_quality = ezgui_entry_get_int(gui->off_gifa_fr);
-		if (gui->sysopt->img_quality == 0) {
-			gui->sysopt->img_quality = 1000;
+		if (gui->tmp_gifa_fr && (gui->tmp_gifa_fr < 15)) {
+			gui->tmp_gifa_fr = 1000;
 		}
+		strcpy(gui->sysopt->img_format, "gif");
+		gui->sysopt->img_quality = gui->tmp_gifa_fr;
 	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_png))) {
 		strcpy(gui->sysopt->img_format, "png");
-		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_png_trsp)) == TRUE) {
+		gui->sysopt->img_quality = 0;
+		if (gui->tmp_png_trsp) {
 			gui->sysopt->flags |= EZOP_TRANSPARENT;
 		} else {
 			gui->sysopt->flags &= ~EZOP_TRANSPARENT;
-
 		}
 	}
 
@@ -940,38 +922,66 @@ static int ezgui_signal_setup_update(void *parent, EZGUI *gui)
 
 static int ezgui_signal_setup_format(void *parent, EZGUI *gui)
 {
-	gtk_widget_set_sensitive(gui->off_png_trsp, FALSE);
-	gtk_widget_set_sensitive(gui->off_gif_trsp, FALSE);
-	gtk_widget_set_sensitive(gui->off_gifa_fr, FALSE);
-	gtk_widget_set_sensitive(gui->off_jpg_qf, FALSE);
-	gtk_entry_set_text(GTK_ENTRY(gui->off_gifa_fr), "");
-	gtk_entry_set_text(GTK_ENTRY(gui->off_jpg_qf), "");
+	GtkWidget	*entry, *tickbox;
+	int		val;
 
+	entry = tickbox = NULL;
 	if (parent == gui->off_png) {
-		gtk_widget_set_sensitive(gui->off_png_trsp, TRUE);
-		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
-			gtk_toggle_button_set_active(
-					GTK_TOGGLE_BUTTON(gui->off_png_trsp), TRUE);
-		} else {
-			gtk_toggle_button_set_active(
-					GTK_TOGGLE_BUTTON(gui->off_png_trsp), FALSE);
-		}
+		tickbox = gui->off_png_trsp;
 	} else if (parent == gui->off_gif) {
-		gtk_widget_set_sensitive(gui->off_gif_trsp, TRUE);
-		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
-			gtk_toggle_button_set_active(
-					GTK_TOGGLE_BUTTON(gui->off_gif_trsp), TRUE);
-		} else {
-			gtk_toggle_button_set_active(
-					GTK_TOGGLE_BUTTON(gui->off_gif_trsp), FALSE);
-		}
+		tickbox = gui->off_gif_trsp;
 	} else if (parent == gui->off_gifa) {
-		gtk_widget_set_sensitive(gui->off_gifa_fr, TRUE);
-		ezgui_entry_set_int(gui->off_gifa_fr, gui->sysopt->img_quality);
+		entry = gui->off_gifa_fr;
 	} else if (parent == gui->off_jpg) {
-		gtk_widget_set_sensitive(gui->off_jpg_qf, TRUE);
-		ezgui_entry_set_int(gui->off_jpg_qf, gui->sysopt->img_quality);
+		entry = gui->off_jpg_qf;
+	} else {
+		return -1;
 	}
+
+	//printf("Entry %p Tickbox %p\n", entry, tickbox);
+	if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(parent))) {
+		if (tickbox) {
+			//gtk_toggle_button_set_active
+			//	(GTK_TOGGLE_BUTTON(tickbox), FALSE);
+			gtk_widget_set_sensitive(tickbox, FALSE);
+		}
+		if (entry) {
+			//gtk_entry_set_text(GTK_ENTRY(entry), "");
+			gtk_widget_set_sensitive(entry, FALSE);
+		}
+		return 0;
+	}
+
+	if (tickbox) {
+		gtk_widget_set_sensitive(tickbox, TRUE);
+		/*if (tickbox == gui->off_png_trsp) {
+			val = gui->tmp_png_trsp;
+		} else {
+			val = gui->tmp_gif_trsp;
+		}
+		if (val) {
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tickbox), TRUE);
+		} else {
+			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tickbox), FALSE);
+		}*/
+	}
+	if (entry) {
+		gtk_widget_set_sensitive(entry, TRUE);
+		/*if (entry == gui->off_gifa_fr) {
+			val = gui->tmp_gifa_fr;
+		} else {
+			val = gui->tmp_jpg_qf;
+		}
+		ezgui_entry_set_int(entry, val);*/
+		/*if (gui->sysopt->img_quality) {
+			ezgui_entry_set_int(entry, gui->sysopt->img_quality);
+		} else if (entry == gui->off_gifa_fr) {
+			ezgui_entry_set_int(entry, 1000);
+		} else if (entry == gui->off_jpg_qf) {
+			ezgui_entry_set_int(entry, 85);
+		}*/
+	}
+
 	ezgui_signal_setup_sensible(parent, gui);
 	return 0;
 }
@@ -1464,6 +1474,54 @@ static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s,
 	//gtk_widget_set_size_request(rab, 180, -1);
 	g_signal_connect(rab, "toggled", c_handler, gui);
 	return rab;
+}
+
+static int ezgui_format_reset(EZGUI *gui, int rwcfg)
+{
+	EZOPT	*ezopt = gui->sysopt;
+	char	*p, tmp[32];
+
+	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_FILE_FORMAT)) != NULL) {
+		ezopt->img_quality = para_get_format(p, ezopt->img_format, 8);
+		free(p);
+	} else if (rwcfg == EZUI_FMR_RDWR) {
+		sprintf(tmp, "%s@%d", ezopt->img_format, ezopt->img_quality);
+		ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, tmp);
+	}
+
+	if (rwcfg == EZUI_FMR_RDRSET) {
+		gui->tmp_gifa_fr = 1000;
+		gui->tmp_jpg_qf  = 85;
+		if (!strcmp(ezopt->img_format, "jpg")) {
+			gui->tmp_jpg_qf  = ezopt->img_quality;
+		} else if (!strcmp(ezopt->img_format, "gif")) {
+			gui->tmp_gifa_fr = ezopt->img_quality;
+		}
+	}
+
+	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_TRANSPARENCY)) != NULL) {
+		if (!strcmp(p, "yes")) {
+			ezopt->flags |= EZOP_TRANSPARENT;
+		} else {
+			ezopt->flags &= ~EZOP_TRANSPARENT;
+		}
+		free(p);
+	} else if (rwcfg) {
+		ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
+				ezopt->flags & EZOP_TRANSPARENT ? "yes":"no");
+	}
+
+	if (rwcfg == EZUI_FMR_RDRSET) {
+		gui->tmp_gif_trsp = gui->tmp_png_trsp = FALSE;
+		if (ezopt->flags & EZOP_TRANSPARENT) {
+			if (!strcmp(ezopt->img_format, "gif")) {
+				gui->tmp_gif_trsp = TRUE;
+			} else if (!strcmp(ezopt->img_format, "png")) {
+				gui->tmp_png_trsp = TRUE;
+			}
+		}
+	}
+	return 0;
 }
 
 static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y)

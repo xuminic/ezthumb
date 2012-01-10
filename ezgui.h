@@ -49,7 +49,6 @@
 #define CFG_KEY_TIME_STEP	"time_step"
 #define CFG_KEY_DURATION	"duration_mode"
 #define CFG_KEY_FILE_FORMAT	"file_format"
-#define CFG_KEY_FILE_QUALITY	"quality_fact"
 #define CFG_KEY_TRANSPARENCY	"transparency"
 
 #define	CFG_PIC_GRID_DIM	"column and row"	/* Grid 4x4 */
@@ -61,11 +60,6 @@
 #define CFG_PIC_ZOOM_DEFINE	"zoom by size"		/* Zoom 320x240 */
 #define CFG_PIC_ZOOM_SCREEN	"zoom by canvas"	/* Res 1024 */
 #define CFG_PIC_AUTO		"auto"			/* Grid/Zoom Auto */
-
-#define CFG_FFMT_JPEG		"JPEG"
-#define CFG_FFMT_PNG		"PNG"
-#define CFG_FFMT_GIF		"GIF"
-#define CFG_FFMT_AGIF		"Animated GIF"
 
 typedef	struct		{
 	char		*fname;		/* the path of the configure file */
@@ -120,6 +114,10 @@ typedef	struct		{
 	GtkWidget	*off_gifa_fr;	/* frame rate */
 	GtkWidget	*off_png;
 	GtkWidget	*off_png_trsp;	/* transparent */
+	int		tmp_jpg_qf;
+	int		tmp_gifa_fr;
+	int		tmp_gif_trsp;
+	int		tmp_png_trsp;
 
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
@@ -139,6 +137,11 @@ enum	{
 	EZUI_COL_MAX
 };
 
+enum	{
+	EZUI_FMR_RDWR = 0,
+	EZUI_FMR_RDRSET,
+	EZUI_FMR_RDONLY
+};
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
 int ezgui_run(EZGUI *gui, char *flist[], int fnum);
