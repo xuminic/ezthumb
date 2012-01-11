@@ -2692,14 +2692,14 @@ char *meta_filesize(int64_t size, char *buffer)
 	if (buffer == NULL) {
 		buffer = tmp;
 	}
-	if (size < (1ULL << 24)) {
+	if (size < (1ULL << 20)) {
 		sprintf(buffer, "%lu KB", (unsigned long)(size >> 10));
-	} else if (size < (1ULL << 34)) {
-		sprintf(buffer, "%lu.%03lu MB", (unsigned long)(size >> 20), 
-				(unsigned long)((size % (1 << 20)) >> 10));
+	} else if (size < (1ULL << 30)) {
+		sprintf(buffer, "%lu.%lu MB", (unsigned long)(size >> 20), 
+				(unsigned long)(((size % (1 << 20)) >> 10) / 100));
 	} else {
 		sprintf(buffer, "%lu.%03lu GB", (unsigned long)(size >> 30), 
-				(unsigned long)((size % (1 << 30)) >> 20));
+				(unsigned long)(((size % (1 << 30)) >> 20) / 100));
 	}
 	return buffer;
 }

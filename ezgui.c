@@ -35,8 +35,10 @@ static	char	*prof_list_zoom[] = {
 	CFG_PIC_ZOOM_SCREEN, NULL
 };
 
-static int ezgui_create_window(EZGUI *gui);
 static int ezgui_option_save(EZGUI *gui);
+
+static int ezgui_create_window(EZGUI *gui);
+static void ezgui_signal_resize(GtkWidget *parent, GdkRectangle *rect, EZGUI *gui);
 
 static GtkWidget *ezgui_page_main_create(EZGUI *gui);
 static GtkWidget *ezgui_page_main_profile_box(EZGUI *gui);
@@ -189,36 +191,6 @@ int ezgui_close(EZGUI *gui)
 }
 
 
-static int ezgui_create_window(EZGUI *gui)
-{
-	GtkWidget	*page_main, *page_setup;
-	int		w_wid, w_hei;
-
-	/* Create the pages of notebook */
-	page_main = ezgui_page_main_create(gui);
-	page_setup = ezgui_page_setup_create(gui);
-
-	/* Create a new notebook, place the position of the tabs */
-	gui->gw_page = gtk_notebook_new();
-	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(gui->gw_page), GTK_POS_TOP);
-	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_main, 
-			ezgui_page_label("Generate"));
-	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_setup, 
-			ezgui_page_label("Setup"));
-
-	gtk_notebook_set_current_page(GTK_NOTEBOOK(gui->gw_page), 0);
-
-	/* create the top level window */
-	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	w_wid = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_WIDTH, 640);
-	w_hei = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_HEIGHT, 480);
-	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), w_wid, w_hei);
-	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
-	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
-	gtk_container_add(GTK_CONTAINER(gui->gw_main), gui->gw_page);
-	return 0;
-}
-
 static int ezgui_option_save(EZGUI *gui)
 {
 	EZOPT	*opt = gui->sysopt;
@@ -250,6 +222,44 @@ static int ezgui_option_save(EZGUI *gui)
 	/* save to the configure file */
 	ezgui_cfg_flush(gui->config);
 	return 0;
+}
+
+static int ezgui_create_window(EZGUI *gui)
+{
+	GtkWidget	*page_main, *page_setup;
+	int		w_wid, w_hei;
+
+	/* Create the pages of notebook */
+	page_main = ezgui_page_main_create(gui);
+	page_setup = ezgui_page_setup_create(gui);
+
+	/* Create a new notebook, place the position of the tabs */
+	gui->gw_page = gtk_notebook_new();
+	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(gui->gw_page), GTK_POS_TOP);
+	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_main, 
+			ezgui_page_label("Generate"));
+	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_setup, 
+			ezgui_page_label("Setup"));
+
+	gtk_notebook_set_current_page(GTK_NOTEBOOK(gui->gw_page), 0);
+
+	/* create the top level window */
+	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	w_wid = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_WIDTH, 800);
+	w_hei = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_HEIGHT, 480);
+	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), w_wid, w_hei);
+	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
+	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
+	g_signal_connect(gui->gw_main, "size-allocate",
+			G_CALLBACK(ezgui_signal_resize), gui);
+	gtk_container_add(GTK_CONTAINER(gui->gw_main), gui->gw_page);
+	return 0;
+}
+
+static void ezgui_signal_resize(GtkWidget *parent, GdkRectangle *rect, EZGUI *gui)
+{
+	printf("X=%d Y=%d Width=%d Height=%d\n",
+			rect->x, rect->y, rect->width, rect->height);
 }
 
 static GtkWidget *ezgui_page_main_create(EZGUI *gui)
@@ -1053,7 +1063,7 @@ static int ezgui_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 {
 	GtkTreeIter	row;
 	EZVID		*vidx;
-	char		*fname, tmark[32], res[16], tsize[16];
+	char		*fname, tmark[32], res[32], tsize[32];
 
 	if (!s || !*s || !ezadd) {
 		return 0;
