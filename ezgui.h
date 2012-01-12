@@ -71,7 +71,8 @@ typedef	struct		{
 	GtkTreeModel	*app_model;
 	
 	GtkTextBuffer	*discarded;
-	int		dis_count;
+	int		dis_count;	/* counter of discarded files */
+	int		add_count;	/* counter of added files */
 } EZADD;
 
 typedef	struct		{
@@ -81,6 +82,7 @@ typedef	struct		{
 	GtkWidget	*gw_listview;
 
 	GtkWidget	*button_del;	/* the delete button on main page */
+	GtkWidget	*button_run;	/* the start button on main page */
 	GtkWidget	*button_box;
 	GtkWidget	*prof_group;
 
@@ -119,6 +121,7 @@ typedef	struct		{
 	/* feed to progress */
 	GtkTreeModel	*pro_model;
 	GtkTreeIter	*pro_iter;
+	int		list_count;	/* counter of files in the listview */
 
 	/* GUI parameters */
 	EZOPT		*sysopt;
