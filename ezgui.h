@@ -80,6 +80,8 @@ typedef	struct		{
 	GtkWidget	*gw_page;
 	GtkWidget	*gw_page_main;
 	GtkWidget	*gw_listview;
+	int		w_width;
+	int		w_height;
 
 	GtkWidget	*button_del;	/* the delete button on main page */
 	GtkWidget	*button_run;	/* the start button on main page */
