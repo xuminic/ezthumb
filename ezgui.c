@@ -45,7 +45,6 @@ static void ezgui_signal_resize(GtkWidget *parent, GdkRectangle *rect, EZGUI *gu
 
 static GtkWidget *ezgui_page_main_create(EZGUI *gui);
 static GtkWidget *ezgui_page_main_profile(EZGUI *gui);
-static GtkWidget *ezgui_main_entry(EZGUI *gui, char *key, int def, int);
 static int ezgui_page_main_read(EZGUI *gui);
 static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui);
 static EZADD *ezgui_page_main_listview_open(GtkWidget *view);
@@ -56,7 +55,6 @@ static void ezgui_signal_file_choose(void *parent, EZGUI *gui);
 static void ezgui_signal_file_remove(void *parent, EZGUI *gui);
 static void ezgui_signal_run(void *parent, EZGUI *gui);
 static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui);
-static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui);
 static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
 		GtkTreeViewColumn *column, EZGUI *gui);
 static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
@@ -81,6 +79,8 @@ static int ezgui_cfg_flush(EZCFG *cfg);
 
 static GtkWidget *ezgui_pack_forward(GtkWidget *box, ...);
 static GtkWidget *ezgui_pack_backward(GtkWidget *box, ...);
+static GtkWidget *ezgui_pack_fill(GtkWidget *box, ...);
+static GtkWidget *ezgui_entry_box(int val, int dw);
 static int ezgui_entry_get_int(GtkWidget *entry);
 static int ezgui_entry_set_int(GtkWidget *entry, int val);
 static GtkWidget *ezgui_page_label(gchar *s);
@@ -189,6 +189,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 int ezgui_close(EZGUI *gui)
 {
 	if (gui) {
+		ezgui_option_save(gui);
 		ezgui_cfg_free(gui->config);
 		free(gui);
 	}
@@ -256,11 +257,15 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 		break;
 
 	case EN_PROC_CURRENT:
-		if (param) {	/* i-frame ripping */
+		if (param == 0) {	/* i-frame ripping */
 			val = 100;
 		} else {
 			val = opt * 100 / param;
 		}
+		//printf("%d\n", val);
+		//if (val > 50) {
+		//	val = 60;
+		//}
 		gtk_list_store_set(GTK_LIST_STORE(gui->pro_model), 
 				gui->pro_iter, EZUI_COL_PROGRESS, val, -1);
 		break;
@@ -349,8 +354,8 @@ static GtkWidget *ezgui_page_main_create(EZGUI *gui)
 
 	/* create the vertical box and stuffed with all above */
 	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox), gui->button_box, FALSE, FALSE, 0);
+	ezgui_pack_fill(vbox, scroll, NULL);
+	ezgui_pack_forward(vbox, gui->button_box, NULL);
 	return vbox;
 }
 
@@ -358,55 +363,48 @@ static GtkWidget *ezgui_page_main_create(EZGUI *gui)
  * Zoom: (Zoom Auto)(Zoom 50%)(Zoom 320x240)(Res 1024) */
 static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
 {
-	GtkWidget	*hbox, *label1, *label2, *label3, *label4;
+	GtkWidget	*hbox;
+	GtkAdjustment	*adjust;
+	int		val;
 	char		*pic;
 
 	hbox = gtk_hbox_new(FALSE, 0);
 
 	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
 	if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
-		label1 = gtk_label_new("Grid");
-		label2 = gtk_label_new("x");
-		gui->entry_col = ezgui_main_entry(gui, 
-				CFG_KEY_GRID_COLUMN, gui->sysopt->grid_col, 3);
-		gui->entry_row = ezgui_main_entry(gui, 
-				CFG_KEY_GRID_ROW, gui->sysopt->grid_row, 3);
-		ezgui_pack_forward(hbox, label1, gui->entry_col, 
-				label2, gui->entry_row, NULL);
+		gui->entry_col = ezgui_entry_box(gui->sysopt->grid_col, 3);
+		gui->entry_row = ezgui_entry_box(gui->sysopt->grid_row, 3);
+		ezgui_pack_forward(hbox, 
+				gtk_label_new("Grid"), gui->entry_col, 
+				gtk_label_new("x"), gui->entry_row, NULL);
 	} else if (!strcmp(pic, CFG_PIC_GRID_STEP)) {
-		label1 = gtk_label_new("Grid");
-		label2 = gtk_label_new("Step");
-		gui->entry_col = ezgui_main_entry(gui, 
-				CFG_KEY_GRID_COLUMN, gui->sysopt->grid_col, 3);
-		gui->entry_step = ezgui_main_entry(gui, CFG_KEY_TIME_STEP,
-				gui->sysopt->tm_step / 1000, 5);
-		ezgui_pack_forward(hbox, label1, gui->entry_col,
-				label2, gui->entry_step, NULL);
+		gui->entry_col = ezgui_entry_box(gui->sysopt->grid_col, 3);
+		gui->entry_step = 
+			ezgui_entry_box(gui->sysopt->tm_step / 1000, 5);
+		ezgui_pack_forward(hbox, 
+				gtk_label_new("Grid"), gui->entry_col,
+				gtk_label_new("Step"), gui->entry_step, NULL);
 	} else if (!strcmp(pic, CFG_PIC_DIS_NUM)) {
-		label1 = gtk_label_new("DSS No ");
-		gui->entry_row = ezgui_main_entry(gui, CFG_KEY_GRID_ROW,
-				gui->sysopt->grid_row, 3);
-		ezgui_pack_forward(hbox, label1, gui->entry_row, NULL);
+		gui->entry_row = ezgui_entry_box(gui->sysopt->grid_row, 3);
+		ezgui_pack_forward(hbox, 
+				gtk_label_new("DSS No "), gui->entry_row,
+				NULL);
 	} else if (!strcmp(pic, CFG_PIC_DIS_STEP)) {
-		label1 = gtk_label_new("DSS Step ");
-		gui->entry_step = ezgui_main_entry(gui, CFG_KEY_TIME_STEP,
-				gui->sysopt->tm_step / 1000, 5);
-		ezgui_pack_forward(hbox, label1, gui->entry_step, NULL);
+		gui->entry_step = 
+			ezgui_entry_box(gui->sysopt->tm_step / 1000, 5);
+		ezgui_pack_forward(hbox, 
+				gtk_label_new("DSS Step "), gui->entry_step, 
+				NULL);
 	} else if (!strcmp(pic, CFG_PIC_DIS_KEY)) {
-		label1 = gtk_label_new("DSS I-Frame");
-		ezgui_pack_forward(hbox, label1, NULL);
+		ezgui_pack_forward(hbox, gtk_label_new("DSS I-Frame"), NULL);
 	} else {
 		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
-		label1 = gtk_label_new("Grid Auto");
-		ezgui_pack_forward(hbox, label1, NULL);
+		ezgui_pack_forward(hbox, gtk_label_new("Grid Auto"), NULL);
 	}
 	g_free(pic);
 
 	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
 	if (!strcmp(pic, CFG_PIC_ZOOM_RATIO)) {
-		GtkAdjustment	*adjust;
-		int		val;
-
 		val = ezgui_cfg_read_int(gui->config, CFG_KEY_ZOOM_RATIO, 
 				gui->sysopt->tn_facto);
 		adjust = (GtkAdjustment *) gtk_adjustment_new(val, 5.0, 
@@ -414,28 +412,26 @@ static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
 		gui->entry_zoom_ratio = gtk_spin_button_new(adjust, 0, 0);
 		gtk_widget_set_size_request(gui->entry_zoom_ratio, 50, -1);
 
-		label3 = gtk_label_new("  Zoom");
-		label4 = gtk_label_new("%");
-		ezgui_pack_forward(hbox, label3, gui->entry_zoom_ratio, 
-				label4, NULL);
+		ezgui_pack_forward(hbox, 
+				gtk_label_new("  Zoom"), 
+				gui->entry_zoom_ratio, 
+				gtk_label_new("%"), NULL);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_DEFINE)) {
-		label3 = gtk_label_new("  Zoom");
-		label4 = gtk_label_new("x");
-		gui->entry_zoom_wid = ezgui_main_entry(gui, CFG_KEY_ZOOM_WIDTH,
-				gui->sysopt->tn_width, 5);
-		gui->entry_zoom_hei = ezgui_main_entry(gui, CFG_KEY_ZOOM_HEIGHT,
-				gui->sysopt->tn_height, 5);
-		ezgui_pack_forward(hbox, label3, gui->entry_zoom_wid, 
-				label4, gui->entry_zoom_hei);
+		gui->entry_zoom_wid = 
+			ezgui_entry_box(gui->sysopt->tn_width, 5);
+		gui->entry_zoom_hei = 
+			ezgui_entry_box(gui->sysopt->tn_height, 5);
+		ezgui_pack_forward(hbox, 
+				gtk_label_new("  Zoom"), gui->entry_zoom_wid,
+				gtk_label_new("x"), gui->entry_zoom_hei, NULL);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
-		label3 = gtk_label_new("  Res");
-		gui->entry_width = ezgui_main_entry(gui, CFG_KEY_CANVAS_WIDTH,
-				gui->sysopt->canvas_width, 5);
-		ezgui_pack_forward(hbox, label3, gui->entry_width, NULL);
+		gui->entry_width = 
+			ezgui_entry_box(gui->sysopt->canvas_width, 5);
+		ezgui_pack_forward(hbox, gtk_label_new("  Res"), 
+				gui->entry_width, NULL);
 	} else {
 		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
-		label3 = gtk_label_new("  Zoom Auto");
-		ezgui_pack_forward(hbox, label3, NULL);
+		ezgui_pack_forward(hbox, gtk_label_new("  Zoom Auto"), NULL);
 	}
 	g_free(pic);
 	return hbox;
@@ -545,7 +541,8 @@ static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui)
 	//gtk_object_set(renderer, "text", "", "value", 100, NULL);
 	col = gtk_tree_view_column_new_with_attributes("Progress",
 			renderer, "value", EZUI_COL_PROGRESS, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);          
+	gtk_tree_view_column_set_resizable(col, TRUE);
+	gtk_tree_view_column_set_min_width(col, 120);
 	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
 
 	/* setup the model */
@@ -684,7 +681,7 @@ static void ezgui_page_main_dialog_invalid_files(EZADD *ezadd)
 	gtk_container_add(GTK_CONTAINER(scroll), text);
 
 	vbox = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
-	gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
+	ezgui_pack_fill(vbox, scroll, NULL);
 	gtk_widget_show_all(vbox);
 
 	gtk_dialog_run(GTK_DIALOG(dialog));
@@ -817,6 +814,7 @@ static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui)
 	}
 }
 
+#if 0
 static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui)
 {
 	GtkTreeSelection	*tsel;
@@ -827,6 +825,7 @@ static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gu
 		gtk_tree_selection_unselect_all(tsel);
 	}
 }
+#endif
 
 static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
 		GtkTreeViewColumn *column, EZGUI *gui)
@@ -950,8 +949,8 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 
 	/* create the vbox container for the whole page */
 	vbox_page = gtk_vbox_new(FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox_page), scroll, TRUE, TRUE, 0);
-	gtk_box_pack_start(GTK_BOX(vbox_page), hbox_button, FALSE, FALSE, 0);
+	ezgui_pack_fill(vbox_page, scroll, NULL);
+	ezgui_pack_forward(vbox_page, hbox_button, NULL);
 
 	/* reset the setup page by the options in the config file */
 	ezgui_signal_setup_reset(NULL, gui);
@@ -1371,7 +1370,20 @@ static GtkWidget *ezgui_pack_backward(GtkWidget *box, ...)
 	return box;
 }
 
-static GtkWidget *ezgui_main_entry(EZGUI *gui, char *key, int def, int dw)
+static GtkWidget *ezgui_pack_fill(GtkWidget *box, ...)
+{
+	va_list		ap;
+	GtkWidget	*wp;
+
+	va_start(ap, box);
+	while ((wp = va_arg(ap, GtkWidget*)) != NULL) {
+		gtk_box_pack_start(GTK_BOX(box), wp, TRUE, TRUE, 0);
+	}
+	va_end(ap);
+	return box;
+}
+
+static GtkWidget *ezgui_entry_box(int val, int dw)
 {
 	GtkWidget	*entry;
 
@@ -1379,7 +1391,7 @@ static GtkWidget *ezgui_main_entry(EZGUI *gui, char *key, int def, int dw)
 	gtk_entry_set_max_length(GTK_ENTRY(entry), dw);
 	gtk_widget_set_size_request(entry, dw * 10, -1);
 
-	ezgui_entry_set_int(entry, ezgui_cfg_read_int(gui->config, key, def));
+	ezgui_entry_set_int(entry, val);
 	return entry;
 }
 
