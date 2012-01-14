@@ -6,8 +6,10 @@ INCDIR	= $(EXINC) -I./libsmm
 LIBDIR	= $(EXLIB) -L./libsmm
 
 CFLAGS	+= -D_FILE_OFFSET_BITS=64 $(INCDIR)
+
+
 ifeq	($(SYSGUI),CFG_GUI_ON)
-CFLAGS	+= `pkg-config gtk+-2.0 --cflags --libs`
+CFLAGS	+= $(GTKINC)
 endif
 
 OBJS	= main.o fixtoken.o ezthumb.o cliopt.o eznotify.o id_lookup.o
@@ -18,6 +20,9 @@ endif
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd
 #	 -lfreetype -lbz2 -lm
 
+ifeq	($(SYSGUI),CFG_GUI_ON)
+LIBS	+= $(GTKLIB)
+endif
 
 ifeq	($(SYSTOOL),unix)
 	TARGET	= ezthumb
@@ -25,10 +30,14 @@ else
 	TARGET	= ezthumb.exe
 endif
 
+RELDIR	= ezthumb-`./version`
+RELDATE	= `date  +%Y%m%d`
+
+
 all: version smm $(TARGET) install
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS)  -lsmm
 
 version: version.c
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
@@ -40,19 +49,38 @@ vidlen : vidlen.c
 	$(CC) -o $@ $^ $(CFLAGS) -lavformat
 
 install:
+ifeq	($(SYSTOOL),unix)
 	$(CP) $(TARGET) ~/bin
+else
+	-mkdir $(RELDIR)-win-bin
+	-$(CP) $(TARGET) ezthumb.1 $(RELDIR)-win-bin
+	-$(CP) $(EXDLL) $(RELDIR)-win-bin
+endif
+
 
 clean:
 	make -C libsmm clean
 	$(RM) $(TARGET) version $(OBJS)
 
-release:
+rel_source:
+	-mkdir $(RELDIR)
+	-cp *.c *.h *.1 *.txt Make* COPYING ChangeLog $(RELDIR)
+	-cp -a libsmm $(RELDIR)
+	-tar czf $(RELDIR).tar.gz $(RELDIR)
+	-rm -rf $(RELDIR)
+
+rel_win_dev:
+	-tar czf ezthumb-libmingw-$(RELDATE).tar.gz libmingw
+
+rel_win_bin: install
+	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin
+	-rm -rf $(RELDIR)-win-bin
+
+
 ifeq	($(SYSTOOL),unix)
-	./release.sh
+release: rel_source
 else
-	mkdir $(RELDIR)
-	$(CP) $(TARGET) ezthumb.1 $(RELDIR)
-	$(CP) $(EXDLL) $(RELDIR)
-	./release.sh win
+release: rel_source rel_win_dev rel_win_bin
 endif
+	
 

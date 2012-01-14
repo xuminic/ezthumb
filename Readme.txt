@@ -49,6 +49,9 @@ libpng-1.2.37
 zlib-1.2.3
 freetype-2.3.5-1
 
+The GTK+ library was tailored from the All-in-one bundles in 
+http://www.gtk.org/download/win32.php
+
 NOTE that these libraries are not part of Ezthumb. 
 They were grabbed to here just for the conveniece of building.
 
