@@ -34,7 +34,7 @@ RELDIR	= ezthumb-`./version`
 RELDATE	= `date  +%Y%m%d`
 
 
-all: version smm $(TARGET) install
+all: version smm $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS)  -lsmm
