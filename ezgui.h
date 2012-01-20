@@ -121,8 +121,10 @@ typedef	struct		{
 	int		tmp_gifa_fr;
 
 	/* feed to progress */
-	GtkTreeModel	*pro_model;
-	GtkTreeIter	*pro_iter;
+//	GtkTreeModel	*pro_model;
+//	GtkTreeIter	*pro_iter;
+//	GtkTreePath	*pro_path;
+	int		n_child;
 	int		list_count;	/* counter of files in the listview */
 
 	/* GUI parameters */
