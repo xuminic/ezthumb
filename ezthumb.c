@@ -335,17 +335,20 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	FILE	*fp;
 	int	rc, loglvl;
 
-	/* check if the nominated file existed */
-	if ((fp = fopen(filename, "r")) == NULL) {
-		return NULL;
-	} else {
-		fclose(fp);
-	}
-
 	/* allocate the runtime index structure of the video */
 	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
+	}
+
+	/* check if the nominated file existed */
+	if ((fp = fopen(filename, "r")) == NULL) {
+		free(vidx);
+		return NULL;
+	} else {
+		fseek(fp, 0, SEEK_END);
+		vidx->filesize = (int64_t) ftell(fp);
+		fclose(fp);
 	}
 
 	vidx->sysopt   = ezopt;
@@ -445,7 +448,11 @@ int video_free(EZVID *vidx)
 		avcodec_close(vidx->codecx);
 	}
 	if (vidx->formatx) {
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+		avformat_close_input(&vidx->formatx);
+#else
 		av_close_input_file(vidx->formatx);
+#endif
 	}
 	free(vidx);
 	return EZ_ERR_NONE;
@@ -1017,12 +1024,12 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	strcat(buffer, meta_timestamp(vidx->duration, 0, tmp));
 
 	strcat(buffer, " (");
-	strcat(buffer, meta_filesize(vidx->formatx->file_size, tmp));
+	strcat(buffer, meta_filesize(vidx->filesize, tmp));
 	strcat(buffer, ")  ");
 
 	i = vidx->formatx->bit_rate;
 	if (vidx->formatx->bit_rate == 0) {
-		i = (int)(vidx->formatx->file_size * 1000 / vidx->duration);
+		i = (int)(vidx->filesize * 1000 / vidx->duration);
 	}
 	strcat(buffer, meta_bitrate(i, tmp));
 	image_gdcanvas_print(image, 1, 0, buffer);

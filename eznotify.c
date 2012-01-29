@@ -96,7 +96,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		break;
 	case EN_MEDIA_OPEN:
 		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
-			dump_format_context(vidx->formatx);
+			dump_format_context(vidx->formatx, vidx->filesize);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
 			printf("Duration in millisecond by ");
@@ -317,11 +317,11 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 	return 0;
 }
 
-int dump_format_context(AVFormatContext *format)
+int dump_format_context(AVFormatContext *format, int64_t filesize)
 {
 	SMM_PRINT("  Format: %s, Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
-			(long long) format->file_size,
+			(long long) filesize,
 			format->bit_rate);
 	SMM_PRINT("  Streams: %d, Start time: %lld, Duration: %lld\n",
 			format->nb_streams,

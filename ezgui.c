@@ -61,6 +61,8 @@ static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
 static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
 		int x, int y, GtkSelectionData *seldata, 
 		guint info, guint time, EZGUI *gui);
+static void ezgui_signal_progress(GtkTreeView *tree_view, GtkTreeIter *iter, 
+		GtkTreePath *path, EZSIG *sig);
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui);
 static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int);
@@ -136,6 +138,11 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 		free(p);
 	}
 	
+	gui->w_width  = ezgui_cfg_read_int(gui->config, 
+			CFG_KEY_WIN_WIDTH, 800);
+	gui->w_height = ezgui_cfg_read_int(gui->config, 
+			CFG_KEY_WIN_HEIGHT, 480);
+
 	ezopt->grid_col = ezgui_cfg_read_int(gui->config, 
 			CFG_KEY_GRID_COLUMN, ezopt->grid_col);
 	ezopt->grid_row = ezgui_cfg_read_int(gui->config,
@@ -276,6 +283,27 @@ static int ezgui_ezthumb(EZGUI *gui)
 
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 {
+	EZSIG	*sig;
+
+	if ((sig = calloc(sizeof(EZSIG), 1)) == NULL) {
+		return -1;
+	}
+
+	sig->gui   = ((EZVID*) v)->sysopt->gui;
+	sig->vobj  = v;
+	sig->eid   = eid;
+	sig->param = param;
+	sig->opt   = opt;
+	sig->bobj  = b;
+	printf("emiting: %p %p\n", sig, sig->gui);
+	g_signal_emit_by_name(G_OBJECT(sig->gui->gw_listview), 
+			"test-expand-row", sig, NULL,  sig);
+	return 0;
+}
+
+#if 0
+static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
+{
 	EZGUI		*gui = ((EZVID*) v)->sysopt->gui;
 	GtkTreeModel	*model;
 	GtkTreeIter	iter;
@@ -293,9 +321,6 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 			val = opt * 100 / param;
 		}
 		printf("%d\n", val);
-		//if (val > 50) {
-		//	val = 60;
-		//}
 		model = gtk_tree_view_get_model(
 				GTK_TREE_VIEW(gui->gw_listview));
 		if (gtk_tree_model_iter_nth_child(model, &iter, 
@@ -311,12 +336,11 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 	}
 	return eid;
 }
-
+#endif
 
 static int ezgui_create_window(EZGUI *gui)
 {
 	GtkWidget	*page_main, *page_setup;
-	int		w_wid, w_hei;
 
 	/* Create the pages of notebook */
 	page_main = ezgui_page_main_create(gui);
@@ -334,9 +358,8 @@ static int ezgui_create_window(EZGUI *gui)
 
 	/* create the top level window */
 	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	w_wid = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_WIDTH, 800);
-	w_hei = ezgui_cfg_read_int(gui->config, CFG_KEY_WIN_HEIGHT, 480);
-	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), w_wid, w_hei);
+	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), 
+			gui->w_width, gui->w_height);
 	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
 	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
 	g_signal_connect(gui->gw_main, "size-allocate",
@@ -622,6 +645,10 @@ static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui)
 	g_signal_connect(view, "row-activated",
 			G_CALLBACK(ezgui_signal_select_enter), gui);
 
+	/* bind the progress signal */
+	g_signal_connect(view, "test-expand-row",
+			G_CALLBACK(ezgui_signal_progress), gui);
+
 	/* Make tree view a destination for Drag'n'Drop */
 	gtk_drag_dest_set(view, GTK_DEST_DEFAULT_ALL, 
 			targets, 1, GDK_ACTION_COPY);
@@ -704,7 +731,7 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 
 	}
 	meta_timestamp(vidx->duration, 0, tmark);
-	meta_filesize(vidx->formatx->file_size, tsize);
+	meta_filesize(vidx->filesize, tsize);
 	sprintf(res, "%dx%d", 
 			vidx->formatx->streams[vidx->vsidx]->codec->width, 
 			vidx->formatx->streams[vidx->vsidx]->codec->height);
@@ -846,7 +873,7 @@ static void ezgui_signal_file_remove(void *parent, EZGUI *gui)
 static void ezgui_signal_run(void *parent, EZGUI *gui)
 {
 	gui->n_child = -1;
-	g_thread_create(ezgui_ezthumb, gui, FALSE, NULL);
+	g_thread_create((GThreadFunc) ezgui_ezthumb, gui, FALSE, NULL);
 	//ezgui_ezthumb(gui);
 #if 0
 	GtkTreeModel	*model;
@@ -906,7 +933,7 @@ static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
 		gui->n_child = -1;
 	}
 
-	g_thread_create(ezgui_ezthumb, gui, FALSE, NULL);
+	g_thread_create((GThreadFunc) ezgui_ezthumb, gui, FALSE, NULL);
 	//ezgui_ezthumb(gui);
 #if 0
 	GtkTreeModel	*model;
@@ -965,6 +992,11 @@ static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *contex
 	g_free(dndl);
 }
 
+static void ezgui_signal_progress(GtkTreeView *tree_view, GtkTreeIter *iter, 
+		GtkTreePath *path, EZSIG *sig)
+{
+	printf("test %p %p %p\n", iter, path, sig);
+}
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 {

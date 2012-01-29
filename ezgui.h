@@ -132,6 +132,16 @@ typedef	struct		{
 	EZCFG		*config;
 } EZGUI;
 
+
+typedef	struct	{
+	EZGUI	*gui;
+	void	*vobj;
+	int	eid;
+	long	param;
+	long	opt;
+	void	*bobj;
+} EZSIG;
+
 enum	{
 	EZUI_COL_NAME = 0,
 	EZUI_COL_SIZE,
