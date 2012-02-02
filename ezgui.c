@@ -37,8 +37,8 @@ static	char	*prof_list_zoom[] = {
 };
 
 static int ezgui_option_save(EZGUI *gui);
-static int ezgui_option_commit(EZGUI *gui);
 static int ezgui_ezthumb(EZGUI *gui);
+static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
 static int ezgui_create_window(EZGUI *gui);
@@ -54,15 +54,10 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s);
 static void ezgui_page_main_dialog_invalid_files(EZADD *ezadd);
 static void ezgui_signal_file_choose(void *parent, EZGUI *gui);
 static void ezgui_signal_file_remove(void *parent, EZGUI *gui);
-static void ezgui_signal_run(void *parent, EZGUI *gui);
 static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui);
-static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
-		GtkTreeViewColumn *column, EZGUI *gui);
 static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
 		int x, int y, GtkSelectionData *seldata, 
 		guint info, guint time, EZGUI *gui);
-static void ezgui_signal_progress(GtkTreeView *tree_view, GtkTreeIter *iter, 
-		GtkTreePath *path, EZSIG *sig);
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui);
 static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int);
@@ -243,71 +238,69 @@ static int ezgui_option_save(EZGUI *gui)
 	return 0;
 }
 
-static int ezgui_option_commit(EZGUI *gui)
+static int ezgui_ezthumb(EZGUI *gui)
 {
+	GtkTreeSelection	*tsel;
+	GtkTreeModel		*model;
+	GtkTreeIter		iter;
+	GList			*slist, *node;
+
 	/* bind the notification function to GUI mode */
 	gui->sysopt->notify = ezgui_notificate;
 	/* read options from the GUI widgets */
 	ezgui_page_main_read(gui);
 	/* save these options into the configure file */
 	ezgui_option_save(gui);
-	return 0;
-}
 
-static int ezgui_ezthumb(EZGUI *gui)
-{
-	GtkTreeModel	*model;
-	GtkTreeIter	iter;
-	char		*s;
-
-	ezgui_option_commit(gui);
-
+	tsel  = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
 	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
 
-	if (gui->n_child >= 0) {
-		if (gtk_tree_model_iter_nth_child(model, &iter, NULL, gui->n_child)) {
-			gtk_tree_model_get(model, &iter, EZUI_COL_NAME, &s, -1);
-			ezthumb(s, gui->sysopt);
-			g_free(s);
+	if (gtk_tree_selection_count_selected_rows(tsel) == 0) {
+		/* no selection; process the whole list */
+		if (gtk_tree_model_get_iter_first(model, &iter)) {
+			do {
+				ezgui_commit(gui, model, &iter);
+			} while (gtk_tree_model_iter_next(model, &iter));
 		}
-	} else if (gtk_tree_model_get_iter_first(model, &iter)) {
-		do {
-			gtk_tree_model_get(model, &iter, EZUI_COL_NAME, &s, -1);
-			gui->n_child = gtk_tree_model_iter_n_children(model, &iter);
-			ezthumb(s, gui->sysopt);
-			g_free(s);
-		} while (gtk_tree_model_iter_next(model, &iter));
+		return 0;
 	}
+
+	slist = gtk_tree_selection_get_selected_rows(tsel, &model);
+	for (node = slist; node; node = g_list_next(node)) {
+		if (gtk_tree_model_get_iter(model, &iter, node->data)) {
+			ezgui_commit(gui, model, &iter);
+		}
+		gtk_tree_path_free(node->data);
+	}
+	g_list_free(slist);
+	return 0;
+}
+
+static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter)
+{
+	char	*s;
+
+	/*
+	GtkTreePath	*path;
+	int		*idx;
+	path = gtk_tree_model_get_path(model, iter);
+	idx = gtk_tree_path_get_indices(path);
+	gui->list_index = *idx;
+	gtk_tree_path_free(path);
+	printf("process %d\n", gui->list_index);
+	*/
+	gui->list_model = model;
+	gui->list_iter  = iter;
+	gtk_tree_model_get(model, iter, EZUI_COL_NAME, &s, -1);
+	ezthumb(s, gui->sysopt);
+	g_free(s);
 	return 0;
 }
 
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 {
-	EZSIG	*sig;
-
-	if ((sig = calloc(sizeof(EZSIG), 1)) == NULL) {
-		return -1;
-	}
-
-	sig->gui   = ((EZVID*) v)->sysopt->gui;
-	sig->vobj  = v;
-	sig->eid   = eid;
-	sig->param = param;
-	sig->opt   = opt;
-	sig->bobj  = b;
-	printf("emiting: %p %p\n", sig, sig->gui);
-	g_signal_emit_by_name(G_OBJECT(sig->gui->gw_listview), 
-			"test-expand-row", sig, NULL,  sig);
-	return 0;
-}
-
-#if 0
-static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
-{
-	EZGUI		*gui = ((EZVID*) v)->sysopt->gui;
-	GtkTreeModel	*model;
-	GtkTreeIter	iter;
-	int		val;
+	EZGUI	*gui = ((EZVID*) v)->sysopt->gui;
+	int	val;
 
 	switch (eid) {
 	case EN_PROC_BEGIN:
@@ -320,15 +313,13 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 		} else {
 			val = opt * 100 / param;
 		}
-		printf("%d\n", val);
-		model = gtk_tree_view_get_model(
-				GTK_TREE_VIEW(gui->gw_listview));
-		if (gtk_tree_model_iter_nth_child(model, &iter, 
-					NULL, gui->n_child)) {
-			gtk_list_store_set(GTK_LIST_STORE(model), 
-					&iter, EZUI_COL_PROGRESS, val, -1);
+
+		gtk_list_store_set(GTK_LIST_STORE(gui->list_model), 
+				gui->list_iter, EZUI_COL_PROGRESS, val, -1);
+
+		while (gtk_events_pending()) {
+			gtk_main_iteration();
 		}
-		usleep(100000);
 		break;
 
 	default:
@@ -336,7 +327,6 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 	}
 	return eid;
 }
-#endif
 
 static int ezgui_create_window(EZGUI *gui)
 {
@@ -396,8 +386,9 @@ static GtkWidget *ezgui_page_main_create(EZGUI *gui)
 			G_CALLBACK(ezgui_signal_file_choose));
 	gui->button_del = ezgui_button(gui, "Remove",
 			G_CALLBACK(ezgui_signal_file_remove));
-	gui->button_run = ezgui_button(gui, "Start", 
-			G_CALLBACK(ezgui_signal_run));
+	gui->button_run = ezgui_button(gui, "Start", NULL);
+	g_signal_connect_swapped(gui->button_run, "clicked",
+			G_CALLBACK(ezgui_ezthumb), gui);
 
 	gtk_widget_set_sensitive(gui->button_del, FALSE);
 	gtk_widget_set_sensitive(gui->button_run, FALSE);
@@ -551,30 +542,6 @@ static int ezgui_page_main_read(EZGUI *gui)
 	return 0;
 }
 
-static gboolean increase_progress_timeout ( EZGUI *gui)
-{
-	GtkTreeModel	*model;
-	GtkTreeIter  iter;
-	int          perc = 0, step = 1;
-
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
-	if (gtk_tree_model_get_iter_first(model, &iter) != TRUE) { /* first and only row */
-		return FALSE;
-	}
-
-	gtk_tree_model_get (model, &iter, EZUI_COL_PROGRESS, &perc, -1);
-
-	if (perc == 0) {
-		step = 1;
-	} else if (perc == 100) {
-		step = -1;
-	}
-	perc += step;
-
-	gtk_list_store_set (GTK_LIST_STORE(model), &iter, EZUI_COL_PROGRESS, perc, -1);
-	return TRUE; /* Call again */
-}
-
 static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui)
 {
 	static	GtkTargetEntry	targets[] = { { "STRING", 0, 0 } };
@@ -642,12 +609,8 @@ static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui)
 	/* bind the signal */
 	//g_signal_connect(view, "button-release-event",
 	//		G_CALLBACK(ezgui_signal_select_undo), gui);
-	g_signal_connect(view, "row-activated",
-			G_CALLBACK(ezgui_signal_select_enter), gui);
-
-	/* bind the progress signal */
-	g_signal_connect(view, "test-expand-row",
-			G_CALLBACK(ezgui_signal_progress), gui);
+	g_signal_connect_swapped(view, "row-activated",
+			G_CALLBACK(ezgui_ezthumb), gui);
 
 	/* Make tree view a destination for Drag'n'Drop */
 	gtk_drag_dest_set(view, GTK_DEST_DEFAULT_ALL, 
@@ -847,19 +810,21 @@ static void ezgui_signal_file_remove(void *parent, EZGUI *gui)
 	GtkTreeSelection	*tsel;
 	GtkTreeModel	*model;
 	GtkTreeIter 	iter;
-	GList		*node;
+	GList		*slist, *node;
 
-	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
+	tsel  = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
 	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
 
-	while ((node = gtk_tree_selection_get_selected_rows(tsel, &model)) 
+	while ((slist = gtk_tree_selection_get_selected_rows(tsel, &model)) 
 			!= NULL) {
-		if (gtk_tree_model_get_iter(model, &iter, node->data)) {
+		if (gtk_tree_model_get_iter(model, &iter, slist->data)) {
 			gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
 			gui->list_count--;
 		}
-		g_list_foreach(node, (GFunc) gtk_tree_path_free, NULL);
-		g_list_free(node);
+		for (node = slist; node; node = g_list_next(node)) {
+			gtk_tree_path_free(node->data);
+		}
+		g_list_free(slist);
 	}
 
 	/* find out if the list is empty */
@@ -868,34 +833,6 @@ static void ezgui_signal_file_remove(void *parent, EZGUI *gui)
 	} else {
 		gtk_widget_set_sensitive(gui->button_run, FALSE);
 	}
-}
-
-static void ezgui_signal_run(void *parent, EZGUI *gui)
-{
-	gui->n_child = -1;
-	g_thread_create((GThreadFunc) ezgui_ezthumb, gui, FALSE, NULL);
-	//ezgui_ezthumb(gui);
-#if 0
-	GtkTreeModel	*model;
-	GtkTreeIter	row;
-	char	*s;
-
-	ezgui_option_commit(gui);
-
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
-	if (gtk_tree_model_get_iter_first(model, &row)) {
-		do {
-			gtk_tree_model_get(model, &row, EZUI_COL_NAME, &s, -1);
-			
-			gui->pro_model = model;
-			gui->pro_iter  = &row;
-			ezthumb(s, gui->sysopt);
-			//puts(s);
-
-			g_free(s);
-		} while (gtk_tree_model_iter_next(model, &row));
-	}
-#endif
 }
 
 static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui)
@@ -919,40 +856,6 @@ static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gu
 	}
 }
 #endif
-
-static void ezgui_signal_select_enter(GtkWidget *view, GtkTreePath *path,
-		GtkTreeViewColumn *column, EZGUI *gui)
-{
-	GtkTreeModel	*model;
-	GtkTreeIter	iter;
-
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	if (gtk_tree_model_get_iter(model, &iter, path)) {
-		gui->n_child = gtk_tree_model_iter_n_children(model, &iter);
-	} else {
-		gui->n_child = -1;
-	}
-
-	g_thread_create((GThreadFunc) ezgui_ezthumb, gui, FALSE, NULL);
-	//ezgui_ezthumb(gui);
-#if 0
-	GtkTreeModel	*model;
-	char	*s;
-
-	g_timeout_add(50, (GSourceFunc) increase_progress_timeout, gui);
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	if (gtk_tree_model_get_iter(model, &iter, path)) {
-		gtk_tree_model_get(model, &iter, EZUI_COL_NAME, &s, -1);
-
-		ezgui_option_commit(gui);
-		gui->pro_model = model;
-		gui->pro_iter  = &iter;
-		ezthumb(s, gui->sysopt);
-		//puts(s);
-	}
-
-#endif
-}
 
 static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
 		int x, int y, GtkSelectionData *seldata, 
@@ -990,12 +893,6 @@ static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *contex
 	}
 
 	g_free(dndl);
-}
-
-static void ezgui_signal_progress(GtkTreeView *tree_view, GtkTreeIter *iter, 
-		GtkTreePath *path, EZSIG *sig)
-{
-	printf("test %p %p %p\n", iter, path, sig);
 }
 
 static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
@@ -1561,7 +1458,9 @@ static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler)
 
 	button = gtk_button_new_with_label(s);
 	gtk_widget_set_size_request(button, 80, 30);
-	g_signal_connect(button, "clicked", c_handler, gui);
+	if (c_handler) {
+		g_signal_connect(button, "clicked", c_handler, gui);
+	}
 	return button;
 }
 
@@ -1576,7 +1475,9 @@ static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler)
 	}
 	gtk_widget_set_size_request(combo, 160, -1);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
-	g_signal_connect(combo, "changed", c_handler, gui);
+	if (c_handler) {
+		g_signal_connect(combo, "changed", c_handler, gui);
+	}
 	return combo;
 }
 
@@ -1592,7 +1493,9 @@ static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s,
 			(GTK_RADIO_BUTTON(prev), s);
 	}
 	//gtk_widget_set_size_request(rab, 180, -1);
-	g_signal_connect(rab, "toggled", c_handler, gui);
+	if (c_handler) {
+		g_signal_connect(rab, "toggled", c_handler, gui);
+	}
 	return rab;
 }
 

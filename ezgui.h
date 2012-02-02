@@ -121,26 +121,16 @@ typedef	struct		{
 	int		tmp_gifa_fr;
 
 	/* feed to progress */
-//	GtkTreeModel	*pro_model;
-//	GtkTreeIter	*pro_iter;
-//	GtkTreePath	*pro_path;
-	int		n_child;
 	int		list_count;	/* counter of files in the listview */
+	int		list_index;	/* current node index */
+	GtkTreeModel	*list_model;
+	GtkTreeIter	*list_iter;
 
 	/* GUI parameters */
 	EZOPT		*sysopt;
 	EZCFG		*config;
 } EZGUI;
 
-
-typedef	struct	{
-	EZGUI	*gui;
-	void	*vobj;
-	int	eid;
-	long	param;
-	long	opt;
-	void	*bobj;
-} EZSIG;
 
 enum	{
 	EZUI_COL_NAME = 0,
