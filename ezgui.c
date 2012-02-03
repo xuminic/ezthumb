@@ -24,7 +24,7 @@
 #include <stdarg.h>
 
 #include "ezgui.h"
-
+#include "ezicon.h"
 
 static	char	*prof_list_grid[] = {
 	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
@@ -336,6 +336,7 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 static int ezgui_create_window(EZGUI *gui)
 {
 	GtkWidget	*page_main, *page_setup;
+	GdkPixbuf	*icon;
 
 	/* Create the pages of notebook */
 	page_main = ezgui_page_main_create(gui);
@@ -365,6 +366,9 @@ static int ezgui_create_window(EZGUI *gui)
 	if (gui->gw_win_state & GDK_WINDOW_STATE_FULLSCREEN) {
 		gtk_window_fullscreen(GTK_WINDOW(gui->gw_main));
 	}
+	icon = gdk_pixbuf_new_from_inline(-1, ezicon_pixbuf, FALSE, NULL);
+	gtk_window_set_icon(GTK_WINDOW(gui->gw_main), icon);
+
 	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
 	g_signal_connect(gui->gw_main, "size-allocate",
 			G_CALLBACK(ezgui_signal_resize), gui);

@@ -55,6 +55,11 @@ http://www.gtk.org/download/win32.php
 NOTE that these libraries are not part of Ezthumb. 
 They were grabbed to here just for the conveniece of building.
 
+Icons
+=====
+
+The icon file SMirC-thumbsup.svg is a public domain under GNU Free Documentation License.
+http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg
 
 Examples
 ========

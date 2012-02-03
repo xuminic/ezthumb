@@ -36,8 +36,11 @@ RELDATE	= `date  +%Y%m%d`
 
 all: version smm $(TARGET)
 
-$(TARGET): $(OBJS)
+$(TARGET): ezicon.h $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS)  -lsmm
+
+ezicon.h : SMirC-thumbsup.svg
+	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
 
 version: version.c
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
@@ -75,7 +78,6 @@ rel_win_dev:
 rel_win_bin: install
 	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin
 	-rm -rf $(RELDIR)-win-bin
-
 
 ifeq	($(SYSTOOL),unix)
 release: rel_source
