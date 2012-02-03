@@ -42,7 +42,8 @@ static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
 static int ezgui_create_window(EZGUI *gui);
-static void ezgui_signal_resize(GtkWidget *parent, GdkRectangle *rect, EZGUI *gui);
+static void ezgui_signal_win_state(GtkWidget *widget, GdkEvent *, EZGUI *);
+static void ezgui_signal_resize(GtkWidget *parent, GdkRectangle *, EZGUI *);
 
 static GtkWidget *ezgui_page_main_create(EZGUI *gui);
 static GtkWidget *ezgui_page_main_profile(EZGUI *gui);
@@ -55,7 +56,7 @@ static void ezgui_page_main_dialog_invalid_files(EZADD *ezadd);
 static void ezgui_signal_file_choose(void *parent, EZGUI *gui);
 static void ezgui_signal_file_remove(void *parent, EZGUI *gui);
 static void ezgui_signal_select_change(GtkTreeSelection *tsel, EZGUI *gui);
-static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *context,
+static void ezgui_signal_select_dragdrop(GtkWidget *view, GdkDragContext *,
 		int x, int y, GtkSelectionData *seldata, 
 		guint info, guint time, EZGUI *gui);
 
@@ -137,6 +138,8 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 			CFG_KEY_WIN_WIDTH, 800);
 	gui->w_height = ezgui_cfg_read_int(gui->config, 
 			CFG_KEY_WIN_HEIGHT, 480);
+	gui->gw_win_state = ezgui_cfg_read_int(gui->config,
+			CFG_KEY_WINDOWSTATE, 0);
 
 	ezopt->grid_col = ezgui_cfg_read_int(gui->config, 
 			CFG_KEY_GRID_COLUMN, ezopt->grid_col);
@@ -209,6 +212,8 @@ static int ezgui_option_save(EZGUI *gui)
 			CFG_KEY_WIN_WIDTH, gui->w_width);
 	ezgui_cfg_write_int(gui->config,
 			CFG_KEY_WIN_HEIGHT, gui->w_height);
+	ezgui_cfg_write_int(gui->config,
+			CFG_KEY_WINDOWSTATE, gui->gw_win_state);
 
 	ezgui_cfg_write_int(gui->config, 
 			CFG_KEY_GRID_COLUMN, opt->grid_col);
@@ -351,15 +356,42 @@ static int ezgui_create_window(EZGUI *gui)
 	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), 
 			gui->w_width, gui->w_height);
 	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
+	if (gui->gw_win_state & GDK_WINDOW_STATE_ICONIFIED) {
+		gtk_window_iconify(GTK_WINDOW(gui->gw_main));
+	}
+	if (gui->gw_win_state & GDK_WINDOW_STATE_MAXIMIZED) {
+		gtk_window_maximize(GTK_WINDOW(gui->gw_main));
+	}
+	if (gui->gw_win_state & GDK_WINDOW_STATE_FULLSCREEN) {
+		gtk_window_fullscreen(GTK_WINDOW(gui->gw_main));
+	}
 	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
 	g_signal_connect(gui->gw_main, "size-allocate",
 			G_CALLBACK(ezgui_signal_resize), gui);
+	g_signal_connect(gui->gw_main, "window-state-event",
+			G_CALLBACK(ezgui_signal_win_state), gui);
 	gtk_container_add(GTK_CONTAINER(gui->gw_main), gui->gw_page);
 	return 0;
 }
 
-static void ezgui_signal_resize(GtkWidget *parent, GdkRectangle *rect, EZGUI *gui)
+static void ezgui_signal_win_state(GtkWidget *widget, 
+		GdkEvent *event, EZGUI *gui)
 {
+	//printf("Envent %d\n", event->type);
+	if (event->type == GDK_WINDOW_STATE) {
+		gui->gw_win_state = event->window_state.new_window_state;
+	}
+}
+
+static void ezgui_signal_resize(GtkWidget *parent, 
+		GdkRectangle *rect, EZGUI *gui)
+{
+	if (gui->gw_win_state & (GDK_WINDOW_STATE_ICONIFIED | 
+				GDK_WINDOW_STATE_MAXIMIZED | 
+				GDK_WINDOW_STATE_FULLSCREEN)) {
+		return;
+	}
+
 	//printf("X=%d Y=%d Width=%d Height=%d\n",
 	//		rect->x, rect->y, rect->width, rect->height);
 	gui->w_width  = rect->width;
@@ -748,7 +780,8 @@ static void ezgui_signal_file_choose(void *parent, EZGUI *gui)
 	EZADD		*ezadd;
 	char		*dir;
 
-	dialog = gtk_file_chooser_dialog_new ("Choose File", NULL,
+	dialog = gtk_file_chooser_dialog_new ("Choose File", 
+			GTK_WINDOW(gui->gw_main),
 			GTK_FILE_CHOOSER_ACTION_OPEN,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 			GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
@@ -1318,7 +1351,7 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 	gsize	len = 0;
 	FILE	*fp;
 	
-	printf("ezgui_cfg_flush: %d\n", cfg->mcount);
+	//printf("ezgui_cfg_flush: %d\n", cfg->mcount);
 
 	if (cfg->mcount == 0) {
 		return 0;

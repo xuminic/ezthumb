@@ -50,6 +50,7 @@
 #define CFG_KEY_DURATION	"duration_mode"
 #define CFG_KEY_FILE_FORMAT	"file_format"
 #define CFG_KEY_TRANSPARENCY	"transparency"
+#define CFG_KEY_WINDOWSTATE	"window_state"
 
 #define	CFG_PIC_GRID_DIM	"column and row"	/* Grid 4x4 */
 #define CFG_PIC_GRID_STEP	"column and step"	/* Grid 4 Step 15 */
@@ -80,6 +81,7 @@ typedef	struct		{
 	GtkWidget	*gw_page;
 	GtkWidget	*gw_page_main;
 	GtkWidget	*gw_listview;
+	GdkWindowState	gw_win_state;	/* window state from events */
 	int		w_width;
 	int		w_height;
 
