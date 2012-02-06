@@ -802,12 +802,14 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Videos");
 	gtk_file_filter_add_mime_type(filter, "video/*");
+	gtk_file_filter_add_pattern(filter, "*.rm");
+	gtk_file_filter_add_pattern(filter, "*.rmvb");
 	gtk_file_chooser_add_filter(chooser, filter);
 
-	filter = gtk_file_filter_new();
+	/*filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "*.avi");
 	gtk_file_filter_add_pattern(filter, "*.avi");
-	gtk_file_chooser_add_filter(chooser, filter);
+	gtk_file_chooser_add_filter(chooser, filter);*/
 
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Files");
