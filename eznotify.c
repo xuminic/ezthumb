@@ -246,7 +246,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}*/
 		break;
 	case EN_FRAME_EXCEPTION:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_VERBS) {
 			printf("Discard ");
 			dump_frame(block, 1);
 		}

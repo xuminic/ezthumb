@@ -448,7 +448,7 @@ int video_free(EZVID *vidx)
 		avcodec_close(vidx->codecx);
 	}
 	if (vidx->formatx) {
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 2, 0))
 		avformat_close_input(&vidx->formatx);
 #else
 		av_close_input_file(vidx->formatx);
