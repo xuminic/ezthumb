@@ -9,6 +9,9 @@ compose a single GIF animation file.  But it can also save frames separately.
 The output format could be JPG, PNG, GIF or GIF animation, where PNG and GIF 
 supports the transparent background. Batch processing allows.
 
+From 2.0.0 ezthumb introduced a GUI based on GTK2. The command line interface 
+is still the same.
+
 This program was inspired by movie thumbnailer (mtn):
 http://sourceforge.net/projects/moviethumbnail/
 

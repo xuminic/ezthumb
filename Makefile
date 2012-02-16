@@ -63,7 +63,8 @@ vidlen : vidlen.c
 
 install:
 ifeq	($(SYSTOOL),unix)
-	$(CP) ezthumb ~/bin
+	install -s ezthumb $(BINDIR)
+	install ezthumb.1 $(MANDIR)
 else
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin

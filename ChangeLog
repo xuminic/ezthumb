@@ -1,3 +1,6 @@
+20120214: V2.0.0
+  + GUI mode added
+
 20111214: V1.5.8
   + ezthumb.c, main.c: improved progress display for i-frame ripping by using
   DTS as the indicator
