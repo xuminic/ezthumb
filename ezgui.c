@@ -204,6 +204,19 @@ int ezgui_close(EZGUI *gui)
 	return 0;
 }
 
+void ezgui_version(void)
+{
+	char	*path;
+
+	printf("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION, 
+			GTK_MINOR_VERSION, GTK_MICRO_VERSION);
+	path = g_build_filename(g_get_user_config_dir(),
+			CFG_SUBPATH, CFG_FILENAME, NULL);
+	printf("Profile: %s\n", path);
+	g_free(path);
+}
+
+
 
 static int ezgui_option_save(EZGUI *gui)
 {

@@ -73,17 +73,18 @@ static	struct	cliopt	clist[] = {
 	{  20, "transparent", 0, "generate the transparent background" },
 	{  22, "vindex",   1, "the index of the video stream" },
 	{   1, "help",    0, "*Display the help message" },
-	{   2, "version", 0, "*Display the version number" },
+	{   2, "version", 0, "*Display the version message" },
+	{   3, "vernum",  0, "*Display the version number" },
 	{ 0, NULL, 0, NULL }
 };
 
 
 static	char	*version = "\
-ezthumb %s, to generate the thumbnails from video files.\n\
+ezthumb %s, to generate the thumbnails from video files.\n\n\
 Copyright (C) 2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
-There is NO WARRANTY, to the extent permitted by law.\n";
+There is NO WARRANTY, to the extent permitted by law.\n\n";
 
 
 /* predefined profiles */
@@ -111,6 +112,7 @@ static int para_get_color(EZOPT *opt, char *s);
 static int para_get_fontsize(EZOPT *opt, char *s);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
+static void version_ffmpeg(void);
 
 extern int fixtoken(char *sour, char **idx, int ids, char *delim);
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
@@ -141,22 +143,14 @@ int main(int argc, char **argv)
 			break;
 		case 2:
 			printf(version, EZTHUMB_VERSION);
-			printf("FFMPEG: libavcodec %d.%d.%d; ", 
-					LIBAVCODEC_VERSION_MAJOR, 
-					LIBAVCODEC_VERSION_MINOR,
-					LIBAVCODEC_VERSION_MICRO);
-			printf("libavformat %d.%d.%d; ", 
-					LIBAVFORMAT_VERSION_MAJOR,
-					LIBAVFORMAT_VERSION_MINOR,
-					LIBAVFORMAT_VERSION_MICRO);
-			printf("libavutil %d.%d.%d; ",
-					LIBAVUTIL_VERSION_MAJOR,
-					LIBAVUTIL_VERSION_MINOR,
-					LIBAVUTIL_VERSION_MICRO);
-			printf("libswscale %d.%d.%d\n",
-					LIBSWSCALE_VERSION_MAJOR,
-					LIBSWSCALE_VERSION_MINOR,
-					LIBSWSCALE_VERSION_MICRO);
+			version_ffmpeg();
+#ifdef	CFG_GUI_ON
+			ezgui_version();
+#endif
+			todo = 'E';	/* END PROCESS */
+			break;
+		case 3:
+			printf("%s\n", EZTHUMB_VERSION);
 			todo = 'E';	/* END PROCESS */
 			break;
 		case 6:	/* nonkey */
@@ -809,5 +803,17 @@ static int event_list(void *vobj, int event, long param, long opt, void *block)
 		return EN_EVENT_PASSTHROUGH;
 	}
 	return event;
+}
+
+static void version_ffmpeg(void)
+{
+	printf("FFMPEG: libavcodec %d.%d.%d; ", LIBAVCODEC_VERSION_MAJOR, 
+			LIBAVCODEC_VERSION_MINOR, LIBAVCODEC_VERSION_MICRO);
+	printf("libavformat %d.%d.%d; ", LIBAVFORMAT_VERSION_MAJOR, 
+			LIBAVFORMAT_VERSION_MINOR, LIBAVFORMAT_VERSION_MICRO);
+	printf("libavutil %d.%d.%d; ", LIBAVUTIL_VERSION_MAJOR, 
+			LIBAVUTIL_VERSION_MINOR, LIBAVUTIL_VERSION_MICRO);
+	printf("libswscale %d.%d.%d\n", LIBSWSCALE_VERSION_MAJOR, 
+			LIBSWSCALE_VERSION_MINOR, LIBSWSCALE_VERSION_MICRO);
 }
 

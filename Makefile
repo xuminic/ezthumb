@@ -24,20 +24,30 @@ ifeq	($(SYSGUI),CFG_GUI_ON)
 LIBS	+= $(GTKLIB)
 endif
 
-ifeq	($(SYSTOOL),unix)
-	TARGET	= ezthumb
-else
-	TARGET	= ezthumb.exe
-endif
 
-RELDIR	= ezthumb-`./version`
+RELDIR	= ezthumb-`./ezthumb --vernum`
 RELDATE	= `date  +%Y%m%d`
 
 
-all: version smm $(TARGET)
+all: smm ezthumb
 
-$(TARGET): ezicon.h $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS)  -lsmm
+
+ifeq	($(SYSTOOL),unix)
+ezthumb: $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+else
+ezthumb:
+	make clean
+	SYSGUI=CFG_GUI_OFF make ezthumb.exe
+	make clean
+	SYSGUI=CFG_GUI_ON make ezthumb_win.exe
+endif
+
+ezthumb.exe: $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+
+ezthumb_win.exe: $(OBJS)
+	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 
 ezicon.h : SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
@@ -53,21 +63,28 @@ vidlen : vidlen.c
 
 install:
 ifeq	($(SYSTOOL),unix)
-	$(CP) $(TARGET) ~/bin
+	$(CP) ezthumb ~/bin
 else
 	-mkdir $(RELDIR)-win-bin
-	-$(CP) $(TARGET) ezthumb.1 $(RELDIR)-win-bin
+	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin
 endif
 
 
 clean:
+ifeq	($(SYSTOOL),unix)
+	$(RM) ezthumb version $(OBJS)
+else
+	$(RM) ezthumb.exe ezthumb_win.exe version $(OBJS)
+endif
+
+cleanall: clean
 	make -C libsmm clean
-	$(RM) $(TARGET) version $(OBJS)
 
 rel_source:
 	-mkdir $(RELDIR)
-	-cp *.c *.h *.1 *.txt Make* COPYING ChangeLog $(RELDIR)
+	-cp *.c *.h *.1 *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
+	-cp SMirC-thumbsup.svg $(RELDIR)
 	-cp -a libsmm $(RELDIR)
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-rm -rf $(RELDIR)
