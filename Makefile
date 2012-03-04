@@ -98,9 +98,9 @@ rel_win_bin: install
 	-rm -rf $(RELDIR)-win-bin
 
 ifeq	($(SYSTOOL),unix)
-release: rel_source
+release: ezthumb rel_source
 else
-release: rel_source rel_win_dev rel_win_bin
+release: ezthumb rel_source rel_win_dev rel_win_bin
 endif
 	
 
