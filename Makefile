@@ -29,11 +29,11 @@ RELDIR	= ezthumb-`./ezthumb --vernum`
 RELDATE	= `date  +%Y%m%d`
 
 
-all: smm ezthumb
+all: ezthumb
 
 
 ifeq	($(SYSTOOL),unix)
-ezthumb: $(OBJS)
+ezthumb: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb:
@@ -43,10 +43,10 @@ ezthumb:
 	SYSGUI=CFG_GUI_ON make ezthumb_win.exe
 endif
 
-ezthumb.exe: $(OBJS)
+ezthumb.exe: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 
-ezthumb_win.exe: $(OBJS)
+ezthumb_win.exe: smm $(OBJS)
 	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 
 ezicon.h : SMirC-thumbsup.svg
@@ -86,7 +86,8 @@ rel_source:
 	-mkdir $(RELDIR)
 	-cp *.c *.h *.1 *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
 	-cp SMirC-thumbsup.svg $(RELDIR)
-	-cp -a libsmm $(RELDIR)
+	-mkdir $(RELDIR)/libsmm
+	-cp libsmm/*.c libsmm/*.h libsmm/Makefile $(RELDIR)/libsmm
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-rm -rf $(RELDIR)
 
