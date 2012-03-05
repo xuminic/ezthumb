@@ -25,7 +25,11 @@ LIBS	+= $(GTKLIB)
 endif
 
 
-RELDIR	= ezthumb-`./ezthumb --vernum`
+ifeq	($(SYSTOOL),unix)
+RELDIR	= ezthumb-`./version`
+else
+RELDIR	= ezthumb-`./version.exe`
+endif
 RELDATE	= `date  +%Y%m%d`
 
 
@@ -37,9 +41,9 @@ ezthumb: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb:
-	make clean
+	make cleanobj
 	SYSGUI=CFG_GUI_OFF make ezthumb.exe
-	make clean
+	make cleanobj
 	SYSGUI=CFG_GUI_ON make ezthumb_win.exe
 endif
 
@@ -61,7 +65,7 @@ smm:
 vidlen : vidlen.c
 	$(CC) -o $@ $^ $(CFLAGS) -lavformat
 
-install:
+install: ezthumb
 ifeq	($(SYSTOOL),unix)
 	install -s ezthumb $(BINDIR)
 	install ezthumb.1 $(MANDIR)
@@ -72,11 +76,14 @@ else
 endif
 
 
-clean:
+cleanobj:
+	$(RM) $(OBJS)
+
+clean: cleanobj
 ifeq	($(SYSTOOL),unix)
-	$(RM) ezthumb version $(OBJS)
+	$(RM) ezthumb version
 else
-	$(RM) ezthumb.exe ezthumb_win.exe version $(OBJS)
+	$(RM) ezthumb.exe ezthumb_win.exe version.exe
 endif
 
 cleanall: clean
@@ -99,9 +106,9 @@ rel_win_bin: install
 	-rm -rf $(RELDIR)-win-bin
 
 ifeq	($(SYSTOOL),unix)
-release: ezthumb rel_source
+release: version rel_source
 else
-release: ezthumb rel_source rel_win_dev rel_win_bin
+release: version rel_source rel_win_dev rel_win_bin
 endif
 	
 
