@@ -1180,8 +1180,16 @@ static int video_duration(EZVID *vidx, int scanmode)
 		first_dts = video_current_dts(vidx);
 		
 		/* seek to 90% of the clip */
-		cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
-		video_seeking(vidx, cur_dts * 9 / 10);
+		/* 20120308: should seek to position according to the length
+		 * of the file rather than the duration. It's quite obvious 
+		 * that when one need the fast/scan mode, the duration must
+		 * has been out of order already. */
+		avformat_seek_file(vidx->formatx, vidx->vsidx, INT64_MIN, 
+				vidx->filesize * 9 / 10, 
+				INT64_MAX, AVSEEK_FLAG_BYTE);
+
+		//cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
+		//video_seeking(vidx, cur_dts * 9 / 10);
 		cur_dts = video_current_dts(vidx);
 
 		if ((first_dts < 0) || (cur_dts < 0)) {
