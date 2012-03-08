@@ -578,7 +578,11 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			if (dts < 0) {
 				break;
 			}
-			dts = video_decode_keyframe(vidx, &packet);
+			if (image->sysopt->flags & EZOP_P_FRAME) {
+				dts = video_decode_next(vidx, &packet);
+			} else {
+				dts = video_decode_keyframe(vidx, &packet);
+			}
 			if (dts < 0) {
 				break;
 			}
@@ -1152,6 +1156,15 @@ static int video_duration(EZVID *vidx, int scanmode)
 {
 	int64_t		first_dts, cur_dts;
 
+	if (vidx->formatx->duration && (vidx->formatx->bit_rate > 131072) &&
+			(scanmode == EZ_DUR_CLIPHEAD)) {
+		vidx->duration = (int)(vidx->formatx->duration / 
+					AV_TIME_BASE * 1000);
+		eznotify(vidx, EN_DURATION, ENX_DUR_MHEAD,
+                                vidx->duration, NULL);
+                return vidx->duration;
+	}
+#if 0
 	if (vidx->formatx->duration && (scanmode == EZ_DUR_CLIPHEAD)) {
 		/* convert duration from AV_TIME_BASE to video stream base */
 		cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
@@ -1161,7 +1174,7 @@ static int video_duration(EZVID *vidx, int scanmode)
 				vidx->duration, NULL);
 		return vidx->duration;
 	}
-
+#endif
 	/* quick scan from the tail of the stream */
 	if (scanmode != EZ_DUR_FULLSCAN) {
 		first_dts = video_current_dts(vidx);

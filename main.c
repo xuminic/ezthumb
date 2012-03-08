@@ -39,7 +39,7 @@ static	struct	cliopt	clist[] = {
 	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
 	{ 'F', "fontsize",2, "the size setting of the font" },
-	{ 'g', "grid",    2, "the thumbnail grid in the canvas.(4x4)" },
+	{ 'g', "grid",    2, "the thumbnail grid in the canvas." },
 #ifdef	CFG_GUI_ON
 	{ 'G', "gui",     0, "enable the graphic user interface" },
 #endif
@@ -47,7 +47,8 @@ static	struct	cliopt	clist[] = {
 	{ 'I', "info",    0, "display the media information" },
 	{ 'm', "format",  2, "the output format (jpg@85)" },
 	{ 'o', "outdir",  2, "the directory for storing output images" },
-	{ 'p', "process", 1, "specify the process method (0|1|2|3|4)" },
+	{ 'p', "process", 1, 
+		"the process method (skim|scan|2pass|heuri|key[@N])" },
 	{ 'P', "profile", 2, "specify the profile string" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
@@ -352,11 +353,11 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_PROC_SCAN;
 				break;
 			}
-			if ((*optarg == '3') || !strcmp(optarg, "twopass")) {
+			if ((*optarg == '3') || !strcmp(optarg, "2pass")) {
 				sysopt.flags |= EZOP_PROC_TWOPASS;
 				break;
 			}
-			if ((*optarg == '4') || !strcmp(optarg, "heuris")) {
+			if ((*optarg == '4') || !strcmp(optarg, "heuri")) {
 				sysopt.flags |= EZOP_PROC_HEURIS;
 				break;
 			}

@@ -180,19 +180,19 @@ devices like CDROM.
 Explicitly specify a method to generate thumbnails.
 .B ezthumb
 uses a seek-and-decode strategy called
-.I "'skim' (1)"
+.I "'skim'"
 in default. It will seek to the most possible place in the video 
 file and start to decode the nearest frame. 
 If the video file doesn't support seeking, 
 .B ezthumb
 will automatically switch to
-.I "'heuris' (4)" ,
+.I "'heuri'" ,
 the heuristic method, where it will scan the whole video file from begining 
 to find the proper frame to be decoded.
-.I "'heuris'"
+.I "'heuri'"
 is a single-pass strategy which uses heuristic method to decide the position
 of the the nearest frame. 
-.I "'scan' (2)"
+.I "'scan'"
 is a single-pass scan strategy too. However, it always scans to
 and decode the next nearest key frame. What's more, 
 .I "'scan'"
@@ -201,19 +201,25 @@ does
 support the
 .BR "\-\-accurate"
 option. On the other hand,
-.I "'twopass' (3)"
+.I "'2pass'"
 let
 .B ezthumb
 scan the video file twice to decide the finest position for decoding.
+.I "'key'"
+is used to rip key frames. It is almost same to
+.BR "'\-g 0x0'"
+except it can accept the number of ripped key frames. For example,
+.I "key@5"
+means to take first 5 key frames from the video clip.
 
 The default setting can process most of files. However, in dodgy
 situation, user might need to specify, or try, one of these strategies.
 
 Note that
 .I "'scan'" ,
-.I "'twopass'"
+.I "'2pass'"
 and
-.I "'heuris'" 
+.I "'heuri'" 
 are all scan-based methods. If the video file requires decoding nearby
 key frames, the
 .BR "\-\-decode\-otf"
