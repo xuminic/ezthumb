@@ -172,6 +172,11 @@
 
 #define EZ_MAX_PROFILE		64
 
+/* the threshold of "normal" byte rates. 
+ * Ezthumb calcuates the rough byterates as a reference to find out
+ * if the video source file was broken. */
+#define EZ_BR_GATE_LOW		13000
+
 
 #define BYTE	unsigned char
 

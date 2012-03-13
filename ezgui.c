@@ -1371,12 +1371,12 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 	gsize	len = 0;
 	FILE	*fp;
 	
-	//printf("ezgui_cfg_flush: %d\n", cfg->mcount);
-
 	if (cfg->mcount == 0) {
 		return 0;
 	}
 
+	printf("ezgui_cfg_flush: %d\n", cfg->mcount);
+	
 	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
 
 	if ((fp = fopen(cfg->fname, "w")) != NULL) {

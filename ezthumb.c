@@ -46,6 +46,7 @@ static int video_seekable_random(EZVID *vidx, EZIMG *image);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static int video_find_stream(EZVID *vidx, int flags);
 static int video_duration(EZVID *vidx, int scanmode);
+static int video_duration_check(EZVID *vidx);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
@@ -1156,10 +1157,10 @@ static int video_duration(EZVID *vidx, int scanmode)
 {
 	int64_t		first_dts, cur_dts;
 
-	if (vidx->formatx->duration && (vidx->formatx->bit_rate > 131072) &&
-			(scanmode == EZ_DUR_CLIPHEAD)) {
-		vidx->duration = (int)(vidx->formatx->duration / 
-					AV_TIME_BASE * 1000);
+	vidx->duration = (int)(vidx->formatx->duration / AV_TIME_BASE * 1000);
+	if (video_duration_check(vidx) == 0) {	/* bad video header */
+		scanmode = EZ_DUR_FULLSCAN;	/* full scan is enforced */
+	} else if (scanmode == EZ_DUR_CLIPHEAD) {
 		eznotify(vidx, EN_DURATION, ENX_DUR_MHEAD,
                                 vidx->duration, NULL);
                 return vidx->duration;
@@ -1184,14 +1185,19 @@ static int video_duration(EZVID *vidx, int scanmode)
 		 * of the file rather than the duration. It's quite obvious 
 		 * that when one need the fast/scan mode, the duration must
 		 * has been out of order already. */
-		avformat_seek_file(vidx->formatx, vidx->vsidx, INT64_MIN, 
+		/* 20120313: AVSEEK_FLAG_BYTE is incapable to seek through
+		 * some video file. Disable it */
+		/*avformat_seek_file(vidx->formatx, vidx->vsidx, INT64_MIN, 
 				vidx->filesize * 9 / 10, 
 				INT64_MAX, AVSEEK_FLAG_BYTE);
+		avcodec_flush_buffers(vidx->codecx);*/
 
-		//cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
-		//video_seeking(vidx, cur_dts * 9 / 10);
+		cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
+		video_seeking(vidx, cur_dts * 9 / 10);
 		cur_dts = video_current_dts(vidx);
 
+		//printf("DTS: %lld %lld\n", first_dts, cur_dts);
+		//printf("POS: %lld\n", vidx->formatx->pb->pos);
 		if ((first_dts < 0) || (cur_dts < 0)) {
 			vidx->seekable = ENX_SEEK_BW_NO;
 		} else if (cur_dts <= first_dts) {
@@ -1218,6 +1224,22 @@ static int video_duration(EZVID *vidx, int scanmode)
 	vidx->duration = (int) video_dts_to_ms(vidx, cur_dts);
 	eznotify(vidx, EN_DURATION, ENX_DUR_SCAN, vidx->duration, NULL);
 	return vidx->duration;
+}
+
+static int video_duration_check(EZVID *vidx)
+{
+	int	br;
+
+	if (vidx->duration == 0) {
+		return 0;	/* bad duration */
+	}
+
+	br = (int)(vidx->filesize / (vidx->duration / 1000));
+	//printf("video_duration_check: dur=%d br=%d\n", vidx->duration, br);
+	if (br < EZ_BR_GATE_LOW) {	/* very suspecious bitrates */
+		return 0;
+	}
+	return 1;
 }
 
 static int64_t video_statistics(EZVID *vidx)
@@ -1492,6 +1514,21 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 }
 #endif
 
+/* To get the file position: AVFormatContext.pb.pos
+ *
+ * for example:
+ *
+ * int64_t byteposition = pFormatCtx->pb->pos;
+ *
+ * To set the file position: url_seek(AVFormatContext.pb, Position, SEEK_SET);
+ *
+ * for example:
+ *
+ * url_seek(pFormatCtx->pb, 27909056, SEEK_SET);
+ *
+ * Don't forget to flush the buffers if you change the location while playing.
+ * ff_read_frame_flush()? avcodec_flush_buffers()?
+ */
 static int video_rewind(EZVID *vidx)
 {
 	/* for some reason, to rewind the stream to the head,
@@ -1499,6 +1536,7 @@ static int video_rewind(EZVID *vidx)
 	//av_seek_frame(vidx->formatx, vidx->vsidx, 0, AVSEEK_FLAG_ANY);
 	avformat_seek_file(vidx->formatx, vidx->vsidx, 
 			INT64_MIN, 0, INT64_MAX, 0);
+	avcodec_flush_buffers(vidx->codecx);
 	video_keyframe_credit(vidx, -1);
 	return 0;
 }
@@ -1508,6 +1546,7 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 	//av_seek_frame(vidx->formatx, vidx->vsidx, dts, AVSEEK_FLAG_BACKWARD);
 	avformat_seek_file(vidx->formatx, vidx->vsidx, 
 			INT64_MIN, dts, INT64_MAX, AVSEEK_FLAG_BACKWARD);
+	avcodec_flush_buffers(vidx->codecx);
 	video_keyframe_credit(vidx, -1);
 	return 0;
 }

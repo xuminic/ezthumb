@@ -1,3 +1,11 @@
+20120313:
+  + video_duration(): there are two issues in this function. First the video
+  header might be non-existed or inaccurate. In that case the video duration
+  could be a redicules number. Using a bitrate threshold to workaround this
+  problem. Second is that in the function avformat_seek_file(), the
+  AVSEEK_FLAG_BYTE acts terrible (with middle.avi). Sometimes there is no way
+  to seek to 90% of the video file so have to make a workabound.
+ 
 20120214: V2.0.0
   + GUI mode added
 
