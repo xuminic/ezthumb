@@ -579,6 +579,12 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			if (dts < 0) {
 				break;
 			}
+			/* Argus_20120222-114427384.ts case:
+			 * the HD DVB rip file has some dodge i-frame, 
+			 * after decoding, they turned to P/B frames.
+			 * This issue may also happen on H.264 streams.
+			 * The workaround is the option to decode the
+			 * next frame instead of searching an i-frame. */
 			if (image->sysopt->flags & EZOP_P_FRAME) {
 				dts = video_decode_next(vidx, &packet);
 			} else {
