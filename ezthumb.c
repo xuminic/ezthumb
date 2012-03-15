@@ -476,6 +476,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
+	//printf("video_snapshot_keyframes: %lld to %lld\n", dts_from, dts_to);
 	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
 	i = 0;
@@ -586,6 +587,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			 * The workaround is the option to decode the
 			 * next frame instead of searching an i-frame. */
 			if (image->sysopt->flags & EZOP_P_FRAME) {
+				//printf("DTS=%lld to %lld\n", dts, dts_snap);
 				dts = video_decode_next(vidx, &packet);
 			} else {
 				dts = video_decode_keyframe(vidx, &packet);
@@ -1412,6 +1414,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	vidx->rf_size = 0;
 	vidx->rf_pac  = 0;
 	do {
+		//printf("video_decode_next: %lld\n", packet->dts);
 		eznotify(vidx, EN_PACKET_RECV, 0, 0, packet);
 		vidx->rf_size += packet->size;
 		vidx->rf_pac++;

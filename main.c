@@ -365,6 +365,7 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_PROC_KEYRIP;
 				sysopt.grid_col = 0;
 				sysopt.grid_row = 0;
+				prof_grid = 0;	/* disable the profile */
 				c = (*optarg == '5') ? 1 : 3;
 				if (optarg[c] == '@') {
 					sysopt.key_ripno = (int)
