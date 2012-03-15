@@ -1,3 +1,8 @@
+20120315: V2.0.1
+  + main.c: fixed the '-p key' issue which caused by the profile
+  + workaround for DVB rip file by this option:
+    ezthumb -p scan --accurate --decode-otf Argus_20120222-114427384.ts
+
 20120313:
   + video_duration(): there are two issues in this function. First the video
   header might be non-existed or inaccurate. In that case the video duration
