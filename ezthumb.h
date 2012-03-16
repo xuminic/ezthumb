@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.0.1"
+#define EZTHUMB_VERSION		"2.1.0"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -130,6 +130,7 @@
 #define EZOP_PROC_TWOPASS	0x30000	/* two pass scan support p-frame */
 #define EZOP_PROC_HEURIS	0x40000 /* heuristic scan */
 #define EZOP_PROC_KEYRIP	0x50000	/* rip key frames */
+#define EZOP_PROC_SAFE		0x60000	/* safe mode */
 
 
 #define EZ_POS_LEFTTOP		0
@@ -403,6 +404,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
 int video_free(EZVID *vidx);
 int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
 int video_snapshot_skim(EZVID *vidx, EZIMG *image);
+int video_snapshot_safemode(EZVID *vidx, EZIMG *image);
 int video_snapshot_scan(EZVID *vidx, EZIMG *image);
 int video_snapshot_twopass(EZVID *vidx, EZIMG *image);
 int video_snapshot_heuristic(EZVID *vidx, EZIMG *image);

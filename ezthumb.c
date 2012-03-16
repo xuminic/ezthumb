@@ -254,6 +254,9 @@ int ezthumb(char *filename, EZOPT *ezopt)
 	case EZOP_PROC_SCAN:
 		video_snapshot_scan(vidx, image);
 		break;
+	case EZOP_PROC_SAFE:
+		video_snapshot_safemode(vidx, image);
+		break;
 	case EZOP_PROC_TWOPASS:
 		video_snapshot_twopass(vidx, image);
 		break;
@@ -556,6 +559,41 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
+	}
+	video_snap_end(vidx, image);
+	return EZ_ERR_NONE;
+}
+
+int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
+{
+	AVPacket	packet;
+	int64_t		dts, dts_snap;
+	int		i = 0;
+
+	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
+
+	dts_snap = video_snap_point(vidx, image, i);
+	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
+		/* use video_decode_next() instead of video_decode_keyframe()
+		 * because sometimes it's good for debugging doggy clips */
+		if (video_decode_next(vidx, &packet) < 0) {
+			break;
+		}
+		if (dts >= dts_snap) {
+			eznotify(vidx, EN_FRAME_EFFECT, i, 0, &packet);
+			video_snap_update(vidx, image, i, dts);
+			dts_snap = video_snap_point(vidx, image, ++i);
+		}
+		av_free_packet(&packet);
+		if (i >= image->shots) {
+			break;
+		}
+	}
+	if (i < image->shots) {
+		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
+		for ( ; i < image->shots; i++) {
+			video_snap_update(vidx, image, i, -1);
+		}
 	}
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;

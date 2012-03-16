@@ -211,6 +211,9 @@ is used to rip key frames. It is almost same to
 except it can accept the number of ripped key frames. For example,
 .I "key@5"
 means to take first 5 key frames from the video clip.
+.I "'safe'"
+mode is based on the key frame ripping strategy. It decodes every key frames
+and picks up the closest frames to compose the thumbnails. 
 
 The default setting can process most of files. However, in dodgy
 situation, user might need to specify, or try, one of these strategies.

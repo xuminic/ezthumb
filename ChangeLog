@@ -1,3 +1,10 @@
+
+??: V2.1.0
+  + introduced the safe mode
+
+20120316:
+  + main.c/ezthumb.c: introduced the safe mode as part of the -p option.
+
 20120315: V2.0.1
   + main.c: fixed the '-p key' issue which caused by the profile
   + workaround for DVB rip file by this option:

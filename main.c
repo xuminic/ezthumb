@@ -48,7 +48,7 @@ static	struct	cliopt	clist[] = {
 	{ 'm', "format",  2, "the output format (jpg@85)" },
 	{ 'o', "outdir",  2, "the directory for storing output images" },
 	{ 'p', "process", 1, 
-		"the process method (skim|scan|2pass|heuri|key[@N])" },
+		"the process method (skim|scan|2pass|heuri|safe|key[@N])" },
 	{ 'P', "profile", 2, "specify the profile string" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
@@ -361,12 +361,16 @@ int main(int argc, char **argv)
 				sysopt.flags |= EZOP_PROC_HEURIS;
 				break;
 			}
-			if ((*optarg == '5') || !strncmp(optarg, "key", 3)) {
+			if ((*optarg == '5') || !strcmp(optarg, "safe")) {
+				sysopt.flags |= EZOP_PROC_SAFE;
+				break;
+			}
+			if ((*optarg == '6') || !strncmp(optarg, "key", 3)) {
 				sysopt.flags |= EZOP_PROC_KEYRIP;
 				sysopt.grid_col = 0;
 				sysopt.grid_row = 0;
 				prof_grid = 0;	/* disable the profile */
-				c = (*optarg == '5') ? 1 : 3;
+				c = (*optarg == '6') ? 1 : 3;
 				if (optarg[c] == '@') {
 					sysopt.key_ripno = (int)
 						strtol(optarg+c+1, NULL, 0);
