@@ -339,10 +339,21 @@ typedef	struct	{
 } EZIMG;
 
 typedef	struct		{
+	AVFrame		*frame;
+	int64_t		rf_dts;
+	int64_t		rf_pos;
+	int		rf_size;
+	int		rf_pac;
+} EZFRM;
+
+typedef	struct		{
 	AVFormatContext	*formatx;	/* must NULL it !! */
 	AVCodecContext	*codecx;
-	AVFrame		*frame;
 	int		vsidx;
+	
+	EZFRM		fgroup[2];
+	int		fnow;
+	unsigned	fdec;
 
 	int		duration;	/* the stream duration in ms */
 	int		seekable;	/* video keyframe seekable flag */
@@ -353,12 +364,6 @@ typedef	struct		{
 	int64_t		keylast;	/* the DTS of the last keyframe */
 	int		keycount;
 	int64_t		keydelta;	/* the delta DTS of snapshots */
-
-	/* for recording the last decoding status */
-	int64_t		rf_dts;
-	int64_t		rf_pos;
-	int		rf_size;
-	int		rf_pac;
 
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */
@@ -433,7 +438,7 @@ int dump_codec_video(AVCodecContext *codec);
 int dump_codec_audio(AVCodecContext *codec);
 int dump_packet(AVPacket *p);
 int dump_frame(AVFrame *frame, int got_pic);
-int dump_frame_packet(EZVID *vidx, int ffin);
+int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
 int dump_stream(AVStream *stream);
 int dump_ezimage(EZIMG *image);
 

@@ -1,6 +1,12 @@
 
 ??: V2.1.0
   + introduced the safe mode
+  + introduced the dual frame buffer
+
+20120320:
+  + ezthumb.c: introduced two frame buffers while decoding, one is the 
+    current decoded frame and another one is the previous decoded frame.
+    It could be useful while deciding the closest frames.
 
 20120316:
   + main.c/ezthumb.c: introduced the safe mode as part of the -p option.
