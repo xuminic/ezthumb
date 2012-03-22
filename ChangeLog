@@ -3,6 +3,9 @@
   + introduced the safe mode
   + introduced the dual frame buffer
 
+20120322:
+  + ezthumb.c: reapply the twopass method
+
 20120320:
   + ezthumb.c: introduced two frame buffers while decoding, one is the 
     current decoded frame and another one is the previous decoded frame.

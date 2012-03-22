@@ -364,6 +364,7 @@ typedef	struct		{
 	int64_t		keylast;	/* the DTS of the last keyframe */
 	int		keycount;
 	int64_t		keydelta;	/* the delta DTS of snapshots */
+	void		*keylib;	/* the anchor to keyframe list */
 
 	FILE		*gifx_fp;	/* for GIF89 animation */
 	int		gifx_opt;	/* for GIF89 animation */
@@ -391,7 +392,13 @@ struct	MeStat		{	/* media statistics */
 	int64_t		dts_last;
 };
 
+#define	MAX_DTS_LIB	8192
 
+struct	DTSLIB	{
+	struct	DTSLIB	*next;
+	int	num;
+	int64_t	dts[MAX_DTS_LIB];
+};
 
 typedef	int  (*F_BRK)(void*, void*);
 typedef	void (*F_HOOK)(F_BRK, void*, void*);

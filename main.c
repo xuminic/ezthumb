@@ -341,31 +341,31 @@ int main(int argc, char **argv)
 			sysopt.pathout = optarg;
 			break;
 		case 'p':
-			if ((*optarg == '0') || !strcmp(optarg, "auto")) {
+			if (!strcmp(optarg, "auto")) {
 				sysopt.flags |= EZOP_PROC_AUTO;
 				break;
 			}
-			if ((*optarg == '1') || !strcmp(optarg, "skim")) {
+			if (!strcmp(optarg, "skim")) {
 				sysopt.flags |= EZOP_PROC_SKIM;
 				break;
 			}
-			if ((*optarg == '2') || !strcmp(optarg, "scan")) {
+			if (!strcmp(optarg, "scan")) {
 				sysopt.flags |= EZOP_PROC_SCAN;
 				break;
 			}
-			if ((*optarg == '3') || !strcmp(optarg, "2pass")) {
+			if (!strcmp(optarg, "2pass")) {
 				sysopt.flags |= EZOP_PROC_TWOPASS;
 				break;
 			}
-			if ((*optarg == '4') || !strcmp(optarg, "heuri")) {
+			if (!strcmp(optarg, "heuri")) {
 				sysopt.flags |= EZOP_PROC_HEURIS;
 				break;
 			}
-			if ((*optarg == '5') || !strcmp(optarg, "safe")) {
+			if (!strcmp(optarg, "safe")) {
 				sysopt.flags |= EZOP_PROC_SAFE;
 				break;
 			}
-			if ((*optarg == '6') || !strncmp(optarg, "key", 3)) {
+			if (!strncmp(optarg, "key", 3)) {
 				sysopt.flags |= EZOP_PROC_KEYRIP;
 				sysopt.grid_col = 0;
 				sysopt.grid_row = 0;

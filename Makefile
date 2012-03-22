@@ -75,6 +75,8 @@ else
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin
 endif
 
+debug: ezthumb
+	cp ezthumb ~/bin
 
 cleanobj:
 	$(RM) $(OBJS)
