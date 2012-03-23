@@ -355,6 +355,10 @@ typedef	struct		{
 	int		fnow;
 	unsigned	fdec;
 
+	int		ses_dura;	/* session duration mode */
+	int		ses_proc;	/* session process mode */
+	int		ses_acc;	/* session accurate mode */
+
 	int		duration;	/* the stream duration in ms */
 	int		seekable;	/* video keyframe seekable flag */
 	SMM_TIME	tmark;		/* the beginning timestamp */
@@ -406,6 +410,7 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 
 /* ezthumb.c */
 void ezopt_init(EZOPT *ezopt, char *profile);
+void ezopt_review(EZOPT *opt);
 int ezopt_profile_setup(EZOPT *opt, char *s);
 char *ezopt_profile_export(EZOPT *ezopt);
 int ezthumb(char *filename, EZOPT *ezopt);
@@ -431,8 +436,6 @@ int meta_fontsize(int fsize, int refsize);
 char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
 char *meta_timestamp(int ms, int enms, char *buffer);
-
-
 
 /* eznotify.c */
 int eznotify(EZVID *vidx, int event, long param, long opt, void *block);

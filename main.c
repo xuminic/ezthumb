@@ -460,11 +460,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* foolproof the right transparent setting */
-	if (!strcmp(sysopt.img_format, "jpg")) {
-		sysopt.flags &= ~EZOP_TRANSPARENT;
-	}
-
 	/* disable the unwanted profiles */
 	if (prof_grid == 0) {
 		sysopt.pro_grid = NULL;
@@ -472,6 +467,10 @@ int main(int argc, char **argv)
 	if (prof_size == 0) {
 		sysopt.pro_size = NULL;
 	}
+
+	/* review the command option structure to make sure there is no
+	 * controdicted options */
+	ezopt_review(&sysopt);
 
 	/* if no video file was specified, the ezthumb starts in GUI mode */
 	if (optind >= argc) {
