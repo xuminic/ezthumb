@@ -36,7 +36,7 @@
 
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
-static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, int64_t);
+//static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, int64_t);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
 static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
@@ -98,6 +98,7 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
 static void *dts_lib_free(void *anchor);
 static void *dts_lib_add(void *anchor, int64_t dts);
 static int64_t dts_lib_seek(void *anchor, int64_t refdts, int whence);
+static int dts_lib_compress(void *anchor, int64_t *refdts, int num);
 
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
 
@@ -578,7 +579,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		video_snap_update(vidx, image, i, dts);
+		video_snap_update(vidx, image, i, dts_snap);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
@@ -673,36 +674,70 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap, key_last, key_now;
+	int64_t		*refdts;
 	int		i;
+
+	/* compress the key frame list */
+	if ((refdts = calloc(image->shots * 4, sizeof(int64_t))) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+	for (i = 0; i < image->shots; i++) {
+		refdts[i*3] = video_snap_point(vidx, image, i);
+	}
+	dts_lib_compress(vidx->keylib, refdts, image->shots);
 
 	/* review if more than one snapshots were taken inside nearby 
 	 * keyframes. If more than one shots, we will take p-frames instead 
 	 * even the EZOP_P_FRAME was not set */
 	if (vidx->ses_acc == 0) {
-		dts_snap = video_snap_point(vidx, image, 0);
-		key_last = dts_lib_seek(vidx->keylib, dts_snap, SEEK_SET);
-		for (i = 1; i < image->shots; i++) {
-			dts_snap = video_snap_point(vidx, image, i);
-			key_now  = dts_lib_seek(vidx->keylib, dts_snap, SEEK_SET);
-			if (key_now == key_last) {
+		for (i = 0; i < image->shots; i++) {
+			if (refdts[i*3+1] == refdts[i*3+4]) {
 				vidx->ses_acc = 1;
 				break;
 			}
-			key_last = key_now;
 		}
 	}
 
 	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
 	for (i = dts = 0; i < image->shots; i++) {
-		/* find the snap point to shoot */
-		dts_snap = video_snap_point(vidx, image, i);
+		if (dts < refdts[i*3+1]) {
+			dts = video_keyframe_to(vidx, &packet, refdts[i*3+1]);
+			video_decode_next(vidx, &packet);
+		}
+		if (vidx->ses_acc) {
+			dts = video_load_packet(vidx, &packet);
+			video_decode_to(vidx, &packet, refdts[i*3]);
+		} else if (dts < refdts[i*3+2]) {
+			dts = video_keyframe_to(vidx, &packet, refdts[i*3+2]);
+			video_decode_next(vidx, &packet);
+		}
+		if (dts < 0) {
+			break;
+		}
+		video_snap_update(vidx, image, i, refdts[i*3]);
+
+
+
+
+
+
+
 
 		if (vidx->ses_acc) {
-			key_now = dts_lib_seek(vidx->keylib, dts_snap, SEEK_SET);
-		} else {
-			key_now = dts_lib_seek(vidx->keylib, dts_snap, SEEK_CUR);
+			if (dts < refdts[i*3+1]) {
+				dts = video_keyframe_to(vidx, &packet, refdts[i*3+1]);
+			} else {
+				dts = video_load_packet(vidx, &packet);
+			}
+			if (dts < 0) {
+				break;
+			}
+			video_decode_to(vidx, &packet, refdts[i*3]);
+		} else if (dts < refdts[i*3+1]) {
+			dts = meta_bestfit(refdts[i*3], refdts[i*3+1], refdts[i*3+2]);
+			dts = video_keyframe_to(vidx, &packet, ... );
+			video_decode_next(vidx, &packet);
 		}
-		//printf("video_snapshot_twopass: %lld (%lld)\n", key_now, dts);
 
 		if (dts < key_now) {
 			dts = video_keyframe_to(vidx, &packet, key_now);
@@ -733,6 +768,21 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	video_snap_end(vidx, image);
 	return EZ_ERR_NONE;
 }
+
+{
+	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
+
+	for (i = dts = 0; i < image->shots; i++) {
+		dts_snap = video_snap_point(vidx, image, i);
+
+		if ((dts_snap >= dts_cur_key) && (dts_snap < dts_next_key)) {
+			video_decode_to(vidx, dts_snap);
+		} else {
+			dts_cur_key = video_keyframe_to(vidx, &packet, dts_snap);
+			dts_next_key = ...;
+
+
+
 
 int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 {
@@ -1403,29 +1453,19 @@ static EZFRM *video_frame_next(EZVID *vidx)
 
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 {
-	int	c, p;
+	int	i;
 
-	c = vidx->fnow;
-	p = (c == 0) ? 1 : 0;
-	if ((vidx->fgroup[c].rf_dts < 0) && (vidx->fgroup[p].rf_dts < 0)) {
+	if ((refdts = meta_bestfit(refdts, 
+			vidx->fgroup[0].rf_dts,vidx->fgroup[1].rf_dts)) < 0) {
 		return NULL;	/* no proper frame */
-	} else if (vidx->fgroup[c].rf_dts < 0) {
-		c = p;
-		p = (c == 0) ? 1 : 0;
-	} else if (refdts >= 0) {
-		if ((refdts - vidx->fgroup[p].rf_dts) < 
-				(vidx->fgroup[c].rf_dts - refdts)) {
-			c = p;
-			p = (c == 0) ? 1 : 0;
-		}
+	} 
+	
+	i = 0;
+	if (refdts == vidx->fgroup[1].rf_dts) {
+		i = 1;
 	}
-	printf("FRAME %s\n", c == vidx->fnow ? "Current" : "Previous");
-	/*printf("FRAME %lld: %lld+%d %lld+%d \n", refdts, 
-			vidx->fgroup[c].rf_dts, 
-			(int)(vidx->fgroup[c].rf_dts - refdts),
-			vidx->fgroup[p].rf_dts,
-			(int)(vidx->fgroup[p].rf_dts - refdts));*/
-	return &vidx->fgroup[c];
+	printf("FRAME %s\n", i == vidx->fnow ? "Current" : "Previous");
+	return &vidx->fgroup[i];
 }
 
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
@@ -1482,11 +1522,9 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 		 *   [mpeg4 @ 0x91a6a60]Invalid and inefficient vfw-avi packed
 		 *   B frames detected
 		 * The FFMPEG can not decode this i-frame, perhaps in lack of
-		 * previous key frame information. The workabound is continuing
+		 * previous key frame information. The workaround is continuing
 		 * decoding until a proper key frame met */
 		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
-			/* successfully decoded a frame and the packet would
-			 * be freed outside this function */
 			return dts;	
 		}
 		eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, 
@@ -1502,8 +1540,6 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	do {
 		dts = video_decode_next(vidx, packet);
 		if ((dts < 0) || (dts >= dtsto)) {
-			/* successfully decoded a frame and the packet would
-			 * be freed outside this function */
 			return dts;
 		}
 
@@ -2848,6 +2884,37 @@ _dts_lib_seek_ok:
 }
 
 
+/* input:  refdts[0] = reference DTS 0;    refdts[1] = 0;    refdts[2] = 0
+ *         refdts[3] = reference DTS 1;    refdts[4] = 0;    refdts[5] = 0
+ *         ...
+ * output: refdts[0] = reference DTS 0;    refdts[1] = KEY1; refdts[2] = KEY2
+ *         refdts[3] = reference DTS 1;    refdts[4] = KEY3; refdts[5] = KEY4
+ *         ...
+ */
+static int dts_lib_compress(void *anchor, int64_t *refdts, int num)
+{
+	struct	DTSLIB	*lp;
+	int64_t	prev = 0;
+	int	i, n;
+
+	n = 0;
+	for (lp = anchor; lp; lp = lp->next) {
+		for (i = 0; i < lp->num; i++) {
+			while (lp->dts[i] >= refdts[n*3]) {
+				refdts[n*3+1] = prev;
+				refdts[n*3+1] = lp->dts[i];
+				n++;
+				if (n >= num) {
+					return n;
+				}
+			}
+			prev = lp->dts[i];
+		}
+	}
+	return n;
+}
+
+
 char *meta_bitrate(int bitrate, char *buffer)
 {
 	static	char	tmp[32];
@@ -2967,4 +3034,22 @@ char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
 	return buf;
 }
 
+int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2)
+{
+	int64_t	c1, c2;
+
+	if (v1 < 0) {
+		return v2;
+	}
+	if (v2 < 0) {
+		return v1;
+	}
+	
+	c1 = (ref > v1) ? ref - v1 : v1 - ref;
+	c2 = (ref > v2) ? ref - v2 : v2 - ref;
+	if (c1 < c2) {
+		return v1;
+	}
+	return v2;
+}
 

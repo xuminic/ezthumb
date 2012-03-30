@@ -436,6 +436,7 @@ int meta_fontsize(int fsize, int refsize);
 char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
 char *meta_timestamp(int ms, int enms, char *buffer);
+int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
 
 /* eznotify.c */
 int eznotify(EZVID *vidx, int event, long param, long opt, void *block);
