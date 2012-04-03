@@ -97,7 +97,6 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
 
 static void *dts_lib_free(void *anchor);
 static void *dts_lib_add(void *anchor, int64_t dts);
-static int64_t dts_lib_seek(void *anchor, int64_t refdts, int whence);
 static int dts_lib_compress(void *anchor, int64_t *refdts, int num);
 
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
@@ -112,7 +111,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 
 	/* enable media info area and inset timestamp, skip the first and the
 	 * last frame, no shadows */
-	ezopt->flags = EZOP_INFO | EZOP_TIMEST;
+	ezopt->flags = EZOP_INFO | EZOP_TIMEST | EZOP_DECODE_OTF;
 
 	//ezopt->grid_gap_w = 4 | EZ_RATIO_OFF;
 	//ezopt->grid_gap_h = 4 | EZ_RATIO_OFF;
@@ -656,7 +655,8 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 				break;
 			}
 		}
-		video_snap_update(vidx, image, i, dts);
+		//video_snap_update(vidx, image, i, dts);
+		video_snap_update(vidx, image, i, dts_snap);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
@@ -673,8 +673,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
-	int64_t		dts, dts_snap, key_last, key_now;
-	int64_t		*refdts;
+	int64_t		dts, *refdts;
 	int		i;
 
 	/* compress the key frame list */
@@ -686,6 +685,13 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	}
 	dts_lib_compress(vidx->keylib, refdts, image->shots);
 
+	/*
+	for (i = 0; i < image->shots; i++) {
+		printf("(%lld %lld %lld)", 
+				refdts[i*3], refdts[i*3+1], refdts[i*3+2]);
+	}
+	printf("\n");
+	*/
 	/* review if more than one snapshots were taken inside nearby 
 	 * keyframes. If more than one shots, we will take p-frames instead 
 	 * even the EZOP_P_FRAME was not set */
@@ -715,49 +721,6 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			break;
 		}
 		video_snap_update(vidx, image, i, refdts[i*3]);
-
-
-
-
-
-
-
-
-		if (vidx->ses_acc) {
-			if (dts < refdts[i*3+1]) {
-				dts = video_keyframe_to(vidx, &packet, refdts[i*3+1]);
-			} else {
-				dts = video_load_packet(vidx, &packet);
-			}
-			if (dts < 0) {
-				break;
-			}
-			video_decode_to(vidx, &packet, refdts[i*3]);
-		} else if (dts < refdts[i*3+1]) {
-			dts = meta_bestfit(refdts[i*3], refdts[i*3+1], refdts[i*3+2]);
-			dts = video_keyframe_to(vidx, &packet, ... );
-			video_decode_next(vidx, &packet);
-		}
-
-		if (dts < key_now) {
-			dts = video_keyframe_to(vidx, &packet, key_now);
-		} else {
-			dts = video_load_packet(vidx, &packet);
-		}
-		if (dts < 0) {
-			break;
-		}
-
-		if (vidx->ses_acc) {
-			dts = video_decode_to(vidx, &packet, dts_snap);
-		} else {
-			dts = video_decode_next(vidx, &packet);
-		}
-		if (dts < 0) {
-			break;
-		}
-
-		video_snap_update(vidx, image, i, dts);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
@@ -766,22 +729,9 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		}
 	}
 	video_snap_end(vidx, image);
+	free(refdts);
 	return EZ_ERR_NONE;
 }
-
-{
-	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
-
-	for (i = dts = 0; i < image->shots; i++) {
-		dts_snap = video_snap_point(vidx, image, i);
-
-		if ((dts_snap >= dts_cur_key) && (dts_snap < dts_next_key)) {
-			video_decode_to(vidx, dts_snap);
-		} else {
-			dts_cur_key = video_keyframe_to(vidx, &packet, dts_snap);
-			dts_next_key = ...;
-
-
 
 
 int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
@@ -927,6 +877,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 	return dts;
 }
 
+#if 0
 static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, 
 		int64_t dtsto)
 {
@@ -941,6 +892,7 @@ static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet,
 	}
 	return video_keyframe_to(vidx, packet, dtsto);
 }
+#endif
 
 static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
@@ -1453,18 +1405,22 @@ static EZFRM *video_frame_next(EZVID *vidx)
 
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 {
+	int64_t	dts;
 	int	i;
 
-	if ((refdts = meta_bestfit(refdts, 
-			vidx->fgroup[0].rf_dts,vidx->fgroup[1].rf_dts)) < 0) {
+	if ((dts = meta_bestfit(refdts, vidx->fgroup[0].rf_dts,
+			vidx->fgroup[1].rf_dts)) < 0) {
 		return NULL;	/* no proper frame */
 	} 
 	
 	i = 0;
-	if (refdts == vidx->fgroup[1].rf_dts) {
+	if (dts == vidx->fgroup[1].rf_dts) {
 		i = 1;
 	}
-	printf("FRAME %s\n", i == vidx->fnow ? "Current" : "Previous");
+
+	/*printf("FRAME of %s: %lld in (%lld %lld)\n", 
+			i == vidx->fnow ? "Current" : "Previous", dts,
+			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts);*/
 	return &vidx->fgroup[i];
 }
 
@@ -2818,7 +2774,7 @@ static void *dts_lib_free(void *anchor)
 
 	lp = anchor; 
 	while (lp) {
-		printf("dts_lib_free: %d\n", lp->num);
+		//printf("dts_lib_free: %d\n", lp->num);
 		now = lp;
  		lp = lp->next;
 		free(now);
@@ -2851,38 +2807,6 @@ static void *dts_lib_add(void *anchor, int64_t dts)
 	return anchor;
 }
 
-static int64_t dts_lib_seek(void *anchor, int64_t refdts, int whence)
-{
-	struct	DTSLIB	*lp;
-	int64_t	prev = 0;
-	int	i;
-
-	for (lp = anchor; lp; lp = lp->next) {
-		for (i = 0; i < lp->num; i++) {
-			if (lp->dts[i] >= refdts) {
-				goto _dts_lib_seek_ok;
-			}
-			prev = lp->dts[i];
-		}
-	}
-	return -1;	/* DTS not found */
-
-_dts_lib_seek_ok:
-	switch (whence) {
-	case SEEK_SET:
-		break;
-	case SEEK_CUR:
-		if ((refdts - prev) > (lp->dts[i] - refdts)) {
-			prev = lp->dts[i];
-		}
-		break;
-	default:	/* SEEK_END */
-		prev = lp->dts[i];
-		break;
-	}
-	return prev;
-}
-
 
 /* input:  refdts[0] = reference DTS 0;    refdts[1] = 0;    refdts[2] = 0
  *         refdts[3] = reference DTS 1;    refdts[4] = 0;    refdts[5] = 0
@@ -2902,7 +2826,7 @@ static int dts_lib_compress(void *anchor, int64_t *refdts, int num)
 		for (i = 0; i < lp->num; i++) {
 			while (lp->dts[i] >= refdts[n*3]) {
 				refdts[n*3+1] = prev;
-				refdts[n*3+1] = lp->dts[i];
+				refdts[n*3+2] = lp->dts[i];
 				n++;
 				if (n >= num) {
 					return n;
@@ -3043,6 +2967,9 @@ int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2)
 	}
 	if (v2 < 0) {
 		return v1;
+	}
+	if (ref < 0) {
+		return v1 > v2 ? v1 : v2;
 	}
 	
 	c1 = (ref > v1) ? ref - v1 : v1 - ref;
