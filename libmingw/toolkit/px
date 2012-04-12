@@ -1,0 +1,27 @@
+#!/bin/sh
+#/bin/ps axfo user,pid,pcpu,time,rss,stat,tty,comm $@
+
+PSTASK="-N --ppid 2"
+PSSTRU="-H"
+PSFMT="-o user,pid,pcpu,time,rss,stat,tname,cmd"
+PSFILTR=
+
+for i in $*
+do
+    case "$i" in
+	-a)
+	    PSTASK=-e
+	    ;;
+	-u)
+	    PSTASK="-u `id -u`"
+	    ;;
+	-*)
+	    echo $0 [-a][-u] [filter ...]
+	    exit 0
+	    ;;
+	*)
+	    PSFILTR="$PSFILTR | grep $i"
+	    ;;
+    esac
+done
+eval /bin/ps $PSTASK $PSSTRU $PSFMT $PSFILTR
