@@ -72,6 +72,8 @@ static void e_hentai_page_stat(EHBUF *ehbuf);
 static int  e_hentai_file_sn(char *url);
 static char *e_hentai_url_filename(char *url, char *buffer, int blen);
 static int e_hentai_trap(char *url);
+static int e_hentai_is_image(char *url);
+static int e_hentai_is_image_path(char *url);
 
 static char *url_get_tail(char *url, int sep);
 static char *url_get_path(char *url, int pn, char *buf, int blen);
@@ -319,12 +321,11 @@ static int e_hentai_download(char *urbuf, int todo)
 static char *e_hentai_find_url(EHBUF *ehbuf, int cmd)
 {
 	char	*dict_first[] = 
-	{ "f.png", "p.afk", "M.iha", "7.qqm", "f.lol", "Q.bbq", "a.tlc", NULL };
+	{ "f.png", "p.afk", "M.iha", "7.qqm", "f.lol", "Q.bbq", "a.tlc", "o.ffs", NULL };
 	char	*dict_last[]  = 
-	{ "l.png", "O.ffs", "T.afk", "d.lol", "x.qqm", "l.iha", "h.bbq", NULL };
+	{ "l.png", "O.ffs", "T.afk", "d.lol", "x.qqm", "l.iha", "h.bbq", "Z.tlc", NULL };
 	char	*dict_next[]  = 
-	{ "n.png", "S.bbq", "b.tlc", "P.afk", "F.lol", "W.ffs", "g.qqm", "next.png", NULL };
-	char	tmp[16];
+	{ "n.png", "S.bbq", "b.tlc", "P.afk", "F.lol", "W.ffs", "g.qqm", "e.iha", "next.png", NULL };
 	int	i;
 
 	for (i = 0; ehbuf->urlist[i][0]; i++) {
@@ -374,16 +375,10 @@ static char *e_hentai_find_url(EHBUF *ehbuf, int cmd)
 					ehbuf->keysn[2]) {
 				break;
 			}
-			/*if ((nurl = strrchr(ehbuf->urlist[i][1], '.')) == NULL) {
+			if (!e_hentai_is_image(ehbuf->urlist[i][1])) {
 				break;
 			}
-			if (strcmp(nurl, ".jpg") && strcmp(nurl, ".png")) {
-				break;
-			}*/
-			if (url_get_path(ehbuf->urlist[i][1], 1, tmp, sizeof(tmp)) == NULL) {
-				break;
-			}
-			if (strcmp(tmp, "h") && strcmp(tmp, "ehg")) {
+			if (!e_hentai_is_image_path(ehbuf->urlist[i][1])) {
 				break;
 			}
 			if (cmd == URL_CMD_NEXT) {
@@ -565,7 +560,42 @@ static int e_hentai_trap(char *url)
 	return 0;
 }
 
+static int e_hentai_is_image(char *url)
+{
+	if ((url = strrchr(url, '.')) == NULL) {
+		return 0;	/* no image in the URL */
+	}
+	url++;
+	if (!strcmp(url, "jpg") || !strcmp(url, "jpe")) {
+		return 1;
+	}
+	if (!strcmp(url, "gif")) {
+		return 1;
+	}
+	if (!strcmp(url, "png")) {
+		return 1;
+	}
+	if (!strcmp(url, "bmp")) {
+		return 1;
+	}
+	return 0;
+}
 
+static int e_hentai_is_image_path(char *url)
+{
+	char	tmp[32];
+
+	if (url_get_path(url, 1, tmp, sizeof(tmp)) == NULL) {
+		return 0;
+	}
+	if (!strcmp(tmp, "h")) {
+		return 1;
+	}
+	if (!strcmp(tmp, "ehg")) {
+		return 1;
+	}
+	return 0;
+}
 
 static char *url_get_tail(char *url, int sep)
 {

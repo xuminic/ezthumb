@@ -1,11 +1,14 @@
 
-??: V2.1.0
-  + introduced the safe mode
+20120413: V2.1.0
+  + introduced the safe mode as the default single step
   + introduced the dual frame buffer
+  + improved the towpass mode
 
 20120403:
   + ezthumb.c: improved twopass method after sanity test.
     Replace the scan mode with the safe mode
+  + ezthumb.c: decode-on-the-fly is now the default setting.
+    --decode-otf option will still be available but no effect at all
 
 20120322:
   + ezthumb.c: reapply the twopass method
