@@ -1,4 +1,9 @@
 
+/* Changes:
+ * 20120419: image name test before overwritten
+ * 20120419: update the proxy list
+ */
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,16 +48,17 @@ typedef	struct	_EHBUF	{
 } EHBUF;
 
 static	char	*proxy[] = {
-	"93.95.66.1:8080",	
+	"184.107.108.63:8080",
+	"200.75.135.62:8080",
+	"64.85.181.46:8080",
+	"199.168.138.52:3128",
+	"41.35.46.37:8080",
+	"201.57.153.114:3128",
+	"201.174.18.170:8080",
+	"190.82.105.114:8080",
+	"77.48.243.250:8080",
+	"118.96.153.206:8080",
 	"188.254.250.14:8080",
-	"188.242.74.148:3128",	/* fast */
-	//"94.229.86.110:8080",
-	//"90.182.223.85:8888",	/* slow */
-	"75.125.163.212:3128",
-	"81.20.196.45:8080",
-	"75.125.163.210:3128",
-	"186.3.41.38:3128",
-	"41.234.202.71:8080",
 
 	//"",		/* direct link */
 	NULL		/* end of the list */
@@ -71,6 +77,7 @@ static EHBUF *e_hentai_url_list(char *htm_file);
 static void e_hentai_page_stat(EHBUF *ehbuf);
 static int  e_hentai_file_sn(char *url);
 static char *e_hentai_url_filename(char *url, char *buffer, int blen);
+static char *e_hentai_image_name(char *url, char *buffer, int blen);
 static int e_hentai_trap(char *url);
 static int e_hentai_is_image(char *url);
 static int e_hentai_is_image_path(char *url);
@@ -221,7 +228,7 @@ static int e_hentai_safe_download(char *urbuf, int todo)
 static int e_hentai_download(char *urbuf, int todo)
 {
 	EHBUF	*ehbuf;
-	char	*url, *cpage, *fname;
+	char	*url, *cpage, fname[256];
 
 
 	if (strncmp(urbuf, "http:", 5)) {
@@ -268,7 +275,8 @@ static int e_hentai_download(char *urbuf, int todo)
 	if (todo & EHENTAI_IMAGE) {
 		if ((url = e_hentai_find_url(ehbuf, URL_CMD_IMAGE)) != NULL) {
 			//url_download(url);
-			fname = e_hentai_url_filename(url, NULL, 0);
+			//fname = e_hentai_url_filename(url, NULL, 0);
+			e_hentai_image_name(url, fname, sizeof(fname));
 			if (sys_download_wget(url, fname, sys_proxy()) != 0) {
 				free(ehbuf);
 				return 1;
@@ -534,6 +542,30 @@ static char *e_hentai_url_filename(char *url, char *buffer, int blen)
 		p = buffer;
 	}
 	return p;
+}
+
+static char *e_hentai_image_name(char *url, char *buffer, int blen)
+{
+	FILE	*fp;
+	char	*tail;
+	int	i = 0;
+
+	if ((buffer == NULL) || (blen == 0)) {
+		return e_hentai_url_filename(url, NULL, 0);
+	}
+
+	e_hentai_url_filename(url, buffer, blen - 4);
+	tail = buffer + strlen(buffer);
+
+	while (1) {
+		if ((fp = fopen(buffer, "r")) == NULL) {
+			break;
+		}
+		fclose(fp);
+
+		sprintf(tail, ".%d", i++);
+	}
+	return buffer;
 }
 
 static int e_hentai_trap(char *url)
