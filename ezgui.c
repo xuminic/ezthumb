@@ -794,9 +794,14 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	GtkWidget 	*dialog;
 	GtkFileFilter	*filter;
 	GtkFileChooser	*chooser;
-	GSList		*flist, *p;
-	EZADD		*ezadd;
-	char		*dir;
+
+	GSList	*flist, *p;
+	EZADD	*ezadd;
+	char	*dir;
+	int	i;
+	char	*vidtab[] = { "*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", 
+		"*.mpg", "*.mpeg", "*.rm", "*.rmvb", 
+		"*.ts", "*.vob", "*.wmv" };
 
 	dialog = gtk_file_chooser_dialog_new ("Choose File", 
 			GTK_WINDOW(gui->gw_main),
@@ -815,8 +820,9 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Videos");
 	gtk_file_filter_add_mime_type(filter, "video/*");
-	gtk_file_filter_add_pattern(filter, "*.rm");
-	gtk_file_filter_add_pattern(filter, "*.rmvb");
+	for (i = 0; i < sizeof(vidtab)/sizeof(char*); i++) {
+		gtk_file_filter_add_pattern(filter, vidtab[i]);
+	}
 	gtk_file_chooser_add_filter(chooser, filter);
 
 	/*filter = gtk_file_filter_new();

@@ -1,3 +1,6 @@
+20120612: V2.1.1
+  + improved the file type selection function
+  + fixed the application icon issue in MS Windows
 
 20120413: V2.1.0
   + introduced the safe mode as the default single step

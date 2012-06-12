@@ -33,6 +33,9 @@ endif
 RELDATE	= `date  +%Y%m%d`
 
 
+
+.PHONY: ezthumb
+
 all: ezthumb
 
 
@@ -41,20 +44,23 @@ ezthumb: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb:
-	make cleanobj
+	make cleanobj smm
 	SYSGUI=CFG_GUI_OFF make ezthumb.exe
-	make cleanobj
+	make cleanobj smm
 	SYSGUI=CFG_GUI_ON make ezthumb_win.exe
 endif
 
-ezthumb.exe: smm $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+ezthumb.exe: $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
-ezthumb_win.exe: smm $(OBJS)
-	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+ezthumb_win.exe: ezthumb_icon.o $(OBJS)
+	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
-ezicon.h : SMirC-thumbsup.svg
+ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
+
+ezthumb_icon.o: ezthumb_icon.rc
+	windres $< -o $@
 
 version: version.c
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
