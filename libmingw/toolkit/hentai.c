@@ -1,5 +1,6 @@
 
 /* Changes:
+ * 20120522: update the proxy list; minor coding adjustment
  * 20120419: image name test before overwritten
  * 20120419: update the proxy list
  */
@@ -14,12 +15,17 @@
 
 
 /* 
- * IE6 on Windows XP: Mozilla/4.0 (compatible; MSIE 6.0; Microsoft Windows NT 5.1)
- * Firefox on Windows XP: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14
- * Firefox on Ubuntu Gutsy: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.14) Gecko/20080418 Ubuntu/7.10 (gutsy) Firefox/2.0.0.14
- * Safari on Mac OS X Leopard: Mozilla/5.0 (Macintosh; U; Intel Mac OS X; en) AppleWebKit/523.12.2 (KHTML, like Gecko) Version/3.0.4 Safari/523.12.2
+ * IE6 on Windows XP: 
+ *     Mozilla/4.0 (compatible; MSIE 6.0; Microsoft Windows NT 5.1)
+ * Firefox on Windows XP: 
+ *     Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14
+ * Firefox on Ubuntu Gutsy: 
+ *     Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.14) Gecko/20080418 Ubuntu/7.10 (gutsy) Firefox/2.0.0.14
+ * Safari on Mac OS X Leopard: 
+ *     Mozilla/5.0 (Macintosh; U; Intel Mac OS X; en) AppleWebKit/523.12.2 (KHTML, like Gecko) Version/3.0.4 Safari/523.12.2
  */
-#define BROWSER		"Mozilla/4.0 (compatible; MSIE 6.0; Microsoft Windows NT 5.1)"
+#define BROWSER		\
+	"Mozilla/4.0 (compatible; MSIE 6.0; Microsoft Windows NT 5.1)"
 
 #define MAX_PAGE_SIZE	(64*1024)
 #define MAX_URL_LIST	128
@@ -48,17 +54,16 @@ typedef	struct	_EHBUF	{
 } EHBUF;
 
 static	char	*proxy[] = {
-	"184.107.108.63:8080",
-	"200.75.135.62:8080",
-	"64.85.181.46:8080",
-	"199.168.138.52:3128",
-	"41.35.46.37:8080",
-	"201.57.153.114:3128",
-	"201.174.18.170:8080",
-	"190.82.105.114:8080",
-	"77.48.243.250:8080",
-	"118.96.153.206:8080",
-	"188.254.250.14:8080",
+	"184.82.206.81:3128",
+	"209.112.224.253:8085",
+	"190.99.64.5:8080",
+	"38.104.90.26:8080",
+	"75.101.226.215:8080",
+	"193.73.184.201:3128",
+	"78.108.108.146:8080",
+	"151.13.151.112:8080",
+	"193.27.209.200:8080",
+	"190.111.121.57:8080",	/* slow */
 
 	//"",		/* direct link */
 	NULL		/* end of the list */
@@ -117,7 +122,7 @@ static int url_download(char *url)
 #endif
 
 char	*help = "\
-Usage: hentai [-d][-D][-n][-c][-pXXX] [html_page | URL]\n\
+Usage: hentai [-d][-D][-n][-c][-pXXX] [html_page|URL]\n\
   -n,--next      download from the next page\n\
   -c,--continue  continuiously downloading\n\
   -d,--dump      dump the useful URL in the page\n\
@@ -126,6 +131,7 @@ Usage: hentai [-d][-D][-n][-c][-pXXX] [html_page | URL]\n\
   -p             rotating internal proxy list\n\
   -p[0-nn]       specify an internal proxy by number\n\
   -pxx.xx.xx.xx  specify an external proxy server\n\
+Downloading embedded images as the default action (20120522)\n\
 ";
 
 int main(int argc, char **argv)
@@ -140,7 +146,7 @@ int main(int argc, char **argv)
 		} else if (!strcmp(*argv, "-d") || !strcmp(*argv, "--dump")) {
 			flags &= ~EHENTAI_IMAGE;
 			flags |= EHENTAI_DUMP;
-		} else if (!strcmp(*argv, "-D") || !strcmp(*argv, "--dumpall")) {
+		} else if (!strcmp(*argv, "-D")||!strcmp(*argv, "--dumpall")) {
 			flags &= ~EHENTAI_IMAGE;
 			flags |= EHENTAI_DUMP;
 			flags |= EHENTAI_DUMP_ALL;
@@ -150,11 +156,11 @@ int main(int argc, char **argv)
 			flags |= EHENTAI_DUMP_IMAGE;
 		} else if (!strcmp(*argv, "-n") || !strcmp(*argv, "--next")) {
 			flags |= EHENTAI_START_NEXT;
-		} else if (!strcmp(*argv, "-c") || !strcmp(*argv, "--continue")) {
+		} else if (!strcmp(*argv, "-c")||!strcmp(*argv,"--continue")) {
 			flags |= EHENTAI_RETURN_NEXT;
 		} else if (!strncmp(*argv, "-p", 2)) {
 			if (argv[0][2] == 0) {
-				pidx = 0;	/* rotating proxy is hooked on */
+				pidx = 0;  /* rotating proxy is hooked on */
 			} else if (strchr(*argv, '.')) {
 				pcur = &argv[0][2];
 			} else {
@@ -189,7 +195,8 @@ static int e_hentai_harvest(char *url, int flags)
 	strcpy(curl, url);
 
 	if (flags & EHENTAI_START_NEXT) {
-		if (e_hentai_safe_download(curl, EHENTAI_DUMP | EHENTAI_RETURN_NEXT)) {
+		if (e_hentai_safe_download(curl, 
+					EHENTAI_DUMP | EHENTAI_RETURN_NEXT)) {
 			return -1;
 		}
 	}
@@ -250,7 +257,8 @@ static int e_hentai_download(char *urbuf, int todo)
 	}
 
 	if (todo & EHENTAI_DUMP) {
-		printf("Page: %d %d %d %d (%s)\n", ehbuf->keysn[0], ehbuf->keysn[1], 
+		printf("Page: %d %d %d %d (%s)\n", 
+				ehbuf->keysn[0], ehbuf->keysn[1], 
 				ehbuf->keysn[2], ehbuf->keysn[3], cpage);
 		url = e_hentai_find_url(ehbuf, URL_CMD_NEXT);
 		printf("First Page: %s\n", 
@@ -329,11 +337,14 @@ static int e_hentai_download(char *urbuf, int todo)
 static char *e_hentai_find_url(EHBUF *ehbuf, int cmd)
 {
 	char	*dict_first[] = 
-	{ "f.png", "p.afk", "M.iha", "7.qqm", "f.lol", "Q.bbq", "a.tlc", "o.ffs", NULL };
+		{ "f.png", "p.afk", "M.iha", "7.qqm", "f.lol", "Q.bbq", 
+		  "a.tlc", "o.ffs", NULL };
 	char	*dict_last[]  = 
-	{ "l.png", "O.ffs", "T.afk", "d.lol", "x.qqm", "l.iha", "h.bbq", "Z.tlc", NULL };
+		{ "l.png", "O.ffs", "T.afk", "d.lol", "x.qqm", "l.iha", 
+		  "h.bbq", "Z.tlc", NULL };
 	char	*dict_next[]  = 
-	{ "n.png", "S.bbq", "b.tlc", "P.afk", "F.lol", "W.ffs", "g.qqm", "e.iha", "next.png", NULL };
+		{ "n.png", "S.bbq", "b.tlc", "P.afk", "F.lol", "W.ffs", 
+		  "g.qqm", "e.iha", "next.png", NULL };
 	int	i;
 
 	for (i = 0; ehbuf->urlist[i][0]; i++) {
