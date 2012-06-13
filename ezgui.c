@@ -736,6 +736,18 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 		} while (gtk_tree_model_iter_next(ezadd->app_model, &row));
 	}
 
+	/*printf("ezgui_page_main_listview_append: %s\n", s);
+	{
+		unsigned char *p;
+		if ((p = strstr(s, "\\User\\")) != NULL) {
+			p += 6;
+			while (*p != '\\') {
+				printf("%d ", *p++);
+			}
+		}
+		printf("\n");
+	}*/
+
 	if ((vidx = video_allocate(s, gui->sysopt, NULL)) == NULL) {
 		ezadd->dis_count++;
 		gtk_text_buffer_insert_at_cursor(ezadd->discarded, s, -1);
@@ -1385,7 +1397,7 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 	
 	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
 
-	if ((fp = fopen(cfg->fname, "w")) != NULL) {
+	if ((fp = g_fopen(cfg->fname, "w")) != NULL) {
 		fwrite(cfgdata, 1, len, fp);
 		fclose(fp);
 	}

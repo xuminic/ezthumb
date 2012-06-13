@@ -100,6 +100,9 @@ static void *dts_lib_add(void *anchor, int64_t dts);
 static int dts_lib_compress(void *anchor, int64_t *refdts, int num);
 
 extern int ziptoken(char *sour, char **idx, int ids, char *delim);
+#ifdef	CFG_GUI_ON
+extern FILE *g_fopen(const char *filename, const char *mode);
+#endif
 
 
 void ezopt_init(EZOPT *ezopt, char *profile)
@@ -362,7 +365,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	}
 
 	/* check if the nominated file existed */
+#ifdef	CFG_GUI_ON
+	if ((fp = g_fopen(filename, "r")) == NULL) {
+#else
 	if ((fp = fopen(filename, "r")) == NULL) {
+#endif
 		free(vidx);
 		return NULL;
 	} else {
@@ -389,6 +396,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
 	 * since 53.2.0. Apparently it is wrong. It is at least appeared in
 	 * my archlinux 64-bit box by 52.110.0 */
+	/* 20120613: What a surprise that avformat_open_input() do support
+	 * utf-8 in native MSWindows */
 #if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
 	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
 #else
@@ -2227,7 +2236,11 @@ static int image_gdframe_save(EZIMG *image, char *filename, int idx)
 	sprintf(tmp, "%03d.%s", idx, image->sysopt->img_format);
 	meta_name_suffix(image->sysopt->pathout, 
 			filename, image->filename, tmp);
+#ifdef	CFG_GUI_ON
+	if ((fout = g_fopen(image->filename, "wb")) == NULL) {
+#else
 	if ((fout = fopen(image->filename, "wb")) == NULL) {
+#endif
 		perror(image->filename);
 		return EZ_ERR_FILE;
 	}
@@ -2291,7 +2304,11 @@ static int image_gdcanvas_save(EZIMG *image, char *filename)
 	sprintf(tmp, "%s.%s",image->sysopt->suffix,image->sysopt->img_format);
 	meta_name_suffix(image->sysopt->pathout,
 			filename, image->filename, tmp);
+#ifdef	CFG_GUI_ON
+	if ((fout = g_fopen(image->filename, "wb")) == NULL) {
+#else
 	if ((fout = fopen(image->filename, "wb")) == NULL) {
+#endif
 		perror(image->filename);
 		return EZ_ERR_FILE;
 	}
@@ -2451,7 +2468,11 @@ static int image_gdcanvas_background(EZIMG *image)
 	if (image->sysopt->background == NULL) {
 		return EZ_ERR_NONE;
 	}
+#ifdef	CFG_GUI_ON
+	if ((fin = g_fopen(image->sysopt->background, "rb")) == NULL) {
+#else
 	if ((fin = fopen(image->sysopt->background, "rb")) == NULL) {
+#endif
 		perror(image->sysopt->background);
 		return EZ_ERR_FILE;
 	}
@@ -2557,7 +2578,11 @@ static FILE *image_gif_anim_open(EZIMG *image, char *filename)
 	sprintf(tmp, "%s.%s",image->sysopt->suffix,image->sysopt->img_format);
 	meta_name_suffix(image->sysopt->pathout,
 			filename, image->filename, tmp);
+#ifdef	CFG_GUI_ON
+	if ((fout = g_fopen(image->filename, "wb")) == NULL) {
+#else
 	if ((fout = fopen(image->filename, "wb")) == NULL) {
+#endif
 		return NULL;
 	}
 

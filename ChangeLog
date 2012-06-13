@@ -1,3 +1,15 @@
+20120613: V2.1.2
+  + Fixed the Chinese filename issue.
+  This issue happened on MS Windows porting. If the filename, or part of the
+  directory contain Chinese, for example, ²âÊÔÎÄ¼þ, which isnatively
+  \262\342\312\324\316\304\274\376 in Windows file system, it would be failed
+  to be open because the GTK file chooser changed it to utf-8, which is
+  230 181 139 232 175 149 230 150 135 228 187 182. The fopen() doesn't know 
+  the conversion so it fails. The fix is to use g_fopen() instead.
+
+  A good thing is the avformat_open_input() supports utf-8 itself so the
+  simple replacement of fopen() can do the trick.
+
 20120612: V2.1.1
   + improved the file type selection function
   + fixed the application icon issue in MS Windows

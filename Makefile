@@ -71,11 +71,12 @@ smm:
 vidlen : vidlen.c
 	$(CC) -o $@ $^ $(CFLAGS) -lavformat
 
-install: ezthumb
 ifeq	($(SYSTOOL),unix)
+install: ezthumb
 	install -s ezthumb $(BINDIR)
 	install ezthumb.1 $(MANDIR)
 else
+install: ezthumb.exe ezthumb_win.exe version
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin
