@@ -33,6 +33,9 @@ endif
 RELDATE	= `date  +%Y%m%d`
 
 
+
+.PHONY: ezthumb
+
 all: ezthumb
 
 
@@ -41,20 +44,23 @@ ezthumb: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb:
-	make cleanobj
+	make cleanobj smm
 	SYSGUI=CFG_GUI_OFF make ezthumb.exe
-	make cleanobj
+	make cleanobj smm
 	SYSGUI=CFG_GUI_ON make ezthumb_win.exe
 endif
 
-ezthumb.exe: smm $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+ezthumb.exe: $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
-ezthumb_win.exe: smm $(OBJS)
-	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
+ezthumb_win.exe: ezthumb_icon.o $(OBJS)
+	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
-ezicon.h : SMirC-thumbsup.svg
+ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
+
+ezthumb_icon.o: ezthumb_icon.rc
+	windres $< -o $@
 
 version: version.c
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
@@ -65,11 +71,12 @@ smm:
 vidlen : vidlen.c
 	$(CC) -o $@ $^ $(CFLAGS) -lavformat
 
-install: ezthumb
 ifeq	($(SYSTOOL),unix)
+install: ezthumb
 	install -s ezthumb $(BINDIR)
 	install ezthumb.1 $(MANDIR)
 else
+install: ezthumb.exe ezthumb_win.exe version
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin

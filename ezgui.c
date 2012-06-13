@@ -736,6 +736,18 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 		} while (gtk_tree_model_iter_next(ezadd->app_model, &row));
 	}
 
+	/*printf("ezgui_page_main_listview_append: %s\n", s);
+	{
+		unsigned char *p;
+		if ((p = strstr(s, "\\User\\")) != NULL) {
+			p += 6;
+			while (*p != '\\') {
+				printf("%d ", *p++);
+			}
+		}
+		printf("\n");
+	}*/
+
 	if ((vidx = video_allocate(s, gui->sysopt, NULL)) == NULL) {
 		ezadd->dis_count++;
 		gtk_text_buffer_insert_at_cursor(ezadd->discarded, s, -1);
@@ -794,9 +806,14 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	GtkWidget 	*dialog;
 	GtkFileFilter	*filter;
 	GtkFileChooser	*chooser;
-	GSList		*flist, *p;
-	EZADD		*ezadd;
-	char		*dir;
+
+	GSList	*flist, *p;
+	EZADD	*ezadd;
+	char	*dir;
+	int	i;
+	char	*vidtab[] = { "*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", 
+		"*.mpg", "*.mpeg", "*.rm", "*.rmvb", 
+		"*.ts", "*.vob", "*.wmv" };
 
 	dialog = gtk_file_chooser_dialog_new ("Choose File", 
 			GTK_WINDOW(gui->gw_main),
@@ -815,8 +832,9 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Videos");
 	gtk_file_filter_add_mime_type(filter, "video/*");
-	gtk_file_filter_add_pattern(filter, "*.rm");
-	gtk_file_filter_add_pattern(filter, "*.rmvb");
+	for (i = 0; i < sizeof(vidtab)/sizeof(char*); i++) {
+		gtk_file_filter_add_pattern(filter, vidtab[i]);
+	}
 	gtk_file_chooser_add_filter(chooser, filter);
 
 	/*filter = gtk_file_filter_new();
@@ -1379,7 +1397,7 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 	
 	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
 
-	if ((fp = fopen(cfg->fname, "w")) != NULL) {
+	if ((fp = g_fopen(cfg->fname, "w")) != NULL) {
 		fwrite(cfgdata, 1, len, fp);
 		fclose(fp);
 	}

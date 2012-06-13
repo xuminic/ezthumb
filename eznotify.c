@@ -202,7 +202,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 				printf("Duration from Media head: %ld (ms)\n",
 						opt);
 			} else if (param == ENX_DUR_JUMP) {
-				printf("Duration from fast scan at %lld\n", 
+				SMM_PRINT("Duration from fast scan at %lld\n", 
 						*((long long *)block));
 			} else if (param == ENX_DUR_SCAN) {
 				printf("Duration from scanning: %ld (ms)\n",
