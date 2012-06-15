@@ -2035,7 +2035,9 @@ static int image_user_profile(EZIMG *image, int *col, int *row,
 	EZPROF	*pf;
 
 	for (pf = image->sysopt->pro_grid; pf; pf = pf->next) {
-		if ((image->time_during / 1000) <= pf->weight) {
+		if (((image->time_during / 1000) <= pf->weight) ||
+			/* A fix for video length run out of the profile */
+				(pf->next == NULL)) {
 			if (col) {
 				*col = pf->x;
 			}

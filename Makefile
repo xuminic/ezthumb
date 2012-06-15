@@ -63,7 +63,7 @@ ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
 version: version.c
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $< -lm
 
 smm:
 	make -C libsmm

@@ -1,3 +1,9 @@
+20120615: V2.1.3
+  * Fixed a problem that when the video length ran out of the profile range,
+    say 180 minute, ezthumb would use the default 4x4 grid which was bad.
+    The fix extended the profile's range so if video ran out, it uses the
+    last field of the profile.
+
 20120613: V2.1.2
   + Fixed the Chinese filename issue.
   This issue happened on MS Windows porting. If the filename, or part of the
