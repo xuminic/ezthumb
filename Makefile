@@ -47,7 +47,7 @@ all: ezthumb
 
 
 ifeq	($(SYSTOOL),unix)
-ezthumb: smm $(OBJS)
+ezthumb: smm objdir $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb: smm
