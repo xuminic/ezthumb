@@ -1,5 +1,12 @@
+20120620: V2.1.4
+  + Fixed a build system problem in Win32. The install rule in the Makefile
+    required ezthumb.exe and ezthumb_win.exe rule. After a successful
+    building, the object files would be the GUI version at last. The install
+    rule will make it link again so the console version ezthumb accidentally
+    linked by the GUI version objects, which is annoying.
+
 20120615: V2.1.3
-  * Fixed a problem that when the video length ran out of the profile range,
+  + Fixed a problem that when the video length ran out of the profile range,
     say 180 minute, ezthumb would use the default 4x4 grid which was bad.
     The fix extended the profile's range so if video ran out, it uses the
     last field of the profile.

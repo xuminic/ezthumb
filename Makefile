@@ -12,9 +12,16 @@ ifeq	($(SYSGUI),CFG_GUI_ON)
 CFLAGS	+= $(GTKINC)
 endif
 
-OBJS	= main.o fixtoken.o ezthumb.o cliopt.o eznotify.o id_lookup.o
+
+OBJS	= $(OBJDIR)/main.o	\
+	  $(OBJDIR)/fixtoken.o	\
+	  $(OBJDIR)/ezthumb.o	\
+	  $(OBJDIR)/cliopt.o	\
+	  $(OBJDIR)/eznotify.o	\
+	  $(OBJDIR)/id_lookup.o
+
 ifeq	($(SYSGUI),CFG_GUI_ON)
-OBJS	+= ezgui.o
+OBJS	+= $(OBJDIR)/ezgui.o
 endif
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd
@@ -43,23 +50,23 @@ ifeq	($(SYSTOOL),unix)
 ezthumb: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
-ezthumb:
-	make cleanobj smm
+ezthumb: smm
 	SYSGUI=CFG_GUI_OFF make ezthumb.exe
-	make cleanobj smm
-	SYSGUI=CFG_GUI_ON make ezthumb_win.exe
+	SYSGUI=CFG_GUI_ON  make ezthumb_win.exe
 endif
 
+# internal rules, do not use it
 ezthumb.exe: $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
-ezthumb_win.exe: ezthumb_icon.o $(OBJS)
+# internal rules, do not use it
+ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
 	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
 ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
 
-ezthumb_icon.o: ezthumb_icon.rc
+$(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
 version: version.c
@@ -76,7 +83,7 @@ install: ezthumb
 	install -s ezthumb $(BINDIR)
 	install ezthumb.1 $(MANDIR)
 else
-install: ezthumb.exe ezthumb_win.exe version
+install: ezthumb version
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin
@@ -87,11 +94,17 @@ debug: ezthumb
 
 cleanobj:
 	$(RM) $(OBJS)
+ifeq	($(SYSGUI),CFG_GUI_ON)
+	$(RM) $(OBJDIR)/ezthumb_icon.o
+endif
 
-clean: cleanobj
 ifeq	($(SYSTOOL),unix)
+clean: cleanobj
 	$(RM) ezthumb version
 else
+clean:
+	SYSGUI=CFG_GUI_OFF make cleanobj
+	SYSGUI=CFG_GUI_ON  make cleanobj
 	$(RM) ezthumb.exe ezthumb_win.exe version.exe
 endif
 
