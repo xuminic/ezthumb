@@ -97,10 +97,7 @@ debug: ezthumb
 	$(CP) ezthumb ~/bin
 
 cleanobj:
-	$(RM) $(OBJS)
-ifeq	($(SYSGUI),CFG_GUI_ON)
-	$(RM) $(OBJDIR)/ezthumb_icon.o
-endif
+	$(RM) -r $(OBJDIR)
 
 ifeq	($(SYSTOOL),unix)
 clean: cleanobj
@@ -123,14 +120,14 @@ rel_source:
 	-$(CP) SMirC-thumbsup.svg $(RELDIR)
 	-$(CP) libsmm/*.c libsmm/*.h libsmm/Makefile $(RELDIR)/libsmm
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
-	-$(RM) -rf $(RELDIR)
+	-$(RM) -r $(RELDIR)
 
 rel_win_dev:
 	-tar czf ezthumb-libmingw-$(RELDATE).tar.gz libmingw
 
 rel_win_bin: install
 	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin
-	-rm -rf $(RELDIR)-win-bin
+	-$(RM) -r $(RELDIR)-win-bin
 
 ifeq	($(SYSTOOL),unix)
 release: version rel_source
