@@ -55,8 +55,44 @@ freetype-2.3.5-1
 The GTK+ library was tailored from the All-in-one bundles in 
 http://www.gtk.org/download/win32.php
 
-NOTE that these libraries are not part of Ezthumb. 
-They were grabbed to here just for the conveniece of building.
+NOTE that these libraries are not part of Ezthumb. They were grabbed from
+different websites to here to make life easier. Therefore you don't need to 
+download them one by one, just download the recent one big bundle tar ball
+
+ezthumb-libmingw-xxxxxxxx.tar.gz 
+
+along with the ezthumb source codes, untar it to libmingw/
+The file structure should look like this:
+
+./ezthumb.c
+./libmingw/
+./libmingw/gtk-2.24.8/
+...
+
+Then you may build it by
+
+make clean
+make
+
+It will generate two executable files: ezthumb.exe and ezthumb_win.exe. 
+One for the console and another one for the GUI environment. 
+These two files can not be executed directly in normal condition because 
+the supporting DLLs were not with them. You need to
+
+make install
+
+to collect all files into the directory looks like
+
+ezthumb-x.x.x-win-bin
+
+then
+
+cd ezthumb-x.x.x-win-bin
+ezthumb
+ezthumb_win
+
+Enjoy!
+
 
 Icons
 =====

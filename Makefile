@@ -51,8 +51,8 @@ ezthumb: smm $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb: smm
-	SYSGUI=CFG_GUI_OFF make ezthumb.exe
-	SYSGUI=CFG_GUI_ON  make ezthumb_win.exe
+	SYSGUI=CFG_GUI_OFF make objdir ezthumb.exe
+	SYSGUI=CFG_GUI_ON  make objdir ezthumb_win.exe
 endif
 
 # internal rules, do not use it
@@ -62,6 +62,9 @@ ezthumb.exe: $(OBJS)
 # internal rules, do not use it
 ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
 	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
+
+objdir:
+	if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
 
 ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
@@ -84,13 +87,14 @@ install: ezthumb
 	install ezthumb.1 $(MANDIR)
 else
 install: ezthumb version
+	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin
 endif
 
 debug: ezthumb
-	cp ezthumb ~/bin
+	$(CP) ezthumb ~/bin
 
 cleanobj:
 	$(RM) $(OBJS)
@@ -112,13 +116,14 @@ cleanall: clean
 	make -C libsmm clean
 
 rel_source:
+	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-cp *.c *.h *.1 *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
-	-cp SMirC-thumbsup.svg $(RELDIR)
 	-mkdir $(RELDIR)/libsmm
-	-cp libsmm/*.c libsmm/*.h libsmm/Makefile $(RELDIR)/libsmm
+	-$(CP) *.c *.h *.1 *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
+	-$(CP) SMirC-thumbsup.svg $(RELDIR)
+	-$(CP) libsmm/*.c libsmm/*.h libsmm/Makefile $(RELDIR)/libsmm
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
-	-rm -rf $(RELDIR)
+	-$(RM) -rf $(RELDIR)
 
 rel_win_dev:
 	-tar czf ezthumb-libmingw-$(RELDATE).tar.gz libmingw
