@@ -171,7 +171,11 @@
 #define EZ_ST_OFF		3
 #define EZ_ST_MAX_REC		16	/* maximum monited streams */
 
-#define EZ_MAX_PROFILE		64
+#define EZ_PROF_MAX_ENTRY	64	/* maximum profile entries */
+#define EZ_PROF_LENGTH		1	/* the length of video */
+#define EZ_PROF_WIDTH		2	/* the width of video frame */
+#define EZ_PROF_ALL		3
+
 
 /* the threshold of "normal" byte rates. 
  * Ezthumb calcuates the rough byterates as a reference to find out
@@ -183,12 +187,32 @@
 
 
 
+/* FORMAT: WEIGHT + flag + X + sep + Y + sep + Z
+ *
+ * Sample shots (weighted by clip length in time, default 0):
+ * 12M4x4 : 720S4x4 : create 4x4 thumb matrix when video under 12/720 (m/s)
+ * 30L10x50x1.025 : when video under 30 minutes, sample following shots:
+ *                  log(1.025)(n+10)-50
+ *
+ * Zoom of thumbnails (weighted by frame width, default 0):
+ * 160W200% : zoom 200% when video width under 160 pixel
+ * 160T200: thumbnail sets to 200x(height) when video width under 160 pixel
+ * 160T200x80: thumbnail sets to 200x80 when video width under 160 pixel
+ * 100F4x1280 : create 4 thumbnails in a row inside a 1280 canvas 
+ *              when video width under 100
+ * 100R4x320 : create 4 thumbnails in a row, each of them CLOSE to 320 pixels
+ *             when video width under 100
+ */
 typedef	struct	{
 	void	*next;
-	int	weight;
+	int	flag;	/* 'M', 'S', 'W', 'L', 'F', 'R' */
+	int	weight;	/* time segment in sec, or width in pixel */
 
-	int	x;
-	int	y;	/* or being ratio, if x < 0 */
+	int	x;	/* grid x, or time offset before log()  */
+	int	y;	/* grid y, or ratio of width, or fixed canvas, */
+			/* or relative width, or error of log() */
+
+	float	lbase;	/* the base of logarithm */
 } EZPROF;
 
 
@@ -282,8 +306,7 @@ typedef	struct	{
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
 	EZPROF	*pro_size;	/* profile of the size of each snapshots */
-	EZPROF	pro_pool[EZ_MAX_PROFILE];
-	int	pro_idx;
+	EZPROF	pro_pool[EZ_PROF_MAX_ENTRY];
 } EZOPT;
 
 /* This structure is used to store the runtime parameters. Most parameters
@@ -411,8 +434,6 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 /* ezthumb.c */
 void ezopt_init(EZOPT *ezopt, char *profile);
 void ezopt_review(EZOPT *opt);
-int ezopt_profile_setup(EZOPT *opt, char *s);
-char *ezopt_profile_export(EZOPT *ezopt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
 int ezthumb_break(EZOPT *ezopt);
@@ -430,6 +451,14 @@ int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
 int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
 int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
+int ezopt_profile_setup(EZOPT *opt, char *s);
+int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size);
+char *ezopt_profile_export_alloc(EZOPT *ezopt);
+int ezopt_profile_disable(EZOPT *ezopt, int prof);
+int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
+int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
+int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
+
 char *meta_bitrate(int bitrate, char *buffer);
 char *meta_filesize(int64_t size, char *buffer);
 int meta_fontsize(int fsize, int refsize);
@@ -437,6 +466,10 @@ char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
 char *meta_timestamp(int ms, int enms, char *buffer);
 int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
+
+char *strcpy_alloc(const char *src);
+char *strncpy_safe(char *dest, const char *src, size_t n);
+
 
 /* eznotify.c */
 int eznotify(EZVID *vidx, int event, long param, long opt, void *block);
@@ -452,6 +485,10 @@ int dump_frame(AVFrame *frame, int got_pic);
 int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
 int dump_stream(AVStream *stream);
 int dump_ezimage(EZIMG *image);
+
+/* fixtoken.c */
+int fixtoken(char *sour, char **idx, int ids, char *delim);
+int ziptoken(char *sour, char **idx, int ids, char *delim);
 
 
 #endif	/* _EZTHUMB_H_ */

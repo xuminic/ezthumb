@@ -68,9 +68,9 @@ static int ezgui_signal_setup_reset(EZGUI *gui);
 static int ezgui_signal_setup_update(EZGUI *gui);
 static int ezgui_signal_setup_format(EZGUI *gui, void *parent);
 
-static EZCFG *ezgui_cfg_create(void);
+static EZCFG *ezgui_cfg_alloc(void);
 static int ezgui_cfg_free(EZCFG *cfg);
-static char *ezgui_cfg_read(EZCFG *cfg, char *key);
+static char *ezgui_cfg_read_alloc(EZCFG *cfg, char *key);
 static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s);
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
 static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
@@ -108,29 +108,29 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
 		return NULL;
 	}
-	if ((gui->config = ezgui_cfg_create()) == NULL) {
+	if ((gui->config = ezgui_cfg_alloc()) == NULL) {
 		free(gui);
 		return NULL;
 	}
 	gui->sysopt = ezopt;
 	
 	/* setup the simple profile */
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_PROF_SIMPLE))) {
+	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_PROF_SIMPLE))) {
 		ezopt_profile_setup(ezopt, p);
 	} else {
-		p = ezopt_profile_export(ezopt);
+		p = ezopt_profile_export_alloc(ezopt);
 		ezgui_cfg_write(gui->config, CFG_KEY_PROF_SIMPLE, p);
 	}
 	free(p);
 
 	/* setup the grid profile */
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_GRID)) == NULL) {
+	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID)) == NULL) {
 		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
 	} else {
 		free(p);
 	}
 	/* setup the zoom profile */
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM)) == NULL) {
+	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM)) == NULL) {
 		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
 	} else {
 		free(p);
@@ -467,7 +467,7 @@ static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
 
 	hbox = gtk_hbox_new(FALSE, 0);
 
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
+	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID);
 	if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
 		gui->entry_col = ezgui_entry_box(gui->sysopt->grid_col, 3);
 		gui->entry_row = ezgui_entry_box(gui->sysopt->grid_row, 3);
@@ -502,7 +502,7 @@ static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
 	}
 	g_free(pic);
 
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
+	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM);
 	if (!strcmp(pic, CFG_PIC_ZOOM_RATIO)) {
 		val = ezgui_cfg_read_int(gui->config, CFG_KEY_ZOOM_RATIO, 
 				gui->sysopt->tn_facto);
@@ -542,48 +542,48 @@ static int ezgui_page_main_read(EZGUI *gui)
 	char	*pic;
 
 	/* update the grid parameters */
-	if ((pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID)) == NULL) {
+	if ((pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID)) == NULL) {
 		/* do nothing as default setting */
 	} else if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
 		opt->grid_col = ezgui_entry_get_int(gui->entry_col);
 		opt->grid_row = ezgui_entry_get_int(gui->entry_row);
-		opt->pro_grid = NULL;	/* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 	} else if (!strcmp(pic, CFG_PIC_GRID_STEP)) {
 		opt->grid_col = ezgui_entry_get_int(gui->entry_col);
 		opt->tm_step  = ezgui_entry_get_int(gui->entry_step) * 1000;
-		opt->pro_grid = NULL;	/* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 	} else if (!strcmp(pic, CFG_PIC_DIS_NUM)) {
 		opt->grid_col = 0;
 		opt->grid_row = ezgui_entry_get_int(gui->entry_row);
-		opt->pro_grid = NULL;	/* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 	} else if (!strcmp(pic, CFG_PIC_DIS_STEP)) {
 		opt->grid_col = 0;
 		opt->grid_row = 0;
 		opt->tm_step  = ezgui_entry_get_int(gui->entry_step) * 1000;
-		opt->pro_grid = NULL; /* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 	} else if (!strcmp(pic, CFG_PIC_DIS_KEY)) {
 		opt->grid_col = 0;
 		opt->grid_row = 0;
 		opt->tm_step  = 0;
-		opt->pro_grid = NULL;	/* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 	}
 	if (pic) {
 		g_free(pic);
 	}
 
 	/* update the zoom parameters */
-	if ((pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM)) == NULL) {
+	if ((pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM)) == NULL) {
 		/* do nothing as default setting */
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_RATIO)) {
 		opt->tn_facto  = ezgui_entry_get_int(gui->entry_zoom_ratio);
-		opt->pro_size  = NULL;  /* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_DEFINE)) {
 		opt->tn_width  = ezgui_entry_get_int(gui->entry_zoom_wid);
 		opt->tn_height = ezgui_entry_get_int(gui->entry_zoom_hei);
-		opt->pro_size  = NULL;  /* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
 		opt->canvas_width = ezgui_entry_get_int(gui->entry_width);
-		opt->pro_size = NULL;	/* disable the automatic profile */
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
 	}
 	if (pic) {
 		g_free(pic);
@@ -824,7 +824,7 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	chooser = GTK_FILE_CHOOSER(dialog);
 
 	gtk_file_chooser_set_select_multiple(chooser, TRUE);
-	if ((dir = ezgui_cfg_read(gui->config, CFG_KEY_DIRECTORY)) != NULL) {
+	if ((dir = ezgui_cfg_read_alloc(gui->config, CFG_KEY_DIRECTORY)) != NULL) {
 		gtk_file_chooser_set_current_folder(chooser, dir);
 		g_free(dir);
 	}
@@ -1116,7 +1116,7 @@ static int ezgui_signal_setup_reset(EZGUI *gui)
 	char	*pic;
 	int	i;
 
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_GRID);
+	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID);
 	for (i = 0; prof_list_grid[i]; i++) {
 		if (!strcmp(pic, prof_list_grid[i])) {
 			break;
@@ -1129,7 +1129,7 @@ static int ezgui_signal_setup_reset(EZGUI *gui)
 	}
 	g_free(pic);
 
-	pic = ezgui_cfg_read(gui->config, CFG_KEY_ZOOM);
+	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM);
 	for (i = 0; prof_list_zoom[i]; i++) {
 		if (!strcmp(pic, prof_list_zoom[i])) {
 			break;
@@ -1283,7 +1283,7 @@ static int ezgui_signal_setup_format(EZGUI *gui, void *parent)
 }
 
 
-static EZCFG *ezgui_cfg_create(void)
+static EZCFG *ezgui_cfg_alloc(void)
 {
 	EZCFG	*cfg;
 	char	*path;
@@ -1332,7 +1332,7 @@ static int  ezgui_cfg_free(EZCFG *cfg)
 	return 0;
 }
 
-static char *ezgui_cfg_read(EZCFG *cfg, char *key)
+static char *ezgui_cfg_read_alloc(EZCFG *cfg, char *key)
 {
 	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
 		return NULL;
@@ -1586,7 +1586,7 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 	EZOPT	*ezopt = gui->sysopt;
 	char	*p, tmp[32];
 
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_FILE_FORMAT)) != NULL) {
+	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_FILE_FORMAT)) != NULL) {
 		ezopt->img_quality = para_get_format(p, ezopt->img_format, 8);
 		free(p);
 	} else if (rwcfg == EZUI_FMR_RDWR) {
@@ -1604,7 +1604,7 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 		}
 	}
 
-	if ((p = ezgui_cfg_read(gui->config, CFG_KEY_TRANSPARENCY)) != NULL) {
+	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_TRANSPARENCY)) != NULL) {
 		if (!strcmp(p, "yes")) {
 			ezopt->flags |= EZOP_TRANSPARENT;
 		} else {

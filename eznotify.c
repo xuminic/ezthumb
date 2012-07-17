@@ -464,8 +464,6 @@ int dump_stream(AVStream *stream)
 
 int dump_ezimage(EZIMG *image)
 {
-	EZPROF	*seg;
-
 	printf("\n>>>>>>>>>>>>>>>>>>\n");
 	printf("Source frame size: %dx%dx%d\n", 
 			image->src_width, image->src_height, image->src_pixfmt);
@@ -526,16 +524,9 @@ int dump_ezimage(EZIMG *image)
 			gdFontGetGiant()->w, gdFontGetGiant()->h);
 	printf("Background Image:  %s (0x%x)\n", image->sysopt->background,
 			image->sysopt->bg_position);
-	printf("Profile of Grid:   ");
-	for (seg = image->sysopt->pro_grid; seg != NULL; seg = seg->next) {
-		printf("%d/%d/%d ", seg->weight, seg->x, seg->y);
-	}
-	printf("\n");
-	printf("Profile of Shots:  ");
-	for (seg = image->sysopt->pro_size; seg != NULL; seg = seg->next) {
-		printf("%d/%d/%d ", seg->weight, seg->x, seg->y);
-	}
-	printf("\n");
+
+	ezopt_profile_dump(image->sysopt, 
+			"Profile of Grid:   ", "Profile of Shots:  ");
 	printf("<<<<<<<<<<<<<<<<<<\n");
 	return 0;
 }

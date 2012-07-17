@@ -233,7 +233,7 @@ int test_print_token(char *content, char *delim)
 	printf("PARSING   {%s} by {%s}\n", content, delim);
 
 	strcpy(buf, content);
-	argc = fixtoken(buf, argv, 32, delim);
+	argc = fixtoken(buf, argv, sizeof(argv)/sizeof(char*), delim);
 	printf("FIXTOKEN: ");
 	for (i = 0; i < argc; i++) {
 		printf("{%s} ", argv[i]);
@@ -241,7 +241,7 @@ int test_print_token(char *content, char *delim)
 	printf("\n");
 
 	strcpy(buf, content);
-	argc = ziptoken(buf, argv, 32, delim);
+	argc = ziptoken(buf, argv, sizeof(argv)/sizeof(char*), delim);
 	printf("ZIPTOKEN: ");
 	for (i = 0; i < argc; i++) {
 		printf("{%s} ", argv[i]);
@@ -249,7 +249,7 @@ int test_print_token(char *content, char *delim)
 	printf("\n");
 
 	strcpy(buf, content);
-	argc = mkargv(buf, argv, 32);
+	argc = mkargv(buf, argv, sizeof(argv)/sizeof(char*));
 	printf("MKARGV:   ");
 	for (i = 0; i < argc; i++) {
 		printf("{%s} ", argv[i]);

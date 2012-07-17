@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <math.h>
 
 #include "ezthumb.h"
 #include "cliopt.h"
@@ -73,6 +74,8 @@ static	struct	cliopt	clist[] = {
 	{  19, "time-end", 2, "the time in video where ends shooting" },
 	{  20, "transparent", 0, "generate the transparent background" },
 	{  22, "vindex",   1, "the index of the video stream" },
+	{  23, "protest",  2, "transform the resolution (0)" },
+	{  24, "trcur",   2, "transform the log curve (logb+length+calib)" },
 	{   1, "help",    0, "*Display the help message" },
 	{   2, "version", 0, "*Display the version message" },
 	{   3, "vernum",  0, "*Display the version number" },
@@ -115,8 +118,12 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
 static void version_ffmpeg(void);
 
-extern int fixtoken(char *sour, char **idx, int ids, char *delim);
-extern int ziptoken(char *sour, char **idx, int ids, char *delim);
+static int runtime_profile_test(EZOPT *opt, char *cmd);
+
+static int intest_transcurves(char *opt);
+static int transolution(int ref, int wid);
+static int cal_shots(float lbase, int minute, int minoff, int neckdwn, int align);
+
 
 
 int main(int argc, char **argv)
@@ -269,6 +276,12 @@ int main(int argc, char **argv)
 				sysopt.vs_idx = strtol(optarg, NULL, 0);
 			}
 			break;
+		case 23:
+			return runtime_profile_test(&sysopt, optarg);
+
+		case 24:
+			return intest_transcurves(optarg);
+
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
 			if (para_get_color(&sysopt, optarg) != EZ_ERR_NONE) {
 				todo = 'B';	/* BREAK */
@@ -434,8 +447,7 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'x':
-			strncpy(sysopt.suffix, optarg, 63);
-			sysopt.suffix[63] = 0;
+			strncpy_safe(sysopt.suffix, optarg, 64);
 			break;
 		default:
 			todo = 'B';	/* BREAK */
@@ -462,10 +474,10 @@ int main(int argc, char **argv)
 
 	/* disable the unwanted profiles */
 	if (prof_grid == 0) {
-		sysopt.pro_grid = NULL;
+		ezopt_profile_disable(&sysopt, EZ_PROF_LENGTH);
 	}
 	if (prof_size == 0) {
-		sysopt.pro_size = NULL;
+		ezopt_profile_disable(&sysopt, EZ_PROF_WIDTH);
 	}
 
 	/* review the command option structure to make sure there is no
@@ -567,7 +579,7 @@ static int para_get_time_point(char *s)
 		return val;
 	}
 
-	argcs = ziptoken(s, argvs, 8, ":");
+	argcs = ziptoken(s, argvs, sizeof(argvs)/sizeof(char*), ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
 		puts("Incorrect time format. Try HH:MM:SS or NN%.");
@@ -603,7 +615,7 @@ static int para_get_position(char *s)
 	char	*argvs[4];
 	int	argcs;
 
-	argcs = ziptoken(s, argvs, 4, ":");
+	argcs = ziptoken(s, argvs, sizeof(argvs)/sizeof(char*), ":");
 	if (argcs < 2) {
 		return para_make_postition(s);
 	} 
@@ -655,7 +667,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	unsigned long	rc;
 	char	*clist[3];
 
-	fixtoken(s, clist, 3, ":");
+	fixtoken(s, clist, sizeof(clist)/sizeof(char*), ":");
 
 	if (clist[0] && *clist[0]) {
 		if (!isxdigit(*clist[0])) {
@@ -691,7 +703,7 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 {
 	char	*clist[3];
 
-	fixtoken(s, clist, 2, ":");
+	fixtoken(s, clist, sizeof(clist)/sizeof(char*), ":");
 
 	if (clist[0] && *clist[0]) {
 		if (isdigit(*clist[0])) {
@@ -719,8 +731,7 @@ int para_get_format(char *arg, char *fmt, int flen)
 		*p++ = 0;
 		quality = strtol(p, NULL, 0);
 	}
-	strncpy(fmt, arg, flen - 1);
-	fmt[flen-1] = 0;
+	strncpy_safe(fmt, arg, flen);
 
 	/* foolproof */
 	if (!strcmp(fmt, "jpg")) {
@@ -821,4 +832,162 @@ static void version_ffmpeg(void)
 	printf("libswscale %d.%d.%d\n", LIBSWSCALE_VERSION_MAJOR, 
 			LIBSWSCALE_VERSION_MINOR, LIBSWSCALE_VERSION_MICRO);
 }
+
+
+static void linefeed_count(int n, int mod, char *con, char *coff)
+{
+	if ((n % mod) == (mod - 1)) {
+		printf("%s", con);
+	} else {
+		printf("%s", coff);
+	}
+}
+
+static void print_profile_shots(EZOPT *opt, int min)
+{
+	int	wid, hei, fac;
+
+	wid = hei = 0;
+	fac = ezopt_profile_sampling(opt, min * 60, &wid, &hei);
+	if (fac > 0) {
+		ezopt_profile_sampled(opt, 640, fac, &wid, &hei);
+	}
+	printf("[%4d]=[%4d %4d %3d]", min, wid, hei, fac);
+}
+
+static void print_profile_width(EZOPT *opt, int vidw)
+{
+	int	wid, hei, fac, can;
+
+	wid = hei = fac = 0;
+	can = ezopt_profile_zooming(opt, vidw, &wid, &hei, &fac);
+	printf("[%4d]=[%4d %4d %3d %d]", vidw, wid, hei, fac, can);
+}
+
+/* -o @180    specify the video length
+ * -o +1024   specify the width of the video */
+static int runtime_profile_test(EZOPT *opt, char *cmd)
+{
+	int	stdres[] = { 160, 240, 320, 512, 640, 704, 720, 800, 1024,
+		1152, 1280, 1366, 1440, 1680, 1920, 2048, 2560, 2880 };
+	int	i, val;
+
+	ezopt_profile_dump(opt, "Grid: ", "Size: ");
+
+	switch (*cmd) {
+	case '@':
+		val = (int)strtol(cmd + 1, 0, 10);
+		print_profile_shots(opt, val);
+		printf("\n");
+		return 0;
+
+	case '+':
+		val = (int)strtol(cmd + 1, 0, 10);
+		print_profile_width(opt, val);
+		printf("\n");
+		return 0;
+	}
+
+	printf("Reference of Video Length:\n");
+	for (i = 0; i < 10; i++) {
+		val = (i+1)*10;
+		print_profile_shots(opt, val);
+		linefeed_count(i, 3, "\n", "    ");
+	}
+	linefeed_count(i, 3, "\n", "\n\n");
+
+	printf("Reference of Width:\n");
+	for (i = 0; i < sizeof(stdres)/sizeof(int); i++) {
+		print_profile_width(opt, stdres[i]);
+		linefeed_count(i, 3, "\n", "    ");
+	}
+	linefeed_count(i, 3, "", "\n");
+	return 0;
+}
+
+static int intest_transcurves(char *opt)
+{
+	float	logbase;
+	int	i, uplimit, cali;
+
+	logbase = strtof(opt, NULL);
+	if ((opt = strchr(opt, '+')) == NULL) {
+		uplimit = 360;
+		cali = 32;
+	} else {
+		opt++;
+		uplimit = strtol(opt, NULL, 0);
+		if ((opt = strchr(opt, '+')) == NULL) {
+			cali = 32;
+		} else {
+			opt++;
+			cali = strtol(opt, NULL, 0);
+		}
+	}
+
+	for (i = 0; i < 10; i++) {
+		cal_shots(logbase, uplimit / 10 * (i+1), 10, cali, 4);
+	}
+	return 0;
+}
+
+static int transolution(int ref, int wid)
+{
+	float	ratio, error;
+	int	i, neari;
+
+	if (wid > ref) {
+		ratio = (float) wid / ref;	/* zoom out */
+	} else {
+		ratio = (float) ref / wid;	/* zoom in */
+	}
+	//printf("ratio: %f\n", ratio);
+	
+	/* convert to the nearest zoom ratio in integer */
+	neari = (int)(ratio + 0.5);
+
+	/* find out if the zoom ratio being 1,2,4,8,... */
+	for (i = 0; i < 32; i++) {
+		if (neari == (1 << i)) {
+			break;
+		}
+	}
+	/* if the zoom ratio is not 1,2,4,8,..., we just accept the
+	 * reference width as the expected width */
+	if (i == 32) {
+		return ref;
+	}
+	
+	/* even the nearest zoom ratio is 1,2,4,8,..., we still need to
+	 * check the error between the reference width and the zoomed width.
+	 * If the error is over 20%, we'll stick to the reference one */
+	//printf("neari: %d\n", neari);
+	error = abs(neari * ref - wid) / ref;
+	if (error > 0.2) {
+		return ref;
+	}
+
+	/* final check in case of odd width */
+	if (wid > ref) {
+		i = wid / neari;
+	} else {
+		i = wid * neari;
+	}
+	return i / 2 * 2;
+}
+
+
+static int cal_shots(float lbase, int minute, int minoff, int neckdwn, int align)
+{
+	int	shoot, cali;
+
+	shoot = (int)(log(minute + minoff) / log(lbase)) - neckdwn;
+	cali  = (shoot + align - 1) / align * align;
+	printf("%4d: %4d -> %4d (%d)\n", minute, shoot, cali, minute * 60 / shoot);
+	return cali;
+}
+
+/* 30L1.025P10N50 */
+
+
 

@@ -73,7 +73,7 @@ $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
 version: version.c
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $< -lm
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
 
 smm:
 	make -C libsmm

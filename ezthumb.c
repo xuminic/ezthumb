@@ -92,7 +92,9 @@ static gdFont *image_fontset(int fsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
 static int ezopt_profile_append(EZOPT *ezopt, char *ps);
-static EZPROF *ezopt_profile_new(EZOPT *opt, int wei, int x, int y);
+static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen);
+static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei);
+static int ezopt_profile_free(EZPROF *node);
 static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
 
 static void *dts_lib_free(void *anchor);
@@ -173,76 +175,6 @@ void ezopt_review(EZOPT *ezopt)
 			ezopt->flags |= EZOP_PROC_TWOPASS;
 		}
 	}
-}
-
-int ezopt_profile_setup(EZOPT *opt, char *s)
-{
-	char	*tmp, *plist[64];	/* hope that's big enough */
-	int	i, len;
-
-	/* duplicate the input profile string */
-	if ((tmp = calloc(strlen(s)+4, 1)) == NULL) {
-		return -1;
-	}
-	strcpy(tmp, s);
-	
-	/* Reset the profile control block pool */
-	memset(opt->pro_pool, 0, sizeof(EZPROF) * EZ_MAX_PROFILE);
-	opt->pro_grid = opt->pro_size = NULL;
-	opt->pro_idx  = 0;
-
-	len = ziptoken(tmp, plist, 64, ":");
-	for (i = 0; i < len; i++) {
-		ezopt_profile_append(opt, plist[i]);
-	}
-	
-	free(tmp);
-
-	/* for debug purpose */
-	/*printf("Grid: ");
-	for (seg = opt->pro_grid; seg != NULL; seg = seg->next) {
-		printf("%d ", seg->weight);
-	}
-	printf("\n");
-	printf("Size: ");
-	for (seg = opt->pro_size; seg != NULL; seg = seg->next) {
-		printf("%d ", seg->weight);
-	}
-	printf("\n");
-	*/
-	return 0;
-}
-
-char *ezopt_profile_export(EZOPT *ezopt)
-{
-	EZPROF	*p;
-	char	*buf, tmp[64];
-	int	n = 0;
-
-	for (p = ezopt->pro_grid; p; p = p->next, n++);
-	for (p = ezopt->pro_size; p; p = p->next, n++);
-	if ((buf = calloc(n, 64)) == NULL) {
-		return NULL;
-	}
-	buf[0] = 0;
-	for (p = ezopt->pro_grid; p; p = p->next) {
-		if ((p->weight % 60) == 0) {
-			sprintf(tmp, "%dM%dx%d:", p->weight / 60, p->x, p->y);
-		} else {
-			sprintf(tmp, "%dS%dx%d:", p->weight, p->x, p->y);
-		}
-		strcat(buf, tmp);
-	}
-	for (p = ezopt->pro_size; p; p = p->next) {
-		if (p->x < 0) {
-			sprintf(tmp, "%dW%d%%:", p->weight, p->y);
-		} else {
-			sprintf(tmp, "%dW%dx%d:", p->weight, p->x, p->y);
-		}
-		strcat(buf, tmp);
-	}
-	//printf("ezopt_profile_export: %s\n", buf);
-	return buf;
 }
 
 int ezthumb(char *filename, EZOPT *ezopt)
@@ -1725,6 +1657,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	EZIMG	*image;
 	int	size, shots;
 	int	pro_col, pro_row, pro_width, pro_height, pro_facto;
+	int	pro_canvas;
 
 	// FIXME: the filename could be utf-8 or widebytes
 	size = sizeof(EZIMG) + strlen(vidx->filename) + 128;
@@ -1758,7 +1691,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	pro_width  = ezopt->tn_width;
 	pro_height = ezopt->tn_height;
 	pro_facto  = ezopt->tn_facto;
-	image_user_profile(image, &pro_col, &pro_row, 
+	pro_canvas = image_user_profile(image, &pro_col, &pro_row, 
 			&pro_width, &pro_height, &pro_facto);
 	
 	/* calculate the expected size of each screen shots.
@@ -1823,10 +1756,15 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 					ezopt->flags);
 		}
 
-		if (ezopt->canvas_width > 63) {
+		if ((ezopt->canvas_width > 63) || (pro_canvas > 63)) {
 			/* if the canvas width is specified, it overrides 
 			 * tn_width, tn_height and tn_facto */
-			image->canvas_width = ezopt->canvas_width & ~1;
+			if (ezopt->canvas_width > 63) {
+				image->canvas_width = ezopt->canvas_width;
+			} else {
+				image->canvas_width = pro_canvas;
+			}
+			image->canvas_width &= ~1;
 
 			/* it's the reference width for getting the gap size */
 			size = ezopt->canvas_width / pro_col;
@@ -2032,39 +1970,16 @@ static int image_free(EZIMG *image)
 static int image_user_profile(EZIMG *image, int *col, int *row,
 		int *width, int *height, int *facto)
 {
-	EZPROF	*pf;
+	int	shots;
 
-	for (pf = image->sysopt->pro_grid; pf; pf = pf->next) {
-		if (((image->time_during / 1000) <= pf->weight) ||
-			/* A fix for video length run out of the profile */
-				(pf->next == NULL)) {
-			if (col) {
-				*col = pf->x;
-			}
-			if (row) {
-				*row = pf->y;
-			}
-			break;
-		}
+	shots = ezopt_profile_sampling(image->sysopt, 
+			image->time_during / 1000, col, row);
+	if (shots > 0) {
+		ezopt_profile_sampled(image->sysopt, 
+				image->src_width, shots, col, row);
 	}
-	for (pf = image->sysopt->pro_size; pf; pf = pf->next) {
-		if (image->src_width <= pf->weight) {
-			if (pf->x < 0) {
-				if (facto) {
-					*facto = pf->y;
-				}
-			} else {
-				if (width) {
-					*width = pf->x;
-				}
-				if (height) {
-					*height = pf->y;
-				}
-			}
-			break;
-		}
-	}
-	return 0;
+	return ezopt_profile_zooming(image->sysopt,
+			image->src_width, width, height, facto);
 }
 
 static int image_scale(EZIMG *image, AVFrame *frame)
@@ -2705,64 +2620,404 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
 }
 
 
+/****************************************************************************
+ * Profile Functions
+ ****************************************************************************/
+
+int ezopt_profile_setup(EZOPT *opt, char *s)
+{
+	char	*tmp, *plist[64];	/* hope that's big enough */
+	int	i, len;
+
+	/* duplicate the input profile string */
+	if ((tmp = strcpy_alloc(s)) == NULL) {
+		return -1;
+	}
+	
+	/* Reset the profile control block pool */
+	memset(opt->pro_pool, 0, sizeof(EZPROF) * EZ_PROF_MAX_ENTRY);
+	opt->pro_grid = opt->pro_size = NULL;
+
+	len = ziptoken(tmp, plist, sizeof(plist)/sizeof(char*), ":");
+	for (i = 0; i < len; i++) {
+		ezopt_profile_append(opt, plist[i]);
+	}
+	
+	free(tmp);
+	return 0;
+}
+
+/* for debug purpose only */
+int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size)
+{
+	EZPROF	*node;
+	char	tmp[64];
+
+	printf("%s", pmt_grid);		/* "Grid: " */
+	for (node = opt->pro_grid; node != NULL; node = node->next) {
+		printf("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
+	}
+	printf("\n");
+
+	printf("%s", pmt_size);		/* "Size: " */
+	for (node = opt->pro_size; node != NULL; node = node->next) {
+		printf("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
+	}
+	printf("\n");
+	return 0;
+}
+
+char *ezopt_profile_export_alloc(EZOPT *ezopt)
+{
+	EZPROF	*p;
+	char	*buf, tmp[64];
+	int	n = 0;
+
+	for (p = ezopt->pro_grid; p; p = p->next, n++);
+	for (p = ezopt->pro_size; p; p = p->next, n++);
+	if ((buf = calloc(n, 64)) == NULL) {
+		return NULL;
+	}
+	buf[0] = 0;
+
+	for (p = ezopt->pro_grid; p; p = p->next) {
+		ezopt_profile_sprint(p, tmp, sizeof(tmp));
+		strcat(buf, tmp);
+	}
+	for (p = ezopt->pro_size; p; p = p->next) {
+		ezopt_profile_sprint(p, tmp, sizeof(tmp));
+		strcat(buf, tmp);
+	}
+	//printf("ezopt_profile_export: %s\n", buf);
+	return buf;
+}
+
+int ezopt_profile_disable(EZOPT *ezopt, int prof)
+{
+	if (prof == EZ_PROF_LENGTH) {
+		ezopt->pro_grid = NULL;
+	} else if (prof == EZ_PROF_WIDTH) {
+		ezopt->pro_size = NULL;
+	} else if (prof == EZ_PROF_ALL) {
+		ezopt->pro_grid = NULL;
+		ezopt->pro_size = NULL;
+	}
+	return 0;
+}
+
+int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row)
+{
+	EZPROF	*node;
+	int	snap;
+
+	if (ezopt->pro_grid == NULL) {
+		return -1;	/* profile disabled */
+	}
+
+	for (node = ezopt->pro_grid; node->next; node = node->next) {
+		if (vidsec <= node->weight) {
+			break;
+		}
+	}
+
+	switch (node->flag) {
+	case 's':
+	case 'S':
+	case 'm':
+	case 'M':
+		if (col) {
+			*col = node->x;
+		}
+		if (row) {
+			*row = node->y;
+		}
+		//printf("ezopt_profile_sampling: %d x %d\n", node->x, node->y);
+		return 0;	/* returned the matrix */
+
+	case 'l':
+	case 'L':
+		snap = (int)(log(vidsec / 60 + node->x) / log(node->lbase)) 
+			- node->y;
+		//printf("ezopt_profile_sampling: %d+\n", snap);
+		return snap;	/* need more info to decide the matrix */
+	}
+	return -2;	/* no effective profile found */
+}
+
+int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row)
+{
+	EZPROF	*node;
+
+	if (ezopt->pro_size == NULL) {
+		return bs;	/* profile disabled so ignore it */
+	}
+
+	for (node = ezopt->pro_size; node->next; node = node->next) {
+		if (vw <= node->weight) {
+			break;
+		}
+	}
+
+	switch (node->flag) {
+	case 'f':
+	case 'F':
+	case 'r':
+	case 'R':
+		if (col) {
+			*col = node->x;
+		}
+		bs = (bs + node->x - 1) / node->x * node->x;
+		if (row) {
+			*row = bs / node->x;
+		}
+		break;
+	}
+	//printf("ezopt_profile_sampled: %d\n", bs);
+	return bs;
+}
+
+
+int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
+{
+	EZPROF	*node;
+	float	ratio;
+	int	neari;
+
+	if (ezopt->pro_size == NULL) {
+		return 0;	/* profile disabled so ignore it */
+	}
+
+	for (node = ezopt->pro_size; node->next; node = node->next) {
+		if (vw <= node->weight) {
+			break;
+		}
+	}
+
+	switch (node->flag) {
+	case 'w':
+	case 'W':
+		if (ra) {
+			*ra = node->x;
+		}
+		break;
+	
+	case 't':
+	case 'T':
+		if (wid) {
+			*wid = node->x;
+		}
+		if (hei) {
+			*hei = node->y;
+		}
+		break;
+
+	case 'f':
+	case 'F':
+		return node->y;	/* return the canvas size if required */
+
+	case 'r':
+	case 'R':
+		/* find the zoom ratio */
+		if (vw > node->x) {
+			ratio = (float) vw / node->x;	/* zoom out */
+		} else {
+			ratio = (float) node->x / vw;	/* zoom in */
+		}
+		/* quantized the zoom ratio to base-2 exponential 1,2,4,8.. */
+		neari = 1 << (int)(log(ratio) / log(2) + 0.5);
+		/* checking the error between the reference width and the 
+		 * zoomed width. The error should be less than 20% */
+		ratio = abs(neari * node->x - vw) / (float) node->x;
+		if (ratio > 0.2) {
+			neari = node->x;	/* error over 20% */
+		} else if (vw > node->x) {
+			neari = vw / neari;
+		} else {
+			neari = vw * neari;
+		}
+		if (wid) {
+			*wid = neari / 2 * 2;	/* final quantizing width */
+		}
+		break;
+	}
+	return 0;
+}
+
+
 /* available profile field example:
  * 12M4x6, 720s4x6, 720S4
  * 160w200%, 320w100%, 320w160x120, 320w160 */
 static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 {
 	EZPROF	*node;
-	char	*type, *flag;
-	int	wei, x, y;
+	char	pbuf[256], *argv[8];
+	int	val, argc;
 
-	wei = (int) strtol(ps, &type, 10);
-	if ((wei == 0) || (*type == 0)) {
+	strncpy_safe(pbuf, ps, sizeof(pbuf));
+
+	val = (int) strtol(pbuf, &ps, 10);
+	if (*ps == 0) {	/* pointed to the EOL; no flag error */
 		return -1;
 	}
 
-	x = (int) strtol(type + 1, &flag, 10);
-	if (*flag == '%') {
-		y = x;
-		x = -1;
-	} else if (*flag == 0) {
-		y = 0;
-	} else {
-		y = (int) strtol(++flag, NULL, 10);
-	}
-	//printf("prof_append: %s [%d:%d:%d]\n", ps, wei, x, y);
+	argc = fixtoken(ps + 1, argv, sizeof(argv)/sizeof(char*), "xX");
+	node = ezopt_profile_new(ezopt, *ps, val);
 
-	switch (*type) {
+	switch (node->flag) {
 	case 'm':
 	case 'M':
-		wei *= 60;
-		/* falling down */
+		node->weight *= 60;	/* turn to seconds */
+		node->x = (int) strtol(argv[0], NULL, 10);
+		node->y = argv[1] ? (int) strtol(argv[1], NULL, 10) : 0;
+		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
+		break;
+
 	case 's':
 	case 'S':
-		node = ezopt_profile_new(ezopt, wei, x, y);
+		node->x = (int) strtol(argv[0], NULL, 10);
+		node->y = argv[1] ? (int) strtol(argv[1], NULL, 10) : 0;
 		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
-		return 0;
+		break;
+
+	case 'l':
+	case 'L':
+		if ((argv[1] == NULL) || (argv[2] == NULL)) {
+			ezopt_profile_free(node);
+			return -2;
+		}
+		node->x = (int) strtol(argv[0], NULL, 10);
+		node->y = (int) strtol(argv[1], NULL, 10);
+		node->lbase = (float) strtof(argv[2], NULL);
+		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
+		break;
+
 	case 'w':
 	case 'W':
-		node = ezopt_profile_new(ezopt, wei, x, y);
+		node->x = (int) strtol(argv[0], NULL, 10);
 		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
-		return 1;
+		break;
+
+	case 't':
+	case 'T':
+		node->x = (int) strtol(argv[0], NULL, 10);
+		node->y = argv[1] ? (int) strtol(argv[1], NULL, 10) : 0;
+		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
+		break;
+	
+	case 'f':
+	case 'F':
+	case 'r':
+	case 'R':
+		node->x = (int) strtol(argv[0], NULL, 10);
+		if (argv[1] == NULL) {
+			ezopt_profile_free(node);
+			return -2;
+		}
+		node->y = (int) strtol(argv[1], NULL, 10);
+		if (node->y <= 0) {
+			ezopt_profile_free(node);
+			return -2;
+		}
+		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
+		break;
+
+	default:
+		ezopt_profile_free(node);
+		return -2;
 	}
-	return -2;
+	return 0;
 }
 
-static EZPROF *ezopt_profile_new(EZOPT *opt, int wei, int x, int y)
+static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen)
 {
-	if (opt->pro_idx >= EZ_MAX_PROFILE) {
+	char	tmp[64];
+
+	if (blen < 32) {	/* FIXME: very rough estimation */
 		return NULL;
 	}
 
-	opt->pro_pool[opt->pro_idx].next = NULL;
-	opt->pro_pool[opt->pro_idx].weight = wei;
-	opt->pro_pool[opt->pro_idx].x = x;
-	opt->pro_pool[opt->pro_idx].y = y;
+	switch (node->flag) {
+	case 'm':
+	case 'M':
+		sprintf(buf, "%dM%d", node->weight / 60, node->x);
+		if (node->y > 0) {
+			sprintf(tmp, "x%d", node->y);
+			strcat(buf, tmp);
+		}
+		break;
 
-	x = opt->pro_idx;
-	opt->pro_idx++;
-	return &opt->pro_pool[x];
+	case 's':
+	case 'S':
+		sprintf(buf, "%dS%d", node->weight, node->x);
+		if (node->y > 0) {
+			sprintf(tmp, "x%d", node->y);
+			strcat(buf, tmp);
+		}
+		break;
+
+	case 'l':
+	case 'L':
+		sprintf(buf, "%dL%dx%dx%f", node->weight, node->x, node->y,
+				node->lbase);
+		break;
+
+	case 'w':
+	case 'W':
+		sprintf(buf, "%dW%d%%", node->weight, node->x);
+		break;
+
+	case 't':
+	case 'T':
+		sprintf(buf, "%dT%d", node->weight, node->x);
+		if (node->y > 0) {
+			sprintf(tmp, "x%d", node->y);
+			strcat(buf, tmp);
+		}
+		break;
+
+	case 'f':
+	case 'F':
+		sprintf(buf, "%dF%dx%d", node->weight, node->x, node->y);
+		break;
+
+	case 'r':
+	case 'R':
+		sprintf(buf, "%dR%dx%d", node->weight, node->x, node->y);
+		break;
+
+	default:
+		return NULL;
+	}
+	return buf;
+}
+
+static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei)
+{
+	int	i;
+
+	for (i = 0; i < EZ_PROF_MAX_ENTRY; i++) {
+		if (opt->pro_pool[i].flag == 0) {
+			break;
+		}
+	}
+	if (i == EZ_PROF_MAX_ENTRY) {
+		return NULL;
+	}
+
+	memset(&opt->pro_pool[i], 0, sizeof(EZPROF));
+	opt->pro_pool[i].next = NULL;
+	opt->pro_pool[i].flag = flag;
+	opt->pro_pool[i].weight = wei;
+
+	return &opt->pro_pool[i];
+}
+
+/* note that it's NOT a proper free since the 'next' point was not processed
+ * at all. It only serves as a quick release */
+static int ezopt_profile_free(EZPROF *node)
+{
+	memset(node, 0, sizeof(EZPROF));
+	return 0;
 }
 
 static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
@@ -2794,6 +3049,11 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
 	}
 	return root;
 }
+
+
+/****************************************************************************
+ * Statistical Analysis of DTS stamps in the stream
+ ****************************************************************************/
 
 static void *dts_lib_free(void *anchor)
 {
@@ -2865,6 +3125,10 @@ static int dts_lib_compress(void *anchor, int64_t *refdts, int num)
 	return n;
 }
 
+
+/****************************************************************************
+ * Utility Functions
+ ****************************************************************************/
 
 char *meta_bitrate(int bitrate, char *buffer)
 {
@@ -3006,4 +3270,22 @@ int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2)
 	}
 	return v2;
 }
+
+char *strcpy_alloc(const char *src)
+{
+	char	*dest;
+	
+	if ((dest = malloc(strlen(src) + 4)) == NULL) {
+		return NULL;
+	}
+	return strcpy(dest, src);
+}
+
+char *strncpy_safe(char *dest, const char *src, size_t n)
+{
+	strncpy(dest, src, n - 1);
+	dest[n - 1] = 0;
+	return dest;
+}
+
 
