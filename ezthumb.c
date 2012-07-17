@@ -2682,11 +2682,21 @@ char *ezopt_profile_export_alloc(EZOPT *ezopt)
 
 	for (p = ezopt->pro_grid; p; p = p->next) {
 		ezopt_profile_sprint(p, tmp, sizeof(tmp));
-		strcat(buf, tmp);
+		if (buf[0] == 0) {
+			strcpy(buf, tmp);
+		} else {
+			strcat(buf, ":");
+			strcat(buf, tmp);
+		}
 	}
 	for (p = ezopt->pro_size; p; p = p->next) {
 		ezopt_profile_sprint(p, tmp, sizeof(tmp));
-		strcat(buf, tmp);
+		if (buf[0] == 0) {
+			strcpy(buf, tmp);
+		} else {
+			strcat(buf, ":");
+			strcat(buf, tmp);
+		}
 	}
 	//printf("ezopt_profile_export: %s\n", buf);
 	return buf;
@@ -2818,19 +2828,20 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
 	case 'r':
 	case 'R':
 		/* find the zoom ratio */
-		if (vw > node->x) {
-			ratio = (float) vw / node->x;	/* zoom out */
+		if (vw > node->y) {
+			ratio = (float) vw / node->y;	/* zoom out */
 		} else {
-			ratio = (float) node->x / vw;	/* zoom in */
+			ratio = (float) node->y / vw;	/* zoom in */
 		}
 		/* quantized the zoom ratio to base-2 exponential 1,2,4,8.. */
 		neari = 1 << (int)(log(ratio) / log(2) + 0.5);
+		//printf("ez.._zooming: ratio=%f quant=%d\n", ratio, neari);
 		/* checking the error between the reference width and the 
 		 * zoomed width. The error should be less than 20% */
-		ratio = abs(neari * node->x - vw) / (float) node->x;
+		ratio = abs(neari * node->y - vw) / (float) node->y;
 		if (ratio > 0.2) {
-			neari = node->x;	/* error over 20% */
-		} else if (vw > node->x) {
+			neari = node->y;	/* error over 20% */
+		} else if (vw > node->y) {
 			neari = vw / neari;
 		} else {
 			neari = vw * neari;
@@ -2885,6 +2896,7 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 			ezopt_profile_free(node);
 			return -2;
 		}
+		node->weight *= 60;	/* turn to seconds */
 		node->x = (int) strtol(argv[0], NULL, 10);
 		node->y = (int) strtol(argv[1], NULL, 10);
 		node->lbase = (float) strtof(argv[2], NULL);
@@ -2957,8 +2969,8 @@ static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen)
 
 	case 'l':
 	case 'L':
-		sprintf(buf, "%dL%dx%dx%f", node->weight, node->x, node->y,
-				node->lbase);
+		sprintf(buf, "%dL%dx%dx%f", node->weight / 60, 
+				node->x, node->y, node->lbase);
 		break;
 
 	case 'w':
@@ -3028,6 +3040,7 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
 		return root;	/* do nothing */
 	}
 
+	//printf("ezopt_profile_insert: %d\n", leaf->weight);
 	if (root == NULL) {
 		return leaf;
 	}
@@ -3269,6 +3282,37 @@ int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2)
 		return v1;
 	}
 	return v2;
+}
+
+/* input: jpg@85, gif@1000, png */
+int meta_image_format(char *input, char *fmt, int flen)
+{
+	char	*p, arg[128];
+	int	quality = 0;
+
+	strncpy_safe(arg, input, sizeof(arg));
+	if ((p = strchr(arg, '@')) != NULL) {
+		*p++ = 0;
+		quality = strtol(p, NULL, 0);
+	}
+	strncpy_safe(fmt, arg, flen);
+
+	/* foolproof of the quality parameter */
+	if (!strcmp(fmt, "jpg") || !strcmp(fmt, "jpeg")) {
+		if ((quality < 5) || (quality > 100)) {
+			quality = 85;	/* as default */
+		}
+	} else if (!strcmp(fmt, "png")) {
+		quality = 0;
+	} else if (!strcmp(fmt, "gif")) {
+		if (quality && (quality < 15)) {
+			quality = 1000;	/* 1 second as default */
+		}
+	} else {
+		strcpy(fmt, "jpg");	/* as default */
+		quality = 85;
+	}
+	return quality;
 }
 
 char *strcpy_alloc(const char *src)

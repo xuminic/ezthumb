@@ -1,3 +1,21 @@
+20120717: V2.1.5
+  + Expended the profile system.
+    The profile now accept a logarithmic formula to take screen shots.
+    The formula is 
+        lg(n)(M + a) - b
+    'n' is the base. 'M' is the video length in minutes. 
+    The related profile item is 
+        WEIGHT + 'L' + a + 'x' + b + 'x' + n.
+    For example, the default profile is 180L10x100x1.027, so if a video
+    length is 120 minutes, it would take
+        lg(1.027)(120+10) - 100 == 82 shots
+    Combined with the relative screen size profile 100R4x320, which means
+    to generate 4 shots in a row, each shot closed to 320 in width. 
+    It will generate a 4x21 thumbnail array.
+  + A hidden command line option, --protest, was applied to test the 
+    new profile system and help to find out the proper parameter of the
+    formula.
+
 20120620: V2.1.4
   + Fixed a build system problem in Win32. The install rule in the Makefile
     required ezthumb.exe and ezthumb_win.exe rule. After a successful

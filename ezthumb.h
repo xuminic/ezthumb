@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.4"
+#define EZTHUMB_VERSION		"2.1.5"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -466,6 +466,7 @@ char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
 char *meta_timestamp(int ms, int enms, char *buffer);
 int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
+int meta_image_format(char *input, char *fmt, int flen);
 
 char *strcpy_alloc(const char *src);
 char *strncpy_safe(char *dest, const char *src, size_t n);

@@ -230,43 +230,23 @@ options sometimes is quite supportive.
 
 .TP
 .BR \-P , " \-\-profile \fIprofile_string\fP"
-Specify a string of profiles for defining the size of grid and screen shots. 
+Specify a string of profiles to define the size of grid and screen shots. 
 In simple, it can be treated as the combination of 
 .BR \-g
 and
 .BR \-s
-options. There are two types of profiles, for example,
-.I 60m4x12
-for the
-.BR \-g
-option and
-.I 640w35%
-for the
-.BR \-s
-option. In this example, 
-.I 60m
-means if a video file is smaller than or equal to 60 minutes,
-.B ezthumb 
-would generate a
-.I 4x12
-grid of screen shots. The
-.I 640w
-means if the width of the video display is smaller than or equal to 640 pixels,
-it would take 
-.I 35%
-of screen size for each shots. The profiles could be combined by ':' like
-.I "12m4x4:30m4x8:90m4x16:320w100%:640w240x180:1280w20%".
-
-The
+options. Please see the
+.B PROFILES
+section below. Note that the
 .BR \-P
-option could also accept an index number for its predefine profiles.
-The first predefined profile is also the default profile of 
-.B ezthumb.
-However, the profile could be overriden by the
+option would override the internal profiles and configure file profiles,
+and the
 .BR \-g
 and
 .BR \-s
-options.
+options would override the
+.BR \-P
+option.
 
 .TP
 .BR \-s , " \-\-ssize \fIthumbnail_size\fP"
@@ -532,6 +512,108 @@ stretch the width of the picture to fit the canvas but keep its height same.
 .TP
 .BR sy
 stretch the height of the picture to fit the canvas but keep its width same.
+
+.SH PROFILES
+The profile is used to set a group of rules about the geometry size of the 
+thumbnails. It can generate different screenshot according to the attribute
+of the video clip. For example, it can generate a 4x4 screen shot array 
+if the video lasts 30 minute, or generate a 6x8 array if the video lasts 
+120 minutes. It can also generate a 240x120 thumbnail if the video frame 
+is 160x120, or generate a 320x240 thumbnail if the video frame is 1920x1024.
+
+In general words, there are two types of profiles. One is used to define the 
+screen shot array by the length of the video. Another one is used to define 
+the size of the thumbnails by the frame size of the videos. These profile
+entries can be combined by a
+.I ':'
+like
+.I "12m4x4:30m4x8:90m4x16:320w100%:640w240x180:1280w20%" .
+
+The profile entry has a fixed format
+.P
+.I WEIGHT + flag + A + 'x' + B + 'x' + C
+.P
+The
+.I WEIGHT
+is used to define the length of the video, or width of the video frame.
+.B ezthumb
+uses it to define the action range. For examples with the profile above,
+there are four ranges to make screen shot array by the length of videos: 
+0 to 12 minutes, 13 to 30 minutes, 31 to 90 minute and above 90. There are
+four ranges video frames to make different size of thumbnails, 0 to 320, 
+321 to 640, 640 to 1280 and above 1280 pixels.
+The
+.I "B"
+and
+.I "C"
+are optional.
+The 
+.I "flag"
+is used to define the action inside the range.
+.TP
+.BR M/m
+generate an A by B screen shot array according to the vide length in minutes
+.TP
+.BR S/s
+generate an A by B screen shot array according to the vide length in seconds
+.TP
+.BR L/l
+take shots by a logarithmic formula. The formula is 
+.TP
+.BR .
+lg(C)(length + A) - B
+.TP
+.BR .
+The 
+.I "C"
+is the base and the
+.I "length"
+is the video length in minutes. The screen shot array must be decided by 
+combining with 
+.I "F"
+or
+.I "R"
+flags.
+.TP
+.BR W/w
+zoom the video frame by the specified ratio.
+.I 160W150
+means to zoom in 150% of the original video frame.
+.TP
+.BR T/t
+set the size of the thumbnail to the specified size. The 
+.I "B"
+is optional so 
+.B ezthumb
+would deduce it by video frame ratio.
+.TP
+.BR F/f
+specifies the fixed canvas size. 
+The parameter
+.I "A"
+is the thumbnails in a row. 
+For example the 
+.I "100F4x1280"
+generates a 1280 pixel picture with 4 thumbnails in a row.
+.TP
+.BR R/r
+The size of the thumbnail fits best the specified width. 
+The parameter
+.I "A"
+is the thumbnails in a row. 
+For example the 
+.I "100R4x320"
+generates 4 thumbnails in a row in the picture, each thumbnail has the size
+close to 320 pixel.
+.P
+For examples, the default profile is
+.I "8M4x2:9L10x100x1.027:100R4x320" ,
+which means if the video clip lasts 8 minute or less, it generates a 4x2 array;
+if the video clips lasts longer than 8 minutes, the number of generated 
+thumbnail would be computed by the logarithm formula 
+.I ln(1.027)(length+10)-100 
+and the final picture would be 4 thumbnails in a row, each width would close
+to 320 pixels in width.
 
 .SH EXAMPLES
 .B ezthumb "\-g 4x8" "\-s 33%" *.avi

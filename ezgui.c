@@ -95,8 +95,6 @@ static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y);
 static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n);
 static void ezgui_window_update(void);
 
-extern int para_get_format(char *arg, char *fmt, int flen);
-
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
@@ -1587,7 +1585,7 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 	char	*p, tmp[32];
 
 	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_FILE_FORMAT)) != NULL) {
-		ezopt->img_quality = para_get_format(p, ezopt->img_format, 8);
+		ezopt->img_quality = meta_image_format(p, ezopt->img_format, 8);
 		free(p);
 	} else if (rwcfg == EZUI_FMR_RDWR) {
 		sprintf(tmp, "%s@%d", ezopt->img_format, ezopt->img_quality);
