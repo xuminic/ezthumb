@@ -1737,7 +1737,9 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	} else {
 		image->grid_col = pro_col;
 		if ((pro_row < 1) && (ezopt->tm_step < 1)) {
-			image->grid_row = 4;	/* make it default */
+			/* 20120718 fixed the bug that "-g 4" crashed the 
+			 * program which introduced by the profile system */
+			image->grid_row = pro_row = 4;	/* make it default */
 		}
 		if (pro_row < 1) {
 			shots = image_cal_shots(image->time_during, 

@@ -15,6 +15,7 @@
   + A hidden command line option, --protest, was applied to test the 
     new profile system and help to find out the proper parameter of the
     formula.
+  + ezthumb.c: fixed the bug that "-g 4" option made the program crash
 
 20120620: V2.1.4
   + Fixed a build system problem in Win32. The install rule in the Makefile
