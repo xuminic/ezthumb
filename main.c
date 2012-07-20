@@ -407,6 +407,8 @@ int main(int argc, char **argv)
 				todo = 'B';	/* BREAK */
 				break;
 			}
+			sysopt.tn_width = sysopt.tn_height = 0;	/* 20120720 */
+			sysopt.canvas_width = 0;
 			c = strtol(optarg, &p, 0);
 			if (*p == 0) {
 				sysopt.tn_facto = c;
@@ -421,9 +423,11 @@ int main(int argc, char **argv)
 		case 't':
 			if (!isdigit(*optarg)) {
 				todo = 'B';	/* BREAK */
-			} else {
-				sysopt.tm_step = strtol(optarg, NULL, 0);
+				break;
 			}
+			sysopt.grid_row = 0;
+			prof_grid = 0;	/* disable the profile */
+			sysopt.tm_step = strtol(optarg, NULL, 0);
 			//if (sysopt.tm_step < 1000) {/* at least 1 sec */
 			//	sysopt.tm_step = 0;
 			//}
@@ -439,9 +443,10 @@ int main(int argc, char **argv)
 		case 'w':
 			if (!isdigit(*optarg)) {
 				todo = 'B';	/* BREAK */
-			} else {
-				sysopt.canvas_width = strtol(optarg, NULL, 0);
+				break;
 			}
+			sysopt.canvas_width = strtol(optarg, NULL, 0);
+			prof_size = 0;	/* disable the profile */
 			break;
 		case 'x':
 			strncpy_safe(sysopt.suffix, optarg, 64);

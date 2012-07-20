@@ -1,3 +1,15 @@
+20120720:
+  + Fixed a zooming problem:
+    1. use ezthumb -s 480x240 small.avi to receive the 480x240 thumbnail
+    2. use ezthumb -s 25% small.avi to expect a 180x144 thumbnail, but still
+       received the 480x240 one, which was in the configure file.
+    The zoomed width and height were written in the configure file. 
+    The '-s' disabled the profile so ezthumb retrieved them from the configure
+    file, which included the recent width and height. They have higher
+    priority than the ratio so the command line ratio was ignored.
+    The quick fix is to reset the width and height if a command line was
+    specified. As well as '-t' and '-w' options.
+
 20120717: V2.1.5
   + Expended the profile system.
     The profile now accept a logarithmic formula to take screen shots.
