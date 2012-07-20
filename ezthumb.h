@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.5"
+#define EZTHUMB_VERSION		"2.1.6"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -319,6 +319,7 @@ typedef	struct	{
 	int	src_width;	/* original video frame size */
 	int	src_height;
 	int	src_pixfmt;	/* original video frame pixel format */
+	int	ar_height;	/* original video height by AR correction */
 
 	/* scaled frame images */
 	struct	SwsContext	*swsctx;	/* scaler context */

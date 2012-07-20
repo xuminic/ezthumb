@@ -1,3 +1,7 @@
+20120720: V2.1.6
+  + ezthumb.c: applied the AR correction to the thumbnails. 
+    The AR parameter came from the AVCodecContext->sample_aspect_ratio.
+
 20120720:
   + Fixed a zooming problem:
     1. use ezthumb -s 480x240 small.avi to receive the 480x240 thumbnail

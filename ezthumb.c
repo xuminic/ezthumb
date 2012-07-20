@@ -1671,6 +1671,15 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	image->src_height = vidx->codecx->height;
 	image->src_pixfmt = vidx->codecx->pix_fmt;
 
+	/* 20120720 Apply the AR correction */
+	image->ar_height = image->src_height;
+	if (vidx->codecx->sample_aspect_ratio.num && 
+			vidx->codecx->sample_aspect_ratio.den) {
+		image->ar_height = image->src_height * 
+			vidx->codecx->sample_aspect_ratio.den /
+			vidx->codecx->sample_aspect_ratio.num;
+	}
+
 	/* calculate the expected time range */
 	image->time_from = image_cal_ratio(ezopt->time_from, vidx->duration);
 	if (image->time_from >= vidx->duration) {
@@ -1699,11 +1708,11 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	if ((pro_width < 1) && (pro_height < 1)) {
 		if (pro_facto < 1) {
 			image->dst_width  = image->src_width;
-			image->dst_height = image->src_height;
+			image->dst_height = image->ar_height;
 		} else {
 			image->dst_width  = ((image->src_width * pro_facto)
 					/ 100) & ~1;
-			image->dst_height = ((image->src_height * pro_facto) 
+			image->dst_height = ((image->ar_height * pro_facto) 
 					/ 100) & ~1;
 		}
 	} else if ((pro_width > 0) && (pro_height > 0)) {
@@ -1711,11 +1720,11 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		image->dst_height = pro_height & ~1;
 	} else if (pro_width > 0) {
 		image->dst_width  = pro_width & ~1;
-		image->dst_height = (pro_width * image->src_height /
+		image->dst_height = (pro_width * image->ar_height /
 				image->src_width) & ~1;
 	} else {
 		image->dst_width  = (pro_height * image->src_width /
-				image->src_height) & ~1;
+				image->ar_height) & ~1;
 		image->dst_height = pro_height;
 	}
 	image->dst_pixfmt = PIX_FMT_RGB24;
@@ -1776,7 +1785,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 					size);
 
 			/* it's the reference height for getting the gap size*/
-			size = size * image->src_height / image->src_width;
+			size = size * image->ar_height / image->src_width;
 			image->gap_height = image_cal_ratio(ezopt->grid_gap_h, 
 					size);
 			image->rim_height = image_cal_ratio(ezopt->grid_rim_h, 
@@ -1794,7 +1803,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 					pro_height / pro_width;
 			} else {
 				image->dst_height = image->dst_width * 
-					image->src_height / image->src_width;
+					image->ar_height / image->src_width;
 			}
 			/* adjust the dimention of shots to even boundry */
 			image->dst_width  = image->dst_width & ~1;
