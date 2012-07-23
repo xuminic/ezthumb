@@ -100,9 +100,16 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
 			printf("Duration in millisecond by ");
-			if (vidx->sysopt->dur_mode == EZ_DUR_FULLSCAN) {
+			/*if (vidx->sysopt->dur_mode == EZ_DUR_FULLSCAN) {
 				printf("full scan: ");
 			} else if (vidx->sysopt->dur_mode == EZ_DUR_QK_SCAN) {
+				printf("fast scan: ");
+			} else {
+				printf("stream head: ");
+			}*/
+			if (vidx->ses_dura == EZ_DUR_FULLSCAN) {
+				printf("full scan: ");
+			} else if (vidx->ses_dura == EZ_DUR_QK_SCAN) {
 				printf("fast scan: ");
 			} else {
 				printf("stream head: ");

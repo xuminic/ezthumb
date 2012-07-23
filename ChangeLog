@@ -1,3 +1,13 @@
+20120723: V2.1.6
+  + Fixed the accidental saving of full-scan mode into configure file
+    When using 'ezthumb -p 2pass', the 'duration_mode' in the configure
+    file would be changed to 'full scan', which was default in the '2pass'
+    but should not be stored permenantly. It's a logical issue and be fixed
+    by using the session mode.
+  + Fixed the "ezthumb --accurate Blender_C4_2012-07-19_14-30.ts" broken
+    issue. It caused by the video_frame_best() had picked the empty frame.
+    Should initialize the DTS of empty frames to -1.
+
 20120720: V2.1.6
   + ezthumb.c: applied the AR correction to the thumbnails. 
     The AR parameter came from the AVCodecContext->sample_aspect_ratio.

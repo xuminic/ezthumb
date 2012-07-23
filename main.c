@@ -748,7 +748,7 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		default:
 			printf("Building (Fast)      ");
 			break;
-		}	
+		}
 		dotted = 0;
 		break;
 
@@ -775,7 +775,9 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		}
 		printf("%s: %ldx%ld canvas.\n", 
 				block ? (char*) block : "", param, opt);
+		break;
 
+	case EN_STREAM_BROKEN:
 		break;
 
 	default:

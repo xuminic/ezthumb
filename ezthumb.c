@@ -167,14 +167,19 @@ void ezopt_review(EZOPT *ezopt)
 	}
 
 	/* synchronize the full scan and twopass option */
-	if ((ezopt->flags & EZOP_PROC_MASK) == EZOP_PROC_TWOPASS) {
+	/* 20120723 this could be confusing. When using '-p 2pass' option, 
+	 * the dur_mode was changed automatically so the duration finding 
+	 * mode was also changed in the configure file. The better way should
+	 * be changing the session mode, not the default one.
+	 * So move this functin to video_allocate() */
+	/*if ((ezopt->flags & EZOP_PROC_MASK) == EZOP_PROC_TWOPASS) {
 		ezopt->dur_mode = EZ_DUR_FULLSCAN;
 	} else if ((ezopt->flags & EZOP_PROC_MASK) != EZOP_PROC_KEYRIP) {
 		if (ezopt->dur_mode == EZ_DUR_FULLSCAN) {
 			ezopt->flags &= ~EZOP_PROC_MASK;
 			ezopt->flags |= EZOP_PROC_TWOPASS;
 		}
-	}
+	}*/
 }
 
 int ezthumb(char *filename, EZOPT *ezopt)
@@ -315,7 +320,18 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	vidx->seekable = -1;
 	smm_time_get_epoch(&vidx->tmark);	/* get current time */
 
+	/*vidx->ses_dura = ezopt->dur_mode;
+	vidx->ses_proc = ezopt->flags & EZOP_PROC_MASK;*/
+	/* 20120723 Moved from ezopt_review() */
 	vidx->ses_dura = ezopt->dur_mode;
+	if ((ezopt->flags & EZOP_PROC_MASK) == EZOP_PROC_TWOPASS) {
+		vidx->ses_dura = EZ_DUR_FULLSCAN;
+	} else if ((ezopt->flags & EZOP_PROC_MASK) != EZOP_PROC_KEYRIP) {
+		if (ezopt->dur_mode == EZ_DUR_FULLSCAN) {
+			ezopt->flags &= ~EZOP_PROC_MASK;
+			ezopt->flags |= EZOP_PROC_TWOPASS;
+		}
+	}
 	vidx->ses_proc = ezopt->flags & EZOP_PROC_MASK;
 	vidx->ses_acc  = ezopt->flags & EZOP_P_FRAME;
 
@@ -367,6 +383,10 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	/* allocate a reusable video frame structure */
 	vidx->fgroup[0].frame = avcodec_alloc_frame();
 	vidx->fgroup[1].frame = avcodec_alloc_frame();
+	/* 20120723 Initialize the rf_dts to -1 to avoid the 
+	 * first-unavailable-frame issue */
+	vidx->fgroup[0].rf_dts = vidx->fgroup[1].rf_dts = -1;
+
 	if (!vidx->fgroup[0].frame || !vidx->fgroup[1].frame) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 0, 0, filename);
@@ -518,7 +538,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 		if (dts < 0) {
 			break;
 		}
-
+		
 		video_snap_update(vidx, image, i, dts_snap);
 	}
 	if (i < image->shots) {
@@ -1377,14 +1397,12 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	ezfrm->rf_pac  = 0;
 
 	do {
-		//printf("video_decode_next: %lld\n", packet->dts);
 		eznotify(vidx, EN_PACKET_RECV, 0, 0, packet);
 		ezfrm->rf_size += packet->size;
 		ezfrm->rf_pac++;
 
 		avcodec_decode_video2(vidx->codecx, 
 				ezfrm->frame, &ffin, packet);
-
 		if (ffin == 0) {
 			/* the packet is not finished */
 			eznotify(vidx, EN_FRAME_PARTIAL, 
@@ -1396,7 +1414,6 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		eznotify(vidx, EN_FRAME_COMPLETE, 0, ffin, ezfrm->frame);
 		av_free_packet(packet);
 		vidx->fdec++;
-
 		return ezfrm->rf_dts;	/* succeeded */
 
 	} while (video_load_packet(vidx, packet) >= 0);
