@@ -2937,7 +2937,7 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 {
 	EZPROF	*node;
 	char	pbuf[256], *argv[8];
-	int	val, argc;
+	int	val;
 
 	strncpy_safe(pbuf, ps, sizeof(pbuf));
 
@@ -2946,7 +2946,7 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 		return -1;
 	}
 
-	argc = fixtoken(ps + 1, argv, sizeof(argv)/sizeof(char*), "xX");
+	fixtoken(ps + 1, argv, sizeof(argv)/sizeof(char*), "xX");
 	node = ezopt_profile_new(ezopt, *ps, val);
 
 	switch (node->flag) {
