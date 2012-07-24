@@ -72,7 +72,7 @@ ezicon.h: SMirC-thumbsup.svg
 $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
-version: version.c
+version: version.c ezthumb.h
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
 
 smm:
