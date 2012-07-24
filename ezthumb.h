@@ -436,6 +436,7 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 void ezopt_init(EZOPT *ezopt, char *profile);
 void ezopt_review(EZOPT *opt);
 int ezthumb(char *filename, EZOPT *ezopt);
+int ezthumb_safe(char *filename, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
 int ezthumb_break(EZOPT *ezopt);
 

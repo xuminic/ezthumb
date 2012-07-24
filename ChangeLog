@@ -1,4 +1,14 @@
-20120723: V2.1.6
+20120724: V2.1.6
+  + Moved the registering of video and image object to their allocating
+    functions, as well as the deregistering process to the free functions.
+  + Removed the appendix snapshots. In previous version, if snapshooting
+    was interrupted by broken files, the last snapshot would fill the empty
+    canvas. In this version, the empty canvas will be leave blank.
+  + After weighed by balance, I think it may be a good idea to restart the
+    ezthumb in the safe mode if no thumbnail was generated in the required 
+    process method, better than nothing .
+
+20120723:
   + Fixed the accidental saving of full-scan mode into configure file
     When using 'ezthumb -p 2pass', the 'duration_mode' in the configure
     file would be changed to 'full scan', which was default in the '2pass'
@@ -8,7 +18,7 @@
     issue. It caused by the video_frame_best() had picked the empty frame.
     Should initialize the DTS of empty frames to -1.
 
-20120720: V2.1.6
+20120720:
   + ezthumb.c: applied the AR correction to the thumbnails. 
     The AR parameter came from the AVCodecContext->sample_aspect_ratio.
 

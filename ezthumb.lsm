@@ -1,7 +1,7 @@
 Begin4
 Title:          ezthumb
 Version:        2.1.6
-Entered-date:   2012-07-20
+Entered-date:   2012-07-24
 Description:    A video thumbnail generator based on FFMPEG library.
                 The basic function is to sample screenshots from video files
                 and tile them into a single picture. It can also generate
