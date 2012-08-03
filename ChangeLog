@@ -1,3 +1,28 @@
+
+20120803:
+  + Fixed the 32-bit I/O error by using the internal file size field
+    in the AVFormatContext structure. Hope it make no surprise in different
+    version FFMPEGs
+
+20120803:
+  + A bug was witnessed in Win32 version that when ezthumb was processing
+    files over 4GB, it would enforce the 2-pass mode automatically, which
+    took a long time. Linux version doesn't have this problem.
+
+    The cause of this issue is in the video_allocate() where fopen()/ftell()
+    was used to retrieve the length of file. Apparently the 32-bit file
+    I/O failed to work on the large files. stat() doesn't work either.
+    What's more, the FFMPEG was compiled in 32-bit mode so it could not get
+    the correct file length either. It returned the same result to stat()
+    in AVFormatContext->file_size.
+
+    Linux version doesn't have this problem, which must be contributed by 
+    compiled in the 64-bit system. The I/O is natively 64-bit. I reckon
+    the same issue should appear in the 32-bit system.
+
+    The fix should be implementing the 64-bit I/O, or better, split it into
+    32-bit and 64-bit version and integrating the 64-bit FFMPEG.
+
 20120724: V2.1.6
   + Moved the registering of video and image object to their allocating
     functions, as well as the deregistering process to the free functions.

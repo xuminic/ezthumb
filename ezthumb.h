@@ -386,7 +386,6 @@ typedef	struct		{
 	int		duration;	/* the stream duration in ms */
 	int		seekable;	/* video keyframe seekable flag */
 	SMM_TIME	tmark;		/* the beginning timestamp */
-	int64_t		filesize;	/* the size of the input file */
 
 	int64_t		keygap;		/* maximum gap between keyframe */
 	int64_t		keylast;	/* the DTS of the last keyframe */
@@ -476,7 +475,7 @@ char *strncpy_safe(char *dest, const char *src, size_t n);
 
 /* eznotify.c */
 int eznotify(EZVID *vidx, int event, long param, long opt, void *block);
-int dump_format_context(AVFormatContext *format, int64_t filesize);
+int dump_format_context(AVFormatContext *format);
 int dump_video_context(AVCodecContext *codec);
 int dump_audio_context(AVCodecContext *codec);
 int dump_other_context(AVCodecContext *codec);

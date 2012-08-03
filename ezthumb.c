@@ -686,8 +686,6 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		free(vidx);
 		return NULL;
 	} else {
-		fseek(fp, 0, SEEK_END);
-		vidx->filesize = (int64_t) ftell(fp);
 		fclose(fp);
 	}
 
@@ -1029,12 +1027,12 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	strcat(buffer, meta_timestamp(vidx->duration, 0, tmp));
 
 	strcat(buffer, " (");
-	strcat(buffer, meta_filesize(vidx->filesize, tmp));
+	strcat(buffer, meta_filesize(vidx->formatx->file_size, tmp));
 	strcat(buffer, ")  ");
 
 	i = vidx->formatx->bit_rate;
 	if (vidx->formatx->bit_rate == 0) {
-		i = (int)(vidx->filesize * 1000 / vidx->duration);
+		i = (int)(vidx->formatx->file_size * 1000 / vidx->duration);
 	}
 	strcat(buffer, meta_bitrate(i, tmp));
 	image_gdcanvas_print(image, 1, 0, buffer);
@@ -1210,7 +1208,7 @@ static int video_duration_check(EZVID *vidx)
 		return 0;	/* bad duration */
 	}
 
-	br = (int)(vidx->filesize / (vidx->duration / 1000));
+	br = (int)(vidx->formatx->file_size * 1000 / vidx->duration);
 	//printf("video_duration_check: dur=%d br=%d\n", vidx->duration, br);
 	if (br < EZ_BR_GATE_LOW) {	/* very suspecious bitrates */
 		return 0;
