@@ -1,3 +1,5 @@
+20120807:
+  + a better foolproof way to process the size of file
 
 20120807: V2.1.7
   + added a warning info about the internal field of file size. 

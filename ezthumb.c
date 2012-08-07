@@ -777,6 +777,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	eznotify(vidx, EN_FILE_OPEN, 0, 
 			smm_time_diff(&vidx->tmark), filename);
 
+	/* update the filesize field with the ffmpeg attribute.
+	 * this is a foolproof procedure */
+	if (vidx->filesize < vidx->formatx->file_size) {
+		vidx->filesize = vidx->formatx->file_size;
+	}
 
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library
@@ -1033,7 +1038,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	strcat(buffer, meta_timestamp(vidx->duration, 0, tmp));
 
 	strcat(buffer, " (");
-	strcat(buffer, meta_filesize(vidx->formatx->file_size, tmp));
+	strcat(buffer, meta_filesize(vidx->filesize, tmp));
 	strcat(buffer, ")  ");
 
 	/*i = vidx->formatx->bit_rate;
@@ -1217,12 +1222,7 @@ static int video_duration_check(EZVID *vidx)
 		return 0;	/* bad duration */
 	}
 
-	if (vidx->formatx->file_size <= 0) {
-		SMM_PRINT("WARNING: suspicious file size. [%lld]\n",
-				(long long) vidx->formatx->file_size);
-	}
-
-	br = (int)(vidx->formatx->file_size * 1000 / vidx->duration);
+	br = (int)(vidx->filesize * 1000 / vidx->duration);
 	//printf("video_duration_check: dur=%d br=%d\n", vidx->duration, br);
 	if (br < EZ_BR_GATE_LOW) {	/* very suspecious bitrates */
 		return 0;

@@ -754,7 +754,7 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 
 	}
 	meta_timestamp(vidx->duration, 0, tmark);
-	meta_filesize(vidx->formatx->file_size, tsize);
+	meta_filesize(vidx->filesize, tsize);
 	sprintf(res, "%dx%d", 
 			vidx->formatx->streams[vidx->vsidx]->codec->width, 
 			vidx->formatx->streams[vidx->vsidx]->codec->height);
