@@ -1045,9 +1045,9 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	if (vidx->formatx->bit_rate == 0) {
 		i = (int)(vidx->formatx->file_size * 1000 / vidx->duration);
 	}*/
-	if ((i = vidx->formatx->streams[vidx->vsidx]->codec->bit_rate) == 0) {
-		i = (int) (vidx->filesize * 1000 / vidx->duration);
-	}
+	/* formatx->bit_rate sometimes missed as audio bitrate by ffmpeg.
+	 * so we calculate its combined bit rate here */
+	i = (int) (vidx->filesize * 1000 / vidx->duration);
 	strcat(buffer, meta_bitrate(i, tmp));
 	image_gdcanvas_print(image, 1, 0, buffer);
 	puts(buffer);
