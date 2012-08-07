@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.6"
+#define EZTHUMB_VERSION		"2.1.7"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -399,6 +399,7 @@ typedef	struct		{
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
 	EZIMG		*image;		/* link to its EZIMG parameters */
 	char		*filename;	/* link to the file name */
+	long long	filesize;
 } EZVID;
 
 

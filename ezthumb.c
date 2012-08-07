@@ -668,7 +668,7 @@ int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
 	EZVID	*vidx;
-	FILE	*fp;
+	//FILE	*fp;
 	int	rc, loglvl;
 
 	/* allocate the runtime index structure of the video */
@@ -678,6 +678,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	}
 
 	/* check if the nominated file existed */
+/*
 #ifdef	CFG_GUI_ON
 	if ((fp = g_fopen(filename, "r")) == NULL) {
 #else
@@ -687,6 +688,11 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		return NULL;
 	} else {
 		fclose(fp);
+	}
+*/
+	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
+		free(vidx);
+		return NULL;
 	}
 
 	vidx->sysopt   = ezopt;
@@ -1030,9 +1036,12 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	strcat(buffer, meta_filesize(vidx->formatx->file_size, tmp));
 	strcat(buffer, ")  ");
 
-	i = vidx->formatx->bit_rate;
+	/*i = vidx->formatx->bit_rate;
 	if (vidx->formatx->bit_rate == 0) {
 		i = (int)(vidx->formatx->file_size * 1000 / vidx->duration);
+	}*/
+	if ((i = vidx->formatx->streams[vidx->vsidx]->codec->bit_rate) == 0) {
+		i = (int) (vidx->filesize * 1000 / vidx->duration);
 	}
 	strcat(buffer, meta_bitrate(i, tmp));
 	image_gdcanvas_print(image, 1, 0, buffer);
@@ -1206,6 +1215,11 @@ static int video_duration_check(EZVID *vidx)
 
 	if (vidx->duration == 0) {
 		return 0;	/* bad duration */
+	}
+
+	if (vidx->formatx->file_size <= 0) {
+		SMM_PRINT("WARNING: suspicious file size. [%lld]\n",
+				(long long) vidx->formatx->file_size);
 	}
 
 	br = (int)(vidx->formatx->file_size * 1000 / vidx->duration);

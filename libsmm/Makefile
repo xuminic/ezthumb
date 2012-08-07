@@ -6,6 +6,7 @@ OBJS	= smm_chdir.o		\
 	  smm_cwd_alloc.o	\
 	  smm_cwd_pop.o		\
 	  smm_cwd_push.o	\
+	  smm_filesize.o	\
 	  smm_fstat.o		\
 	  smm_init.o		\
 	  smm_wcstombs.o	\

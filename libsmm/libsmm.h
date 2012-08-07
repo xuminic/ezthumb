@@ -84,6 +84,7 @@ int smm_cwd_pop(int cwid);
 int smm_cwd_push(void);
 int smm_errno(void);
 int smm_errno_update(int value);
+long long smm_filesize(char *fname);
 int smm_fstat(char *fname);
 int smm_init(void);
 int smm_pathtrek(char *path, int flags, F_DIR message, void *option);

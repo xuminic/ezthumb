@@ -1,4 +1,14 @@
 
+20120807: V2.1.7
+  + added a warning info about the internal field of file size. 
+    I remember once before this field returned 0. Thus I tried to get the 
+    size by stream function. Perhaps it's been fixed in the ffmpeg.
+  + added a smm function to retrieve the file size. 
+  + video_media_on_canvas(): calculate the bitrate upon file size.
+    A new issue was found that in some video clips, the ffmpep filled
+    the AVFormatContext->bit_rate with audio stream's. The video
+    AVCodecContext->bit_rate was 0.
+
 20120803:
   + Fixed the 32-bit I/O error by using the internal file size field
     in the AVFormatContext structure. Hope it make no surprise in different
