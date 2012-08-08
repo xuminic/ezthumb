@@ -123,7 +123,6 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 {
 	WIN32_FIND_DATA	ffdata;
 	HANDLE		ffdh;
-	DWORD		fattr;
 	char		*fname;
 	int		rc;
 
@@ -173,6 +172,152 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 	if (GetLastError() != ERROR_NO_MORE_FILES) {
 		smm_errno_update(0);
 		SetCurrentDirectory(TEXT(".."));
+		FindClose(ffdh);
+		return smm_errno();
+	}
+	FindClose(ffdh);
+
+	fname = smm_wcstombs(wpath);
+	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
+	free(fname);
+	SetCurrentDirectory(TEXT(".."));
+	return rc;
+}
+	
+static int win_path_recur_first(struct smmdir *sdir, TCHAR *wpath)
+{
+	WIN32_FIND_DATA	ffdata;
+	HANDLE		ffdh;
+	char		*fname;
+	int		rc;
+
+	if (wpath_set(sdir, wpath, &rc) < 0) {
+		return rc;
+	}
+
+	sdir->stat_dirs++;
+
+	fname = smm_wcstombs(wpath);
+	sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
+	free(fname);
+
+	ffdh = FindFirstFile(TEXT("*"), &ffdata);
+	if (ffdh == INVALID_HANDLE_VALUE) {
+		smm_errno_update(0);
+		SetCurrentDirectory(TEXT(".."));
+		return smm_errno();
+	}
+
+	do {
+		switch (wpath_state(ffdata.cFileName)) {
+		case PATH_STAT_DIR:
+			rc = win_path_recur_first(sdir, ffdata.cFileName);
+			break;
+		default:
+			continue;
+		}
+		if (rc < 0) {
+			fname = smm_wcstombs(ffdata.cFileName);
+			rc = sdir->message(sdir->option, fname,
+					SMM_MSG_PATH_BREAK, &rc);
+			free(fname);
+			break;
+		}
+	} while (FindNextFile(ffdh, &ffdata));
+	FindClose(ffdh);
+
+	ffdh = FindFirstFile(TEXT("*"), &ffdata);
+	do {
+		//wprintf(TEXT("> %s\n"), ffdata.cFileName);
+		switch (wpath_state(ffdata.cFileName)) {
+		case PATH_STAT_REGULAR:
+			sdir->stat_files++;
+			fname = smm_wcstombs(ffdata.cFileName);
+			rc = sdir->message(sdir->option, fname,
+					SMM_MSG_PATH_EXEC, sdir);
+			free(fname);
+			break;
+		default:
+			continue;
+		}
+	} while (FindNextFile(ffdh, &ffdata));
+
+	if (GetLastError() != ERROR_NO_MORE_FILES) {
+		smm_errno_update(0);
+		SetCurrentDirectory(TEXT(".."));
+		FindClose(ffdh);
+		return smm_errno();
+	}
+	FindClose(ffdh);
+
+	fname = smm_wcstombs(wpath);
+	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
+	free(fname);
+	SetCurrentDirectory(TEXT(".."));
+	return rc;
+}
+	
+static int win_path_recur_last(struct smmdir *sdir, TCHAR *wpath)
+{
+	WIN32_FIND_DATA	ffdata;
+	HANDLE		ffdh;
+	char		*fname;
+	int		rc;
+
+	if (wpath_set(sdir, wpath, &rc) < 0) {
+		return rc;
+	}
+
+	sdir->stat_dirs++;
+
+	fname = smm_wcstombs(wpath);
+	sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
+	free(fname);
+
+	ffdh = FindFirstFile(TEXT("*"), &ffdata);
+	if (ffdh == INVALID_HANDLE_VALUE) {
+		smm_errno_update(0);
+		SetCurrentDirectory(TEXT(".."));
+		return smm_errno();
+	}
+
+	do {
+		switch (wpath_state(ffdata.cFileName)) {
+		case PATH_STAT_REGULAR:
+			sdir->stat_files++;
+			fname = smm_wcstombs(ffdata.cFileName);
+			rc = sdir->message(sdir->option, fname,
+					SMM_MSG_PATH_EXEC, sdir);
+			free(fname);
+			break;
+		default:
+			continue;
+		}
+	} while (FindNextFile(ffdh, &ffdata));
+	FindClose(ffdh);
+
+	ffdh = FindFirstFile(TEXT("*"), &ffdata);
+	do {
+		switch (wpath_state(ffdata.cFileName)) {
+		case PATH_STAT_DIR:
+			rc = win_path_recur_last(sdir, ffdata.cFileName);
+			break;
+		default:
+			continue;
+		}
+		if (rc < 0) {
+			fname = smm_wcstombs(ffdata.cFileName);
+			rc = sdir->message(sdir->option, fname,
+					SMM_MSG_PATH_BREAK, &rc);
+			free(fname);
+			break;
+		}
+	} while (FindNextFile(ffdh, &ffdata));
+
+	if (GetLastError() != ERROR_NO_MORE_FILES) {
+		smm_errno_update(0);
+		SetCurrentDirectory(TEXT(".."));
+		FindClose(ffdh);
 		return smm_errno();
 	}
 	FindClose(ffdh);
@@ -205,7 +350,7 @@ static int path_recur_first(struct smmdir *sdir, char *path)
 	if ((wpath = smm_mbstowcs(path)) == NULL) {
 		return smm_errno();
 	}
-	rc = win_path_recur_fifo(sdir, wpath);
+	rc = win_path_recur_first(sdir, wpath);
 	free(wpath);
 	return rc;
 }
@@ -218,7 +363,7 @@ static int path_recur_last(struct smmdir *sdir, char *path)
 	if ((wpath = smm_mbstowcs(path)) == NULL) {
 		return smm_errno();
 	}
-	rc = win_path_recur_fifo(sdir, wpath);
+	rc = win_path_recur_last(sdir, wpath);
 	free(wpath);
 	return rc;
 }
