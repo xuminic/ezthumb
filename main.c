@@ -36,6 +36,7 @@
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: ezthumb [OPTIONS] video_clip ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
+	{ 'b', "bind",    0, "*binding multiple video sources" },
 	{ 'c', "colour",  2, "the colour setting (MI:TM:BG)(RRGGBB)" },
 	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
@@ -51,6 +52,7 @@ static	struct	cliopt	clist[] = {
 	{ 'p', "process", 1, 
 		"the process method (skim|scan|2pass|heuri|safe|key[@N])" },
 	{ 'P', "profile", 2, "specify the profile string" },
+	{ 'R', "recursive", 2, "process files and directories recursively" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
 	{ 'v', "verbose", 1, "*verbose mode (0)(0-7)" },
@@ -105,7 +107,19 @@ static	char	*sysprof[] = {
 
 static	EZOPT	sysopt;
 
+/* Recursive filter, for example: -R "FF,avi,wmv,mkv"
+ * The NULL filter means disable the recursive mode. 
+ * The empty filter means allow all.
+ * Magic words in first two characters: FF, DF, DL.
+ * First-meet-Firt-process, Directory-First, Directory-Last */
+static	char	*r_filter = NULL;	
+static	char	*r_fidx[128];
+static	int	r_fnum;
+
 static int signal_handler(int sig);
+static int msg_info(void *option, char *path, int type, void *info);
+static int msg_shot(void *option, char *path, int type, void *info);
+static int filter_match(char *path);
 static int para_get_ratio(char *s);
 static int para_get_time_point(char *s);
 static int para_get_position(char *s);
@@ -128,7 +142,7 @@ int main(int argc, char **argv)
 {
 	struct	option	*argtbl;
 	char	*p, *arglist;
-	int	c, todo = -1;
+	int	i, c, todo = -1, rflg = SMM_PATH_DIR_FIFO;
 	int	prof_grid, prof_size;
 
 	prof_grid = prof_size = 1;	/* enable the profile */
@@ -279,6 +293,9 @@ int main(int argc, char **argv)
 			todo = 'E';	/* end of process */
 			break;
 
+		case 'b':
+			todo = 'b';
+			break;
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
 			if (para_get_color(&sysopt, optarg) != EZ_ERR_NONE) {
 				todo = 'B';	/* BREAK */
@@ -402,6 +419,24 @@ int main(int argc, char **argv)
 				todo = 'E';	/* END PROCESS */
 			}
 			break;
+		case 'R':
+			if ((optarg[2] == ':') || (optarg[2] == 0)) {
+				if (!strncmp(optarg, "FF", 2)) {
+					rflg = SMM_PATH_DIR_FIFO;
+					optarg += 3;
+				} else if (!strncmp(optarg, "DF", 2)) {
+					rflg = SMM_PATH_DIR_FIRST;
+					optarg += 3;
+				} else if (!strncmp(optarg, "DL", 2)) {
+					rflg = SMM_PATH_DIR_LAST;
+					optarg += 3;
+				}
+			}
+			if ((r_filter = strcpy_alloc(optarg)) != NULL) {
+				r_fnum = ziptoken(r_filter, r_fidx, 
+					sizeof(r_fidx)/sizeof(char*), ",;:");
+			}
+			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
 			if (!isdigit(*optarg)) {
 				todo = 'B';	/* BREAK */
@@ -487,7 +522,8 @@ int main(int argc, char **argv)
 	ezopt_review(&sysopt);
 
 	/* if no video file was specified, the ezthumb starts in GUI mode */
-	if (optind >= argc) {
+	/* on the other hand, ezthumb doesn't start GUI in recursive mode */
+	if ((optind >= argc) && (r_filter == NULL)) {
 		todo = 'G';
 	}
 
@@ -506,9 +542,19 @@ int main(int argc, char **argv)
 	case 'I':
 	case 'i':
 		sysopt.notify = event_list;
-		for ( ; optind < argc; optind++) {
-			c = ezinfo(argv[optind], &sysopt);
+		if (r_filter == NULL) {
+			for (i = optind; i < argc; i++) {
+				c = ezinfo(argv[i], &sysopt);
+			}
+		} else if (optind >= argc) {
+			c = smm_pathtrek(".", rflg, msg_info, &sysopt);
+		} else {
+			for (i = optind; i < argc; i++) {
+				c = smm_pathtrek(argv[i], rflg, msg_info, &sysopt);
+			}
 		}
+		break;
+	case 'b':
 		break;
 	case 'G':
 		c = EZ_ERR_EOP;
@@ -526,8 +572,16 @@ int main(int argc, char **argv)
 		if (EZOP_DEBUG(sysopt.flags) == EZOP_DEBUG_NONE) {
 			sysopt.notify = event_cb;
 		}
-		for ( ; optind < argc; optind++) {
-			c = ezthumb(argv[optind], &sysopt);
+		if (r_filter == NULL) {
+			for (i = optind; i < argc; i++) {
+				c = ezthumb(argv[i], &sysopt);
+			}
+		} else if (optind >= argc) {
+			c = smm_pathtrek(".", rflg, msg_shot, &sysopt);
+		} else {
+			for (i = optind; i < argc; i++) {
+				c = smm_pathtrek(argv[i], rflg, msg_shot, &sysopt);
+			}
 		}
 		break;
 	}
@@ -536,6 +590,9 @@ int main(int argc, char **argv)
 	ezgui_close(sysopt.gui);
 	sysopt.gui = NULL;
 #endif
+	if (r_filter) {
+		free(r_filter);
+	}
 	return c;
 }
 
@@ -547,10 +604,75 @@ static int signal_handler(int sig)
 	ezgui_close(sysopt.gui);
 	sysopt.gui = NULL;
 #endif
+	if (r_filter) {
+		free(r_filter);
+	}
 	return ezthumb_break(&sysopt);
 }
 
+static int msg_info(void *option, char *path, int type, void *info)
+{
+	switch (type) {
+	case SMM_MSG_PATH_ENTER:
+		printf("Entering %s:\n", path);
+		break;
+	case SMM_MSG_PATH_EXEC:
+		if (filter_match(path)) {
+			//printf(">>> %s\n", path);
+			ezinfo(path, option);
+		}
+		break;
+	case SMM_MSG_PATH_BREAK:
+		printf("Failed to process %s\n", path);
+		break;
+	case SMM_MSG_PATH_LEAVE:
+		printf("Leaving %s\n", path);
+		break;
+	}
+	return 0;
+}
 
+static int msg_shot(void *option, char *path, int type, void *info)
+{
+	switch (type) {
+	case SMM_MSG_PATH_ENTER:
+		printf("Entering %s:\n", path);
+		break;
+	case SMM_MSG_PATH_EXEC:
+		if (filter_match(path)) {
+			//printf("+++ %s\n", path);
+			ezthumb(path, option);
+		}
+		break;
+	case SMM_MSG_PATH_BREAK:
+		printf("Failed to process %s\n", path);
+		break;
+	case SMM_MSG_PATH_LEAVE:
+		printf("Leaving %s\n", path);
+		break;
+	}
+	return 0;
+}
+
+static int filter_match(char *path)
+{
+	int	i, n;
+
+	if (r_fnum == 0) {
+		return 1;
+	}
+	
+	for (i = 0; i < r_fnum; i++) {
+		n = strlen(path) - strlen(r_fidx[i]) - 1;
+		if (path[n] != '.') {
+			continue;
+		}
+		if (!strcasecmp(path + n + 1, r_fidx[i])) {
+		       return 1;
+		}
+	}
+	return 0;
+}
 
 static int para_get_ratio(char *s)
 {

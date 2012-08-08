@@ -26,6 +26,12 @@
 #include "libsmm.h"
 
 
+#define	PATH_STAT_IGNORE	-1
+#define PATH_STAT_REGULAR	0
+#define PATH_STAT_DIR		1
+#define PATH_STAT_SKIP		2
+
+
 static int dummy_message(void *option, char *path, int type, void *info);
 static int path_recur_fifo(struct smmdir *sdir, char *path);
 static int path_recur_first(struct smmdir *sdir, char *path);
@@ -69,6 +75,50 @@ static int dummy_message(void *option, char *path, int type, void *info)
 
 
 #ifdef  CFG_WIN32_API
+static int wpath_state(TCHAR *wpath)
+{
+	DWORD	fattr;
+
+	if (!lstrcmp(wpath, TEXT(".")) || !lstrcmp(wpath, TEXT(".."))) {
+		return PATH_STAT_SKIP;	/* skip */
+	}
+	if ((fattr = GetFileAttributes(wpath)) == 0xFFFFFFFF) {
+		return PATH_STAT_IGNORE;	/* ignore */
+	}
+	if (fattr & FILE_ATTRIBUTE_DIRECTORY) {
+		return PATH_STAT_DIR;	/* directory */
+	}
+	return PATH_STAT_REGULAR;	/* regular file */
+}
+
+static int wpath_set(struct smmdir *sdir, TCHAR *wpath, int *rcode)
+{
+	char	*fname;
+
+	switch (wpath_state(wpath)) {
+	case PATH_STAT_IGNORE:
+		*rcode = 0;
+		return -1;	/* maybe permission denied */
+	case PATH_STAT_SKIP:
+		*rcode = 0;
+		break;
+	case PATH_STAT_REGULAR:
+		sdir->stat_files++;
+		fname = smm_wcstombs(wpath);
+		*rcode = sdir->message(sdir->option, fname, 
+				SMM_MSG_PATH_EXEC, sdir);
+		free(fname);
+		return -2;
+	case PATH_STAT_DIR:
+		if (SetCurrentDirectory(wpath) == 0) {
+			*rcode = smm_errno_update(0);
+			return -3;
+		}
+		break;
+	}
+	return 0;
+}
+
 static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 {
 	WIN32_FIND_DATA	ffdata;
@@ -77,8 +127,8 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 	char		*fname;
 	int		rc;
 
-	if (SetCurrentDirectory(wpath) == 0) {
-		return smm_errno_update(0);
+	if (wpath_set(sdir, wpath, &rc) < 0) {
+		return rc;
 	}
 
 	sdir->stat_dirs++;
@@ -96,19 +146,20 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 
 	do {
 		//wprintf(TEXT("> %s\n"), ffdata.cFileName);
-		if (!lstrcmp(ffdata.cFileName, TEXT(".")) ||
-				!lstrcmp(ffdata.cFileName, TEXT(".."))) {
+		switch (wpath_state(ffdata.cFileName)) {
+		case PATH_STAT_SKIP:
+		case PATH_STAT_IGNORE:
 			continue;
-		}
-		fattr = GetFileAttributes(ffdata.cFileName);
-		if (fattr & FILE_ATTRIBUTE_DIRECTORY) {
+		case PATH_STAT_DIR:
 			rc = win_path_recur_fifo(sdir, ffdata.cFileName);
-		} else {
+			break;
+		case PATH_STAT_REGULAR:
 			sdir->stat_files++;
 			fname = smm_wcstombs(ffdata.cFileName);
 			rc = sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_EXEC, sdir);
 			free(fname);
+			break;
 		}
 		if (rc < 0) {
 			fname = smm_wcstombs(ffdata.cFileName);
@@ -180,11 +231,6 @@ static int path_recur_last(struct smmdir *sdir, char *path)
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define	PATH_STAT_IGNORE	-1
-#define PATH_STAT_REGULAR	0
-#define PATH_STAT_DIR		1
-#define PATH_STAT_SKIP		2
-
 static int path_state(char *path)
 {
 	struct	stat	fs;
@@ -201,6 +247,29 @@ static int path_state(char *path)
 	return PATH_STAT_REGULAR;	/* regular file */
 }
 
+static int path_set(struct smmdir *sdir, char *path, int *rcode)
+{
+	switch (path_state(path)) {
+	case PATH_STAT_IGNORE:
+		*rcode = 0;
+		return -1;	/* maybe permission denied */
+	case PATH_STAT_SKIP:
+		*rcode = 0;
+		break;
+	case PATH_STAT_REGULAR:
+		sdir->stat_files++;
+		*rcode = sdir->message(sdir->option, path, 
+				SMM_MSG_PATH_EXEC, sdir);
+		return -2;
+	case PATH_STAT_DIR:
+		if (chdir(path) < 0)  {
+			*rcode = smm_errno_update(0);
+			return -3;
+		}
+		break;
+	}
+	return 0;
+}
 
 static int path_recur_fifo(struct smmdir *sdir, char *path)
 {
@@ -208,8 +277,8 @@ static int path_recur_fifo(struct smmdir *sdir, char *path)
 	struct	dirent	*de;
 	int	rc = 0;
 
-	if (chdir(path) < 0)  {
-		return smm_errno_update(0);
+	if (path_set(sdir, path, &rc) < 0)  {
+		return rc;
 	}
 
 	sdir->stat_dirs++;
@@ -256,8 +325,8 @@ static int path_recur_last(struct smmdir *sdir, char *path)
 	struct	dirent	*de = NULL;
 	int	rc = 0;
 
-	if (chdir(path) < 0)  {
-		return smm_errno_update(0);
+	if (path_set(sdir, path, &rc) < 0)  {
+		return rc;
 	}
 
 	sdir->stat_dirs++;
@@ -302,8 +371,8 @@ static int path_recur_first(struct smmdir *sdir, char *path)
 	struct	dirent	*de = NULL;
 	int	rc = 0;
 
-	if (chdir(path) < 0)  {
-		return smm_errno_update(0);
+	if (path_set(sdir, path, &rc) < 0)  {
+		return rc;
 	}
 
 	sdir->stat_dirs++;
