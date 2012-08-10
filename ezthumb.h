@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.7"
+#define EZTHUMB_VERSION		"2.1.8"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -113,6 +113,11 @@
 #define EZOP_DECODE_OTF		0x100
 /* font test (obsolete) */
 #define EZOP_FONT_TEST		0x200
+/* define the override mode */
+#define EZOP_THUMB_OVERRIDE	0x400
+/* define the copy mode if not override */
+#define EZOP_THUMB_COPY		0x800
+
 
 /* Display the debug log in the command line. */
 #define EZOP_DEBUG_MASK		0x7000

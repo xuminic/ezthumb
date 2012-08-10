@@ -77,6 +77,7 @@ static	struct	cliopt	clist[] = {
 	{  20, "transparent", 0, "generate the transparent background" },
 	{  22, "vindex",   1, "the index of the video stream" },
 	{  23, "protest",  2, "*testing the profile (@length, +width)" },
+	{  24, "override", 2, "override existed thumbnails (yes|no)(copy)"},
 	{   1, "help",    0, "*Display the help message" },
 	{   2, "version", 0, "*Display the version message" },
 	{   3, "vernum",  0, "*Display the version number" },
@@ -107,7 +108,7 @@ static	char	*sysprof[] = {
 
 static	EZOPT	sysopt;
 
-/* Recursive filter, for example: -R "FF,avi,wmv,mkv"
+/* Recursive filter, for example: -R "FF:avi,wmv,mkv"
  * The NULL filter means disable the recursive mode. 
  * The empty filter means allow all.
  * Magic words in first two characters: FF, DF, DL.
@@ -292,6 +293,20 @@ int main(int argc, char **argv)
 			runtime_profile_test(&sysopt, optarg);
 			todo = 'E';	/* end of process */
 			break;
+		case 24:
+			if (!strcmp(optarg, "yes")) {
+				sysopt.flags |= EZOP_THUMB_OVERRIDE;
+				sysopt.flags &= ~EZOP_THUMB_COPY;
+			} else if (!strcmp(optarg, "no")) {
+				sysopt.flags &= ~EZOP_THUMB_OVERRIDE;
+				sysopt.flags &= ~EZOP_THUMB_COPY;
+			} else if (!strcmp(optarg, "copy")) {
+				sysopt.flags &= ~EZOP_THUMB_OVERRIDE;
+				sysopt.flags |= EZOP_THUMB_COPY;
+			} else {
+				todo = 'B';	/* BREAK */
+			}
+			break;
 
 		case 'b':
 			todo = 'b';
@@ -420,6 +435,10 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'R':
+			if (*optarg == '-') {
+				todo = 'B';	/* BREAK */
+				break;
+			}
 			if ((optarg[2] == ':') || (optarg[2] == 0)) {
 				if (!strncmp(optarg, "FF", 2)) {
 					rflg = SMM_PATH_DIR_FIFO;

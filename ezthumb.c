@@ -84,6 +84,7 @@ static int image_gdcanvas_background(EZIMG *image);
 static FILE *image_gif_anim_open(EZIMG *image, char *filename);
 static int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 static int image_gif_anim_close(EZIMG *image, FILE *fout);
+static FILE *image_create_file(EZIMG *image, char *filename, int idx);
 static int image_cal_ratio(int ratio, int refsize);
 static int image_cal_shots(int duration, int tmstep, int mode);
 static int image_cal_timestep(int duration, int shots, int mode);
@@ -117,6 +118,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	/* enable media info area and inset timestamp, skip the first and the
 	 * last frame, no shadows */
 	ezopt->flags = EZOP_INFO | EZOP_TIMEST | EZOP_DECODE_OTF;
+	ezopt->flags |= EZOP_THUMB_COPY;
 
 	//ezopt->grid_gap_w = 4 | EZ_RATIO_OFF;
 	//ezopt->grid_gap_h = 4 | EZ_RATIO_OFF;
@@ -2235,16 +2237,8 @@ static int image_gdframe_timestamp(EZIMG *image, char *timestamp)
 static int image_gdframe_save(EZIMG *image, char *filename, int idx)
 {
 	FILE	*fout;
-	char	tmp[128];
 
-	sprintf(tmp, "%03d.%s", idx, image->sysopt->img_format);
-	meta_name_suffix(image->sysopt->pathout, 
-			filename, image->filename, tmp);
-#ifdef	CFG_GUI_ON
-	if ((fout = g_fopen(image->filename, "wb")) == NULL) {
-#else
-	if ((fout = fopen(image->filename, "wb")) == NULL) {
-#endif
+	if ((fout = image_create_file(image, filename, idx)) == NULL) {
 		perror(image->filename);
 		return EZ_ERR_FILE;
 	}
@@ -2303,16 +2297,8 @@ static int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char
 static int image_gdcanvas_save(EZIMG *image, char *filename)
 {
 	FILE	*fout;
-	char	tmp[128];
 
-	sprintf(tmp, "%s.%s",image->sysopt->suffix,image->sysopt->img_format);
-	meta_name_suffix(image->sysopt->pathout,
-			filename, image->filename, tmp);
-#ifdef	CFG_GUI_ON
-	if ((fout = g_fopen(image->filename, "wb")) == NULL) {
-#else
-	if ((fout = fopen(image->filename, "wb")) == NULL) {
-#endif
+	if ((fout = image_create_file(image, filename, -1)) == NULL) {
 		perror(image->filename);
 		return EZ_ERR_FILE;
 	}
@@ -2577,16 +2563,9 @@ static FILE *image_gif_anim_open(EZIMG *image, char *filename)
 {
 	gdImage	*imgif;
 	FILE	*fout;
-	char	tmp[128];
 
-	sprintf(tmp, "%s.%s",image->sysopt->suffix,image->sysopt->img_format);
-	meta_name_suffix(image->sysopt->pathout,
-			filename, image->filename, tmp);
-#ifdef	CFG_GUI_ON
-	if ((fout = g_fopen(image->filename, "wb")) == NULL) {
-#else
-	if ((fout = fopen(image->filename, "wb")) == NULL) {
-#endif
+	if ((fout = image_create_file(image, filename, -1)) == NULL) {
+		perror(image->filename);
 		return NULL;
 	}
 
@@ -2630,6 +2609,47 @@ static int image_gif_anim_close(EZIMG *image, FILE *fout)
 	gdImageGifAnimEnd(fout);
 	fclose(fout);
 	return 0;
+}
+
+static FILE *image_create_file(EZIMG *image, char *filename, int idx)
+{
+	char	tmp[128];
+	int	i;
+
+	if (idx < 0) {
+		sprintf(tmp, "%s.", image->sysopt->suffix);
+	} else {
+		sprintf(tmp, "%03d.", idx);
+	}
+	strcat(tmp, image->sysopt->img_format);
+	meta_name_suffix(image->sysopt->pathout,
+			filename, image->filename, tmp);
+
+	for (i = 0; i < 256; i++) {
+		if (smm_fstat(image->filename) < 0) {
+			break;		/* file not existed */
+		} else if (image->sysopt->flags & EZOP_THUMB_OVERRIDE) {
+			break;		/* override the existed files */
+		} else if ((image->sysopt->flags & EZOP_THUMB_COPY) == 0) {
+			errno = EEXIST;
+			return NULL;	/* skip the existed files */
+		}
+		
+		if (idx < 0) {
+			sprintf(tmp, "%s.%d.", image->sysopt->suffix, i);
+		} else {
+			sprintf(tmp, "%03d.%d.", idx, i);
+		}
+		strcat(tmp, image->sysopt->img_format);
+		meta_name_suffix(image->sysopt->pathout,
+				filename, image->filename, tmp);
+	}
+
+#ifdef	CFG_GUI_ON
+	return g_fopen(image->filename, "wb");
+#else
+	return fopen(image->filename, "wb");
+#endif
 }
 
 static int image_cal_ratio(int ratio, int refsize)
