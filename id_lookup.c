@@ -419,17 +419,8 @@ struct	idtbl	id_codec_flag[] = {
 };
 
 
-struct	idtbl	id_codec_type[] = {
-	{ AVMEDIA_TYPE_UNKNOWN, "AVMEDIA_TYPE_UNKNOWN" },
-	{ AVMEDIA_TYPE_VIDEO, "AVMEDIA_TYPE_VIDEO" },
-	{ AVMEDIA_TYPE_AUDIO, "AVMEDIA_TYPE_AUDIO" },
-	{ AVMEDIA_TYPE_DATA, "AVMEDIA_TYPE_DATA" },
-	{ AVMEDIA_TYPE_SUBTITLE, "AVMEDIA_TYPE_SUBTITLE" },
-	{ AVMEDIA_TYPE_ATTACHMENT, "AVMEDIA_TYPE_ATTACHMENT" },
-	{ AVMEDIA_TYPE_NB, "AVMEDIA_TYPE_NB" },
-	{ 0, NULL }
-};
-/*
+/* Note that CODEC_TYPE_* are macros but AVMEDIA_TYPE_* are enums */
+#ifdef	CODEC_TYPE_UNKNOWN
 struct	idtbl	id_codec_type[] = {
 	{ CODEC_TYPE_UNKNOWN, "CODEC_TYPE_UNKNOWN" },
 	{ CODEC_TYPE_VIDEO, "CODEC_TYPE_VIDEO" },
@@ -440,9 +431,21 @@ struct	idtbl	id_codec_type[] = {
 	{ CODEC_TYPE_NB, "CODEC_TYPE_NB" },
 	{ 0, NULL }
 };
-*/
+#else
+struct	idtbl	id_codec_type[] = {
+	{ AVMEDIA_TYPE_UNKNOWN, "AVMEDIA_TYPE_UNKNOWN" },
+	{ AVMEDIA_TYPE_VIDEO, "AVMEDIA_TYPE_VIDEO" },
+	{ AVMEDIA_TYPE_AUDIO, "AVMEDIA_TYPE_AUDIO" },
+	{ AVMEDIA_TYPE_DATA, "AVMEDIA_TYPE_DATA" },
+	{ AVMEDIA_TYPE_SUBTITLE, "AVMEDIA_TYPE_SUBTITLE" },
+	{ AVMEDIA_TYPE_ATTACHMENT, "AVMEDIA_TYPE_ATTACHMENT" },
+	{ AVMEDIA_TYPE_NB, "AVMEDIA_TYPE_NB" },
+	{ 0, NULL }
+};
+#endif
 
-
+/* Note that FF_I_* are macros but AV_PICTURE_TYPE_* are enums */
+#ifdef	FF_I_TYPE
 struct	idtbl	id_pict_type[] = {
 	{ FF_I_TYPE, "FF_I_TYPE" },
 	{ FF_P_TYPE, "FF_P_TYPE" },
@@ -453,6 +456,20 @@ struct	idtbl	id_pict_type[] = {
 	{ FF_BI_TYPE, "FF_BI_TYPE" },
 	{ 0, NULL }
 };
+#else
+struct	idtbl	id_pict_type[] = {
+	AV_PICTURE_TYPE_NONE, "AV_PICTURE_TYPE_NONE" },
+	AV_PICTURE_TYPE_I, "AV_PICTURE_TYPE_I" },	///< Intra
+	AV_PICTURE_TYPE_P, "AV_PICTURE_TYPE_P" },	///< Predicted
+	AV_PICTURE_TYPE_B, "AV_PICTURE_TYPE_B" },	///< Bi-dir predicted
+	AV_PICTURE_TYPE_S, "AV_PICTURE_TYPE_S" },	///< S(GMC)-VOP MPEG4
+	AV_PICTURE_TYPE_SI, "AV_PICTURE_TYPE_SI" },	///< Switching Intra
+	AV_PICTURE_TYPE_SP, "AV_PICTURE_TYPE_SP" },	///< Switching Predicted
+	AV_PICTURE_TYPE_BI, "AV_PICTURE_TYPE_BI" },	///< BI type
+	{ 0, NULL }
+};
+#endif
+
 
 
 struct	idtbl	id_pix_fmt[] = {

@@ -1491,7 +1491,13 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 		 * The FFMPEG can not decode this i-frame, perhaps in lack of
 		 * previous key frame information. The workaround is continuing
 		 * decoding until a proper key frame met */
+		/* FF_I_TYPE has been deprecated since 4 Jan 2012. */
+#ifdef	FF_I_TYPE
 		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
+#else
+		if (vidx->fgroup[vidx->fnow].frame->pict_type == 
+				AV_PICTURE_TYPE_I) {
+#endif
 			return dts;	
 		}
 		eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, 
@@ -2625,7 +2631,7 @@ static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 	meta_name_suffix(image->sysopt->pathout,
 			filename, image->filename, tmp);
 
-	for (i = 0; i < 256; i++) {
+	for (i = 1; i < 256; i++) {
 		if (smm_fstat(image->filename) < 0) {
 			break;		/* file not existed */
 		} else if (image->sysopt->flags & EZOP_THUMB_OVERRIDE) {
