@@ -781,9 +781,18 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 	/* update the filesize field with the ffmpeg attribute.
 	 * this is a foolproof procedure */
+	/* the file_size field will be depreciated soon */
+#if	LIBAVFORMAT_VERSION_INT < (53<<16)
 	if (vidx->filesize < vidx->formatx->file_size) {
 		vidx->filesize = vidx->formatx->file_size;
 	}
+#else
+	if (vidx->formatx->pb) {
+		if (vidx->filesize < avio_size(vidx->formatx->pb)) {
+			vidx->filesize = avio_size(vidx->formatx->pb);
+		}
+	}
+#endif
 
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library

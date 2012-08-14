@@ -1,3 +1,17 @@
+20120814:
+  + file_size field is depreciated and soon removed. use avio_size() instead
+  + document update
+
+20120813:
+  + Replaced FF_I_TYPE by AV_PICTURE_TYPE_I since it was deprecated
+    since 4 Jan 2012. See
+    https://lists.ffmpeg.org/pipermail/ffmpeg-cvslog/2012-January/045452.html
+
+20120812:
+  + Introduced the recursive mode to batch process video files
+  + Introduced an option to override/skip/copy the existed thumbnails
+    The default is 'copy'.
+
 20120807:
   + a better foolproof way to process the size of file
   + video_media_on_canvas(): display combined bitrate by calculating it.

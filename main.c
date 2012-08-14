@@ -68,6 +68,7 @@ static	struct	cliopt	clist[] = {
 	{  11, "opt-time", 2, "the timestamp inside the screen shots (on)" },
 	{  12, "opt-ffr",  2, "start from the first frame (off)" },
 	{  13, "opt-lfr",  2, "end at the last frame (off)" },
+	{  24, "override", 2, "override existed thumbnails (copy)"},
 	{  15, "pos-bg",   2, "the position of the background image (mc)" },
 	{  16, "pos-time", 2, "the position of the timestamp (rt)" },
 	{  17, "pos-info", 2, "the position of the media infomation (lt)" },
@@ -76,11 +77,10 @@ static	struct	cliopt	clist[] = {
 	{  19, "time-end", 2, "the time in video where ends shooting" },
 	{  20, "transparent", 0, "generate the transparent background" },
 	{  22, "vindex",   1, "the index of the video stream" },
-	{  23, "protest",  2, "*testing the profile (@length, +width)" },
-	{  24, "override", 2, "override existed thumbnails (yes|no)(copy)"},
 	{   1, "help",    0, "*Display the help message" },
 	{   2, "version", 0, "*Display the version message" },
 	{   3, "vernum",  0, "*Display the version number" },
+	{  23, "protest",  2, "*testing the profile (@length, +width)" },
 	{ 0, NULL, 0, NULL }
 };
 
@@ -294,10 +294,10 @@ int main(int argc, char **argv)
 			todo = 'E';	/* end of process */
 			break;
 		case 24:
-			if (!strcmp(optarg, "yes")) {
+			if (!strcmp(optarg, "on")) {
 				sysopt.flags |= EZOP_THUMB_OVERRIDE;
 				sysopt.flags &= ~EZOP_THUMB_COPY;
-			} else if (!strcmp(optarg, "no")) {
+			} else if (!strcmp(optarg, "off")) {
 				sysopt.flags &= ~EZOP_THUMB_OVERRIDE;
 				sysopt.flags &= ~EZOP_THUMB_COPY;
 			} else if (!strcmp(optarg, "copy")) {

@@ -249,6 +249,21 @@ options would override the
 option.
 
 .TP
+.BR \-R , " \-\-recursive \fIsuffix_filter\fP"
+Generate thumbnails from files under specified directories and subdirectories
+recursively. If no directory was specified, it would start from the current
+directory. A
+.I \fIsuffix_filter\fP
+string is required to help
+.B ezthumb
+to filter out the target files. The string is composed by the extension 
+filenames separated by comma. For example,
+.I "avi,rm,rmvb,mkv,wmv" .
+If an empty string was specified, 
+.B ezthumb
+would try to process every files.
+
+.TP
 .BR \-s , " \-\-ssize \fIthumbnail_size\fP"
 Specify the width and height of each screen shot. 
 It could be defined by pixel like
@@ -379,6 +394,33 @@ because most videos start from a black screen.
 Turn on or turn off taking screen shots to the last frame. The default is
 .I off
 because most videos end at a black screen.
+
+.TP
+.BR "\-\-override \fIon|off|copy\fP"
+Turn on or turn off overriding existed thumbnails. The third option is
+.I copy
+which would generate thumbnails named by serial numbers. 
+For example, if the thumbnail file should be named
+.I video_file_thumb.jpg,
+the
+.I copy
+option would generate
+.I video_file_thumb.1.jpg
+if
+.I video_file_thumb.jpg
+existed, or
+.I video_file_thumb.2.jpg
+if
+.I video_file_thumb.1.jpg
+existed, etc. The default is
+.I copy
+option.
+
+Note the serial number is limited to 
+.B 255. 
+If the limitation is reached, the last one, which should be
+.I video_file_thumb.255.jpg
+for example, will be overriden.
 
 .TP
 .BR "\-\-pos\-bg \fIposition_code ( : qualification )\fP"
