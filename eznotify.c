@@ -326,8 +326,9 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 
 int dump_format_context(AVFormatContext *format)
 {
-	SMM_PRINT("  Format: %s, Size: %lld, Bitrate: %u\n",
+	SMM_PRINT("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
+			format->iformat->name,
 			(long long) format->file_size,
 			format->bit_rate);
 	SMM_PRINT("  Streams: %d, Start time: %lld, Duration: %lld\n",

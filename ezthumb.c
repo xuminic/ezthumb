@@ -672,6 +672,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	EZVID	*vidx;
 	//FILE	*fp;
 	int	rc;
+	char	*mblock[] = { "mp3", "image2" };
 
 	/* allocate the runtime index structure of the video */
 	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
@@ -744,6 +745,17 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 
+	/* 20120814 Implemented a media type filter to block the unwanted
+	 * media files like jpg, mp3, etc */
+	for (rc = 0; rc < sizeof(mblock)/sizeof(char*); rc++) {
+		if (!strcmp(vidx->formatx->iformat->name, mblock[rc])) {
+			uperror(errcode, EZ_ERR_FORMAT);
+			eznotify(vidx, EZ_ERR_FORMAT, 0, 0, filename);
+			video_free(vidx);
+			return NULL;
+		}
+	}
+
 	/* FIXME: what are these for? */
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
 #if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
@@ -756,7 +768,10 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
+
 #if 0
+	dump_format_context(vidx->formatx);
+	free(vidx);
 	if (EZOP_DEBUG(ezopt->flags) == EZOP_DEBUG_FFM) {
 		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
 	} else {
@@ -1238,7 +1253,7 @@ static int video_duration_check(EZVID *vidx)
 {
 	int	br;
 
-	if (vidx->duration == 0) {
+	if (vidx->duration <= 0) {
 		return 0;	/* bad duration */
 	}
 
