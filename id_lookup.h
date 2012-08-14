@@ -41,6 +41,7 @@ extern	struct	idtbl	id_sample_format[];
 extern	struct	idtbl	id_sam_format[];
 
 char *id_lookup(struct idtbl *table, int id);
+char *id_lookup_tail(struct idtbl *table, int id);
 
 #endif	/* _ID_LOOKUP_H_ */
 

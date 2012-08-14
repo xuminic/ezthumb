@@ -35,6 +35,25 @@ char *id_lookup(struct idtbl *table, int id)
 	return def;
 }
 
+char *id_lookup_tail(struct idtbl *table, int id)
+{
+	static	char	def[32];
+	char	*tail;
+	int	i;
+
+	for (i = 0; table[i].id; i++) {
+		if (id == table[i].no) {
+			if ((tail = strrchr(table[i].id, '_')) == NULL) {
+				return table[i].id;
+			} else {
+				return tail+1;
+			}
+		}
+	}
+	sprintf(def, "[%d]", id);
+	return def;
+}
+
 #if 0
 /* help to generate the array of ffmpeg IDs */
 

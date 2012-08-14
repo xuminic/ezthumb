@@ -121,9 +121,13 @@
 
 /* Display the debug log in the command line. */
 #define EZOP_DEBUG_MASK		0x7000
-#define EZOP_DEBUG_NONE		0
-#define EZOP_DEBUG_BRIEF	0x1000
-#define EZOP_DEBUG_VERBS	0x2000
+#define EZOP_DEBUG_NONE		0	/* no debug information at all */
+#define EZOP_DEBUG_WARNING	0x1000	/* open, close, duration */
+#define EZOP_DEBUG_INFO		0x2000	/* av info, image info */
+#define EZOP_DEBUG_BRIEF	0x3000	/* warning from FFMPEG */
+#define EZOP_DEBUG_IFRAME	0x4000	/* key frame received */
+#define EZOP_DEBUG_PACKET	0x5000	/* key packet dump */
+#define EZOP_DEBUG_VERBS	0x6000	/* broken frames, scanned frames */
 #define EZOP_DEBUG_FFM		0x7000	/* the FFMPEG debug output */
 #define EZOP_DEBUG(x)		((x) & EZOP_DEBUG_MASK)
 #define EZOP_DEBUG_MAKE(x)	(((x) << 12) & EZOP_DEBUG_MASK)

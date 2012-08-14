@@ -89,13 +89,13 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 #endif
 			av_log_set_level(i);
 		}
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_WARNING) {
 			printf("%s: open successed (%ld ms)\n", 
 					(char*) block, opt);
 		}
 		break;
 	case EN_MEDIA_OPEN:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
 			dump_format_context(vidx->formatx);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
@@ -123,7 +123,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_IMAGE_CREATED:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
 			dump_ezimage(block);
 		}
 		break;
@@ -142,7 +142,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		//dump_packet(block);
 		break;
 	case EN_PACKET_KEY:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_PACKET) {
 			dump_packet(block);
 		}
 		break;
@@ -153,7 +153,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		//dump_frame(block, opt);
 		break;
 	case EN_FRAME_EFFECT:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
 			dump_frame_packet(vidx, param, block);
 		}
 		break;
@@ -161,7 +161,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		//printf("Key Frame %d: %lld\n", param, *((long long *)block));
 		break;
 	case EN_SCAN_IFRAME:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
 			printf("I-Frame Scanned (%ld ms):\n", opt);
 			for (i = 0; i < param; i++) {
 				SMM_PRINT("%9lld", ((long long *)block)[i]);
@@ -175,26 +175,26 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_STREAM_FORMAT:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
 			dump_codec_attr(block, (int)param);
 			//dump_stream(((AVFormatContext*)block)->streams
 			//	[(int)param]);
 		}
 		break;
 	case EN_TYPE_VIDEO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
 			//dump_video_context(block);
 			dump_codec_video(block);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
 			//dump_audio_context(block);
 			dump_codec_audio(block);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
 			dump_other_context(block);
 		}
 		break;
@@ -204,7 +204,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 					(long long)((AVPacket*) block)->dts,
 					*((long long *) opt));
 		}
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_WARNING) {
 			if (param == ENX_DUR_MHEAD) {
 				printf("Duration from Media head: %ld (ms)\n",
 						opt);
@@ -226,7 +226,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 	case EN_SEEK_FRAME:
 		if (param == ENX_SEEK_BW_NO) {
 			printf("WARNING: Backward Seeking Disabled.\n");
-		} else if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_NONE) {
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_WARNING) {
 			SMM_PRINT("Backward Seeking Test successed to %lld\n",
 					*((long long *) block));
 		}
@@ -253,7 +253,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}*/
 		break;
 	case EN_FRAME_EXCEPTION:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_VERBS) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
 			printf("Discard ");
 			dump_frame(block, 1);
 		}
@@ -362,7 +362,7 @@ int dump_audio_context(AVCodecContext *codec)
 int dump_other_context(AVCodecContext *codec)
 {
 	printf("    Stream %s:\n",
-			id_lookup(id_codec_type, codec->codec_type) + 11);
+			id_lookup_tail(id_codec_type, codec->codec_type));
 	return 0;
 }
 

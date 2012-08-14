@@ -291,7 +291,7 @@ int ezinfo(char *filename, EZOPT *ezopt)
 		return rc;
 	}
 
-	if (EZOP_DEBUG(ezopt->flags) > EZOP_DEBUG_NONE) {
+	if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
 		if ((image = image_allocate(vidx, ezopt, &rc)) != NULL) {
 			//dump_ezimage(image);
 			if (ezopt->flags & EZOP_FONT_TEST) {
@@ -671,7 +671,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
 	EZVID	*vidx;
 	//FILE	*fp;
-	int	rc, loglvl;
+	int	rc;
 
 	/* allocate the runtime index structure of the video */
 	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
@@ -719,8 +719,13 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 
 	/* On second thought, the FFMPEG log is better to be enabled while 
 	 * loading codecs so we would've known if the video files buggy */
-	loglvl = av_log_get_level();
-	av_log_set_level(AV_LOG_INFO);
+	if (EZOP_DEBUG(ezopt->flags) == EZOP_DEBUG_FFM) {
+		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
+	} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+		av_log_set_level(AV_LOG_INFO);
+	} else {
+		av_log_set_level(0);
+	}
 
 	/* apparently the ubuntu 10.10 still use av_open_input_file() */
 	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
@@ -751,9 +756,13 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
-
-	av_log_set_level(loglvl);
-	
+#if 0
+	if (EZOP_DEBUG(ezopt->flags) == EZOP_DEBUG_FFM) {
+		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
+	} else {
+		av_log_set_level(0);	/* disable all complains by ffmpeg */
+	}
+#endif	
 	/* find the video stream and open the codec driver */
 	if ((rc = video_find_stream(vidx, ezopt->flags)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
@@ -1066,8 +1075,8 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	/* Line 2+: the stream information */
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
-		sprintf(buffer, "%s: ", id_lookup(id_codec_type, 
-					stream->codec->codec_type) + 13);
+		sprintf(buffer, "%s: ", id_lookup_tail(id_codec_type, 
+					stream->codec->codec_type));
 		/* seems higher version doesn't support CODEC_TYPE_xxx */
 		switch (stream->codec->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:	
@@ -1627,7 +1636,7 @@ static char *video_media_video(AVStream *stream, char *buffer)
 		strcat(buffer, tmp);
 	}
 
-	strcat(buffer, id_lookup(id_pix_fmt, stream->codec->pix_fmt) + 8);
+	strcat(buffer, id_lookup_tail(id_pix_fmt, stream->codec->pix_fmt));
 	sprintf(tmp, "  %.3f FPS ", (float) stream->r_frame_rate.num / 
 			(float) stream->r_frame_rate.den);
 	strcat(buffer, tmp);

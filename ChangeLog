@@ -1,6 +1,8 @@
 20120814:
   + file_size field is depreciated and soon removed. use avio_size() instead
   + document update
+  + reviewed and adjusted the debug levels
+  + id_lookup.c: id_lookup_tail() introduced to removed the fix coded offset
 
 20120813:
   + Replaced FF_I_TYPE by AV_PICTURE_TYPE_I since it was deprecated

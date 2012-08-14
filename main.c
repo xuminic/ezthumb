@@ -487,12 +487,29 @@ int main(int argc, char **argv)
 			//}
 			break;
 		case 'v':
-			if (!isdigit(*optarg)) {
-				todo = 'B';	/* BREAK */
-			} else {
+			if (!strcmp(optarg, "none")) {
+				c = 0;
+			} else if (!strcmp(optarg, "warning")) {
+				c = 1;
+			} else if (!strcmp(optarg, "info")) {
+				c = 2;
+			} else if (!strcmp(optarg, "brief")) {
+				c = 3;
+			} else if (!strcmp(optarg, "iframe")) {
+				c = 4;
+			} else if (!strcmp(optarg, "packet")) {
+				c = 5;
+			} else if (!strcmp(optarg, "verbose")) {
+				c = 6;
+			} else if (!strcmp(optarg, "ffmpeg")) {
+				c = 7;
+			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
-				sysopt.flags |= EZOP_DEBUG_MAKE(c);
+			} else {
+				todo = 'B';	/* BREAK */
+				break;
 			}
+			sysopt.flags |= EZOP_DEBUG_MAKE(c);
 			break;
 		case 'w':
 			if (!isdigit(*optarg)) {
@@ -551,12 +568,6 @@ int main(int argc, char **argv)
 	avcodec_register_all();
 	av_register_all();
 
-	if (EZOP_DEBUG(sysopt.flags) < EZOP_DEBUG_VERBS) {
-		av_log_set_level(0);	/* disable all complains from ffmpeg*/
-	} else if (EZOP_DEBUG(sysopt.flags) == EZOP_DEBUG_FFM) {
-		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
-	}
-
 	switch (todo) {
 	case 'I':
 	case 'i':
@@ -588,7 +599,7 @@ int main(int argc, char **argv)
 		break;
 	default:
 		/* inject the progress report functions */
-		if (EZOP_DEBUG(sysopt.flags) == EZOP_DEBUG_NONE) {
+		if (EZOP_DEBUG(sysopt.flags) <= EZOP_DEBUG_BRIEF) {
 			sysopt.notify = event_cb;
 		}
 		if (r_filter == NULL) {
