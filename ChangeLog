@@ -1,9 +1,10 @@
-20120814:
+20120814: V2.1.8
   + file_size field is depreciated and soon removed. use avio_size() instead
   + document update
   + reviewed and adjusted the debug levels
   + id_lookup.c: id_lookup_tail() introduced to removed the fix coded offset
   + improved filter to block unwanted/fake media files
+  + eznotify.c: file_size field replaced by avio_size()
 
 20120813:
   + Replaced FF_I_TYPE by AV_PICTURE_TYPE_I since it was deprecated

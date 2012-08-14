@@ -326,11 +326,19 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 
 int dump_format_context(AVFormatContext *format)
 {
+#if	LIBAVFORMAT_VERSION_INT < (53<<16)
 	SMM_PRINT("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) format->file_size,
 			format->bit_rate);
+#else
+	SMM_PRINT("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+			format->iformat->long_name,
+			format->iformat->name,
+			(long long) avio_size(format->pb),
+			format->bit_rate);
+#endif
 	SMM_PRINT("  Streams: %d, Start time: %lld, Duration: %lld\n",
 			format->nb_streams,
 			(long long) format->start_time,
