@@ -36,7 +36,7 @@
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: ezthumb [OPTIONS] video_clip ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
-	{ 'b', "bind",    0, "*binding multiple video sources" },
+	{ 'b', "bind",    0, "binding multiple video sources" },
 	{ 'c', "colour",  2, "the colour setting (MI:TM:BG)(RRGGBB)" },
 	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
 	{ 'f', "font",    2, "the TrueType font name with the full path" },
@@ -585,6 +585,11 @@ int main(int argc, char **argv)
 		}
 		break;
 	case 'b':
+		/* inject the progress report functions */
+		if (EZOP_DEBUG(sysopt.flags) <= EZOP_DEBUG_BRIEF) {
+			sysopt.notify = event_cb;
+		}
+		ezthumb_bind(argv + optind, argc - optind, &sysopt);
 		break;
 	case 'G':
 		c = EZ_ERR_EOP;

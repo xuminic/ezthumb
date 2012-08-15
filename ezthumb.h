@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.8"
+#define EZTHUMB_VERSION		"2.1.9pre"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -364,6 +364,9 @@ typedef	struct	{
 
 	gdImage	*gdframe;	/* gd context for each frame */
 	gdImage	*gdcanvas;	/* gd context for the whole canvas */
+	FILE	*gifx_fp;	/* for GIF89 animation */
+	int	gifx_opt;	/* for GIF89 animation */
+	int	taken;		/* number of shots already taken */
 
 	EZOPT	*sysopt;	/* link to the EZOPT parameters */
 	void	*cbparam;	/* the callback parameter block */
@@ -401,9 +404,6 @@ typedef	struct		{
 	int		keycount;
 	int64_t		keydelta;	/* the delta DTS of snapshots */
 	void		*keylib;	/* the anchor to keyframe list */
-
-	FILE		*gifx_fp;	/* for GIF89 animation */
-	int		gifx_opt;	/* for GIF89 animation */
 
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
 	EZIMG		*image;		/* link to its EZIMG parameters */
@@ -446,6 +446,7 @@ void ezopt_init(EZOPT *ezopt, char *profile);
 void ezopt_review(EZOPT *opt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezthumb_safe(char *filename, EZOPT *ezopt);
+int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt);
 int ezthumb_break(EZOPT *ezopt);
 

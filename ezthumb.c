@@ -49,7 +49,7 @@ static int video_duration_seek(EZVID *vidx);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
-static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts);
+static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
 static EZFRM *video_frame_next(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
@@ -280,6 +280,65 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 	return EZ_ERR_NONE;
 }
 
+
+int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt)
+{
+	EZIMG	*image;
+	EZVID	*vidx, *vtmp;
+	int	i, rc, durall;
+	int	*vfilter;
+
+	if ((vfilter = calloc(fnum, sizeof(int))) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+	for (i = 0; i < fnum; i++) {
+		if ((vidx = video_allocate(filename[i], ezopt,&rc)) != NULL) {
+			break;
+		}
+		vfilter[i] = 1;		/* disable it */
+	}
+	for (durall = vidx->duration; i < fnum; i++) {
+		if ((vtmp = video_allocate(filename[i], ezopt,&rc)) == NULL) {
+			vfilter[i] = 1;	/* disable it */
+		} else {
+			durall += vtmp->duration;
+			video_free(vtmp);
+		}
+	}
+
+	vidx->duration = durall;
+	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
+		video_free(vidx);
+		free(vfilter);
+		return rc;
+	}
+
+	/* if the expected time_step is 0, then it will save every 
+	 * key frames separately. it's good for debug purpose  */
+	if (image->time_step > 0) {	
+		vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
+	} else {
+		vidx->ses_proc = EZOP_PROC_KEYRIP;
+		vidx->keydelta = 0;
+	}
+	video_keyframe_credit(vidx, -1);
+
+	video_snap_begin(vidx, image, ENX_SS_SCAN);
+	for (i = 0; i < fnum; i++) {
+		if (vfilter[i]) {
+			continue;
+		}
+		vtmp = video_allocate(filename[i], ezopt, &rc);
+		video_snapshot_safemode(vtmp, image);
+		video_free(vtmp);
+	}
+
+	image_free(image);
+	video_free(vidx);
+	free(vfilter);
+	return 0;
+}
+
 int ezinfo(char *filename, EZOPT *ezopt)
 {
 	EZVID		*vidx;
@@ -364,7 +423,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		video_snap_update(vidx, image, i, dts);
+		video_snap_update(vidx, image, dts);
 		i++;
 
 		if (vidx->sysopt->key_ripno && 
@@ -411,7 +470,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			break;
 		}
 		
-		video_snap_update(vidx, image, i, dts_snap);
+		video_snap_update(vidx, image, dts_snap);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
@@ -436,7 +495,7 @@ int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 			break;
 		}
 		if (dts >= dts_snap) {
-			video_snap_update(vidx, image, i, dts_snap);
+			video_snap_update(vidx, image, dts_snap);
 			dts_snap = video_snap_point(vidx, image, ++i);
 		}
 		if (i >= image->shots) {
@@ -446,7 +505,7 @@ int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, i, -1);
+			video_snap_update(vidx, image, -1);
 		}*/
 	}
 	video_snap_end(vidx, image);
@@ -488,13 +547,13 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 				break;
 			}
 		}
-		//video_snap_update(vidx, image, i, dts);
-		video_snap_update(vidx, image, i, dts_snap);
+		//video_snap_update(vidx, image, dts);
+		video_snap_update(vidx, image, dts_snap);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, i, -1);
+			video_snap_update(vidx, image, -1);
 		}*/
 	}
 	video_snap_end(vidx, image);
@@ -553,12 +612,12 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		if (dts < 0) {
 			break;
 		}
-		video_snap_update(vidx, image, i, refdts[i*3]);
+		video_snap_update(vidx, image, refdts[i*3]);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, i, -1);
+			video_snap_update(vidx, image, -1);
 		}*/
 	}
 	video_snap_end(vidx, image);
@@ -596,12 +655,12 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		video_snap_update(vidx, image, i, dts);
+		video_snap_update(vidx, image, dts);
 	}
 	if (i < image->shots) {
 		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
 		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, i, -1);
+			video_snap_update(vidx, image, -1);
 		}*/
 	}
 	video_snap_end(vidx, image);
@@ -1365,16 +1424,16 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 {
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
-	vidx->gifx_fp = NULL;
-	if ((vidx->gifx_opt = image_cal_gif_animix(image->sysopt)) > 0) {
-		vidx->gifx_fp = image_gif_anim_open(image, vidx->filename);
+	image->gifx_fp = NULL;
+	if ((image->gifx_opt = image_cal_gif_animix(image->sysopt)) > 0) {
+		image->gifx_fp = image_gif_anim_open(image, vidx->filename);
 	}
 
 	eznotify(vidx, EN_PROC_BEGIN, (long)vidx->duration, method, NULL);
 	return 0;
 }
 
-static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
+static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 {
 	EZFRM	*ezfrm;
 	char	timestamp[64];
@@ -1383,7 +1442,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
 	if ((ezfrm = video_frame_best(vidx, dts)) == NULL) {
 		return -1;	/* no proper frame */
 	}
-	eznotify(vidx, EN_FRAME_EFFECT, sn, 0, ezfrm);
+	eznotify(vidx, EN_FRAME_EFFECT, image->taken, 0, ezfrm);
 
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
@@ -1399,16 +1458,20 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int sn, int64_t dts)
 	}
 
 	if (image->gdcanvas) {
-		image_gdcanvas_update(image, sn);
-	} else if (vidx->gifx_fp) {
-		image_gif_anim_add(image, vidx->gifx_fp, vidx->gifx_opt);
+		image_gdcanvas_update(image, image->taken);
+	} else if (image->gifx_fp) {
+		image_gif_anim_add(image, image->gifx_fp, image->gifx_opt);
 	} else {
-		image_gdframe_save(image, vidx->filename, sn);
+		image_gdframe_save(image, vidx->filename, image->taken);
 	}
+
+	/* update the number of taken shots, must before displaying */
+	image->taken++;
 
 	/* display the on-going information */
 	if (image->shots) {
-		eznotify(vidx, EN_PROC_CURRENT, image->shots, sn+1, &dts);
+		eznotify(vidx, EN_PROC_CURRENT, 
+				image->shots, image->taken, &dts);
 	} else {	/* i-frame ripping */
 		eznotify(vidx, EN_PROC_CURRENT, vidx->duration, dtms, &dts);
 	}
@@ -1420,8 +1483,8 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 	char	status[128];
 
 	/* display the end of the process and generate the status line */
-	sprintf(status, "%dx%d Thumbnails Generated by Ezthumb %s (%.3f s)",
-			image->dst_width, image->dst_height, 
+	sprintf(status, "%dx%dx%d Thumbnails Generated by Ezthumb %s (%.3f s)",
+			image->dst_width, image->dst_height, image->taken,
 			EZTHUMB_VERSION, 
 			smm_time_diff(&vidx->tmark) / 1000.0);
 	eznotify(vidx, EN_PROC_END, image->canvas_width, 
@@ -1435,8 +1498,8 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 			image_gdcanvas_print(image, -1, 0, status);
 		}
 		image_gdcanvas_save(image, vidx->filename);
-	} else if (vidx->gifx_fp) {
-		image_gif_anim_close(image, vidx->gifx_fp);
+	} else if (image->gifx_fp) {
+		image_gif_anim_close(image, image->gifx_fp);
 	}
 	return 0;
 }
