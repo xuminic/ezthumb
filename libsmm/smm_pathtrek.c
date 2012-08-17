@@ -37,18 +37,20 @@ static int path_recur_fifo(struct smmdir *sdir, char *path);
 static int path_recur_first(struct smmdir *sdir, char *path);
 static int path_recur_last(struct smmdir *sdir, char *path);
 
-int smm_pathtrek(char *path, int flags, F_DIR message, void *option)
+int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option)
 {
 	struct	smmdir	sdir;
 	int	rc;
 
 	memset(&sdir, 0, sizeof(sdir));
-	sdir.message = message;
+	sdir.message = msg;
 	if (sdir.message == NULL) {
 		sdir.message = dummy_message;
 	}
 	sdir.option = option;
 	sdir.flags  = flags;
+	sdir.depth  = depth;
+	sdir.depnow = 0;
 
 	switch (flags & SMM_PATH_DIR_MASK) {
 	case SMM_PATH_DIR_FIRST:
@@ -424,6 +426,11 @@ static int path_recur_fifo(struct smmdir *sdir, char *path)
 
 	if (path_set(sdir, path, &rc) < 0)  {
 		return rc;
+	}
+
+	sdir->depnow++;
+	if ((sdir->depth >= 0) && (sdir->depnow >= sdir->depth)) {
+		return PATH_STAT_IGNORE;
 	}
 
 	sdir->stat_dirs++;

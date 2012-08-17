@@ -58,6 +58,9 @@ struct	smmdir	{
 	int	stat_dirs;
 	int	stat_files;
 
+	int	depth;		/* 0 = unlimited, 1 = command line level */
+	int	depnow;		/* current depth */
+
 	int     (*message)(void *option, char *path, int type, void *info);
 	void	*option;
 
@@ -87,7 +90,7 @@ int smm_errno_update(int value);
 long long smm_filesize(char *fname);
 int smm_fstat(char *fname);
 int smm_init(void);
-int smm_pathtrek(char *path, int flags, F_DIR message, void *option);
+int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option);
 int smm_pwuid(char *uname, long *uid, long *gid);
 int smm_signal_break(int (*handle)(int));
 int smm_time_diff(SMM_TIME *tmbuf);
