@@ -1,3 +1,7 @@
+20120816:
+  + Improved the --override option. Testing the existance of thumbnails 
+    before creating the thumbnail.
+
 20120814: V2.1.8
   + file_size field is depreciated and soon removed. use avio_size() instead
   + document update

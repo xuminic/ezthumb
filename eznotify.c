@@ -258,6 +258,9 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 			dump_frame(block, 1);
 		}
 		break;
+	case EN_SKIP_EXIST:
+		printf("Thumbnail Existed: %s\n", (char*) block);
+		break;
 	}
 	return event;
 }

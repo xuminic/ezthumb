@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.8"
+#define EZTHUMB_VERSION		"2.1.8a"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -69,6 +69,7 @@
 #define EN_IFRAME_CREDIT	1025
 #define EN_FRAME_EXCEPTION	1026
 #define EN_EVENT_PASSTHROUGH	1027
+#define EN_SKIP_EXIST		1028
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -185,6 +186,11 @@
 #define EZ_PROF_WIDTH		2	/* the width of video frame */
 #define EZ_PROF_ALL		3
 
+#define EZ_THUMB_VACANT		0	/* thumbnail doesn't exist */
+#define EZ_THUMB_OVERRIDE	1	/* file existed: override it */
+#define EZ_THUMB_SKIP		2	/* file existed: skip it */
+#define EZ_THUMB_COPIABLE	3	/* file existed: make a copy */
+#define EZ_THUMB_OVERCOPY	4	/* copy full: override the last one */
 
 /* the threshold of "normal" byte rates. 
  * Ezthumb calcuates the rough byterates as a reference to find out
