@@ -130,7 +130,7 @@ static int do_path_trek(char *path, int flags)
 {
 	int	rc;
 
-	rc = smm_pathtrek(path, flags, pathtrek_cb, NULL);
+	rc = smm_pathtrek(path, flags, 0, pathtrek_cb, NULL);
 	printf("(%d)\n", rc);
 	return 0;
 }

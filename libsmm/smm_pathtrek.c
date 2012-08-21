@@ -70,6 +70,7 @@ int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option)
 	return rc;
 }
 
+
 static int dummy_message(void *option, char *path, int type, void *info)
 {
 	return 0;
@@ -93,17 +94,18 @@ static int wpath_state(TCHAR *wpath)
 	return PATH_STAT_REGULAR;	/* regular file */
 }
 
-static int wpath_set(struct smmdir *sdir, TCHAR *wpath, int *rcode)
+static int wpath_enter(struct smmdir *sdir, TCHAR *wpath, int *rcode)
 {
 	char	*fname;
 
+	*rcode = smm_errno_update(SMM_ERR_NONE);
+
 	switch (wpath_state(wpath)) {
 	case PATH_STAT_IGNORE:
-		*rcode = 0;
-		return -1;	/* maybe permission denied */
-	case PATH_STAT_SKIP:
-		*rcode = 0;
-		break;
+		*rcode = smm_errno_update(SMM_ERR_EOP);	
+		return -1;	 /* maybe permission denied */
+	case PATH_STAT_SKIP:		/* skip the '.' and '..' */
+		return 0;			/* no error occur, go ahead */
 	case PATH_STAT_REGULAR:
 		sdir->stat_files++;
 		fname = smm_wcstombs(wpath);
@@ -112,13 +114,42 @@ static int wpath_set(struct smmdir *sdir, TCHAR *wpath, int *rcode)
 		free(fname);
 		return -2;
 	case PATH_STAT_DIR:
-		if (SetCurrentDirectory(wpath) == 0) {
-			*rcode = smm_errno_update(0);
-			return -3;
-		}
 		break;
 	}
+
+	/* check the depth of subdirectories */
+	if ((sdir->depth >= 0) && (sdir->depnow >= sdir->depth)) {
+		fname = smm_wcstombs(wpath);
+		sdir->message(sdir->option, fname, SMM_MSG_PATH_FLOOR, sdir);
+		free(fname);
+		*rcode = smm_errno_update(SMM_ERR_EOP);
+		return -3;
+	}
+	
+	if (SetCurrentDirectory(wpath) == 0) {
+		*rcode = smm_errno_update(SMM_ERR_CHDIR);
+		return -4;
+	}
+	
+	sdir->depnow++;
+	sdir->stat_dirs++;
+	fname = smm_wcstombs(wpath);
+	sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
+	free(fname);
 	return 0;
+}
+
+static int wpath_leave(struct smmdir *sdir, TCHAR *wpath)
+{
+	char	*fname;
+
+	SetCurrentDirectory(TEXT(".."));
+
+	sdir->depnow--;
+	fname = smm_wcstombs(wpath);
+	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
+	free(fname);
+	return SMM_ERR_NONE;
 }
 
 static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
@@ -128,21 +159,17 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 	char		*fname;
 	int		rc;
 
-	if (wpath_set(sdir, wpath, &rc) < 0) {
+	if (wpath_enter(sdir, wpath, &rc) < 0) {
 		return rc;
 	}
 
-	sdir->stat_dirs++;
-
-	fname = smm_wcstombs(wpath);
-	sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
-	free(fname);
-
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	if (ffdh == INVALID_HANDLE_VALUE) {
-		smm_errno_update(0);
-		SetCurrentDirectory(TEXT(".."));
-		return smm_errno();
+		fname = smm_wcstombs(wpath);
+		sdir->message(sdir->option, fname, SMM_MSG_PATH_BREAK, NULL);
+		free(fname);
+		wpath_leave(sdir, wpath);
+		return smm_errno_update(SMM_ERR_OPENDIR);
 	}
 
 	do {
@@ -157,32 +184,22 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 		case PATH_STAT_REGULAR:
 			sdir->stat_files++;
 			fname = smm_wcstombs(ffdata.cFileName);
-			rc = sdir->message(sdir->option, fname,
+			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_EXEC, sdir);
 			free(fname);
 			break;
 		}
-		if (rc < 0) {
+		if (rc != SMM_ERR_NONE) {
 			fname = smm_wcstombs(ffdata.cFileName);
-			rc = sdir->message(sdir->option, fname,
+			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_BREAK, &rc);
 			free(fname);
 			break;
 		}
 	} while (FindNextFile(ffdh, &ffdata));
-
-	if (GetLastError() != ERROR_NO_MORE_FILES) {
-		smm_errno_update(0);
-		SetCurrentDirectory(TEXT(".."));
-		FindClose(ffdh);
-		return smm_errno();
-	}
 	FindClose(ffdh);
 
-	fname = smm_wcstombs(wpath);
-	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
-	free(fname);
-	SetCurrentDirectory(TEXT(".."));
+	wpath_leave(sdir, wpath);
 	return rc;
 }
 	
@@ -193,34 +210,27 @@ static int win_path_recur_first(struct smmdir *sdir, TCHAR *wpath)
 	char		*fname;
 	int		rc;
 
-	if (wpath_set(sdir, wpath, &rc) < 0) {
+	if (wpath_enter(sdir, wpath, &rc) < 0) {
 		return rc;
 	}
 
-	sdir->stat_dirs++;
-
-	fname = smm_wcstombs(wpath);
-	sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
-	free(fname);
-
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	if (ffdh == INVALID_HANDLE_VALUE) {
-		smm_errno_update(0);
-		SetCurrentDirectory(TEXT(".."));
-		return smm_errno();
+		fname = smm_wcstombs(wpath);
+		sdir->message(sdir->option, fname, SMM_MSG_PATH_BREAK, NULL);
+		free(fname);
+		wpath_leave(sdir, wpath);
+		return smm_errno_update(SMM_ERR_OPENDIR);
 	}
 
 	do {
-		switch (wpath_state(ffdata.cFileName)) {
-		case PATH_STAT_DIR:
-			rc = win_path_recur_first(sdir, ffdata.cFileName);
-			break;
-		default:
+		if (wpath_state(ffdata.cFileName) != PATH_STAT_DIR) {
 			continue;
 		}
-		if (rc < 0) {
+		rc = win_path_recur_first(sdir, ffdata.cFileName);
+		if (rc != SMM_ERR_NONE) {
 			fname = smm_wcstombs(ffdata.cFileName);
-			rc = sdir->message(sdir->option, fname,
+			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_BREAK, &rc);
 			free(fname);
 			break;
@@ -231,31 +241,17 @@ static int win_path_recur_first(struct smmdir *sdir, TCHAR *wpath)
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	do {
 		//wprintf(TEXT("> %s\n"), ffdata.cFileName);
-		switch (wpath_state(ffdata.cFileName)) {
-		case PATH_STAT_REGULAR:
+		if (wpath_state(ffdata.cFileName) == PATH_STAT_REGULAR) {
 			sdir->stat_files++;
 			fname = smm_wcstombs(ffdata.cFileName);
-			rc = sdir->message(sdir->option, fname,
+			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_EXEC, sdir);
 			free(fname);
-			break;
-		default:
-			continue;
 		}
 	} while (FindNextFile(ffdh, &ffdata));
-
-	if (GetLastError() != ERROR_NO_MORE_FILES) {
-		smm_errno_update(0);
-		SetCurrentDirectory(TEXT(".."));
-		FindClose(ffdh);
-		return smm_errno();
-	}
 	FindClose(ffdh);
 
-	fname = smm_wcstombs(wpath);
-	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
-	free(fname);
-	SetCurrentDirectory(TEXT(".."));
+	wpath_leave(sdir, wpath);
 	return rc;
 }
 	
@@ -266,68 +262,47 @@ static int win_path_recur_last(struct smmdir *sdir, TCHAR *wpath)
 	char		*fname;
 	int		rc;
 
-	if (wpath_set(sdir, wpath, &rc) < 0) {
+	if (wpath_enter(sdir, wpath, &rc) < 0) {
 		return rc;
 	}
 
-	sdir->stat_dirs++;
-
-	fname = smm_wcstombs(wpath);
-	sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
-	free(fname);
-
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	if (ffdh == INVALID_HANDLE_VALUE) {
-		smm_errno_update(0);
-		SetCurrentDirectory(TEXT(".."));
-		return smm_errno();
+		fname = smm_wcstombs(wpath);
+		sdir->message(sdir->option, fname, SMM_MSG_PATH_BREAK, NULL);
+		free(fname);
+		wpath_leave(sdir, wpath);
+		return smm_errno_update(SMM_ERR_OPENDIR);
 	}
 
 	do {
-		switch (wpath_state(ffdata.cFileName)) {
-		case PATH_STAT_REGULAR:
+		if (wpath_state(ffdata.cFileName) == PATH_STAT_REGULAR) {
 			sdir->stat_files++;
 			fname = smm_wcstombs(ffdata.cFileName);
-			rc = sdir->message(sdir->option, fname,
+			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_EXEC, sdir);
 			free(fname);
-			break;
-		default:
-			continue;
 		}
 	} while (FindNextFile(ffdh, &ffdata));
 	FindClose(ffdh);
 
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	do {
-		switch (wpath_state(ffdata.cFileName)) {
-		case PATH_STAT_DIR:
-			rc = win_path_recur_last(sdir, ffdata.cFileName);
-			break;
-		default:
+		if (wpath_state(ffdata.cFileName) != PATH_STAT_DIR) {
 			continue;
 		}
-		if (rc < 0) {
+		rc = win_path_recur_last(sdir, ffdata.cFileName);
+		if (rc != SMM_ERR_NONE) {
 			fname = smm_wcstombs(ffdata.cFileName);
-			rc = sdir->message(sdir->option, fname,
+			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_BREAK, &rc);
 			free(fname);
 			break;
 		}
 	} while (FindNextFile(ffdh, &ffdata));
-
-	if (GetLastError() != ERROR_NO_MORE_FILES) {
-		smm_errno_update(0);
-		SetCurrentDirectory(TEXT(".."));
-		FindClose(ffdh);
-		return smm_errno();
-	}
 	FindClose(ffdh);
 
-	fname = smm_wcstombs(wpath);
-	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
-	free(fname);
-	SetCurrentDirectory(TEXT(".."));
+	wpath_leave(sdir, wpath);
 	return rc;
 }
 	
@@ -337,7 +312,7 @@ static int path_recur_fifo(struct smmdir *sdir, char *path)
 	int	rc;
 
 	if ((wpath = smm_mbstowcs(path)) == NULL) {
-		return smm_errno();
+		return smm_errno_update(SMM_ERR_NONE_READ);
 	}
 	rc = win_path_recur_fifo(sdir, wpath);
 	free(wpath);
@@ -350,7 +325,7 @@ static int path_recur_first(struct smmdir *sdir, char *path)
 	int	rc;
 
 	if ((wpath = smm_mbstowcs(path)) == NULL) {
-		return smm_errno();
+		return smm_errno_update(SMM_ERR_NONE_READ);
 	}
 	rc = win_path_recur_first(sdir, wpath);
 	free(wpath);
@@ -363,7 +338,7 @@ static int path_recur_last(struct smmdir *sdir, char *path)
 	int	rc;
 
 	if ((wpath = smm_mbstowcs(path)) == NULL) {
-		return smm_errno();
+		return smm_errno_update(SMM_ERR_NONE_READ);
 	}
 	rc = win_path_recur_last(sdir, wpath);
 	free(wpath);
@@ -385,7 +360,7 @@ static int path_state(char *path)
 	if (!strcmp(path, ".") || !strcmp(path, "..")) {
 		return PATH_STAT_SKIP;	/* skip */
 	}
-	if (lstat(path, &fs) < 0)  {
+	if (stat(path, &fs) < 0)  {
 		return PATH_STAT_IGNORE;	/* ignore */
 	}
 	if (S_ISDIR(fs.st_mode)) {
@@ -394,52 +369,67 @@ static int path_state(char *path)
 	return PATH_STAT_REGULAR;	/* regular file */
 }
 
-static int path_set(struct smmdir *sdir, char *path, int *rcode)
+static int path_enter(struct smmdir *sdir, char *path, int *rcode)
 {
+	*rcode = smm_errno_update(SMM_ERR_NONE);
+	
 	switch (path_state(path)) {
 	case PATH_STAT_IGNORE:
-		*rcode = 0;
-		return -1;	/* maybe permission denied */
-	case PATH_STAT_SKIP:
-		*rcode = 0;
-		break;
+		*rcode = smm_errno_update(SMM_ERR_EOP);	
+		return -1;	 /* maybe permission denied */
+	case PATH_STAT_SKIP:		/* skip the '.' and '..' */
+		return 0;		/* no error occur, go ahead */
 	case PATH_STAT_REGULAR:
 		sdir->stat_files++;
 		*rcode = sdir->message(sdir->option, path, 
 				SMM_MSG_PATH_EXEC, sdir);
 		return -2;
 	case PATH_STAT_DIR:
-		if (chdir(path) < 0)  {
-			*rcode = smm_errno_update(0);
-			return -3;
-		}
 		break;
 	}
+
+	/* check the depth of subdirectories */
+	if ((sdir->depth >= 0) && (sdir->depnow >= sdir->depth)) {
+		sdir->message(sdir->option, path, SMM_MSG_PATH_FLOOR, sdir);
+		*rcode = smm_errno_update(SMM_ERR_EOP);
+		return -3;
+	}
+	
+	if (chdir(path) < 0)  {
+		*rcode = smm_errno_update(SMM_ERR_CHDIR);
+		return -4;
+	}
+
+	sdir->depnow++;
+	sdir->stat_dirs++;
+	sdir->message(sdir->option, path, SMM_MSG_PATH_ENTER, sdir);
 	return 0;
+}
+
+static int path_leave(struct smmdir *sdir, char *path)
+{
+	if (chdir("..") < 0) {
+		return smm_errno_update(SMM_ERR_CHDIR);
+	}
+
+	sdir->depnow--;
+	sdir->message(sdir->option, path, SMM_MSG_PATH_LEAVE, sdir);
+	return SMM_ERR_NONE;
 }
 
 static int path_recur_fifo(struct smmdir *sdir, char *path)
 {
 	DIR	*dir;
 	struct	dirent	*de;
-	int	rc = 0;
+	int	rc;
 
-	if (path_set(sdir, path, &rc) < 0)  {
+	if (path_enter(sdir, path, &rc))  {
 		return rc;
 	}
-
-	sdir->depnow++;
-	if ((sdir->depth >= 0) && (sdir->depnow >= sdir->depth)) {
-		return PATH_STAT_IGNORE;
-	}
-
-	sdir->stat_dirs++;
-	sdir->message(sdir->option, path, SMM_MSG_PATH_ENTER, sdir);
-
 	if ((dir = opendir(".")) == NULL)  {
-		smm_errno_update(0);
-		rc = chdir("..");
-		return smm_errno();
+		sdir->message(sdir->option, path, SMM_MSG_PATH_BREAK, NULL);
+		path_leave(sdir, path);
+		return smm_errno_update(SMM_ERR_OPENDIR);
 	}
 	while ((de = readdir(dir)) != NULL)  {
 		switch (path_state(de->d_name)) {
@@ -451,116 +441,100 @@ static int path_recur_fifo(struct smmdir *sdir, char *path)
 			break;
 		case PATH_STAT_REGULAR:
 			sdir->stat_files++;
-			rc = sdir->message(sdir->option, de->d_name, 
+			sdir->message(sdir->option, de->d_name, 
 					SMM_MSG_PATH_EXEC, sdir);
 			break;
 		}
-		if (rc < 0) {
+		if (rc != SMM_ERR_NONE) {
 			sdir->message(sdir->option, de->d_name,
-					SMM_MSG_PATH_BREAK, &rc);
+					SMM_MSG_PATH_BREAK, NULL);
 			break;
 		}
 	}
 	closedir(dir);
 
-	sdir->message(sdir->option, path, SMM_MSG_PATH_LEAVE, sdir);
-
-	if (chdir("..") < 0) {
-		return smm_errno_update(0);
-	}
+	path_leave(sdir, path);
 	return rc;
 }
 
 static int path_recur_last(struct smmdir *sdir, char *path)
 {
 	DIR	*dir;
-	struct	dirent	*de = NULL;
-	int	rc = 0;
+	struct	dirent	*de;
+	int	rc;
 
-	if (path_set(sdir, path, &rc) < 0)  {
+	if (path_enter(sdir, path, &rc) < 0)  {
 		return rc;
 	}
-
-	sdir->stat_dirs++;
-	sdir->message(sdir->option, path, SMM_MSG_PATH_ENTER, sdir);
-
 	if ((dir = opendir(".")) == NULL)  {
-		rc = chdir("..");
-		smm_errno_update(0);
-		return smm_errno();
+		sdir->message(sdir->option, path, SMM_MSG_PATH_BREAK, NULL);
+		path_leave(sdir, path);
+		return smm_errno_update(SMM_ERR_OPENDIR);
 	}
-	while ((rc >= 0) && ((de = readdir(dir)) != NULL))  {
+	while ((de = readdir(dir)) != NULL)  {
 		if (path_state(de->d_name) == PATH_STAT_REGULAR) {
 			sdir->stat_files++;
-			rc = sdir->message(sdir->option, de->d_name,
+			sdir->message(sdir->option, de->d_name,
 					SMM_MSG_PATH_EXEC, sdir);
 		}
 	}
 
 	rewinddir(dir);
-	while ((rc >= 0) && ((de = readdir(dir)) != NULL))  {
-		if (path_state(de->d_name) == PATH_STAT_DIR) {
-			rc = sdir->path_recur(sdir, de->d_name);
+	while ((de = readdir(dir)) != NULL)  {
+		if (path_state(de->d_name) != PATH_STAT_DIR) {
+			continue;
 		}
-	}
-	if (rc < 0) {
-		sdir->message(sdir->option, de->d_name, 
-				SMM_MSG_PATH_BREAK, &rc);
+		rc = sdir->path_recur(sdir, de->d_name);
+		if (rc != SMM_ERR_NONE) {
+			sdir->message(sdir->option, de->d_name, 
+					SMM_MSG_PATH_BREAK, NULL);
+			break;
+		}
 	}
 	closedir(dir);
 
-	sdir->message(sdir->option, path, SMM_MSG_PATH_LEAVE, sdir);
-
-	if (chdir("..") < 0) {
-		return smm_errno_update(0);
-	}
+	path_leave(sdir, path);
 	return rc;
 }
 
 static int path_recur_first(struct smmdir *sdir, char *path)
 {
 	DIR	*dir;
-	struct	dirent	*de = NULL;
-	int	rc = 0;
+	struct	dirent	*de;
+	int	rc;
 
-	if (path_set(sdir, path, &rc) < 0)  {
+	if (path_enter(sdir, path, &rc) < 0)  {
 		return rc;
 	}
-
-	sdir->stat_dirs++;
-	sdir->message(sdir->option, path, SMM_MSG_PATH_ENTER, sdir);
-
 	if ((dir = opendir(".")) == NULL)  {
-		smm_errno_update(0);
-		rc = chdir("..");
-		return smm_errno();
+		sdir->message(sdir->option, path, SMM_MSG_PATH_BREAK, NULL);
+		path_leave(sdir, path);
+		return smm_errno_update(SMM_ERR_OPENDIR);
 	}
 
-	while ((rc >= 0) && ((de = readdir(dir)) != NULL))  {
-		if (path_state(de->d_name) == PATH_STAT_DIR) {
-			rc = sdir->path_recur(sdir, de->d_name);
+	while ((de = readdir(dir)) != NULL)  {
+		if (path_state(de->d_name) != PATH_STAT_DIR) {
+			continue;
+		}
+		rc = sdir->path_recur(sdir, de->d_name);
+		if (rc != SMM_ERR_NONE) {
+			sdir->message(sdir->option, de->d_name, 
+					SMM_MSG_PATH_BREAK, NULL);
+			break;
 		}
 	}
 
 	rewinddir(dir);
-	while ((rc >= 0) && ((de = readdir(dir)) != NULL))  {
+	while ((de = readdir(dir)) != NULL)  {
 		if (path_state(de->d_name) == PATH_STAT_REGULAR) {
 			sdir->stat_files++;
-			rc = sdir->message(sdir->option, de->d_name,
+			sdir->message(sdir->option, de->d_name,
 					SMM_MSG_PATH_EXEC, sdir);
 		}
 	}
-	if (rc < 0) {
-		sdir->message(sdir->option, de->d_name,
-				SMM_MSG_PATH_BREAK, &rc);
-	}
 	closedir(dir);
 
-	sdir->message(sdir->option, path, SMM_MSG_PATH_LEAVE, sdir);
-
-	if (chdir("..") < 0) {
-		return smm_errno_update(0);
-	}
+	path_leave(sdir, path);
 	return rc;
 }
 #endif	/* CFG_UNIX_API */

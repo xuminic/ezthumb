@@ -30,17 +30,16 @@ int smm_chdir(char *path)
 	TCHAR	*wpath;
 
 	if ((wpath = smm_mbstowcs(path)) == NULL) {
-		return smm_errno();
+		return smm_errno_update(SMM_ERR_NONE_READ);
 	}
 
 	if (SetCurrentDirectory(wpath) == 0) {
-		smm_errno_update(0);
 		free(wpath);
-		return smm_errno();
+		return smm_errno_update(SMM_ERR_CHDIR);
 	}
 
 	free(wpath);
-	return 0;
+	return smm_errno_update(SMM_ERR_NONE);
 }
 #endif
 
@@ -50,9 +49,9 @@ int smm_chdir(char *path)
 int smm_chdir(char *path)
 {
 	if (chdir(path) < 0) {
-		return smm_errno_update(0);
+		return smm_errno_update(SMM_ERR_CHDIR);
 	}
-	return 0;
+	return smm_errno_update(SMM_ERR_NONE);
 }
 #endif
 

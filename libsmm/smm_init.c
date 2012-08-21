@@ -21,23 +21,40 @@
 
 #include "libsmm.h"
 
+/* Error mask is always 1000 0000 ... in 32-bit error code
+ * libsmm error mask uses 0100 0000 ... in 32-bit error code */
 int	smm_error_no;
 int	smm_sys_cp;
 
 
 int smm_init(void)
 {
-	smm_error_no = 0;
+	smm_error_no = SMM_ERR_NONE;
 	smm_sys_cp   = smm_codepage();
-	return 0;
+	return SMM_ERR_NONE;
 }
 
-int smm_errno(void)
+int smm_errno_zip(int err)
 {
-	return - smm_error_no;
+	if (err == SMM_ERR_NONE_READ) {
+		err = smm_error_no;
+	}
+	return ((err >> 24) | err) & 0xff;
 }
 
+int smm_errno_update(int value)
+{
+	if (value == SMM_ERR_NONE_READ) {
+		value = smm_error_no;		/* do nothing */
+	} else if (value == SMM_ERR_NONE) {
+		smm_error_no = SMM_ERR_NONE;
+	} else {
+		smm_error_no = SMM_ERR(value);
+	}
+	return smm_error_no;
+}
 
+#if 0
 #ifdef  CFG_WIN32_API
 int smm_errno_update(int value)
 {
@@ -63,4 +80,4 @@ int smm_errno_update(int value)
 	return smm_errno();
 }
 #endif
-
+#endif	/* 0 */

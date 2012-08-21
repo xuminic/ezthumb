@@ -2768,7 +2768,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	meta_name_suffix(ezopt->pathout, fname, buf, tmp);
 
 	for (i = 1; i < 256; i++) {
-		if (smm_fstat(buf) < 0) {
+		if (smm_fstat(buf) != SMM_ERR_NONE) {
 			if (i == 1) {
 				rc = EZ_THUMB_VACANT;	/* file not existed */
 			} else {

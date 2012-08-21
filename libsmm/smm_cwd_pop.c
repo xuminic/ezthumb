@@ -26,36 +26,45 @@
 #include "libsmm.h"
 
 #ifdef	CFG_WIN32_API
-int smm_cwd_pop(int cwid)
+int smm_cwd_pop(void *cwid)
 {
 	TCHAR	*wpath;
 
-	wpath = (TCHAR*) cwid;
-	if (wpath == NULL) {
-		return 0;
+	if ((wpath = (TCHAR*) cwid) == NULL) {
+		return SMM_ERR_NONE;
 	}
 	
 	cwid = SetCurrentDirectory(wpath);
 	free(wpath);
 	if (cwid == 0) {
-		return smm_errno_update(0);
+		return smm_errno_update(SMM_ERR_CHDIR);
 	}
-	return 0;
+	return smm_errno_update(SMM_ERR_NONE);
 }
 #endif
 
 #ifdef	CFG_UNIX_API
 #include <unistd.h>
 
-int smm_cwd_pop(int cwid)
+int smm_cwd_pop(void *cwid)
 {
-	if (cwid >= 0) {
-		if (fchdir(cwid) < 0) {
-			close(cwid);
-			return smm_errno_update(0);
-		}
-		close(cwid);
+	int	fid;
+
+	if (cwid == NULL) {
+		return SMM_ERR_NONE;
 	}
-	return 0;
+
+#if	UINTPTR_MAX == 0xffffffff
+	fid = (int) cwid;
+#else
+	fid = (int)(int64_t) cwid;
+#endif
+
+	if (fchdir(fid) < 0) {
+		close(fid);
+		return smm_errno_update(SMM_ERR_CHDIR);
+	}
+	close(fid);
+	return smm_errno_update(SMM_ERR_NONE);
 }
 #endif
