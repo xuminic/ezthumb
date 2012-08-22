@@ -62,10 +62,17 @@
 #define SMM_FSTAT_DEVICE	2
 #define SMM_FSTAT_LINK		3
 
+
+#define SMM_PATH_DEPTH_MASK	0x0000FFFF	/* should be deep enough */
+#define SMM_PATH_DIR_MASK	0xF0000000
 #define SMM_PATH_DIR_FIFO	0
-#define SMM_PATH_DIR_FIRST	1
-#define SMM_PATH_DIR_LAST	2
-#define SMM_PATH_DIR_MASK	3
+#define SMM_PATH_DIR_FIRST	0x10000000
+#define SMM_PATH_DIR_LAST	0x20000000
+
+#define SMM_PATH_DIR(f,x)	\
+	(((f) & ~SMM_PATH_DIR_MASK) | ((x) & SMM_PATH_DIR_MASK))
+#define SMM_PATH_DEPTH(f,x)	\
+	(((f) & ~SMM_PATH_DEPTH_MASK) | ((x) & SMM_PATH_DEPTH_MASK))
 
 #define SMM_MSG_PATH_ENTER	0
 #define SMM_MSG_PATH_LEAVE	1
@@ -115,7 +122,7 @@ int smm_cwd_pop(void *cwid);
 void *smm_cwd_push(void);
 long long smm_filesize(char *fname);
 int smm_fstat(char *fname);
-int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option);
+int smm_pathtrek(char *path, int flags, F_DIR msg, void *option);
 int smm_pwuid(char *uname, long *uid, long *gid);
 int smm_signal_break(int (*handle)(int));
 int smm_time_diff(SMM_TIME *tmbuf);

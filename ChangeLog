@@ -1,4 +1,10 @@
-20120816:
+20120821: quickfix branch
+  + libsmm: Reviewed the error code strategy of libsmm
+    Use the consistent error codes instead of the system dependent ones
+  + smm_pathtrek.c: many bugs were found and fixed
+  + introduced the recursive depth control
+
+20120816: quickfix branch
   + Improved the --override option. Testing the existance of thumbnails 
     before creating the thumbnail.
 

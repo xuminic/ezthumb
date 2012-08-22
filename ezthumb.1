@@ -350,6 +350,15 @@ after decoding. This option is aimed at some video clips which rely
 on previous key frames to decode a proper frame.
 
 .TP
+.BR " \-\-depth \fIlevels\fP"
+Descend at most 
+.I levels
+(a non-negative integer) levels of directories below the command line
+arguments.  
+.BR "\-\-depth \fI0\fP"
+means unlimited.
+
+.TP
 .BR " \-\-edge \fIvalue\fP"
 Define the thickness of the frame edge around each screenshots.
 The thickness is defined by pixel size.

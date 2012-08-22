@@ -37,9 +37,10 @@ static int path_recur_fifo(struct smmdir *sdir, char *path);
 static int path_recur_first(struct smmdir *sdir, char *path);
 static int path_recur_last(struct smmdir *sdir, char *path);
 
-int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option)
+int smm_pathtrek(char *path, int flags, F_DIR msg, void *option)
 {
 	struct	smmdir	sdir;
+	void	*cwid;
 	int	rc;
 
 	memset(&sdir, 0, sizeof(sdir));
@@ -49,7 +50,7 @@ int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option)
 	}
 	sdir.option = option;
 	sdir.flags  = flags;
-	sdir.depth  = depth;
+	sdir.depth  = flags & SMM_PATH_DEPTH_MASK;
 	sdir.depnow = 0;
 
 	switch (flags & SMM_PATH_DIR_MASK) {
@@ -65,8 +66,10 @@ int smm_pathtrek(char *path, int flags, int depth, F_DIR msg, void *option)
 		break;
 	}
 
+	cwid = smm_cwd_push();
 	rc = sdir.path_recur(&sdir, path);
 	sdir.message(sdir.option, path, SMM_MSG_PATH_STAT, &sdir);
+	smm_cwd_pop(cwid);
 	return rc;
 }
 
@@ -104,8 +107,6 @@ static int wpath_enter(struct smmdir *sdir, TCHAR *wpath, int *rcode)
 	case PATH_STAT_IGNORE:
 		*rcode = smm_errno_update(SMM_ERR_EOP);	
 		return -1;	 /* maybe permission denied */
-	case PATH_STAT_SKIP:		/* skip the '.' and '..' */
-		return 0;			/* no error occur, go ahead */
 	case PATH_STAT_REGULAR:
 		sdir->stat_files++;
 		fname = smm_wcstombs(wpath);
@@ -113,16 +114,17 @@ static int wpath_enter(struct smmdir *sdir, TCHAR *wpath, int *rcode)
 				SMM_MSG_PATH_EXEC, sdir);
 		free(fname);
 		return -2;
+	case PATH_STAT_SKIP:	/* go ahead with '.' and '..' */
 	case PATH_STAT_DIR:
 		break;
 	}
 
 	/* check the depth of subdirectories */
-	if ((sdir->depth >= 0) && (sdir->depnow >= sdir->depth)) {
+	if ((sdir->depth > 0) && (sdir->depnow >= sdir->depth)) {
 		fname = smm_wcstombs(wpath);
 		sdir->message(sdir->option, fname, SMM_MSG_PATH_FLOOR, sdir);
 		free(fname);
-		*rcode = smm_errno_update(SMM_ERR_EOP);
+		*rcode = smm_errno_update(SMM_ERR_NONE);
 		return -3;
 	}
 	
@@ -145,10 +147,10 @@ static int wpath_leave(struct smmdir *sdir, TCHAR *wpath)
 
 	SetCurrentDirectory(TEXT(".."));
 
-	sdir->depnow--;
 	fname = smm_wcstombs(wpath);
 	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
 	free(fname);
+	sdir->depnow--;
 	return SMM_ERR_NONE;
 }
 
@@ -377,21 +379,20 @@ static int path_enter(struct smmdir *sdir, char *path, int *rcode)
 	case PATH_STAT_IGNORE:
 		*rcode = smm_errno_update(SMM_ERR_EOP);	
 		return -1;	 /* maybe permission denied */
-	case PATH_STAT_SKIP:		/* skip the '.' and '..' */
-		return 0;		/* no error occur, go ahead */
 	case PATH_STAT_REGULAR:
 		sdir->stat_files++;
 		*rcode = sdir->message(sdir->option, path, 
 				SMM_MSG_PATH_EXEC, sdir);
 		return -2;
+	case PATH_STAT_SKIP:	/* go ahead with '.' and '..' */
 	case PATH_STAT_DIR:
 		break;
 	}
 
 	/* check the depth of subdirectories */
-	if ((sdir->depth >= 0) && (sdir->depnow >= sdir->depth)) {
+	if ((sdir->depth > 0) && (sdir->depnow >= sdir->depth)) {
 		sdir->message(sdir->option, path, SMM_MSG_PATH_FLOOR, sdir);
-		*rcode = smm_errno_update(SMM_ERR_EOP);
+		*rcode = smm_errno_update(SMM_ERR_NONE);
 		return -3;
 	}
 	
@@ -408,12 +409,15 @@ static int path_enter(struct smmdir *sdir, char *path, int *rcode)
 
 static int path_leave(struct smmdir *sdir, char *path)
 {
-	if (chdir("..") < 0) {
+	/*if (chdir("..") < 0) {
 		return smm_errno_update(SMM_ERR_CHDIR);
-	}
+	}*/
+	/* absorbbed the possible error by chdir beyond / directory,
+	 * which is possible if started the pathtrek(.) or pathtrek(/) */
+	chdir("..");
 
-	sdir->depnow--;
 	sdir->message(sdir->option, path, SMM_MSG_PATH_LEAVE, sdir);
+	sdir->depnow--;
 	return SMM_ERR_NONE;
 }
 

@@ -48,14 +48,14 @@ static int do_smm_chdir(char *path)
 
 	printf("Press any key to continue ... ");
 	getchar();
-	printf("(%d)\n", rc);
-	return 0;
+	return rc;
 }
 
 static int do_push_dir(char *path)
 {
 	char	*cwd;
-	int	rc, cid;
+	void	*cid;
+	int	rc;
 
 	cwd = smm_cwd_alloc();
 	printf("Current: %s\n", cwd);
@@ -76,8 +76,7 @@ static int do_push_dir(char *path)
 
 	printf("Press any key to continue ... ");
 	getchar();
-	printf("(%d)\n", rc);
-	return 0;
+	return rc;
 }
 
 static int do_stat_file(char *path)
@@ -99,8 +98,7 @@ static int do_stat_file(char *path)
 		printf("%s: device\n", path);
 		break;
 	}
-	printf("(%d)\n", rc);
-	return 0;
+	return rc;
 }
 
 
@@ -110,10 +108,10 @@ static int pathtrek_cb(void *option, char *path, int type, void *info)
 
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		printf("Enter %s\n", path);
+		printf("Enter[%d] %s\n", sdir->depnow, path);
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		printf("Leave %s (%d:%d)\n", path, 
+		printf("Leave[%d] %s (%d:%d)\n", sdir->depnow, path,
 				sdir->stat_dirs, sdir->stat_files);
 		break;
 	case SMM_MSG_PATH_STAT:
@@ -128,11 +126,7 @@ static int pathtrek_cb(void *option, char *path, int type, void *info)
 
 static int do_path_trek(char *path, int flags)
 {
-	int	rc;
-
-	rc = smm_pathtrek(path, flags, 0, pathtrek_cb, NULL);
-	printf("(%d)\n", rc);
-	return 0;
+	return smm_pathtrek(path, flags, pathtrek_cb, NULL);
 }
 
 
@@ -140,10 +134,11 @@ static  char    *usage = "\
 OPTIONS:\n\
   -c DIR    change current working directory\n\
   -p DIR    push/pop current working directory\n\
-  -r DIR    process directory recurrsively\n\
+  -r DIR    process directory recursively\n\
      --dir-fifo\n\
      --dir-first\n\
      --dir-last\n\
+     --depth N\n\
   -s FILE   state of the file \n\
 ";
 
@@ -156,11 +151,12 @@ There is NO WARRANTY, to the extent permitted by law.\n";
 
 int main(int argc, char **argv)
 {
-	int	d_flags;
+	int	rc, d_flags;
 
 	smm_init();
 	smm_signal_break(do_signal_break);
 
+	rc = 0;
 	d_flags = SMM_PATH_DIR_FIFO;
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "-h")) {
@@ -168,42 +164,47 @@ int main(int argc, char **argv)
 		} else if (!strcmp(*argv, "-V")) {
 			puts(version);
 		} else if (!strcmp(*argv, "--dir-fifo")) {
-			d_flags &= ~SMM_PATH_DIR_MASK;
-			d_flags |= SMM_PATH_DIR_FIFO;
+			d_flags = SMM_PATH_DIR(d_flags, SMM_PATH_DIR_FIFO);
 		} else if (!strcmp(*argv, "--dir-first")) {
-			d_flags &= ~SMM_PATH_DIR_MASK;
-			d_flags |= SMM_PATH_DIR_FIRST;
+			d_flags = SMM_PATH_DIR(d_flags, SMM_PATH_DIR_FIRST);
 		} else if (!strcmp(*argv, "--dir-last")) {
-			d_flags &= ~SMM_PATH_DIR_MASK;
-			d_flags |= SMM_PATH_DIR_LAST;
+			d_flags = SMM_PATH_DIR(d_flags, SMM_PATH_DIR_LAST);
+		} else if (!strcmp(*argv, "--depth")) {
+			if (--argc == 0) {
+				break;
+			} else {
+				rc = strtol(*++argv, NULL, 0);
+				d_flags = SMM_PATH_DEPTH(d_flags, rc);
+			}
 		} else if (!strcmp(*argv, "-c")) {
 			if (--argc == 0) {
 				break;
 			} else {
-				do_smm_chdir(*++argv);
+				rc = do_smm_chdir(*++argv);
 			}
 		} else if (!strcmp(*argv, "-p")) {
 			if (--argc == 0) {
 				break;
 			} else {
-				do_push_dir(*++argv);
+				rc = do_push_dir(*++argv);
 			}
 		} else if (!strcmp(*argv, "-s")) {
 			if (--argc == 0) {
 				break;
 			} else {
-				do_stat_file(*++argv);
+				rc = do_stat_file(*++argv);
 			}
 		} else if (!strcmp(*argv, "-r")) {
 			if (--argc == 0) {
 				break;
 			} else {
-				do_path_trek(*++argv, d_flags);
+				rc = do_path_trek(*++argv, d_flags);
 			}
 		} else {
 			printf("Unknown option. [%s]\n", *argv);
 		}
 	}
-	return 0;
+	printf("(0x%x)\n", smm_errno_zip(rc));
+	return smm_errno_zip(rc);
 }
 
