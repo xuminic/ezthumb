@@ -34,11 +34,11 @@ int smm_cwd_pop(void *cwid)
 		return SMM_ERR_NONE;
 	}
 	
-	cwid = SetCurrentDirectory(wpath);
-	free(wpath);
-	if (cwid == 0) {
+	if (SetCurrentDirectory(wpath) == 0) {
+		free(wpath);
 		return smm_errno_update(SMM_ERR_CHDIR);
 	}
+	free(wpath);
 	return smm_errno_update(SMM_ERR_NONE);
 }
 #endif

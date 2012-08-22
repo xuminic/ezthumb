@@ -1,4 +1,4 @@
-20120822: quickfix branch
+20120822: quickfix branch V2.1.9
   + Makefile: convert man page to PDF file when releasing the ezthumb
   - Makefile: could be a problem in Windows
   + Makefile: decided to generate PDF page in linux and manage with git
