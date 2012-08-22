@@ -1,6 +1,9 @@
 20120822: quickfix branch
   + Makefile: convert man page to PDF file when releasing the ezthumb
   - Makefile: could be a problem in Windows
+  + Makefile: decided to generate PDF page in linux and manage with git
+  + id_lookup.c: fixed the deprecated symbols in ffmpeg-1.x
+    (LIBAVCODEC_VERSION_MAJOR == 54)
 
 20120821: quickfix branch
   + libsmm: Reviewed the error code strategy of libsmm

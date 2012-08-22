@@ -147,10 +147,14 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_FRAME_COMPLETE:
-		//dump_frame(block, opt);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+			dump_frame(block, opt);
+		}
 		break;
 	case EN_FRAME_PARTIAL:
-		//dump_frame(block, opt);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+			dump_frame(block, opt);
+		}
 		break;
 	case EN_FRAME_EFFECT:
 		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
@@ -175,26 +179,32 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_STREAM_FORMAT:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
+			dump_stream(((AVFormatContext*)block)->
+					streams[(int)param]);
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
+				EZOP_DEBUG_INFO) {
 			dump_codec_attr(block, (int)param);
-			//dump_stream(((AVFormatContext*)block)->streams
-			//	[(int)param]);
 		}
 		break;
 	case EN_TYPE_VIDEO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
-			//dump_video_context(block);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
+			dump_video_context(block);
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
+				EZOP_DEBUG_BRIEF) {
 			dump_codec_video(block);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
-			//dump_audio_context(block);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
+			dump_audio_context(block);
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
+				EZOP_DEBUG_BRIEF) {
 			dump_codec_audio(block);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
 			dump_other_context(block);
 		}
 		break;
@@ -366,7 +376,7 @@ int dump_audio_context(AVCodecContext *codec)
 			id_lookup(id_codec, codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->channels, codec->sample_rate,
-			id_lookup(id_sam_format, codec->sample_fmt),
+			id_lookup_tail(id_sample_format, codec->sample_fmt),
 			codec->bit_rate);
 	return 0;
 }

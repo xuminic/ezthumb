@@ -1681,7 +1681,8 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 	}
 
 	sprintf(tmp, ": %d-CH  %s %dHz ", stream->codec->channels, 
-			id_lookup(id_sam_format, stream->codec->sample_fmt),
+			id_lookup_tail(id_sample_format, 
+					stream->codec->sample_fmt),
 			stream->codec->sample_rate);
 	strcat(buffer, tmp);
 

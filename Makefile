@@ -47,7 +47,7 @@ all: ezthumb
 
 
 ifeq	($(SYSTOOL),unix)
-ezthumb: smm objdir $(OBJS)
+ezthumb: smm objdir $(OBJS) ezthumb.pdf
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb: smm
@@ -62,6 +62,9 @@ ezthumb.exe: $(OBJS)
 # internal rules, do not use it
 ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
 	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
+
+ezthumb.pdf: ezthumb.1
+	man -l -Tps $< |ps2pdf - $@
 
 objdir:
 	if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
@@ -89,7 +92,7 @@ else
 install: ezthumb version
 	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
 	-mkdir $(RELDIR)-win-bin
-	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.ico $(RELDIR)-win-bin
+	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXDLL) $(RELDIR)-win-bin
 endif
 
@@ -111,15 +114,15 @@ endif
 
 cleanall: clean
 	make -C libsmm clean
+	$(RM) ezthumb.pdf
 
 rel_source:
 	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
 	-mkdir $(RELDIR)/libsmm
-	-$(CP) *.c *.h *.1 *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
+	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
 	-$(CP) SMirC-thumbsup.svg $(RELDIR)
 	-$(CP) libsmm/*.c libsmm/*.h libsmm/Makefile $(RELDIR)/libsmm
-	-man -l -Tps ./ezthumb.1 |ps2pdf - ezthumb.pdf
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)
 
