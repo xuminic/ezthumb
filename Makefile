@@ -119,6 +119,7 @@ rel_source:
 	-$(CP) *.c *.h *.1 *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
 	-$(CP) SMirC-thumbsup.svg $(RELDIR)
 	-$(CP) libsmm/*.c libsmm/*.h libsmm/Makefile $(RELDIR)/libsmm
+	-man -l -Tps ./ezthumb.1 |ps2pdf - ezthumb.pdf
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)
 

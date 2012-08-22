@@ -1,3 +1,7 @@
+20120822: quickfix branch
+  + Makefile: convert man page to PDF file when releasing the ezthumb
+  - Makefile: could be a problem in Windows
+
 20120821: quickfix branch
   + libsmm: Reviewed the error code strategy of libsmm
     Use the consistent error codes instead of the system dependent ones
