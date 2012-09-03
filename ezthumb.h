@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.9"
+#define EZTHUMB_VERSION		"2.1.10"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
