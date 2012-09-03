@@ -753,13 +753,6 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 		}
 		printf("\n");
 	}*/
-	{
-		FILE	*fp;
-
-		fp = fopen("log.txt", "a");
-		fwrite(s, strlen(s), 1, fp);
-		fclose(fp);
-	}
 	/* 20120903 Bugfix: set the codepage to utf-8 before calling
 	 * ezthumb core. In Win32 version, the ezthumb core uses the 
 	 * default codepage to process file name. However the GTK converted
