@@ -46,7 +46,7 @@ char *smm_cwd_alloc(void)
 		smm_errno_update(SMM_ERR_GETCWD);
 		return NULL;	/* system call failed */
 	}
-	WideCharToMultiByte(smm_sys_cp, 0, wpath + len * 3, -1, 
+	WideCharToMultiByte(smm_codepage(), 0, wpath + len * 3, -1, 
 			(char*) wpath, sizeof(TCHAR) * len * 3, NULL, NULL);
 	return (char*) wpath;
 }

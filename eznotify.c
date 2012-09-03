@@ -75,6 +75,9 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 	case EZ_ERR_CODEC_FAIL:
 		printf("Could not open codec! %ld\n", param);
 		break;
+	case EZ_ERR_FILE:
+		printf("%s: file not found.\n", (char*) block);
+		break;
 
 	case EN_FILE_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {

@@ -700,6 +700,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	}
 */
 	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
+		uperror(errcode, EZ_ERR_FILE);
+		eznotify(NULL, EZ_ERR_FILE, 0, 0, filename);
 		free(vidx);
 		return NULL;
 	}

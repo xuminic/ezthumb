@@ -24,18 +24,37 @@
 
 #include "libsmm.h"
 
-#ifdef	CFG_WIN32_API
+static	int	smm_sys_cp;
+
 int smm_codepage(void)
 {
-	return GetConsoleOutputCP();
+	return smm_sys_cp;
+}
+
+int smm_codepage_set(int cpno)
+{
+	int	tmp;
+
+	tmp = smm_sys_cp;
+	smm_sys_cp = cpno;
+	return tmp;
+}
+
+#ifdef	CFG_WIN32_API
+int smm_codepage_reset(void)
+{
+	//return GetConsoleOutputCP();
+	smm_sys_cp = GetACP();
+	return smm_sys_cp;
 }
 #endif
 
 
 #ifdef	CFG_UNIX_API
-int smm_codepage(void)
+int smm_codepage_reset(void)
 {
-	return 65001;	/* UTF-8 in WIN32 API */
+	smm_sys_cp = 65001;	/* UTF-8 in WIN32 API */
+	return smm_sys_cp;
 }
 #endif
 

@@ -310,7 +310,15 @@ static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter)
 	gui->list_model = model;
 	gui->list_iter  = iter;
 	gtk_tree_model_get(model, iter, EZUI_COL_NAME, &s, -1);
+
+	/* 20120903 Bugfix: set the codepage to utf-8 before calling
+	 * ezthumb core. In Win32 version, the ezthumb core uses the 
+	 * default codepage to process file name. However the GTK converted
+	 * the file name to UTF-8 so the Windows version could not find
+	 * the file. There's no such problem in linux. */
+	smm_codepage_set(65001);
 	ezthumb(s, gui->sysopt);
+	smm_codepage_reset();
 	g_free(s);
 	return 0;
 }
@@ -745,8 +753,22 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 		}
 		printf("\n");
 	}*/
+	{
+		FILE	*fp;
 
-	if ((vidx = video_allocate(s, gui->sysopt, NULL)) == NULL) {
+		fp = fopen("log.txt", "a");
+		fwrite(s, strlen(s), 1, fp);
+		fclose(fp);
+	}
+	/* 20120903 Bugfix: set the codepage to utf-8 before calling
+	 * ezthumb core. In Win32 version, the ezthumb core uses the 
+	 * default codepage to process file name. However the GTK converted
+	 * the file name to UTF-8 so the Windows version could not find
+	 * the file. There's no such problem in linux. */
+	smm_codepage_set(65001);
+	vidx = video_allocate(s, gui->sysopt, NULL);
+	smm_codepage_reset();
+	if (vidx == NULL) {
 		ezadd->dis_count++;
 		gtk_text_buffer_insert_at_cursor(ezadd->discarded, s, -1);
 		gtk_text_buffer_insert_at_cursor(ezadd->discarded, "\n", -1);
@@ -786,7 +808,7 @@ static void ezgui_page_main_dialog_invalid_files(EZADD *ezadd)
 	gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
 
 	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_widget_set_size_request(scroll, 300, 150);
+	gtk_widget_set_size_request(scroll, 600, 240);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
 			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(scroll), text);

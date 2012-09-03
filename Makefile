@@ -47,7 +47,7 @@ all: ezthumb
 
 
 ifeq	($(SYSTOOL),unix)
-ezthumb: smm objdir $(OBJS) ezthumb.pdf
+ezthumb: smm objdir $(OBJS) ezthumb.pdf libsmm/libsmm.a
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
 ezthumb: smm
@@ -56,11 +56,11 @@ ezthumb: smm
 endif
 
 # internal rules, do not use it
-ezthumb.exe: $(OBJS)
+ezthumb.exe: $(OBJS) libsmm/libsmm.a
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
 # internal rules, do not use it
-ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
+ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS) libsmm/libsmm.a
 	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lsmm
 
 ezthumb.pdf: ezthumb.1

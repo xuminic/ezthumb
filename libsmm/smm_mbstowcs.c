@@ -31,7 +31,7 @@ void *smm_mbstowcs(char *mbs)
 	int	len;
 
 	smm_errno_update(SMM_ERR_NONE);
-	len = MultiByteToWideChar(smm_sys_cp, 0, mbs, -1, NULL, 0);
+	len = MultiByteToWideChar(smm_codepage(), 0, mbs, -1, NULL, 0);
 	if (len <= 0) {
 		smm_errno_update(SMM_ERR_LENGTH);
                 return NULL;
@@ -40,7 +40,7 @@ void *smm_mbstowcs(char *mbs)
 		smm_errno_update(SMM_ERR_LOWMEM);
 		return NULL;
 	}
-	MultiByteToWideChar(smm_sys_cp, 0, mbs, -1, buf, len);
+	MultiByteToWideChar(smm_codepage(), 0, mbs, -1, buf, len);
 	return buf;
 }
 #endif

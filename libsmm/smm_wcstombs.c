@@ -31,7 +31,8 @@ char *smm_wcstombs(void *wcs)
 	int	len;
 
 	smm_errno_update(SMM_ERR_NONE);
-	len = WideCharToMultiByte(smm_sys_cp, 0, wcs, -1, NULL, 0, NULL, NULL);
+	len = WideCharToMultiByte(smm_codepage(), 
+			0, wcs, -1, NULL, 0, NULL, NULL);
 	if (len <= 0) {
 		smm_errno_update(SMM_ERR_LENGTH);
 		return NULL;
@@ -40,7 +41,7 @@ char *smm_wcstombs(void *wcs)
 		smm_errno_update(SMM_ERR_LOWMEM);
 		return NULL;
 	}
-	WideCharToMultiByte(smm_sys_cp, 0, wcs, -1, buf, len, NULL, NULL);
+	WideCharToMultiByte(smm_codepage(), 0, wcs, -1, buf, len, NULL, NULL);
 	return buf;
 }
 #endif

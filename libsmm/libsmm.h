@@ -108,7 +108,6 @@ typedef	struct timeval	SMM_TIME;
 #endif
 
 extern	int	smm_error_no;
-extern	int	smm_sys_cp;
 
 int smm_init(void);
 int smm_errno(void);
@@ -117,6 +116,8 @@ int smm_errno_update(int value);
 
 int smm_chdir(char *path);
 int smm_codepage(void);
+int smm_codepage_set(int cpno);
+int smm_codepage_reset(void);
 char *smm_cwd_alloc(void);
 int smm_cwd_pop(void *cwid);
 void *smm_cwd_push(void);

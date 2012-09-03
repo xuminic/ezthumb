@@ -24,13 +24,12 @@
 /* Error mask is always 1000 0000 ... in 32-bit error code
  * libsmm error mask uses 0100 0000 ... in 32-bit error code */
 int	smm_error_no;
-int	smm_sys_cp;
 
 
 int smm_init(void)
 {
 	smm_error_no = SMM_ERR_NONE;
-	smm_sys_cp   = smm_codepage();
+	smm_codepage_reset();
 	return SMM_ERR_NONE;
 }
 

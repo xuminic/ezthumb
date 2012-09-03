@@ -1,3 +1,23 @@
+20120902: quickfix branch V2.1.10
+  + ezgui.c: temporarily change the default codepage to UTF-8 to fix the
+    file name issue. The problem is that ezthumb uses native codepage to 
+    translate the file name, which came from the command line as the native
+    form. However, the file name passed from GTK had been converted to UTF-8.
+    When command line version works good, the GUI version failed.
+    Temporarily changing the codepage to UTF-8 before calling ezthumb core
+    functions, the MultiByteToWideChar() could work properly.
+
+20120829: quickfix branch
+  + https://sourceforge.net/p/ezthumb/discussion/general/thread/3fe795fe/
+    A bug was found in Win32 version that ezthumb failed to open certain
+    files with unknown codepage characters in the file name. 
+    When MultiByteToWideChar() converted the file name to UTF-16 string,
+    it was using the output codepage of console, which was ANSI. However
+    the CreateFile() was waiting for the name converted to 623 in my machine.
+    Both converting are correct but dismatched. This problem only happens 
+    in Windows because Linux uses UTF-8 as default.
+  + smm_codepage.c: fixed the default codepage by GetACP()
+
 20120822: quickfix branch V2.1.9
   + Makefile: convert man page to PDF file when releasing the ezthumb
   - Makefile: could be a problem in Windows
