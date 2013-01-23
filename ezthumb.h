@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libsmm.h"
 
-#define EZTHUMB_VERSION		"2.1.9pre"
+#define EZTHUMB_VERSION		"2.2.0"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -325,13 +325,8 @@ typedef	struct	{
 	/* frame images extracted from the video stream */
 	AVFrame	*rgb_frame;	/* turn the frame to RGB mode */
 	uint8_t	*rgb_buffer;	/* the buffer of the RGB mode frame */
-	int	src_width;	/* original video frame size */
-	int	src_height;
-	int	src_pixfmt;	/* original video frame pixel format */
-	int	ar_height;	/* original video height by AR correction */
 
 	/* scaled frame images */
-	struct	SwsContext	*swsctx;	/* scaler context */
 	int	dst_width;	/* scaled video frame size */
 	int	dst_height;
 	int	dst_pixfmt;	/* scaled video frame pixel format */
@@ -382,10 +377,12 @@ typedef	struct		{
 	int		rf_pac;
 } EZFRM;
 
-typedef	struct		{
+typedef	struct	_EzVid	{
 	AVFormatContext	*formatx;	/* must NULL it !! */
 	AVCodecContext	*codecx;
 	int		vsidx;
+
+	struct	SwsContext	*swsctx;	/* scaler context */
 	
 	EZFRM		fgroup[2];
 	int		fnow;
@@ -406,7 +403,7 @@ typedef	struct		{
 	void		*keylib;	/* the anchor to keyframe list */
 
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
-	EZIMG		*image;		/* link to its EZIMG parameters */
+	struct	_EzVid	*next;		/* link to the next EZVID object */
 	char		*filename;	/* link to the file name */
 	long long	filesize;
 } EZVID;

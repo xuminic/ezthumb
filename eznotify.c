@@ -482,7 +482,7 @@ int dump_ezimage(EZIMG *image)
 {
 	printf("\n>>>>>>>>>>>>>>>>>>\n");
 	printf("Source frame size: %dx%dx%d\n", 
-			image->src_width, image->src_height, image->src_pixfmt);
+			vidx->src_width, vidx->src_height, vidx->src_pixfmt);
 	printf("Single shot size:  %dx%dx%d-%d\n", 
 			image->dst_width, image->dst_height, image->dst_pixfmt,
 			image->sysopt->edge_width);

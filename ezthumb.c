@@ -34,6 +34,7 @@
 
 
 
+static int video_alloc_scaler(EZVID *vidx, EZIMG *image);
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
 //static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, int64_t);
@@ -46,6 +47,7 @@ static int video_find_stream(EZVID *vidx, int flags);
 static int video_duration(EZVID *vidx);
 static int video_duration_check(EZVID *vidx);
 static int video_duration_seek(EZVID *vidx);
+static int video_image_scale(EZVID *vidx, EZIMG *image, AVFrame *frame);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
@@ -65,8 +67,8 @@ static int64_t video_packet_timestamp(AVPacket *packet);
 
 static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
 static int image_free(EZIMG *image);
-static int image_user_profile(EZIMG *image, int *, int *, int *, int *, int *);
-static int image_scale(EZIMG *image, AVFrame *frame);
+static int image_user_profile(EZIMG *image, int src_width, int *col, int *row,
+		int *width, int *height, int *facto);
 static int image_font_test(EZIMG *image, char *filename);
 static int image_gdframe_update(EZIMG *image);
 static int image_gdframe_timestamp(EZIMG *image, char *timestamp);
@@ -281,37 +283,23 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 }
 
 
-int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt)
+int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 {
 	EZIMG	*image;
 	EZVID	*vidx, *vtmp;
-	int	i, rc, durall;
-	int	*vfilter;
+	int	i, rc, durtmp, durall;
 
-	if ((vfilter = calloc(fnum, sizeof(int))) == NULL) {
-		return EZ_ERR_LOWMEM;
-	}
-	for (i = 0; i < fnum; i++) {
-		if ((vidx = video_allocate(filename[i], ezopt,&rc)) != NULL) {
-			break;
-		}
-		vfilter[i] = 1;		/* disable it */
-	}
-	for (durall = vidx->duration; i < fnum; i++) {
-		if ((vtmp = video_allocate(filename[i], ezopt,&rc)) == NULL) {
-			vfilter[i] = 1;	/* disable it */
-		} else {
-			durall += vtmp->duration;
-			video_free(vtmp);
-		}
+	if ((vroot = video_group_open(fname, fnum, ezopt, &durall)) == NULL) {
+		return 0;
 	}
 
-	vidx->duration = durall;
+	durtmp = vroot->duration;
+	vroot->duration = durall;
 	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
-		video_free(vidx);
-		free(vfilter);
+		video_group_close(vroot);
 		return rc;
 	}
+	vroot->duration = durtmp;
 
 	/* if the expected time_step is 0, then it will save every 
 	 * key frames separately. it's good for debug purpose  */
@@ -324,18 +312,32 @@ int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt)
 	video_keyframe_credit(vidx, -1);
 
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
-	for (i = 0; i < fnum; i++) {
-		if (vfilter[i]) {
-			continue;
+
+	dts_snap = video_snap_point(vidx, image, i);
+	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
+		/* use video_decode_next() instead of video_decode_keyframe()
+		 * because sometimes it's good for debugging doggy clips */
+		if (video_decode_next(vidx, &packet) < 0) {
+			break;
 		}
-		vtmp = video_allocate(filename[i], ezopt, &rc);
-		video_snapshot_safemode(vtmp, image);
-		video_free(vtmp);
+		if (dts >= dts_snap) {
+			video_snap_update(vidx, image, dts_snap);
+			dts_snap = video_snap_point(vidx, image, ++i);
+		}
+		if (i >= image->shots) {
+			break;
+		}
 	}
+	if (i < image->shots) {
+		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
+		/*for ( ; i < image->shots; i++) {
+			video_snap_update(vidx, image, -1);
+		}*/
+	}
+	video_snap_end(vidx, image);
 
 	image_free(image);
 	video_free(vidx);
-	free(vfilter);
 	return 0;
 }
 
@@ -725,6 +727,38 @@ int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
 			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
 }
 
+EZVID *video_group_open(char **fname, int fnum, EZOPT *ezopt, int *dur)
+{
+	EZVID	*vp, *vidx, *vroot = NULL;
+	int	i, rc;
+
+	for (*dur = 0, i = 0; i < fnum; i++) {
+		if ((vidx = video_allocate(fname[i], ezopt, &rc)) == NULL) {
+			continue;
+		}
+		if (vroot == NULL) {
+			vroot = vidx;
+		} else {
+			for (vp = vroot; vp->next; vp = vp->next);
+			vp->next = vidx;
+		}
+		*dur += vidx->duration;
+	}
+	return vroot;
+}
+
+int video_group_close(EZVID *vroot)
+{
+	EZVID	*vidx;
+
+	while (vroot) {
+		vidx = vroot;
+		vroot = vroot->next;
+		video_free(vidx);
+	}
+	reutrn 0;
+}
+
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
@@ -927,6 +961,9 @@ int video_free(EZVID *vidx)
 		av_close_input_file(vidx->formatx);
 #endif
 	}
+	if (vidx->swsctx) {
+		sws_freeContext(vidx->swsctx);
+	}
 	vidx->keylib = dts_lib_free(vidx->keylib);
 
 	/* 20120724 deregister the video object so it can be reused */
@@ -934,6 +971,21 @@ int video_free(EZVID *vidx)
 
 	free(vidx);
 	return EZ_ERR_NONE;
+}
+
+
+static int video_alloc_scaler(EZVID *vidx, EZIMG *image)
+{
+	/* allocate the swscale structure for scaling the screen image */
+	vidx->swsctx = sws_getContext(vidx->codecx->width, 
+			vidx->codecx->height, vidx->codecx->pix_fmt, 
+			image->dst_width, image->dst_height,
+			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
+	if (vidx->swsctx == NULL) {
+		uperror(errcode, EZ_ERR_SWSCALE);
+		return EZ_ERR_SWSCALE;
+	}
+	return 0;
 }
 
 
@@ -1353,6 +1405,13 @@ static int video_duration_seek(EZVID *vidx)
 	return vidx->seekable;
 }
 
+static int video_image_scale(EZVID *vidx, EZIMG *image, AVFrame *frame)
+{
+	return sws_scale(vidx->swsctx, (const uint8_t * const *)frame->data,
+			frame->linesize, 0, vidx->codecx->height, 
+			image->rgb_frame->data, image->rgb_frame->linesize);
+}
+
 
 static int64_t video_statistics(EZVID *vidx)
 {
@@ -1450,7 +1509,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	meta_timestamp(dtms, 1, timestamp);
 
 	/* write the timestamp into the shot */
-	image_scale(image, ezfrm->frame);
+	video_image_scale(vidx, image, ezfrm->frame);
 	image_gdframe_update(image);
 
 	if (image->sysopt->flags & EZOP_TIMEST) {
@@ -1830,6 +1889,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	int	size, shots;
 	int	pro_col, pro_row, pro_width, pro_height, pro_facto;
 	int	pro_canvas;
+	int	src_width, ar_height;
 
 	// FIXME: the filename could be utf-8 or widebytes
 	size = sizeof(EZIMG) + strlen(vidx->filename) + 128;
@@ -1839,15 +1899,14 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	}
 	
 	image->sysopt = ezopt;
-	image->src_width  = vidx->codecx->width;
-	image->src_height = vidx->codecx->height;
-	image->src_pixfmt = vidx->codecx->pix_fmt;
+	src_width  = vidx->codecx->width;
 
 	/* 20120720 Apply the AR correction */
-	image->ar_height = image->src_height;
+	/* calculate the original video height by AR correction */
+	ar_height = vidx->codecx->height;
 	if (vidx->codecx->sample_aspect_ratio.num && 
 			vidx->codecx->sample_aspect_ratio.den) {
-		image->ar_height = image->src_height * 
+		ar_height = vidx->codecx->height * 
 			vidx->codecx->sample_aspect_ratio.den /
 			vidx->codecx->sample_aspect_ratio.num;
 	}
@@ -1872,31 +1931,27 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	pro_width  = ezopt->tn_width;
 	pro_height = ezopt->tn_height;
 	pro_facto  = ezopt->tn_facto;
-	pro_canvas = image_user_profile(image, &pro_col, &pro_row, 
+	pro_canvas = image_user_profile(image, src_width, &pro_col, &pro_row, 
 			&pro_width, &pro_height, &pro_facto);
 	
 	/* calculate the expected size of each screen shots.
 	 * Note that the result will be overriden by canvas_width */
 	if ((pro_width < 1) && (pro_height < 1)) {
 		if (pro_facto < 1) {
-			image->dst_width  = image->src_width;
-			image->dst_height = image->ar_height;
+			image->dst_width  = src_width;
+			image->dst_height = ar_height;
 		} else {
-			image->dst_width  = ((image->src_width * pro_facto)
-					/ 100) & ~1;
-			image->dst_height = ((image->ar_height * pro_facto) 
-					/ 100) & ~1;
+			image->dst_width  = ((src_width * pro_facto)/100) & ~1;
+			image->dst_height = ((ar_height * pro_facto)/100) & ~1;
 		}
 	} else if ((pro_width > 0) && (pro_height > 0)) {
 		image->dst_width  = pro_width & ~1;
 		image->dst_height = pro_height & ~1;
 	} else if (pro_width > 0) {
 		image->dst_width  = pro_width & ~1;
-		image->dst_height = (pro_width * image->ar_height /
-				image->src_width) & ~1;
+		image->dst_height = (pro_width * ar_height / src_width) & ~1;
 	} else {
-		image->dst_width  = (pro_height * image->src_width /
-				image->ar_height) & ~1;
+		image->dst_width  = (pro_height * src_width / ar_height) & ~1;
 		image->dst_height = pro_height;
 	}
 	image->dst_pixfmt = PIX_FMT_RGB24;
@@ -1957,7 +2012,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 					size);
 
 			/* it's the reference height for getting the gap size*/
-			size = size * image->ar_height / image->src_width;
+			size = size * ar_height / src_width;
 			image->gap_height = image_cal_ratio(ezopt->grid_gap_h, 
 					size);
 			image->rim_height = image_cal_ratio(ezopt->grid_rim_h, 
@@ -1975,7 +2030,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 					pro_height / pro_width;
 			} else {
 				image->dst_height = image->dst_width * 
-					image->ar_height / image->src_width;
+					ar_height / src_width;
 			}
 			/* adjust the dimention of shots to even boundry */
 			image->dst_width  = image->dst_width & ~1;
@@ -2052,17 +2107,6 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	avpicture_fill((AVPicture *) image->rgb_frame, image->rgb_buffer, 
 			image->dst_pixfmt, image->dst_width,image->dst_height);
 
-	/* allocate the swscale structure for scaling the screen image */
-	image->swsctx = sws_getContext(image->src_width, image->src_height, 
-			image->src_pixfmt, 
-			image->dst_width, image->dst_height,
-			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
-	if (image->swsctx == NULL) {
-		image_free(image);
-		uperror(errcode, EZ_ERR_SWSCALE);
-		return NULL;
-	}
-
 	/* create a GD device for handling the screen shots */
 	image->gdframe = gdImageCreateTrueColor(image->dst_width, 
 			image->dst_height);
@@ -2127,8 +2171,6 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 	/* 20120724 Register the image object so unix signal can intervene */
 	ezopt->imgobj = image;
-	/* register the image object to the video object */
-	vidx->image = image;
 
 	eznotify(vidx, EN_IMAGE_CREATED, 0, 0, image);
 	return image;	
@@ -2141,9 +2183,6 @@ static int image_free(EZIMG *image)
 	}
 	if (image->gdframe) {
 		gdImageDestroy(image->gdframe);
-	}
-	if (image->swsctx) {
-		sws_freeContext(image->swsctx);
 	}
 	if (image->rgb_buffer) {
 		av_free(image->rgb_buffer);
@@ -2158,7 +2197,7 @@ static int image_free(EZIMG *image)
 	return EZ_ERR_NONE;
 }
 
-static int image_user_profile(EZIMG *image, int *col, int *row,
+static int image_user_profile(EZIMG *image, int src_width, int *col, int *row,
 		int *width, int *height, int *facto)
 {
 	int	shots;
@@ -2167,17 +2206,10 @@ static int image_user_profile(EZIMG *image, int *col, int *row,
 			image->time_during / 1000, col, row);
 	if (shots > 0) {
 		ezopt_profile_sampled(image->sysopt, 
-				image->src_width, shots, col, row);
+				src_width, shots, col, row);
 	}
 	return ezopt_profile_zooming(image->sysopt,
-			image->src_width, width, height, facto);
-}
-
-static int image_scale(EZIMG *image, AVFrame *frame)
-{
-	return sws_scale(image->swsctx, (const uint8_t * const *)frame->data,
-			frame->linesize, 0, image->src_height, 
-			image->rgb_frame->data, image->rgb_frame->linesize);
+			src_width, width, height, facto);
 }
 
 static int image_font_test(EZIMG *image, char *filename)
