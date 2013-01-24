@@ -192,7 +192,8 @@
 #define EZ_BR_GATE_LOW		13000
 
 
-#define BYTE	unsigned char
+#define EZBYTE	unsigned char
+#define EZTIME	int64_t
 
 
 
@@ -254,9 +255,9 @@ typedef	struct	{
 	int	grid_rim_h;	/* rim height in the canvas */
 
 	/* color setting is combined by R,G,B and A (array index 0-3) */
-	BYTE	edge_color[4];		/* edge line wrapping the thumbshot */
-	BYTE	shadow_color[4];	/* shadow of the thumbshot */
-	BYTE	canvas_color[4];	/* background color of the canvas */
+	EZBYTE	edge_color[4];		/* edge line wrapping the thumbshot */
+	EZBYTE	shadow_color[4];	/* shadow of the thumbshot */
+	EZBYTE	canvas_color[4];	/* background color of the canvas */
 
 	/* edge is always inside the thumbshot */
 	int	edge_width;	/* thickness of the edge line (0=disable) */
@@ -275,15 +276,15 @@ typedef	struct	{
 	 * Shadow color of info area is equal to shadow_color[4] */
 	char	*mi_font;	/* freetype font for info area */
 	int	mi_size;	/* font size of the info area (0=auto) */
-	BYTE	mi_color[4];	/* text color of the media info */
+	EZBYTE	mi_color[4];	/* text color of the media info */
 	int	mi_shadow;	/* width of media info shadow (shadow_color)*/
 	int	mi_position;	/* layout position of the media info */
 	int	st_position;	/* layout position of the status line */
 
 	char	*ins_font;	/* freetype font for inset text */
 	int	ins_size;	/* font size of the inset text (0=auto) */
-	BYTE	ins_color[4];	/* text color of the inset text */
-	BYTE	its_color[4];	/* shadow color of the inset text */
+	EZBYTE	ins_color[4];	/* text color of the inset text */
+	EZBYTE	its_color[4];	/* shadow color of the inset text */
 	int	ins_shadow;	/* width of the shadow of the inset text */
 	int	ins_position;	/* layout position of the inset text */
 
@@ -336,9 +337,9 @@ typedef	struct	{
 	int	shots;		/* the total screenshots */
 
 	/* time setting: they are all calculated from the duration, not DTS */
-	int	time_from;	/* from where to take shots (ms) */
-	int	time_during;	/* the time range of shots (ms) */
-	int	time_step;	/* timestep in millisecond to take shots */
+	EZTIME	time_from;	/* from where to take shots (ms) */
+	EZTIME	time_during;	/* the time range of shots (ms) */
+	EZTIME	time_step;	/* timestep in millisecond to take shots */
 
 	/* gaps */
 	int	gap_width;	/* gap between shots in column */
@@ -374,6 +375,9 @@ typedef	struct		{
 	int		rf_pac;
 } EZFRM;
 
+typedef	struct		{
+} EZGRP;
+
 typedef	struct	_EzVid	{
 	AVFormatContext	*formatx;	/* must NULL it !! */
 	AVCodecContext	*codecx;
@@ -392,7 +396,7 @@ typedef	struct	_EzVid	{
 	int		ses_proc;	/* session process mode */
 	int		ses_acc;	/* session accurate mode */
 
-	int		duration;	/* the stream duration in ms */
+	EZTIME		duration;	/* the stream duration in ms */
 	int		seekable;	/* video keyframe seekable flag */
 	SMM_TIME	tmark;		/* the beginning timestamp */
 
@@ -405,7 +409,13 @@ typedef	struct	_EzVid	{
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
 	char		*filename;	/* link to the file name */
 	long long	filesize;
+
+
+	/* video structure extension for group opening */
+	unsigned	g_duration;
+	EZGRP		g_group[1];	/* must be the last field */
 } EZVID;
+
 
 
 #define uperror(n,c)	{ if (n) *(n) = (c); }
@@ -454,8 +464,8 @@ int video_snapshot_safemode(EZVID *vidx, EZIMG *image);
 int video_snapshot_scan(EZVID *vidx, EZIMG *image);
 int video_snapshot_twopass(EZVID *vidx, EZIMG *image);
 int video_snapshot_heuristic(EZVID *vidx, EZIMG *image);
-int64_t video_dts_to_ms(EZVID *vidx, int64_t dts);
-int64_t video_ms_to_dts(EZVID *vidx, int64_t ms);
+EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
+int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
 int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
 int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
@@ -472,7 +482,7 @@ char *meta_filesize(int64_t size, char *buffer);
 int meta_fontsize(int fsize, int refsize);
 char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
-char *meta_timestamp(int ms, int enms, char *buffer);
+char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
 int meta_image_format(char *input, char *fmt, int flen);
 

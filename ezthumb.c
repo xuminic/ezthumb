@@ -44,7 +44,7 @@ static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
 static int64_t video_current_dts(EZVID *vidx);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static int video_find_stream(EZVID *vidx, int flags);
-static int video_duration(EZVID *vidx);
+static EZTIME video_duration(EZVID *vidx);
 static int video_duration_check(EZVID *vidx);
 static int video_duration_seek(EZVID *vidx);
 static int video_frame_scale(EZVID *vidx, AVFrame *frame);
@@ -88,8 +88,9 @@ static int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 static int image_gif_anim_close(EZIMG *image, FILE *fout);
 static FILE *image_create_file(EZIMG *image, char *filename, int idx);
 static int image_cal_ratio(int ratio, int refsize);
-static int image_cal_shots(int duration, int tmstep, int mode);
-static int image_cal_timestep(int duration, int shots, int mode);
+static EZTIME image_cal_time_range(int ratio, EZTIME reftime);
+static int image_cal_shots(EZTIME duration, EZTIME tmstep, int mode);
+static EZTIME image_cal_timestep(EZTIME duration, int shots, int mode);
 static int image_cal_gif_animix(EZOPT *ezopt);
 static gdFont *image_fontset(int fsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
@@ -412,7 +413,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
-	//printf("video_snapshot_keyframes: %lld to %lld\n", dts_from, dts_to);
+	//SMM_PRINT("video_snapshot_keyframes: %lld to %lld\n", dts_from, dts_to);
 	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
 	i = 0;
@@ -552,7 +553,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			 * The workaround is the option to decode the
 			 * next frame instead of searching an i-frame. */
 			if (vidx->ses_acc) {
-				//printf("DTS=%lld to %lld\n", dts, dts_snap);
+				//SMM_PRINT("DTS=%lld to %lld\n", dts, dts_snap);
 				dts = video_decode_next(vidx, &packet);
 			} else {
 				dts = video_decode_keyframe(vidx, &packet);
@@ -593,7 +594,7 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 
 	/*
 	for (i = 0; i < image->shots; i++) {
-		printf("(%lld %lld %lld)", 
+		SMM_PRINT("(%lld %lld %lld)", 
 				refdts[i*3], refdts[i*3+1], refdts[i*3+2]);
 	}
 	printf("\n");
@@ -649,7 +650,7 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 	video_snap_begin(vidx, image, ENX_SS_HEURIS);
 	for (i = dts = 0; i < image->shots; i++) {
 		dts_snap = video_snap_point(vidx, image, i);
-		/*printf("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
+		/*SMM_PRINT("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
 				dts_snap, dts, dts_snap - dts, vidx->keygap);*/
 		if (dts_snap - dts > vidx->keygap) {
 			dts = video_keyframe_seekat(vidx, &packet, dts_snap);
@@ -687,7 +688,7 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
  *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
  * then
  *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
-int64_t video_dts_to_ms(EZVID *vidx, int64_t dts)
+EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
 {
 	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
 
@@ -697,7 +698,8 @@ int64_t video_dts_to_ms(EZVID *vidx, int64_t dts)
 		dts -= video_system_to_dts(vidx, vidx->formatx->start_time);
 	}
 
-	return av_rescale(dts * 1000, s->time_base.num, s->time_base.den);
+	return (EZTIME) av_rescale(dts * 1000, 
+			s->time_base.num, s->time_base.den);
 }
 
 /* this function is used to convert the timestamp from the millisecond 
@@ -705,11 +707,11 @@ int64_t video_dts_to_ms(EZVID *vidx, int64_t dts)
  *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
  * then
  *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
-int64_t video_ms_to_dts(EZVID *vidx, int64_t ms)
+int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
 {
 	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
 
-	return av_rescale(ms, s->time_base.den, 
+	return av_rescale((int64_t) ms, s->time_base.den, 
 			(int64_t) s->time_base.num * (int64_t) 1000);
 }
 
@@ -1349,12 +1351,13 @@ static int video_find_stream(EZVID *vidx, int flags)
  * to decide the final PTS. To speed up the process, the third method,
  * EZ_DUR_QK_SCAN, only scan the last 90% clip. 
  * User need to specify the scan method. */
-static int video_duration(EZVID *vidx)
+static EZTIME video_duration(EZVID *vidx)
 {
 	int64_t	cur_dts;
 
 	/* find the duration in the header */
-	vidx->duration = (int)(vidx->formatx->duration / AV_TIME_BASE * 1000);
+	vidx->duration = (EZTIME)(vidx->formatx->duration / 
+			AV_TIME_BASE * 1000);
 
 	/* It seems the header missing issue can not be fixed simply
 	 * by seek to tail. In that case a full stream scan is required */
@@ -1370,7 +1373,7 @@ static int video_duration(EZVID *vidx)
 	case EZ_DUR_CLIPHEAD:
 		video_rewind(vidx);	/* rewind the stream */
 		eznotify(vidx, EN_DURATION, ENX_DUR_MHEAD,
-				vidx->duration, NULL);
+				(long) vidx->duration, NULL);
 		return vidx->duration;
 
 	case EZ_DUR_FULLSCAN:
@@ -1393,8 +1396,8 @@ static int video_duration(EZVID *vidx)
 	video_rewind(vidx); 	/* rewind the stream to head */
 
 	/* convert duration from video stream base to milliseconds */
-	vidx->duration = (int) video_dts_to_ms(vidx, cur_dts);
-	eznotify(vidx, EN_DURATION, ENX_DUR_SCAN, vidx->duration, NULL);
+	vidx->duration = video_dts_to_ms(vidx, cur_dts);
+	eznotify(vidx, EN_DURATION, ENX_DUR_SCAN, (long)vidx->duration, NULL);
 	return vidx->duration;
 }
 
@@ -1430,8 +1433,8 @@ static int video_duration_seek(EZVID *vidx)
 	video_seeking(vidx, cur_dts * 9 / 10);
 	cur_dts = video_current_dts(vidx);
 
-	//printf("DTS: %lld %lld\n", first_dts, cur_dts);
-	//printf("POS: %lld\n", vidx->formatx->pb->pos);
+	//SMM_PRINT("DTS: %lld %lld\n", first_dts, cur_dts);
+	//SMM_PRINT("POS: %lld\n", vidx->formatx->pb->pos);
 	if ((first_dts < 0) || (cur_dts < 0)) {
 		vidx->seekable = ENX_SEEK_BW_NO;
 	} else if (cur_dts <= first_dts) {
@@ -1534,7 +1537,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 {
 	EZFRM	*ezfrm;
 	char	timestamp[64];
-	int	dtms;
+	EZTIME	dtms;
 
 	if ((ezfrm = video_frame_best(vidx, dts)) == NULL) {
 		return -1;	/* no proper frame */
@@ -1543,7 +1546,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
-	dtms = (int) video_dts_to_ms(vidx, ezfrm->rf_dts);
+	dtms = video_dts_to_ms(vidx, ezfrm->rf_dts);
 	meta_timestamp(dtms, 1, timestamp);
 
 	/* scale the frame into GD frame structure */
@@ -1571,7 +1574,8 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 		eznotify(vidx, EN_PROC_CURRENT, 
 				image->shots, image->taken, &dts);
 	} else {	/* i-frame ripping */
-		eznotify(vidx, EN_PROC_CURRENT, vidx->duration, dtms, &dts);
+		eznotify(vidx, EN_PROC_CURRENT, 
+				(long)vidx->duration, (long)dtms, &dts);
 	}
 	return 0;
 }
@@ -1626,7 +1630,7 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 		i = 1;
 	}
 
-	/*printf("FRAME of %s: %lld in (%lld %lld)\n", 
+	/*SMM_PRINT("FRAME of %s: %lld in (%lld %lld)\n", 
 			i == vidx->fnow ? "Current" : "Previous", dts,
 			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts);*/
 	return &vidx->fgroup[i];
@@ -1951,11 +1955,13 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	}
 
 	/* calculate the expected time range */
-	image->time_from = image_cal_ratio(ezopt->time_from, vidx->duration);
+	image->time_from = image_cal_time_range(ezopt->time_from, 
+			vidx->duration);
 	if (image->time_from >= vidx->duration) {
 		image->time_from = 0;
 	}
-	image->time_during = image_cal_ratio(ezopt->time_to, vidx->duration);
+	image->time_during = image_cal_time_range(ezopt->time_to, 
+			vidx->duration);
 	if (image->time_during > vidx->duration) {
 		image->time_during = vidx->duration - image->time_from;
 	} else if (image->time_during <= image->time_from) {
@@ -2214,7 +2220,7 @@ static int image_user_profile(EZIMG *image, int src_width, int *col, int *row,
 	int	shots;
 
 	shots = ezopt_profile_sampling(image->sysopt, 
-			image->time_during / 1000, col, row);
+			(int)(image->time_during / 1000), col, row);
 	if (shots > 0) {
 		ezopt_profile_sampled(image->sysopt, 
 				src_width, shots, col, row);
@@ -2807,11 +2813,21 @@ static int image_cal_ratio(int ratio, int refsize)
 	return 0;
 }
 
-static int image_cal_shots(int duration, int tmstep, int mode)
+static EZTIME image_cal_time_range(int ratio, EZTIME reftime)
+{
+	if (ratio & EZ_RATIO_OFF) {
+		return ((EZTIME)(ratio & ~EZ_RATIO_OFF)) * reftime / 100;
+	} else if (ratio > 0) {
+		return (EZTIME) ratio;
+	}
+	return 0;
+}
+
+static int image_cal_shots(EZTIME duration, EZTIME tmstep, int mode)
 {
 	int	shots;
 
-	shots = duration / tmstep - 1;
+	shots = (int)(duration / tmstep - 1);
 	if (mode & EZOP_FFRAME) {
 		shots++;
 	}
@@ -2821,7 +2837,7 @@ static int image_cal_shots(int duration, int tmstep, int mode)
 	return shots;
 }
 
-static int image_cal_timestep(int duration, int shots, int mode)
+static EZTIME image_cal_timestep(EZTIME duration, int shots, int mode)
 {
 	if (mode & EZOP_FFRAME) {
 		shots--;
@@ -3425,7 +3441,7 @@ char *meta_filesize(int64_t size, char *buffer)
 	return buffer;
 }
 
-char *meta_timestamp(int ms, int enms, char *buffer)
+char *meta_timestamp(EZTIME ms, int enms, char *buffer)
 {
 	static	char	tmp[32];
 	int	hour, min, sec, msec;

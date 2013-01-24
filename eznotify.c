@@ -116,7 +116,8 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 			}
 			/*printf("%d (%d:%ld)\n", vidx->duration,
 					vidx->seekable, opt);*/
-			printf("%d (%ld ms)\n", vidx->duration, opt);
+			SMM_PRINT("%lld (%ld ms)\n", 
+					(long long) vidx->duration, opt);
 		}
 		if (vidx->sysopt->flags & EZOP_CLI_LIST) {
 			ezdump_video_info(vidx);
@@ -158,7 +159,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_SCAN_PACKET:
-		//printf("Key Frame %d: %lld\n", param, *((long long *)block));
+		//SMM_PRINT("Key Frame %d: %lld\n", param, *((long long *)block));
 		break;
 	case EN_SCAN_IFRAME:
 		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
@@ -243,11 +244,11 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		case ENX_IFRAME_RESET:
 			break;
 		case ENX_IFRAME_SET:
-			printf("Key Frame start from: %lld\n", 
+			SMM_PRINT("Key Frame start from: %lld\n", 
 					(long long) vidx->keylast);
 			break;
 		case ENX_IFRAME_UPDATE:
-			printf("Key Frame Gap Update: %lld\n", 
+			SMM_PRINT("Key Frame Gap Update: %lld\n", 
 					(long long) vidx->keygap);
 			break;
 		}*/
@@ -490,8 +491,10 @@ int dump_ezimage(EZIMG *image)
 	printf("Canvas size:       %dx%d-%d\n", 
 			image->canvas_width, image->canvas_height, 
 			image->canvas_minfo);
-	printf("Time setting:      %d-%d %d (ms)\n", 
-			image->time_from, image->time_during, image->time_step);
+	SMM_PRINT("Time setting:      %lld-%lld %lld (ms)\n", 
+			(long long) image->time_from, 
+			(long long) image->time_during, 
+			(long long) image->time_step);
 	printf("Margin of canvas:  %dx%d\n", 
 			image->rim_width, image->rim_height);
 	printf("Gap of shots:      %dx%d\n", 
