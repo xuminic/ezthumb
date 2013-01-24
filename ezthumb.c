@@ -47,7 +47,7 @@ static int video_find_stream(EZVID *vidx, int flags);
 static int video_duration(EZVID *vidx);
 static int video_duration_check(EZVID *vidx);
 static int video_duration_seek(EZVID *vidx);
-static int video_image_scale(EZVID *vidx, EZIMG *image, AVFrame *frame);
+static int video_frame_scale(EZVID *vidx, AVFrame *frame);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
@@ -70,7 +70,7 @@ static int image_free(EZIMG *image);
 static int image_user_profile(EZIMG *image, int src_width, int *col, int *row,
 		int *width, int *height, int *facto);
 static int image_font_test(EZIMG *image, char *filename);
-static int image_gdframe_update(EZIMG *image);
+static int image_gdframe_update(EZIMG *image, AVFrame *swsframe);
 static int image_gdframe_timestamp(EZIMG *image, char *timestamp);
 static int image_gdframe_save(EZIMG *image, char *filename, int idx);
 static int image_gdframe_strlen(EZIMG *image, int fsize, char *s);
@@ -199,6 +199,11 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		video_free(vidx);
 		return rc;
 	}
+	if (video_alloc_scaler(vidx, image) != EZ_ERR_NONE) {
+		image_free(image);
+		video_free(vidx);
+		return EZ_ERR_SWSCALE;
+	}
 
 	/* if the expected time_step is 0, then it will save every 
 	 * key frames separately. it's good for debug purpose  */
@@ -274,6 +279,12 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 		video_free(vidx);
 		return rc;
 	}
+	if (video_alloc_scaler(vidx, image) != EZ_ERR_NONE) {
+		image_free(image);
+		video_free(vidx);
+		return EZ_ERR_SWSCALE;
+	}
+
 	if (image->time_step > 0) {	/* no i-frame rip in safe mode */
 		video_snapshot_safemode(vidx, image);
 	}
@@ -282,7 +293,7 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 	return EZ_ERR_NONE;
 }
 
-
+#if 0
 int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 {
 	EZIMG	*image;
@@ -340,6 +351,7 @@ int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 	video_free(vidx);
 	return 0;
 }
+#endif
 
 int ezinfo(char *filename, EZOPT *ezopt)
 {
@@ -727,6 +739,7 @@ int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
 			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
 }
 
+#if 0
 EZVID *video_group_open(char **fname, int fnum, EZOPT *ezopt, int *dur)
 {
 	EZVID	*vp, *vidx, *vroot = NULL;
@@ -758,7 +771,7 @@ int video_group_close(EZVID *vroot)
 	}
 	reutrn 0;
 }
-
+#endif
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
@@ -964,6 +977,12 @@ int video_free(EZVID *vidx)
 	if (vidx->swsctx) {
 		sws_freeContext(vidx->swsctx);
 	}
+	if (vidx->swsbuffer) {
+		av_free(vidx->swsbuffer);
+	}
+	if (vidx->swsframe) {
+		av_free(vidx->swsframe);
+	}
 	vidx->keylib = dts_lib_free(vidx->keylib);
 
 	/* 20120724 deregister the video object so it can be reused */
@@ -976,16 +995,35 @@ int video_free(EZVID *vidx)
 
 static int video_alloc_scaler(EZVID *vidx, EZIMG *image)
 {
+	int	size;
+
 	/* allocate the swscale structure for scaling the screen image */
 	vidx->swsctx = sws_getContext(vidx->codecx->width, 
 			vidx->codecx->height, vidx->codecx->pix_fmt, 
 			image->dst_width, image->dst_height,
 			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
 	if (vidx->swsctx == NULL) {
-		uperror(errcode, EZ_ERR_SWSCALE);
 		return EZ_ERR_SWSCALE;
 	}
-	return 0;
+
+	/* allocate the frame structure for RGB converter which
+	 * will be filled by frames converted from YUV form */
+	if ((vidx->swsframe = avcodec_alloc_frame()) == NULL) {
+		return EZ_ERR_SWSCALE;
+	}
+
+	/* allocate the memory buffer for holding the pixel array of
+	 * RGB frame */
+	size = avpicture_get_size(image->dst_pixfmt, 
+			image->dst_width, image->dst_height);
+	if ((vidx->swsbuffer = av_malloc(size)) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+
+	/* link the RGB frame and the RBG pixel buffer */
+	avpicture_fill((AVPicture *) vidx->swsframe, vidx->swsbuffer, 
+		image->dst_pixfmt, image->dst_width, image->dst_height);
+	return EZ_ERR_NONE;
 }
 
 
@@ -1405,11 +1443,11 @@ static int video_duration_seek(EZVID *vidx)
 	return vidx->seekable;
 }
 
-static int video_image_scale(EZVID *vidx, EZIMG *image, AVFrame *frame)
+static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 {
 	return sws_scale(vidx->swsctx, (const uint8_t * const *)frame->data,
 			frame->linesize, 0, vidx->codecx->height, 
-			image->rgb_frame->data, image->rgb_frame->linesize);
+			vidx->swsframe->data, vidx->swsframe->linesize);
 }
 
 
@@ -1508,10 +1546,11 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	dtms = (int) video_dts_to_ms(vidx, ezfrm->rf_dts);
 	meta_timestamp(dtms, 1, timestamp);
 
-	/* write the timestamp into the shot */
-	video_image_scale(vidx, image, ezfrm->frame);
-	image_gdframe_update(image);
+	/* scale the frame into GD frame structure */
+	video_frame_scale(vidx, ezfrm->frame);
+	image_gdframe_update(image, vidx->swsframe);
 
+	/* write the timestamp into the shot */
 	if (image->sysopt->flags & EZOP_TIMEST) {
 		image_gdframe_timestamp(image, timestamp);
 	}
@@ -2085,28 +2124,6 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	}
 	image->canvas_height = (image->canvas_height + 1) & ~1;
 
-	/* allocate the frame structure for RGB converter which
-	 * will be filled by frames converted from YUV form */
-	if ((image->rgb_frame = avcodec_alloc_frame()) == NULL) {
-		image_free(image);
-		uperror(errcode, EZ_ERR_LOWMEM);
-		return NULL;
-	}
-
-	/* allocate the memory buffer for holding the pixel array of
-	 * RGB frame */
-	size = avpicture_get_size(image->dst_pixfmt, 
-			image->dst_width, image->dst_height);
-	if ((image->rgb_buffer = av_malloc(size)) == NULL) {
-		image_free(image);
-		uperror(errcode, EZ_ERR_LOWMEM);
-		return NULL;
-	}
-
-	/* link the RGB frame and the RBG pixel buffer */
-	avpicture_fill((AVPicture *) image->rgb_frame, image->rgb_buffer, 
-			image->dst_pixfmt, image->dst_width,image->dst_height);
-
 	/* create a GD device for handling the screen shots */
 	image->gdframe = gdImageCreateTrueColor(image->dst_width, 
 			image->dst_height);
@@ -2183,12 +2200,6 @@ static int image_free(EZIMG *image)
 	}
 	if (image->gdframe) {
 		gdImageDestroy(image->gdframe);
-	}
-	if (image->rgb_buffer) {
-		av_free(image->rgb_buffer);
-	}
-	if (image->rgb_frame) {
-		av_free(image->rgb_frame);
 	}
 	/* 20120724 deregister the image object so it can be reused */
 	image->sysopt->imgobj = NULL;
@@ -2285,12 +2296,12 @@ static int image_font_test(EZIMG *image, char *filename)
 
 /* This function is used to fill the GD image device with the content of 
  * the RGB frame buffer. It will flush the last image */
-static int image_gdframe_update(EZIMG *image)
+static int image_gdframe_update(EZIMG *image, AVFrame *swsframe)
 {
 	unsigned char	*src;
 	int	x, y;
 
-	src = image->rgb_frame->data[0];
+	src = swsframe->data[0];
 	for (y = 0; y < image->dst_height; y++) {
 		for (x = 0; x < image->dst_width * 3; x += 3) {
 			gdImageSetPixel(image->gdframe, x / 3, y,

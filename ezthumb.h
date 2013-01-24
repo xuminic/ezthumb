@@ -322,9 +322,6 @@ typedef	struct	{
  * are transformed from the EZOPT structure. Due to the difference of each
  * video clips, the content of this structure is dynamic in each operation */
 typedef	struct	{
-	/* frame images extracted from the video stream */
-	AVFrame	*rgb_frame;	/* turn the frame to RGB mode */
-	uint8_t	*rgb_buffer;	/* the buffer of the RGB mode frame */
 
 	/* scaled frame images */
 	int	dst_width;	/* scaled video frame size */
@@ -382,7 +379,10 @@ typedef	struct	_EzVid	{
 	AVCodecContext	*codecx;
 	int		vsidx;
 
+	/* frame extracted and scaled from the video stream */
 	struct	SwsContext	*swsctx;	/* scaler context */
+	AVFrame			*swsframe;	/* scaled frame */
+	uint8_t			*swsbuffer;	/* the buffer of the scaled */
 	
 	EZFRM		fgroup[2];
 	int		fnow;
@@ -403,7 +403,6 @@ typedef	struct	_EzVid	{
 	void		*keylib;	/* the anchor to keyframe list */
 
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
-	struct	_EzVid	*next;		/* link to the next EZVID object */
 	char		*filename;	/* link to the file name */
 	long long	filesize;
 } EZVID;
