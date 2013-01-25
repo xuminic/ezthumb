@@ -34,6 +34,7 @@
 
 
 
+static int video_append(EZVID *vidx, char *filename, EZOPT *ezopt);
 static int video_alloc_scaler(EZVID *vidx, EZIMG *image);
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
@@ -205,6 +206,10 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		video_free(vidx);
 		return EZ_ERR_SWSCALE;
 	}
+	/* Register the video and image object so unix signal can intervene */
+	ezopt->vidobj = vidx;
+	ezopt->imgobj = image;
+
 
 	/* if the expected time_step is 0, then it will save every 
 	 * key frames separately. it's good for debug purpose  */
@@ -246,6 +251,9 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		}
 		break;
 	}
+	/* deregister the video and image object so they can be reused */
+	ezopt->vidobj = NULL;
+	ezopt->imgobj = NULL;
 
 	image_free(image);
 	video_free(vidx);
@@ -286,43 +294,68 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 		return EZ_ERR_SWSCALE;
 	}
 
+	/* Register the video and image object so unix signal can intervene */
+	ezopt->vidobj = vidx;
+	ezopt->imgobj = image;
+
 	if (image->time_step > 0) {	/* no i-frame rip in safe mode */
 		video_snapshot_safemode(vidx, image);
 	}
+
+	/* deregister the video and image object so they can be reused */
+	ezopt->vidobj = NULL;
+	ezopt->imgobj = NULL;
+
 	image_free(image);
 	video_free(vidx);
 	return EZ_ERR_NONE;
 }
 
-#if 0
 int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 {
 	EZIMG	*image;
 	EZVID	*vidx, *vtmp;
-	int	i, rc, durtmp, durall;
+	int	i, rc;
 
-	if ((vroot = video_group_open(fname, fnum, ezopt, &durall)) == NULL) {
-		return 0;
+	for (i = 0, vidx = NULL; (i < fnum) && (vidx == NULL); i++) {
+		vidx = video_allocate(fname[i], ezopt, &rc);
 	}
-
-	durtmp = vroot->duration;
-	vroot->duration = durall;
-	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
-		video_group_close(vroot);
+	if (vidx == NULL) {
 		return rc;
 	}
-	vroot->duration = durtmp;
+	printf("%d %d\n", i, fnum);
+	for ( ; i < fnum; i++) {
+		video_append(vidx, fname[i], ezopt);
+	}
+	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
+		video_free(vidx);
+		return rc;
+	}
+	if (video_alloc_scaler(vidx, image) != EZ_ERR_NONE) {
+		image_free(image);
+		video_free(vidx);
+		return EZ_ERR_SWSCALE;
+	}
+	printf("%lld %d\n", vidx->g_duration, vidx->g_avail);
+
+	/* Register the video and image object so unix signal can intervene */
+	ezopt->vidobj = vidx;
+	ezopt->imgobj = image;
 
 	/* if the expected time_step is 0, then it will save every 
 	 * key frames separately. it's good for debug purpose  */
-	if (image->time_step > 0) {	
-		vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
-	} else {
-		vidx->ses_proc = EZOP_PROC_KEYRIP;
-		vidx->keydelta = 0;
+	if (image->time_step == 0) {
+		video_snapshot_keyframes(vidx, image);
+		puts("1");
+		for (i = 0; i < vidx->g_avail; i++) {
+			vtmp = video_allocate(vidx->g_group[i].filename, 
+					ezopt, &rc);
+			video_alloc_scaler(vtmp, image);
+			video_snapshot_keyframes(vtmp, image);
+			video_free(vtmp);
+		}
 	}
-	video_keyframe_credit(vidx, -1);
-
+#if 0
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
 
 	dts_snap = video_snap_point(vidx, image, i);
@@ -347,12 +380,15 @@ int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 		}*/
 	}
 	video_snap_end(vidx, image);
+#endif
+	/* deregister the video and image object so they can be reused */
+	ezopt->vidobj = NULL;
+	ezopt->imgobj = NULL;
 
 	image_free(image);
 	video_free(vidx);
 	return 0;
 }
-#endif
 
 int ezinfo(char *filename, EZOPT *ezopt)
 {
@@ -413,12 +449,14 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
-	//SMM_PRINT("video_snapshot_keyframes: %lld to %lld\n", dts_from, dts_to);
+	SMM_PRINT("video_snapshot_keyframes: %lld to %lld\n", dts_from, dts_to);
 	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
+	puts("a");
 	i = 0;
 	video_keyframe_credit(vidx, -1);
 	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
+		puts("b");
 		if (dts < dts_from) {
 			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
@@ -438,6 +476,7 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
+		puts("c");
 		video_snap_update(vidx, image, dts);
 		i++;
 
@@ -741,39 +780,6 @@ int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
 			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
 }
 
-#if 0
-EZVID *video_group_open(char **fname, int fnum, EZOPT *ezopt, int *dur)
-{
-	EZVID	*vp, *vidx, *vroot = NULL;
-	int	i, rc;
-
-	for (*dur = 0, i = 0; i < fnum; i++) {
-		if ((vidx = video_allocate(fname[i], ezopt, &rc)) == NULL) {
-			continue;
-		}
-		if (vroot == NULL) {
-			vroot = vidx;
-		} else {
-			for (vp = vroot; vp->next; vp = vp->next);
-			vp->next = vidx;
-		}
-		*dur += vidx->duration;
-	}
-	return vroot;
-}
-
-int video_group_close(EZVID *vroot)
-{
-	EZVID	*vidx;
-
-	while (vroot) {
-		vidx = vroot;
-		vroot = vroot->next;
-		video_free(vidx);
-	}
-	reutrn 0;
-}
-#endif
 
 EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 {
@@ -783,7 +789,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	char	*mblock[] = { "mp3", "image2" };
 
 	/* allocate the runtime index structure of the video */
-	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
+	rc = sizeof(EZVID) + sizeof(EZGRP) * ezopt->grpclips;
+	if ((vidx = calloc(rc, 1)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
 	}
@@ -809,6 +816,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;	/* keep a copy of the filename */
 	vidx->seekable = -1;
+	vidx->g_maxgrp = ezopt->grpclips;
 	smm_time_get_epoch(&vidx->tmark);	/* get current time */
 
 	/*vidx->ses_dura = ezopt->dur_mode;
@@ -936,6 +944,7 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
+	vidx->g_duration = vidx->duration;
 
 	/* 20111213: It seems detecting media length could not block some 
 	 * unwanted files. For example, in guidev branch, the ezthumb.o
@@ -949,9 +958,6 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 
-	/* 20120724 Register the video object so unix signal can intervene */
-	ezopt->vidobj = vidx;
-	
 	eznotify(vidx, EN_MEDIA_OPEN, 0, 
 			smm_time_diff(&vidx->tmark), filename);
 	return vidx;
@@ -987,13 +993,25 @@ int video_free(EZVID *vidx)
 	}
 	vidx->keylib = dts_lib_free(vidx->keylib);
 
-	/* 20120724 deregister the video object so it can be reused */
-	vidx->sysopt->vidobj = NULL;
-
 	free(vidx);
 	return EZ_ERR_NONE;
 }
 
+static int video_append(EZVID *vidx, char *filename, EZOPT *ezopt)
+{
+	EZVID	*vtmp;
+
+	if ((vtmp = video_allocate(filename, ezopt, NULL)) == NULL) {
+		return EZ_ERR_FORMAT;
+	}
+	vidx->g_group[vidx->g_avail].duration = vtmp->duration;
+	vidx->g_group[vidx->g_avail].filename = filename;
+
+	vidx->g_avail++;
+	vidx->g_duration += vtmp->duration;
+	video_free(vtmp);
+	return EZ_ERR_NONE;
+}
 
 static int video_alloc_scaler(EZVID *vidx, EZIMG *image)
 {
@@ -1929,6 +1947,7 @@ static int64_t video_packet_timestamp(AVPacket *packet)
 static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 {
 	EZIMG	*image;
+	EZTIME	rt_during;
 	int	size, shots;
 	int	pro_col, pro_row, pro_width, pro_height, pro_facto;
 	int	pro_canvas;
@@ -1955,17 +1974,18 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 	}
 
 	/* calculate the expected time range */
-	image->time_from = image_cal_time_range(ezopt->time_from, 
-			vidx->duration);
-	if (image->time_from >= vidx->duration) {
+	if ((rt_during = vidx->g_duration) == 0) {
+		rt_during = vidx->duration;
+	}
+	image->time_from = image_cal_time_range(ezopt->time_from, rt_during);
+	if (image->time_from >= rt_during) {
 		image->time_from = 0;
 	}
-	image->time_during = image_cal_time_range(ezopt->time_to, 
-			vidx->duration);
-	if (image->time_during > vidx->duration) {
-		image->time_during = vidx->duration - image->time_from;
+	image->time_during = image_cal_time_range(ezopt->time_to, rt_during);
+	if (image->time_during > rt_during) {
+		image->time_during = rt_during - image->time_from;
 	} else if (image->time_during <= image->time_from) {
-		image->time_during = vidx->duration - image->time_from;
+		image->time_during = rt_during - image->time_from;
 	} else {
 		image->time_during -= image->time_from;
 	}
@@ -2192,9 +2212,6 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 	uperror(errcode, EZ_ERR_NONE);
 
-	/* 20120724 Register the image object so unix signal can intervene */
-	ezopt->imgobj = image;
-
 	eznotify(vidx, EN_IMAGE_CREATED, 0, 0, image);
 	return image;	
 }
@@ -2207,9 +2224,6 @@ static int image_free(EZIMG *image)
 	if (image->gdframe) {
 		gdImageDestroy(image->gdframe);
 	}
-	/* 20120724 deregister the image object so it can be reused */
-	image->sysopt->imgobj = NULL;
-
 	free(image);
 	return EZ_ERR_NONE;
 }

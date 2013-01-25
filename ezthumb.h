@@ -302,6 +302,7 @@ typedef	struct	{
 	int	vs_idx;		/* specify the stream index */
 	int	key_ripno;	/* specify the number when ripping keyframes*/
 	char	*pathout;	/* output path */
+	int	grpclips;	/* number of grouped clips */
 
 	/* callback functions to indicate the progress */
 	int	(*notify)(void *nobj, int event, long param, long, void *);
@@ -376,6 +377,8 @@ typedef	struct		{
 } EZFRM;
 
 typedef	struct		{
+	EZTIME		duration;
+	char		*filename;
 } EZGRP;
 
 typedef	struct	_EzVid	{
@@ -412,7 +415,9 @@ typedef	struct	_EzVid	{
 
 
 	/* video structure extension for group opening */
-	unsigned	g_duration;
+	EZTIME		g_duration;	/* ==0 means ignoring it */
+	int		g_maxgrp;	/* max number of grouped clips */
+	int		g_avail;	/* available clips in the group */
 	EZGRP		g_group[1];	/* must be the last field */
 } EZVID;
 

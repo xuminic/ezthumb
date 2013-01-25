@@ -589,7 +589,7 @@ int main(int argc, char **argv)
 		if (EZOP_DEBUG(sysopt.flags) <= EZOP_DEBUG_BRIEF) {
 			sysopt.notify = event_cb;
 		}
-		//ezthumb_bind(argv + optind, argc - optind, &sysopt);
+		ezthumb_bind(argv + optind, argc - optind, &sysopt);
 		break;
 	case 'G':
 		c = EZ_ERR_EOP;
