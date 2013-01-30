@@ -9,7 +9,8 @@ int main(int argc, char **argv)
 			printf("Usage: ./version [--ffmpeg][--version]\n");
 			return 0;
 		} else if (!strcmp(*argv, "--version")) {
-			printf("%s\n", EZTHUMB_VERSION);
+			printf("%s (%d-bit)\n", EZTHUMB_VERSION, 
+					(int)(sizeof(void*) << 3));
 			return 0;
 		} else if (!strcmp(*argv, "--ffmpeg")) {
 			printf("FFMPEG: libavcodec %d.%d.%d; ", 

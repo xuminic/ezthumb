@@ -32,12 +32,13 @@ long long smm_filesize(char *fname)
 	HANDLE	fhdl;
 
 	if ((wpath = smm_mbstowcs(fname)) == NULL) {
-		return -2;
+		return -1;
 	}
 
 	fhdl = CreateFile(wpath, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0);
 	if (fhdl == INVALID_HANDLE_VALUE) {
 		free(wpath);
+		smm_errno_update(SMM_ERR_OPEN);
 		return -1;
 	}
 	
@@ -46,8 +47,10 @@ long long smm_filesize(char *fname)
 	CloseHandle(fhdl);
 	
 	if (sizel == 0xffffffff && (GetLastError() != NO_ERROR)) {
+		smm_errno_update(SMM_ERR_STAT);
 		return -1;
 	}
+	smm_errno_update(SMM_ERR_NONE);
 	return ((long long) sizeh << 32) | sizel;
 }
 #endif
@@ -63,9 +66,11 @@ long long smm_filesize(char *fname)
 	struct	stat	fs;
 
 	if (stat(fname, &fs) < 0)  {
+		smm_errno_update(SMM_ERR_STAT);
 		return -1;	/* failed < 0 */
 	}
 
+	smm_errno_update(SMM_ERR_NONE);
 	return (long long) fs.st_size;
 }
 #endif

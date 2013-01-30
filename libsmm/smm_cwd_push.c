@@ -26,22 +26,26 @@
 #include "libsmm.h"
 
 #ifdef	CFG_WIN32_API
-int smm_cwd_push(void)
+void *smm_cwd_push(void)
 {
 	TCHAR	*wpath;
 	int	len;
 
 	if ((len = GetCurrentDirectory(0, NULL)) == 0) {
-		return smm_errno_update(0);	/* system call failed */
+		smm_errno_update(SMM_ERR_GETCWD);
+		return NULL;
 	}
 	len++;	/* expend it for the null char */
 	if ((wpath = malloc(sizeof(TCHAR) * len)) == NULL) {
-		return smm_errno_update(ERROR_NOT_ENOUGH_MEMORY);
+		smm_errno_update(SMM_ERR_LOWMEM);
+		return NULL;
 	}
 	if (GetCurrentDirectory(len, wpath) == 0) {
-		return smm_errno_update(0);	/* system call failed */
+		smm_errno_update(SMM_ERR_CHDIR);
+		free(wpath);
+		return NULL;
 	}
-	return (int) wpath;
+	return (void*) wpath;
 }
 #endif
 
@@ -50,14 +54,22 @@ int smm_cwd_push(void)
 #include <fcntl.h>
 #include <unistd.h>
 
-int smm_cwd_push(void)
+/* use void* instead of int because of the potential danger that
+ * might be cut by 64 bit pointer */
+void *smm_cwd_push(void)
 {
 	int	fd;
 
 	if ((fd = open(".", O_RDONLY)) < 0) {
-		return smm_errno_update(0);
+		smm_errno_update(SMM_ERR_GETCWD);
+		return NULL;
 	}
-	return fd;
+
+#if	UINTPTR_MAX == 0xffffffff
+	return (void*) fd;
+#else
+	return (void*)(int64_t)fd;
+#endif
 }
 #endif
 

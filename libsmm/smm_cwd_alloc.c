@@ -31,7 +31,7 @@ char *smm_cwd_alloc(void)
 	int	len;
 
 	if ((len = GetCurrentDirectory(0, NULL)) == 0) {
-		smm_errno_update(0);
+		smm_errno_update(SMM_ERR_GETCWD);
 		return NULL;	/* system call failed */
 	}
 	len++;	/* expend it for the null char */
@@ -39,14 +39,14 @@ char *smm_cwd_alloc(void)
 	/* first 3*len buffer is reserved for the multibyte convert and
 	 * the last len size is for the getcwd call */
 	if ((wpath = malloc(sizeof(TCHAR) * len * 4)) == NULL) {
-		smm_errno_update(ERROR_NOT_ENOUGH_MEMORY);
+		smm_errno_update(SMM_ERR_LOWMEM);
 		return NULL;	/* low memory */
 	}
 	if (GetCurrentDirectory(len, wpath + len * 3) == 0) {
-		smm_errno_update(0);
+		smm_errno_update(SMM_ERR_GETCWD);
 		return NULL;	/* system call failed */
 	}
-	WideCharToMultiByte(smm_sys_cp, 0, wpath + len * 3, -1, 
+	WideCharToMultiByte(smm_codepage(), 0, wpath + len * 3, -1, 
 			(char*) wpath, sizeof(TCHAR) * len * 3, NULL, NULL);
 	return (char*) wpath;
 }
@@ -64,7 +64,7 @@ char *smm_cwd_alloc(void)
 
 	for (i = 0; i < 8; i++) {
 		if ((path = malloc(len)) == NULL) {
-			smm_errno_update(ENOMEM);
+			smm_errno_update(SMM_ERR_LOWMEM);
 			return NULL;
 		}
 		if (getcwd(path, len) != NULL) {
@@ -72,14 +72,14 @@ char *smm_cwd_alloc(void)
 		}
 		free(path);
 		if (errno != ERANGE) {	/* system call failed */
-			smm_errno_update(0);
+			smm_errno_update(SMM_ERR_GETCWD);
 			return NULL;
 		}
 
 		len <<= 1;	/* enlarge the CWD buffer */
 	}
 	/* if it hits here, things must be weird */
-	smm_errno_update(ENOMEM);
+	smm_errno_update(SMM_ERR_LOWMEM);
 	return NULL;
 }
 #endif

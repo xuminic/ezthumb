@@ -30,12 +30,18 @@ char *smm_wcstombs(void *wcs)
 	char	*buf;
 	int	len;
 
-	len = WideCharToMultiByte(smm_sys_cp, 0, wcs, -1, NULL, 0, NULL, NULL);
-	if ((buf = malloc(len + 1)) == NULL) {
-		smm_errno_update(ERROR_NOT_ENOUGH_MEMORY);
+	smm_errno_update(SMM_ERR_NONE);
+	len = WideCharToMultiByte(smm_codepage(), 
+			0, wcs, -1, NULL, 0, NULL, NULL);
+	if (len <= 0) {
+		smm_errno_update(SMM_ERR_LENGTH);
 		return NULL;
 	}
-	WideCharToMultiByte(smm_sys_cp, 0, wcs, -1, buf, len, NULL, NULL);
+	if ((buf = malloc(len + 1)) == NULL) {
+		smm_errno_update(SMM_ERR_LOWMEM);
+		return NULL;
+	}
+	WideCharToMultiByte(smm_codepage(), 0, wcs, -1, buf, len, NULL, NULL);
 	return buf;
 }
 #endif
@@ -48,11 +54,13 @@ char *smm_wcstombs(void *wcs)
 	char	*buf;
 	int	len;
 
+	smm_errno_update(SMM_ERR_NONE);
 	if ((len = wcstombs(NULL, wcs, 0)) == 0) {
+		smm_errno_update(SMM_ERR_LENGTH);
 		return NULL;
 	}
 	if ((buf = malloc(len + 1)) == NULL) {
-		smm_errno_update(ENOMEM);
+		smm_errno_update(SMM_ERR_LOWMEM);
 		return NULL;
 	}
 	wcstombs(buf, wcs, len + 1);

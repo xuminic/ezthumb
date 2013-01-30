@@ -1,7 +1,7 @@
 Begin4
 Title:          ezthumb
-Version:        2.1.8
-Entered-date:   2012-08-13
+Version:        2.1.10
+Entered-date:   2012-09-2
 Description:    A video thumbnail generator based on FFMPEG library.
                 The basic function is to sample screenshots from video files
                 and tile them into a single picture. It can also generate
@@ -10,9 +10,9 @@ Keywords:       ezthumb, thumbnail, screenshot, FFMPEG
 Author:	        "Andy Xuming" <xuming@users.sourceforge.net>
 Maintained-by:  "Andy Xuming" <xuming@users.sourceforge.net>
 Primary-site:   https://sourceforge.net/projects/ezthumb/
-                217K   ezthumb-2.1.8.tar.gz
-                12.4M  ezthumb-2.1.8-win-bin.tar.gz
-		1K     ezthumb-2.1.8.lsm
+                217K   ezthumb-2.1.10.tar.gz
+                12.4M  ezthumb-2.1.10-win-bin.tar.gz
+		1K     ezthumb-2.1.10.lsm
 Alternate-site: 
 Platforms:      Linux/XWindow Microsoft/Windows Win32
 Copying-policy: GPLv3+

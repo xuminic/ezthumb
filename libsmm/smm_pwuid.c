@@ -49,10 +49,10 @@ int smm_pwuid(char *uname, long *uid, long *gid)
 		bufsize = 16384;	/* Should be more than enough */
 	}
 	if ((buf = malloc(bufsize)) == NULL) {
-		return smm_errno_update(ENOMEM);
+		return smm_errno_update(SMM_ERR_LOWMEM);
 	}
 	if ((rc = getpwnam_r(optarg, &pwd, buf, bufsize, &result)) != 0) {
-		rc = smm_errno_update(rc);
+		rc = smm_errno_update(SMM_ERR_PWNAM);
 	} else {
 		if (uid) {
 			*uid = (long) pwd.pw_uid;

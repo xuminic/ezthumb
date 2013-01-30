@@ -30,12 +30,17 @@ void *smm_mbstowcs(char *mbs)
 	TCHAR	*buf;
 	int	len;
 
-	len = MultiByteToWideChar(smm_sys_cp, 0, mbs, -1, NULL, 0);
+	smm_errno_update(SMM_ERR_NONE);
+	len = MultiByteToWideChar(smm_codepage(), 0, mbs, -1, NULL, 0);
+	if (len <= 0) {
+		smm_errno_update(SMM_ERR_LENGTH);
+                return NULL;
+	}		
 	if ((buf = malloc((len + 1) * sizeof(TCHAR))) == NULL) {
-		smm_errno_update(ERROR_NOT_ENOUGH_MEMORY);
+		smm_errno_update(SMM_ERR_LOWMEM);
 		return NULL;
 	}
-	MultiByteToWideChar(smm_sys_cp, 0, mbs, -1, buf, len);
+	MultiByteToWideChar(smm_codepage(), 0, mbs, -1, buf, len);
 	return buf;
 }
 #endif
@@ -48,11 +53,13 @@ void *smm_mbstowcs(char *mbs)
 	wchar_t	*buf;
 	int	len;
 
+	smm_errno_update(SMM_ERR_NONE);
 	if ((len = mbstowcs(NULL, mbs, 0)) == 0) {
+		smm_errno_update(SMM_ERR_LENGTH);
 		return NULL;
 	}
 	if ((buf = malloc((len + 1) * sizeof(wchar_t))) == NULL) {
-		smm_errno_update(ENOMEM);
+		smm_errno_update(SMM_ERR_LOWMEM);
 		return NULL;
 	}
 	mbstowcs(buf, mbs, len + 1);

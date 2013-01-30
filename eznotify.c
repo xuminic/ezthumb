@@ -75,6 +75,9 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 	case EZ_ERR_CODEC_FAIL:
 		printf("Could not open codec! %ld\n", param);
 		break;
+	case EZ_ERR_FILE:
+		printf("%s: file not found.\n", (char*) block);
+		break;
 
 	case EN_FILE_OPEN:
 		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
@@ -148,10 +151,14 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_FRAME_COMPLETE:
-		//dump_frame(block, opt);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+			dump_frame(block, opt);
+		}
 		break;
 	case EN_FRAME_PARTIAL:
-		//dump_frame(block, opt);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+			dump_frame(block, opt);
+		}
 		break;
 	case EN_FRAME_EFFECT:
 		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
@@ -176,26 +183,32 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_STREAM_FORMAT:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
+			dump_stream(((AVFormatContext*)block)->
+					streams[(int)param]);
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
+				EZOP_DEBUG_INFO) {
 			dump_codec_attr(block, (int)param);
-			//dump_stream(((AVFormatContext*)block)->streams
-			//	[(int)param]);
 		}
 		break;
 	case EN_TYPE_VIDEO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
-			//dump_video_context(block);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
+			dump_video_context(block);
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
+				EZOP_DEBUG_BRIEF) {
 			dump_codec_video(block);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
-			//dump_audio_context(block);
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
+			dump_audio_context(block);
+		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
+				EZOP_DEBUG_BRIEF) {
 			dump_codec_audio(block);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (EZOP_DEBUG(vidx->sysopt->flags) > EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
 			dump_other_context(block);
 		}
 		break;
@@ -258,6 +271,9 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 			printf("Discard ");
 			dump_frame(block, 1);
 		}
+		break;
+	case EN_SKIP_EXIST:
+		printf("Thumbnail Existed: %s\n", (char*) block);
 		break;
 	}
 	return event;
@@ -364,7 +380,7 @@ int dump_audio_context(AVCodecContext *codec)
 			id_lookup(id_codec, codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->channels, codec->sample_rate,
-			id_lookup(id_sam_format, codec->sample_fmt),
+			id_lookup_tail(id_sample_format, codec->sample_fmt),
 			codec->bit_rate);
 	return 0;
 }

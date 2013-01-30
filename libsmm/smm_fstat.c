@@ -30,14 +30,17 @@ int smm_fstat(char *fname)
 	TCHAR	*wpath;
 	DWORD	fattr;
 
+	smm_errno_update(SMM_ERR_NONE);
 	if ((wpath = smm_mbstowcs(fname)) == NULL) {
-		return smm_errno();
+		smm_errno_update(SMM_ERR_NONE_READ);
+		return SMM_FSTAT_ERROR;
 	}
 	fattr = GetFileAttributes(wpath);
 	free(wpath);
 
 	if (fattr == INVALID_FILE_ATTRIBUTES) {
-		return smm_errno_update(0);
+		smm_errno_update(SMM_ERR_STAT);
+		return SMM_FSTAT_ERROR;
 	}
 
 	if (fattr & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_SYSTEM |
@@ -66,8 +69,10 @@ int smm_fstat(char *fname)
 {
 	struct	stat	fs;
 
+	smm_errno_update(SMM_ERR_NONE);
 	if (lstat(fname, &fs) < 0)  {
-		return smm_errno_update(0);	/* failed < 0 */
+		smm_errno_update(SMM_ERR_STAT);	/* failed < 0 */
+		return SMM_FSTAT_ERROR;
 	}
 	if (S_ISREG(fs.st_mode)) {
 		return SMM_FSTAT_REGULAR;

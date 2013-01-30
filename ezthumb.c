@@ -96,6 +96,8 @@ static int image_cal_gif_animix(EZOPT *ezopt);
 static gdFont *image_fontset(int fsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
+static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx);
+
 static int ezopt_profile_append(EZOPT *ezopt, char *ps);
 static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen);
 static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei);
@@ -194,6 +196,10 @@ int ezthumb(char *filename, EZOPT *ezopt)
 	EZVID	*vidx;
 	int	rc;
 
+	if (ezopt_thumb_name(ezopt, NULL, filename, -1) == EZ_THUMB_SKIP) {
+		eznotify(NULL, EN_SKIP_EXIST, 0, 0, filename);
+		return EZ_ERR_EOP;
+	}
 	if ((vidx = video_allocate(filename, ezopt, &rc)) == NULL) {
 		return rc;
 	}
@@ -809,6 +815,8 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	}
 */
 	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
+		uperror(errcode, EZ_ERR_FILE);
+		eznotify(NULL, EZ_ERR_FILE, 0, 0, filename);
 		free(vidx);
 		return NULL;
 	}
@@ -1858,7 +1866,8 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 	}
 
 	sprintf(tmp, ": %d-CH  %s %dHz ", stream->codec->channels, 
-			id_lookup(id_sam_format, stream->codec->sample_fmt),
+			id_lookup_tail(id_sample_format, 
+					stream->codec->sample_fmt),
 			stream->codec->sample_rate);
 	strcat(buffer, tmp);
 
@@ -2778,36 +2787,10 @@ static int image_gif_anim_close(EZIMG *image, FILE *fout)
 
 static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 {
-	char	tmp[128];
-	int	i;
-
-	if (idx < 0) {
-		sprintf(tmp, "%s.", image->sysopt->suffix);
-	} else {
-		sprintf(tmp, "%03d.", idx);
-	}
-	strcat(tmp, image->sysopt->img_format);
-	meta_name_suffix(image->sysopt->pathout,
-			filename, image->filename, tmp);
-
-	for (i = 1; i < 256; i++) {
-		if (smm_fstat(image->filename) < 0) {
-			break;		/* file not existed */
-		} else if (image->sysopt->flags & EZOP_THUMB_OVERRIDE) {
-			break;		/* override the existed files */
-		} else if ((image->sysopt->flags & EZOP_THUMB_COPY) == 0) {
-			errno = EEXIST;
-			return NULL;	/* skip the existed files */
-		}
-		
-		if (idx < 0) {
-			sprintf(tmp, "%s.%d.", image->sysopt->suffix, i);
-		} else {
-			sprintf(tmp, "%03d.%d.", idx, i);
-		}
-		strcat(tmp, image->sysopt->img_format);
-		meta_name_suffix(image->sysopt->pathout,
-				filename, image->filename, tmp);
+	if (ezopt_thumb_name(image->sysopt, image->filename, filename, idx) 
+			== EZ_THUMB_SKIP) {
+		errno = EEXIST;
+		return NULL;	/* skip the existed files */
 	}
 
 #ifdef	CFG_GUI_ON
@@ -2899,6 +2882,62 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
 				gdImageSX(src), gdImageSY(src));
 	}
 	return 0;
+}
+
+
+
+static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
+{
+	char	tmp[128], *inbuf = NULL;
+	int	i, rc = 0;
+
+	if (buf == NULL) {
+		buf = inbuf = malloc(strlen(fname) + 128 + 32);
+		if (buf == NULL) {
+			return rc;
+		}
+	}
+
+	if (idx < 0) {
+		sprintf(tmp, "%s.", ezopt->suffix);
+	} else {
+		sprintf(tmp, "%03d.", idx);
+	}
+	strcat(tmp, ezopt->img_format);
+	meta_name_suffix(ezopt->pathout, fname, buf, tmp);
+
+	for (i = 1; i < 256; i++) {
+		if (smm_fstat(buf) != SMM_ERR_NONE) {
+			if (i == 1) {
+				rc = EZ_THUMB_VACANT;	/* file not existed */
+			} else {
+				rc = EZ_THUMB_COPIABLE;	/* copying file  */
+			}
+			break;	/* file not existed */
+		} else if (ezopt->flags & EZOP_THUMB_OVERRIDE) {
+			rc = EZ_THUMB_OVERRIDE;	/* override it */
+			break;
+		} else if ((ezopt->flags & EZOP_THUMB_COPY) == 0) {
+			rc = EZ_THUMB_SKIP;	/* skip the existed files */
+			break;
+		}
+		
+		if (idx < 0) {
+			sprintf(tmp, "%s.%d.", ezopt->suffix, i);
+		} else {
+			sprintf(tmp, "%03d.%d.", idx, i);
+		}
+		strcat(tmp, ezopt->img_format);
+		meta_name_suffix(ezopt->pathout, fname, buf, tmp);
+	}
+	if (i == 256) {
+		rc = EZ_THUMB_OVERCOPY;	/* override the last one */
+	}
+	if (inbuf) {
+		free(inbuf);
+	}
+	//printf("ezopt_thumb_name: %d\n", rc);
+	return rc;
 }
 
 

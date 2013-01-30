@@ -61,6 +61,7 @@ static	struct	cliopt	clist[] = {
 	{   6, "accurate", 0, "take accurate shots including P-frames" },
 	{   7, "background", 2, "the background picture" },
 	{  14, "decode-otf", 0, "decoding on the fly mode for scan process" },
+	{  25, "depth",   1, "most levels of directories recursively" },
 	{  21, "edge",    1, "the width of the screen shot edge (0)" },
 	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
 	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
@@ -143,7 +144,8 @@ int main(int argc, char **argv)
 {
 	struct	option	*argtbl;
 	char	*p, *arglist;
-	int	i, c, todo = -1, rflg = SMM_PATH_DIR_FIFO;
+	int	i, c, todo = -1;
+	int	rflg = SMM_PATH_DIR_FIFO;
 	int	prof_grid, prof_size;
 
 	prof_grid = prof_size = 1;	/* enable the profile */
@@ -307,6 +309,9 @@ int main(int argc, char **argv)
 				todo = 'B';	/* BREAK */
 			}
 			break;
+		case 25:
+			rflg = SMM_PATH_DEPTH(rflg, strtol(optarg, NULL, 0));
+			break;
 
 		case 'b':
 			todo = 'b';
@@ -440,16 +445,18 @@ int main(int argc, char **argv)
 				break;
 			}
 			if ((optarg[2] == ':') || (optarg[2] == 0)) {
+				c = rflg;
 				if (!strncmp(optarg, "FF", 2)) {
-					rflg = SMM_PATH_DIR_FIFO;
+					c = SMM_PATH_DIR_FIFO;
 					optarg += 3;
 				} else if (!strncmp(optarg, "DF", 2)) {
-					rflg = SMM_PATH_DIR_FIRST;
+					c = SMM_PATH_DIR_FIRST;
 					optarg += 3;
 				} else if (!strncmp(optarg, "DL", 2)) {
-					rflg = SMM_PATH_DIR_LAST;
+					c = SMM_PATH_DIR_LAST;
 					optarg += 3;
 				}
+				rflg = SMM_PATH_DIR(rflg, c);
 			}
 			if ((r_filter = strcpy_alloc(optarg)) != NULL) {
 				r_fnum = ziptoken(r_filter, r_fidx, 
