@@ -385,6 +385,13 @@ typedef	struct		{
 typedef	struct		{
 	EZTIME		duration;
 	char		*filename;
+} EZMBR;
+
+typedef	struct		{
+	EZTIME		duration;	/* ==0 means ignoring it */
+	int		maxmem;		/* max members of grouped clips */
+	int		avail;		/* available clips in the group */
+	EZMBR		member[1];	/* must be the last field */
 } EZGRP;
 
 typedef	struct	_EzVid	{
@@ -419,13 +426,9 @@ typedef	struct	_EzVid	{
 	char		*filename;	/* link to the file name */
 	long long	filesize;
 
-
-	/* video structure extension for group opening */
-	EZTIME		g_duration;	/* ==0 means ignoring it */
-	int		g_maxgrp;	/* max number of grouped clips */
-	int		g_avail;	/* available clips in the group */
-	EZGRP		g_group[1];	/* must be the last field */
+	EZGRP		*group;		/* extension for group opening */
 } EZVID;
+
 
 
 
