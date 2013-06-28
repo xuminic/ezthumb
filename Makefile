@@ -41,16 +41,15 @@ RELDATE	= `date  +%Y%m%d`
 
 
 
-.PHONY: ezthumb
+.PHONY: libsmm
 
-all: ezthumb
-
+all: objdir libsmm ezthumb ezthumb.pdf
 
 ifeq	($(SYSTOOL),unix)
-ezthumb: smm objdir $(OBJS) ezthumb.pdf libsmm/libsmm.a
+ezthumb: $(OBJS) libsmm/libsmm.a
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lsmm
 else
-ezthumb: smm
+ezthumb:
 	SYSGUI=CFG_GUI_OFF make objdir ezthumb.exe
 	SYSGUI=CFG_GUI_ON  make objdir ezthumb_win.exe
 endif
@@ -67,7 +66,7 @@ ezthumb.pdf: ezthumb.1
 	man -l -Tps $< |ps2pdf - $@
 
 objdir:
-	if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
+	@if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
 
 ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
@@ -78,7 +77,7 @@ $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 version: version.c ezthumb.h
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
 
-smm:
+libsmm:
 	make -C libsmm
 
 vidlen : vidlen.c

@@ -35,28 +35,30 @@
 #include "gdfontg.h"
 
 
-static int ezdefault(EZVID *vidx, int event, long param, long opt, void *);
+static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *);
 static int ezdump_video_info(EZVID *vidx);
 static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx);
 
 
-int eznotify(EZVID *vidx, int event, long param, long opt, void *block)
+int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block)
 {
 	int	rc;
 
-	if ((vidx == NULL) || (vidx->sysopt->notify == NULL)) {
-		return ezdefault(vidx, event, param, opt, block);
+	if ((ezopt == NULL) || (ezopt->notify == NULL)) {
+		return ezdefault(ezopt, event, param, opt, block);
 	}
 
-	rc = vidx->sysopt->notify(vidx, event, param, opt, block);
+	rc = ezopt->notify(ezopt, event, param, opt, block);
 	if (rc == EN_EVENT_PASSTHROUGH) {
-		return ezdefault(vidx, event, param, opt, block);
+		return ezdefault(ezopt, event, param, opt, block);
 	}
 	return rc;
 }
 
-static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
+static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 {
+	struct	ezntf	*myntf;
+	EZVID	*vidx;
 	int	i;
 
 	switch (event) {
@@ -80,7 +82,8 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		break;
 
 	case EN_FILE_OPEN:
-		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
+		vidx = block;
+		if (ezopt->flags & EZOP_CLI_INFO) {
 			/* This is the ffmpeg function so it must run before
 			 * disabling the av_log */
 			i = av_log_get_level();
@@ -92,16 +95,17 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 #endif
 			av_log_set_level(i);
 		}
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_WARNING) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_WARNING) {
 			printf("%s: open successed (%ld ms)\n", 
-					(char*) block, opt);
+					vidx->filename, opt);
 		}
 		break;
 	case EN_MEDIA_OPEN:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
+		vidx = block;
+		if (EZOP_DEBUG(vidx->ses_flags) >= EZOP_DEBUG_INFO) {
 			dump_format_context(vidx->formatx);
 		}
-		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
+		if (vidx->ses_flags & EZOP_CLI_INFO) {
 			printf("Duration in millisecond by ");
 			/*if (vidx->sysopt->dur_mode == EZ_DUR_FULLSCAN) {
 				printf("full scan: ");
@@ -122,12 +126,12 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 			SMM_PRINT("%lld (%ld ms)\n", 
 					(long long) vidx->duration, opt);
 		}
-		if (vidx->sysopt->flags & EZOP_CLI_LIST) {
+		if (vidx->ses_flags & EZOP_CLI_LIST) {
 			ezdump_video_info(vidx);
 		}
 		break;
 	case EN_IMAGE_CREATED:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
 			dump_ezimage(block);
 		}
 		break;
@@ -146,30 +150,32 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		//dump_packet(block);
 		break;
 	case EN_PACKET_KEY:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_PACKET) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_PACKET) {
 			dump_packet(block);
 		}
 		break;
 	case EN_FRAME_COMPLETE:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_VERBS) {
 			dump_frame(block, opt);
 		}
 		break;
 	case EN_FRAME_PARTIAL:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_VERBS) {
 			dump_frame(block, opt);
 		}
 		break;
 	case EN_FRAME_EFFECT:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
-			dump_frame_packet(vidx, param, block);
+		myntf = block;
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_IFRAME) {
+			dump_frame_packet(myntf->varg1, param, myntf->varg2);
 		}
 		break;
 	case EN_SCAN_PACKET:
 		//SMM_PRINT("Key Frame %d: %lld\n", param, *((long long *)block));
 		break;
 	case EN_SCAN_IFRAME:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
+		vidx = block;
+		if (EZOP_DEBUG(vidx->ses_flags) >= EZOP_DEBUG_BRIEF) {
 			printf("I-Frame Scanned (%ld ms):\n", opt);
 			for (i = 0; i < param; i++) {
 				SMM_PRINT("%9lld", ((long long *)block)[i]);
@@ -183,72 +189,68 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_STREAM_FORMAT:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
-			dump_stream(((AVFormatContext*)block)->
-					streams[(int)param]);
-		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
-				EZOP_DEBUG_INFO) {
-			dump_codec_attr(block, (int)param);
+		vidx = block;
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+			dump_stream(vidx->formatx->streams[param]);
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
+			dump_codec_attr(vidx->formatx, (int) param);
 		}
 		break;
 	case EN_TYPE_VIDEO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_IFRAME) {
 			dump_video_context(block);
-		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
-				EZOP_DEBUG_BRIEF) {
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
 			dump_codec_video(block);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_IFRAME) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_IFRAME) {
 			dump_audio_context(block);
-		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= 
-				EZOP_DEBUG_BRIEF) {
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
 			dump_codec_audio(block);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
 			dump_other_context(block);
 		}
 		break;
 	case EN_DURATION:
-		if (param == ENX_DUR_REWIND) {
-			SMM_PRINT("Rewound PTS: %lld < %lld\n",
-					(long long)((AVPacket*) block)->dts,
-					*((long long *) opt));
-		}
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_WARNING) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_WARNING) {
 			if (param == ENX_DUR_MHEAD) {
-				printf("Duration from Media head: %ld (ms)\n",
-						opt);
+				SMM_PRINT("Duration from Media head: "
+					"%lld (ms)\n", *((long long *)block));
 			} else if (param == ENX_DUR_JUMP) {
-				SMM_PRINT("Duration from fast scan at %lld\n", 
-						*((long long *)block));
+				SMM_PRINT("Duration from fast scan at "
+					"%lld\n", *((long long *)block));
 			} else if (param == ENX_DUR_SCAN) {
-				printf("Duration from scanning: %ld (ms)\n",
-						opt);
+				SMM_PRINT("Duration from scanning: "
+					"%lld (ms)\n", *((long long *)block));
 			}
 		}
 		break;
 	case EN_BUMP_BACK:
-		SMM_PRINT("Bump back to %lld: %ld (%lld < %lld)\n",
-				*((long long *) block), param,
+		myntf = block;
+		vidx = myntf->varg1;
+		SMM_PRINT("Bump back to %lld: %lld (%lld < %lld)\n",
+				(long long) myntf->iarg2, 
+				(long long) myntf->iarg1,
 				(long long) vidx->keydelta, 
 				(long long) vidx->keygap);
 		break;
 	case EN_SEEK_FRAME:
 		if (param == ENX_SEEK_BW_NO) {
 			printf("WARNING: Backward Seeking Disabled.\n");
-		} else if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_WARNING) {
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_WARNING) {
 			SMM_PRINT("Backward Seeking Test successed to %lld\n",
 					*((long long *) block));
 		}
 		break;
 	case EN_MEDIA_STATIS:
-		if (vidx->sysopt->flags & EZOP_CLI_INFO) {
-			ezdump_media_statistics((struct MeStat *) param, 
-					(int)opt, vidx);
+		myntf = block;
+		if (ezopt->flags & EZOP_CLI_INFO) {
+			ezdump_media_statistics(myntf->varg1, 
+					(int) param, myntf->varg2);
 		}
 		break;
 	case EN_IFRAME_CREDIT:
@@ -267,7 +269,7 @@ static int ezdefault(EZVID *vidx, int event, long param, long opt, void *block)
 		}*/
 		break;
 	case EN_FRAME_EXCEPTION:
-		if (EZOP_DEBUG(vidx->sysopt->flags) >= EZOP_DEBUG_VERBS) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_VERBS) {
 			printf("Discard ");
 			dump_frame(block, 1);
 		}

@@ -149,7 +149,8 @@ enum	{
 	EZUI_FMR_RDONLY
 };
 
-EZGUI *ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
+int ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
+EZGUI *ezgui_open(EZOPT *ezopt);
 int ezgui_run(EZGUI *gui, char *flist[], int fnum);
 int ezgui_close(EZGUI *gui);
 void ezgui_version(void);

@@ -72,6 +72,7 @@ static EZCFG *ezgui_cfg_alloc(void);
 static int ezgui_cfg_free(EZCFG *cfg);
 static char *ezgui_cfg_read_alloc(EZCFG *cfg, char *key);
 static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s);
+static int ezgui_cfg_rdonly_int(EZCFG *cfg, char *key, int *readout);
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
 static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
 static int ezgui_cfg_flush(EZCFG *cfg);
@@ -95,13 +96,78 @@ static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y);
 static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n);
 static void ezgui_window_update(void);
 
+int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
+{
+	EZCFG	*cfg;
+	char	*p;
+	int	prof_size, prof_grid;
 
-EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
+	gtk_init(argcs, argvs);
+
+#if 0
+	if ((cfg = ezgui_cfg_alloc()) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+
+	prof_size = prof_grid = 1;
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_GRID_COLUMN, &ezopt->grid_col)
+			== EZ_ERR_NONE) {
+		prof_grid = 0;  /* disable the profile */
+	}
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_GRID_ROW, &ezopt->grid_row)
+			== EZ_ERR_NONE) {
+		prof_grid = 0;  /* disable the profile */
+	}
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_TIME_STEP, &ezopt->tm_step)
+			== EZ_ERR_NONE) {
+		prof_grid = 0;
+	}
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_ZOOM_RATIO, &ezopt->tn_facto)
+			== EZ_ERR_NONE) {
+		prof_size = 0;
+	}
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_ZOOM_WIDTH, &ezopt->tn_width)
+			== EZ_ERR_NONE) {
+		prof_size = 0;
+	}
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_ZOOM_HEIGHT, &ezopt->tn_height)
+			== EZ_ERR_NONE) {
+		prof_size = 0;
+	}
+	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_CANVAS_WIDTH, 
+				&ezopt->canvas_width) == EZ_ERR_NONE) {
+		prof_size = 0;
+	}
+	ezgui_cfg_rdonly_int(cfg, CFG_KEY_DURATION, &ezopt->dur_mode);
+
+
+	if ((p = ezgui_cfg_read_alloc(cfg, CFG_KEY_FILE_FORMAT)) != NULL) {
+		ezopt->img_quality = meta_image_format(p, ezopt->img_format, 8);
+		free(p);
+	}
+
+	/* setup the simple profile */
+	if ((p = ezgui_cfg_read_alloc(cfg, CFG_KEY_PROF_SIMPLE)) != NULL) {
+		ezopt_profile_setup(ezopt, p);
+		/* disable the unwanted profiles */
+		if (prof_grid == 0) {
+			ezopt_profile_disable(ezopt, EZ_PROF_LENGTH);
+		}
+		if (prof_size == 0) {
+			ezopt_profile_disable(ezopt, EZ_PROF_WIDTH);
+		}
+		free(p);
+	}
+	ezgui_cfg_free(cfg);
+#endif
+	return EZ_ERR_NONE;
+}
+
+
+EZGUI *ezgui_open(EZOPT *ezopt)
 {
 	EZGUI	*gui;
 	char	*p;
-
-	gtk_init(argcs, argvs);
 
 	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
 		return NULL;
@@ -722,7 +788,7 @@ static int ezgui_page_main_listview_close(GtkWidget *view, EZADD *ezadd)
 static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 {
 	GtkTreeIter	row;
-	EZVID		*vidx;
+	EZVID		vobj;
 	char		*fname, tmark[32], res[32], tsize[32];
 
 	if (!s || !*s || !ezadd) {
@@ -759,21 +825,18 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 	 * the file name to UTF-8 so the Windows version could not find
 	 * the file. There's no such problem in linux. */
 	smm_codepage_set(65001);
-	vidx = video_allocate(s, gui->sysopt, NULL);
-	smm_codepage_reset();
-	if (vidx == NULL) {
+	if (ezinfo(s, gui->sysopt, &vobj) != EZ_ERR_NONE) {
+		smm_codepage_reset();
 		ezadd->dis_count++;
 		gtk_text_buffer_insert_at_cursor(ezadd->discarded, s, -1);
 		gtk_text_buffer_insert_at_cursor(ezadd->discarded, "\n", -1);
 		return 0;
 
 	}
-	meta_timestamp(vidx->duration, 0, tmark);
-	meta_filesize(vidx->filesize, tsize);
-	sprintf(res, "%dx%d", 
-			vidx->formatx->streams[vidx->vsidx]->codec->width, 
-			vidx->formatx->streams[vidx->vsidx]->codec->height);
-	video_free(vidx);
+	smm_codepage_reset();
+	meta_timestamp(vobj.duration, 0, tmark);
+	meta_filesize(vobj.filesize, tsize);
+	sprintf(res, "%dx%d", vobj.width, vobj.height);
 
 	gtk_list_store_append(GTK_LIST_STORE(ezadd->app_model), &row);
 	gtk_list_store_set(GTK_LIST_STORE(ezadd->app_model), &row, 
@@ -1371,6 +1434,18 @@ static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s)
 	g_key_file_set_value(cfg->ckey, CFG_GRP_MAIN, key, s);
 	cfg->mcount++;
 	return cfg->mcount;
+}
+
+static int ezgui_cfg_rdonly_int(EZCFG *cfg, char *key, int *readout)
+{
+	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
+		return EZ_ERR_KEYCFG;	/* key not found */
+	}
+	if (readout) {
+		*readout = g_key_file_get_integer(cfg->ckey, 
+				CFG_GRP_MAIN, key, NULL);
+	}
+	return EZ_ERR_NONE;
 }
 
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def)

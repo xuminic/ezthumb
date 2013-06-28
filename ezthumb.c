@@ -33,11 +33,22 @@
 #include "gdfontg.h"
 
 
+static int video_snapping(EZVID *vidx, EZIMG *image);
+static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
+static int video_snapshot_skim(EZVID *vidx, EZIMG *image);
+static int video_snapshot_safemode(EZVID *vidx, EZIMG *image);
+static int video_snapshot_scan(EZVID *vidx, EZIMG *image);
+static int video_snapshot_twopass(EZVID *vidx, EZIMG *image);
+static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image);
 
-static EZGRP *video_group_alloc(int vnum);
-static int video_group_free(EZGRP *vgrp);
-static int video_group_add(EZGRP *vgrp, char *filename, EZOPT *ezopt);
-static int video_alloc_scaler(EZVID *vidx, EZIMG *image);
+static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode);
+static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum);
+static int video_free(EZVID *vidx);
+static int video_open(EZVID *vidx);
+static int video_close(EZVID *vidx);
+static int video_connect(EZVID *vidx, EZIMG *image);
+static int video_disconnect(EZVID *vidx);
+static int video_find_main_stream(EZVID *vidx);
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
 //static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, int64_t);
@@ -46,7 +57,6 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
 static int64_t video_current_dts(EZVID *vidx);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
-static int video_find_stream(EZVID *vidx, int flags);
 static EZTIME video_duration(EZVID *vidx);
 static int video_duration_check(EZVID *vidx);
 static int video_duration_seek(EZVID *vidx);
@@ -68,7 +78,7 @@ static char *video_media_audio(AVStream *stream, char *buffer);
 static char *video_media_subtitle(AVStream *stream, char *buffer);
 static int64_t video_packet_timestamp(AVPacket *packet);
 
-static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode);
+static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode);
 static int image_free(EZIMG *image);
 static int image_user_profile(EZIMG *image, int src_width, int *col, int *row,
 		int *width, int *height, int *facto);
@@ -162,7 +172,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	strcpy(ezopt->suffix, "_thumb");
 
 	ezopt->bg_position = EZ_POS_MIDCENTER;
-	ezopt->vs_idx = -1;	/* default: first found video stream */
+	ezopt->vs_user = -1;	/* default: first found video stream */
 
 	if (profile) {
 		ezopt_profile_setup(ezopt, profile);
@@ -202,63 +212,24 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		eznotify(NULL, EN_SKIP_EXIST, 0, 0, filename);
 		return EZ_ERR_EOP;
 	}
-	if ((vidx = video_allocate(filename, ezopt, &rc)) == NULL) {
+	if ((vidx = video_allocate(ezopt, filename, &rc)) == NULL) {
 		return rc;
 	}
-	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
+	if ((image = image_allocate(vidx, vidx->duration, &rc)) == NULL) {
 		video_free(vidx);
 		return rc;
 	}
-	if (video_alloc_scaler(vidx, image) != EZ_ERR_NONE) {
+	if ((rc = video_connect(vidx, image)) != EZ_ERR_NONE) {
 		image_free(image);
 		video_free(vidx);
-		return EZ_ERR_SWSCALE;
+		return rc;
 	}
 	/* Register the video and image object so unix signal can intervene */
 	ezopt->vidobj = vidx;
 	ezopt->imgobj = image;
 
+	rc = video_snapping(vidx, image);
 
-	/* if the expected time_step is 0, then it will save every 
-	 * key frames separately. it's good for debug purpose  */
-	if (image->time_step > 0) {	
-		vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
-	} else {
-		vidx->ses_proc = EZOP_PROC_KEYRIP;
-		vidx->keydelta = 0;
-	}
-	video_keyframe_credit(vidx, -1);
-
-	switch (vidx->ses_proc) {
-	case EZOP_PROC_SKIM:
-		if (vidx->seekable == ENX_SEEK_BW_YES) {
-			rc = video_snapshot_skim(vidx, image);
-			break;
-		}
-		/* unseekable clips; fall into scan mode */
-	case EZOP_PROC_SCAN:
-		rc = video_snapshot_scan(vidx, image);
-		break;
-	case EZOP_PROC_SAFE:
-		rc = video_snapshot_safemode(vidx, image);
-		break;
-	case EZOP_PROC_TWOPASS:
-		rc = video_snapshot_twopass(vidx, image);
-		break;
-	case EZOP_PROC_HEURIS:
-		rc = video_snapshot_heuristic(vidx, image);
-		break;
-	case EZOP_PROC_KEYRIP:
-		rc = video_snapshot_keyframes(vidx, image);
-		break;
-	default:
-		if (vidx->seekable == ENX_SEEK_BW_YES) {
-			rc = video_snapshot_skim(vidx, image);
-		} else {
-			rc = video_snapshot_heuristic(vidx, image);
-		}
-		break;
-	}
 	/* deregister the video and image object so they can be reused */
 	ezopt->vidobj = NULL;
 	ezopt->imgobj = NULL;
@@ -289,17 +260,17 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 	EZVID	*vidx;
 	int	rc;
 
-	if ((vidx = video_allocate(filename, ezopt, &rc)) == NULL) {
+	if ((vidx = video_allocate(ezopt, filename, &rc)) == NULL) {
 		return rc;
 	}
-	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
+	if ((image = image_allocate(vidx, vidx->duration, &rc)) == NULL) {
 		video_free(vidx);
 		return rc;
 	}
-	if (video_alloc_scaler(vidx, image) != EZ_ERR_NONE) {
+	if ((rc = video_connect(vidx, image)) != EZ_ERR_NONE) {
 		image_free(image);
 		video_free(vidx);
-		return EZ_ERR_SWSCALE;
+		return rc;
 	}
 
 	/* Register the video and image object so unix signal can intervene */
@@ -307,7 +278,9 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 	ezopt->imgobj = image;
 
 	if (image->time_step > 0) {	/* no i-frame rip in safe mode */
+		video_snap_begin(vidx, image, GETPROCS(vidx->ses_flags));
 		video_snapshot_safemode(vidx, image);
+		video_snap_end(vidx, image);
 	}
 
 	/* deregister the video and image object so they can be reused */
@@ -321,113 +294,62 @@ int ezthumb_safe(char *filename, EZOPT *ezopt)
 
 int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 {
+	EZVID	*vanchor, *vidx;
 	EZIMG	*image;
-	EZVID	*vidx, *vtmp;
-	EZGRP	*vgrp;
-	int	i, rc;
+	int	rc, total = 0;
 
-	/*for (i = 0, vidx = NULL; (i < fnum) && (vidx == NULL); i++) {
-		vidx = video_allocate(fname[i], ezopt, &rc);
+	if ((vanchor = video_alloc_queue(ezopt, fname, fnum)) == NULL) {
+		return EZ_ERR_FILE;
 	}
-	if (vidx == NULL) {
+	if ((image = image_allocate(vanchor, vanchor->dur_all, &rc)) == NULL) {
+		video_free(vanchor);
 		return rc;
 	}
 
-	video_close(vidx);
-	for ( ; i < fnum; i++) {
-		video_append(vidx, fname[i], ezopt);
-	}
-	video_reopen(vidx);
-	*/
-	if ((vgrp = video_group_alloc(fnum)) == NULL) {
-		return -1;
-	}
-	for (i = 0; i < fnum; i++) {
-		video_group_add(vgrp, fname[i], ezopt);
-	}
-	if (vgrp->avail == 0) {
-		video_group_free(vgrp);
-		return -2;
-	}
-	
-	vidx = video_allocate(vgrp->member[0].filename, ezopt, &rc);
-	vidx->group = vgrp;
-
-	if ((image = image_allocate(vidx, ezopt, &rc)) == NULL) {
-		video_free(vidx);
-		return rc;
-	}
-	if (video_alloc_scaler(vidx, image) != EZ_ERR_NONE) {
-		image_free(image);
-		video_free(vidx);
-		return EZ_ERR_SWSCALE;
-	}
-	printf("%lld %d\n", vgrp->duration, vgrp->avail);
-
-	/* Register the video and image object so unix signal can intervene */
-	ezopt->vidobj = vidx;
 	ezopt->imgobj = image;
 
-	/* if the expected time_step is 0, then it will save every 
-	 * key frames separately. it's good for debug purpose  */
-	if (image->time_step == 0) {
-		video_snapshot_keyframes(vidx, image);
-		for (i = 0; i < vgrp->avail; i++) {
-			vtmp = video_allocate(vgrp->member[i].filename, 
-					ezopt, &rc);
-			video_alloc_scaler(vtmp, image);
-			video_snapshot_keyframes(vtmp, image);
-			video_free(vtmp);
+	for (vidx = vanchor; vidx; vidx = vidx->next) {
+		video_open(vidx);
+		if (video_connect(vidx, image) != EZ_ERR_NONE) {
+			video_close(vidx);
+			continue;
 		}
-	}
-#if 0
-	video_snap_begin(vidx, image, ENX_SS_SCAN);
 
-	dts_snap = video_snap_point(vidx, image, i);
-	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
-		/* use video_decode_next() instead of video_decode_keyframe()
-		 * because sometimes it's good for debugging doggy clips */
-		if (video_decode_next(vidx, &packet) < 0) {
-			break;
+		ezopt->vidobj = vidx;
+		rc = video_snapping(vidx, image);
+		ezopt->vidobj = NULL;
+
+		if (rc > 0) {
+			total += rc;
 		}
-		if (dts >= dts_snap) {
-			video_snap_update(vidx, image, dts_snap);
-			dts_snap = video_snap_point(vidx, image, ++i);
-		}
-		if (i >= image->shots) {
-			break;
-		}
+
+		video_disconnect(vidx);
+		video_close(vidx);
 	}
-	if (i < image->shots) {
-		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, -1);
-		}*/
-	}
-	video_snap_end(vidx, image);
-#endif
-	/* deregister the video and image object so they can be reused */
-	ezopt->vidobj = NULL;
+
 	ezopt->imgobj = NULL;
 
 	image_free(image);
-	video_free(vidx);
-	return 0;
+	video_free(vanchor);
+	return total;
 }
 
-int ezinfo(char *filename, EZOPT *ezopt)
+int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout)
 {
-	EZVID		*vidx;
-	EZIMG		*image;
-	int		rc;
+	EZVID	*vidx;
+	EZIMG	*image;
+	int	rc;
 
-	rc = EZ_ERR_NONE;
-	if ((vidx = video_allocate(filename, ezopt, &rc)) == NULL) {
+	if ((vidx = video_allocate(ezopt, filename, &rc)) == NULL) {
 		return rc;
+	}
+	if (vout) {
+		memcpy(vout, vidx, sizeof(EZVID));
 	}
 
 	if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
-		if ((image = image_allocate(vidx, ezopt, &rc)) != NULL) {
+		image = image_allocate(vidx, vidx->duration, &rc);
+		if (image != NULL) {
 			//dump_ezimage(image);
 			if (ezopt->flags & EZOP_FONT_TEST) {
 				image_font_test(image, vidx->filename);
@@ -457,9 +379,56 @@ int ezthumb_break(EZOPT *ezopt)
 	return EZ_ERR_NONE;
 }
 
+static int video_snapping(EZVID *vidx, EZIMG *image)
+{
+	int	rc = 0;
+
+	/* if the expected time_step is 0, then it will save every 
+	 * key frames separately. it's good for debug purpose  */
+	if (image->time_step > 0) {	
+		vidx->keydelta = video_ms_to_dts(vidx, image->time_step);
+	} else {
+		SETPROCS(vidx->ses_flags, EZOP_PROC_KEYRIP);
+		vidx->keydelta = 0;
+	}
+	video_keyframe_credit(vidx, -1);
+
+	switch (GETPROCS(vidx->ses_flags)) {
+	case EZOP_PROC_SKIM:
+		if (vidx->seekable == ENX_SEEK_BW_YES) {	//FIXME
+			rc = video_snapshot_skim(vidx, image);
+			break;
+		}
+		/* unseekable clips; fall into scan mode */
+	case EZOP_PROC_SCAN:
+		rc = video_snapshot_scan(vidx, image);
+		break;
+	case EZOP_PROC_SAFE:
+		rc = video_snapshot_safemode(vidx, image);
+		break;
+	case EZOP_PROC_TWOPASS:
+		rc = video_snapshot_twopass(vidx, image);
+		break;
+	case EZOP_PROC_HEURIS:
+		rc = video_snapshot_heuristic(vidx, image);
+		break;
+	case EZOP_PROC_KEYRIP:
+		rc = video_snapshot_keyframes(vidx, image);
+		break;
+	default:
+		if (vidx->seekable == ENX_SEEK_BW_YES) {
+			rc = video_snapshot_skim(vidx, image);
+		} else {
+			rc = video_snapshot_heuristic(vidx, image);
+		}
+		break;
+	}
+	return rc;
+}
+
 /* This function is used to save every key frames in the video clip
  * into individual files. */
-int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
+static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_from, dts_to;
@@ -474,14 +443,15 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
-	SMM_PRINT("video_snapshot_keyframes: %lld to %lld\n", dts_from, dts_to);
+	//SMM_PRINT("video_snapshot_keyframes: %lld to %lld\n", 
+	//dts_from, dts_to);
 	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
 	i = 0;
 	video_keyframe_credit(vidx, -1);
 	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
 		if (dts < dts_from) {
-			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
+			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
 			} else {
 				av_free_packet(&packet);
@@ -514,15 +484,19 @@ int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 /* for these conditions: backward seeking available, key frame only,
  * snap interval is larger than maximum key frame interval and no rewind
  * clips */
-int video_snapshot_skim(EZVID *vidx, EZIMG *image)
+static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap, last_key;
-	int		i;
+	int		scnt = 0;
 
 	video_snap_begin(vidx, image, ENX_SS_SKIM);
-	for (i = last_key = 0; i < image->shots; i++) {
-		dts_snap = video_snap_point(vidx, image, i);
+	last_key = 0;
+	while (image->taken < image->shots) {
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
+			break;
+		}
 
 		video_seeking(vidx, dts_snap);
 
@@ -536,7 +510,7 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else {
 			last_key = dts;
-			if (vidx->ses_acc) {
+			if (GETACCUR(vidx->ses_flags)) {
 				dts = video_decode_to(vidx, &packet, dts_snap);
 			} else {
 				dts = video_decode_keyframe(vidx, &packet);
@@ -547,23 +521,23 @@ int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 		}
 		
 		video_snap_update(vidx, image, dts_snap);
-	}
-	if (i < image->shots) {
-		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
+		scnt++;
 	}
 	video_snap_end(vidx, image);
-	return i;	/* return the number of thumbnails */
+	return scnt;	/* return the number of thumbnails */
 }
 
-int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
+static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap;
-	int		i = 0;
+	int		scnt = 0;
 
-	video_snap_begin(vidx, image, ENX_SS_SCAN);
+	dts_snap = video_snap_point(vidx, image, image->taken);
+	if (dts_snap < 0) {
+		return scnt;
+	}
 
-	dts_snap = video_snap_point(vidx, image, i);
 	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
 		/* use video_decode_next() instead of video_decode_keyframe()
 		 * because sometimes it's good for debugging doggy clips */
@@ -572,35 +546,37 @@ int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 		}
 		if (dts >= dts_snap) {
 			video_snap_update(vidx, image, dts_snap);
-			dts_snap = video_snap_point(vidx, image, ++i);
+			scnt++;
+			if (image->taken >= image->shots) {
+				break;
+			}
+			dts_snap = video_snap_point(vidx, image, image->taken);
+			if (dts_snap < 0) {
+				break;
+			}
 		}
-		if (i >= image->shots) {
-			break;
-		}
-	}
-	if (i < image->shots) {
-		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, -1);
-		}*/
 	}
 	video_snap_end(vidx, image);
-	return i;	/* return the number of thumbnails */
+	return scnt;	/* return the number of thumbnails */
 }
 
 
 /* for these conditions: Though backward seeking is NOT available but it is 
  * required to extract key frame only. snap interval is larger than maximum 
  * key frame interval and no rewind clips */
-int video_snapshot_scan(EZVID *vidx, EZIMG *image)
+static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap;
-	int		i;
+	int		scnt = 0;
 
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
-	for (i = dts = 0; i < image->shots; i++) {
-		dts_snap = video_snap_point(vidx, image, i);
+	dts = 0;
+	while (image->taken < image->shots) {
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
+			break;
+		}
 
 		if (dts < dts_snap) {
 			dts = video_keyframe_to(vidx, &packet, dts_snap);
@@ -613,7 +589,7 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			 * This issue may also happen on H.264 streams.
 			 * The workaround is the option to decode the
 			 * next frame instead of searching an i-frame. */
-			if (vidx->ses_acc) {
+			if (GETACCUR(vidx->ses_flags)) {
 				//SMM_PRINT("DTS=%lld to %lld\n", dts, dts_snap);
 				dts = video_decode_next(vidx, &packet);
 			} else {
@@ -625,24 +601,19 @@ int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 		}
 		//video_snap_update(vidx, image, dts);
 		video_snap_update(vidx, image, dts_snap);
-	}
-	if (i < image->shots) {
-		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, -1);
-		}*/
+		scnt++;
 	}
 	video_snap_end(vidx, image);
-	return i;	/* return the number of thumbnails */
+	return scnt;	/* return the number of thumbnails */
 }
 
 /* for these conditions: Though backward seeking is NOT available and it is 
  * required to extract p-frames. */
-int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
+static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, *refdts;
-	int		i;
+	int		i, scnt = 0;
 
 	/* compress the key frame list */
 	if ((refdts = calloc(image->shots * 4, sizeof(int64_t))) == NULL) {
@@ -663,22 +634,29 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	/* review if more than one snapshots were taken inside nearby 
 	 * keyframes. If more than one shots, we will take p-frames instead 
 	 * even the EZOP_P_FRAME was not set */
-	if (vidx->ses_acc == 0) {
+	if (!GETACCUR(vidx->ses_flags)) {
 		for (i = 0; i < image->shots; i++) {
+			if (refdts[i*3] < 0) {
+				continue;
+			}
 			if (refdts[i*3+1] == refdts[i*3+4]) {
-				vidx->ses_acc = 1;
+				SETACCUR(vidx->ses_flags);
 				break;
 			}
 		}
 	}
 
 	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
-	for (i = dts = 0; i < image->shots; i++) {
+	dts = 0;
+	for (i = image->taken; i < image->shots; i++) {
+		if (refdts[i*3] < 0) {
+			break;
+		}
 		if (dts < refdts[i*3+1]) {
 			dts = video_keyframe_to(vidx, &packet, refdts[i*3+1]);
 			video_decode_next(vidx, &packet);
 		}
-		if (vidx->ses_acc) {
+		if (GETACCUR(vidx->ses_flags)) {
 			dts = video_load_packet(vidx, &packet);
 			video_decode_to(vidx, &packet, refdts[i*3]);
 		} else if (dts < refdts[i*3+2]) {
@@ -689,28 +667,28 @@ int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			break;
 		}
 		video_snap_update(vidx, image, refdts[i*3]);
-	}
-	if (i < image->shots) {
-		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, -1);
-		}*/
+		scnt++;
 	}
 	video_snap_end(vidx, image);
 	free(refdts);
-	return i;	/* return the number of thumbnails */
+	return scnt;	/* return the number of thumbnails */
 }
 
 
-int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
+static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap;
-	int		i;
+	int		scnt = 0;
 
 	video_snap_begin(vidx, image, ENX_SS_HEURIS);
-	for (i = dts = 0; i < image->shots; i++) {
-		dts_snap = video_snap_point(vidx, image, i);
+	dts = 0;
+	while (image->taken < image->shots) {
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
+			break;
+		}
+
 		/*SMM_PRINT("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
 				dts_snap, dts, dts_snap - dts, vidx->keygap);*/
 		if (dts_snap - dts > vidx->keygap) {
@@ -731,131 +709,37 @@ int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		video_snap_update(vidx, image, dts);
-	}
-	if (i < image->shots) {
-		eznotify(vidx, EN_STREAM_BROKEN, i, image->shots, NULL);
-		/*for ( ; i < image->shots; i++) {
-			video_snap_update(vidx, image, -1);
-		}*/
+		video_snap_update(vidx, image, dts);	//FIXME: dts or dts_snap?
+		scnt++;
 	}
 	video_snap_end(vidx, image);
-	return i;	/* return the number of thumbnails */
+	return scnt;	/* return the number of thumbnails */
 }
 
 
-/* this function is used to convert the PTS from the video stream
- * based time to the millisecond based time. The formula is:
- *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
- * then
- *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
-EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
 
-	/* the 'start_time' in the AVFormatContext should be offsetted from
-	 * the video stream's PTS */
-	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
-		dts -= video_system_to_dts(vidx, vidx->formatx->start_time);
-	}
-
-	return (EZTIME) av_rescale(dts * 1000, 
-			s->time_base.num, s->time_base.den);
-}
-
-/* this function is used to convert the timestamp from the millisecond 
- * based time to the video stream based PTS time. The formula is:
- *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
- * then
- *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
-int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale((int64_t) ms, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) 1000);
-}
-
-/* this function is used to convert the PTS from the video stream
- * based time to the default system time base (microseconds). The formula is:
- *   SYS = (PTS * s->time_base.num / s->time_base.den) * AV_TIME_BASE
- * then
- *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
-int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(dts * (int64_t) AV_TIME_BASE,
-			s->time_base.num, s->time_base.den);
-}
-
-/* this function is used to convert the timestamp from the default 
- * system time base (microsecond) to the millisecond based time. The formula:
- *   PTS = (SYS / AV_TIME_BASE) * s->time_base.den / s->time_base.num 
- * then
- *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
-int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(sysdts, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
-}
-
-
-EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
+static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 {
 	EZVID	*vidx;
-	//FILE	*fp;
 	int	rc;
-	char	*mblock[] = { "mp3", "image2" };
 
-	/* allocate the runtime index structure of the video */
-	rc = sizeof(EZVID) + sizeof(EZGRP) * ezopt->grpclips;
-	if ((vidx = calloc(rc, 1)) == NULL) {
+	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
 	}
 
-	/* check if the nominated file existed */
-/*
-#ifdef	CFG_GUI_ON
-	if ((fp = g_fopen(filename, "r")) == NULL) {
-#else
-	if ((fp = fopen(filename, "r")) == NULL) {
-#endif
-		free(vidx);
-		return NULL;
-	} else {
-		fclose(fp);
-	}
-*/
-	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
-		uperror(errcode, EZ_ERR_FILE);
-		eznotify(NULL, EZ_ERR_FILE, 0, 0, filename);
-		free(vidx);
-		return NULL;
-	}
-
 	vidx->sysopt   = ezopt;
-	vidx->filename = filename;	/* keep a copy of the filename */
+	vidx->filename = filename;
 	vidx->seekable = -1;
 	smm_time_get_epoch(&vidx->tmark);	/* get current time */
 
-	/*vidx->ses_dura = ezopt->dur_mode;
-	vidx->ses_proc = ezopt->flags & EZOP_PROC_MASK;*/
-	/* 20120723 Moved from ezopt_review() */
-	vidx->ses_dura = ezopt->dur_mode;
-	if ((ezopt->flags & EZOP_PROC_MASK) == EZOP_PROC_TWOPASS) {
-		vidx->ses_dura = EZ_DUR_FULLSCAN;
-	} else if ((ezopt->flags & EZOP_PROC_MASK) != EZOP_PROC_KEYRIP) {
-		if (ezopt->dur_mode == EZ_DUR_FULLSCAN) {
-			ezopt->flags &= ~EZOP_PROC_MASK;
-			ezopt->flags |= EZOP_PROC_TWOPASS;
-		}
+	/* check if the nominated file existed */
+	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
+		eznotify(NULL, EZ_ERR_FILE, 0, 0, filename);
+		uperror(errcode, EZ_ERR_FILE);
+		free(vidx);
+		return NULL;
 	}
-	vidx->ses_proc = ezopt->flags & EZOP_PROC_MASK;
-	vidx->ses_acc  = ezopt->flags & EZOP_P_FRAME;
 
 	/* On second thought, the FFMPEG log is better to be enabled while 
 	 * loading codecs so we would've known if the video files buggy */
@@ -867,80 +751,22 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		av_log_set_level(0);
 	}
 
-	/* apparently the ubuntu 10.10 still use av_open_input_file() */
-	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
-	 * since 53.2.0. Apparently it is wrong. It is at least appeared in
-	 * my archlinux 64-bit box by 52.110.0 */
-	/* 20120613: What a surprise that avformat_open_input() do support
-	 * utf-8 in native MSWindows */
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
-	if (avformat_open_input(&vidx->formatx, filename, NULL, NULL) != 0) {
-#else
-	if (av_open_input_file(&vidx->formatx, filename, NULL, 0, NULL) < 0) {
-#endif
-		uperror(errcode, EZ_ERR_FORMAT);
-		eznotify(vidx, EZ_ERR_FORMAT, 0, 0, filename);
-		free(vidx);
-		return NULL;
-	}
-
-	/* 20120814 Implemented a media type filter to block the unwanted
-	 * media files like jpg, mp3, etc */
-	for (rc = 0; rc < sizeof(mblock)/sizeof(char*); rc++) {
-		if (!strcmp(vidx->formatx->iformat->name, mblock[rc])) {
-			uperror(errcode, EZ_ERR_FORMAT);
-			eznotify(vidx, EZ_ERR_FORMAT, 0, 0, filename);
-			video_free(vidx);
-			return NULL;
+	/* 20120723 Moved from ezopt_review() */
+	vidx->ses_dura  = ezopt->dur_mode;
+	vidx->ses_flags = ezopt->flags;
+	if (GETPROCS(vidx->ses_flags) == EZOP_PROC_TWOPASS) {
+		vidx->ses_dura = EZ_DUR_FULLSCAN;
+	} else if (GETPROCS(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
+		if (vidx->ses_dura == EZ_DUR_FULLSCAN) {
+			SETPROCS(vidx->ses_flags, EZOP_PROC_TWOPASS);
 		}
 	}
 
-	/* FIXME: what are these for? */
-	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
-	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
-#else
-	if (av_find_stream_info(vidx->formatx) < 0) {
-#endif
-		uperror(errcode, EZ_ERR_STREAM);
-		eznotify(vidx, EZ_ERR_STREAM, 0, 0, filename);
-		video_free(vidx);
-		return NULL;
-	}
-
-#if 0
-	dump_format_context(vidx->formatx);
-	free(vidx);
-	if (EZOP_DEBUG(ezopt->flags) == EZOP_DEBUG_FFM) {
-		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
-	} else {
-		av_log_set_level(0);	/* disable all complains by ffmpeg */
-	}
-#endif	
-	/* find the video stream and open the codec driver */
-	if ((rc = video_find_stream(vidx, ezopt->flags)) != EZ_ERR_NONE) {
+	if ((rc = video_open(vidx)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
-		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 0, 0, filename);
-		video_free(vidx);
+		free(vidx);
 		return NULL;
 	}
-
-	/* allocate a reusable video frame structure */
-	vidx->fgroup[0].frame = avcodec_alloc_frame();
-	vidx->fgroup[1].frame = avcodec_alloc_frame();
-	/* 20120723 Initialize the rf_dts to -1 to avoid the 
-	 * first-unavailable-frame issue */
-	vidx->fgroup[0].rf_dts = vidx->fgroup[1].rf_dts = -1;
-
-	if (!vidx->fgroup[0].frame || !vidx->fgroup[1].frame) {
-		uperror(errcode, EZ_ERR_LOWMEM);
-		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 0, 0, filename);
-		video_free(vidx);
-		return NULL;
-	}
-
-	eznotify(vidx, EN_FILE_OPEN, 0, 
-			smm_time_diff(&vidx->tmark), filename);
 
 	/* update the filesize field with the ffmpeg attribute.
 	 * this is a foolproof procedure */
@@ -956,14 +782,13 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 		}
 	}
 #endif
-
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library
 	 * so it would be wiser to avoid the still image stream, which duration
 	 * is only several milliseconds. FIXME if this assumption is wrong */
 	if (video_duration(vidx) < 500) {
 		uperror(errcode, EZ_ERR_FILE);
-		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
 		return NULL;
 	}
@@ -975,27 +800,182 @@ EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode)
 	if (!vidx->formatx->streams[vidx->vsidx]->codec->width ||
 			!vidx->formatx->streams[vidx->vsidx]->codec->height) {
 		uperror(errcode, EZ_ERR_FILE);
-		eznotify(vidx, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
 		return NULL;
 	}
 
-	eznotify(vidx, EN_MEDIA_OPEN, 0, 
-			smm_time_diff(&vidx->tmark), filename);
+
+	/* collecting other information */
+	vidx->width    = vidx->codecx->width;
+	vidx->height   = vidx->codecx->height;
+	vidx->streams  = vidx->formatx->nb_streams;
+
+	/* 20120720 Apply the AR correction */
+	/* calculate the original video height by AR correction */
+	vidx->ar_height = vidx->codecx->height;
+	if (vidx->codecx->sample_aspect_ratio.num &&
+			vidx->codecx->sample_aspect_ratio.den) {
+		vidx->ar_height = vidx->codecx->height *
+			vidx->codecx->sample_aspect_ratio.den /
+			vidx->codecx->sample_aspect_ratio.num;
+	}
+
+	//dump_format_context(vidx->formatx);
+	//eznotify(ezopt, EN_FILE_OPEN, 0, 0, vidx);
+	eznotify(vidx->sysopt, EN_MEDIA_OPEN, 0, 
+			smm_time_diff(&vidx->tmark), vidx);
+	uperror(errcode, EZ_ERR_NONE);
 	return vidx;
 }
 
-int video_free(EZVID *vidx)
+static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 {
-	if (vidx->fgroup[0].frame) {
-		av_free(vidx->fgroup[0].frame);
+	EZVID	*vanchor, *vidx, *vp;
+	EZTIME	dur_all, dur_off;
+	int	i, rc;
+
+	vanchor = NULL;
+	dur_all = dur_off = 0;
+	for (i = 0; i < fnum; i++) {
+		if ((vidx = video_allocate(ezopt, fname[i], &rc)) == NULL) {
+			continue;
+		}
+
+		vidx->dur_off = dur_off;
+		dur_off += vidx->duration;
+		dur_all += vidx->duration;
+
+		if (vanchor == NULL) {
+			vanchor = vidx;
+		} else if (vanchor->next == NULL) {
+			vanchor->next = vidx;
+		} else {
+			for (vp = vanchor; vp->next; vp = vp->next);
+			vp->next = vidx;
+		}
+		vidx->anchor = vanchor;
+		video_close(vidx);
 	}
-	if (vidx->fgroup[1].frame) {
-		av_free(vidx->fgroup[1].frame);
+	for (vp = vanchor; vp; vp = vp->next) {
+		vp->dur_all = dur_all;
+
+		/* adjust the FirstFrame and LastFrame decoding flag */
+		if (vp == vanchor) {	/* the first clip */
+			if (vp->next != NULL) {
+				vp->ses_flags &= ~EZOP_LFRAME;
+			}
+		} else {
+			vp->ses_flags &= ~EZOP_FFRAME;
+			if (vp->next != NULL) {
+				vp->ses_flags &= ~EZOP_LFRAME;
+			}
+		}
 	}
-	
+	return vanchor;
+}
+
+static int video_free(EZVID *vidx)
+{
+	EZVID	*vp;
+
+	while (vidx) {
+		video_disconnect(vidx);	
+		video_close(vidx);
+
+		vidx->keylib = dts_lib_free(vidx->keylib);
+
+		vp = vidx;
+		vidx = vidx->next;
+		free(vp);
+	}
+	return EZ_ERR_NONE;
+}
+
+
+static int video_open(EZVID *vidx)
+{
+	AVCodec	*codec;
+	char	*mblock[] = { "mp3", "image2" };
+	int	i;
+
+	/* apparently the ubuntu 10.10 still use av_open_input_file() */
+	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
+	 * since 53.2.0. Apparently it is wrong. It is at least appeared in
+	 * my archlinux 64-bit box by 52.110.0 */
+	/* 20120613: What a surprise that avformat_open_input() do support
+	 * utf-8 in native MSWindows */
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+	if (avformat_open_input(&vidx->formatx, vidx->filename, 
+				NULL, NULL) != 0) {
+#else
+	if (av_open_input_file(&vidx->formatx, vidx->filename, 
+				NULL, 0, NULL) < 0) {
+#endif
+		eznotify(NULL, EZ_ERR_FORMAT, 0, 0, vidx->filename);
+		return EZ_ERR_FORMAT;
+	}
+
+	/* 20120814 Implemented a media type filter to block the unwanted
+	 * media files like jpg, mp3, etc */
+	for (i = 0; i < sizeof(mblock)/sizeof(char*); i++) {
+		if (!strcmp(vidx->formatx->iformat->name, mblock[i])) {
+			eznotify(NULL, EZ_ERR_FORMAT, 0, 0, vidx->filename);
+			video_close(vidx);
+			return EZ_ERR_FORMAT;
+		}
+	}
+
+	/* FIXME: what are these for? */
+	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
+	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
+#else
+	if (av_find_stream_info(vidx->formatx) < 0) {
+#endif
+		eznotify(NULL, EZ_ERR_STREAM, 0, 0, vidx->filename);
+		video_close(vidx);
+		return EZ_ERR_STREAM;
+	}
+
+	/* find the video stream and open the codec driver */
+	if (video_find_main_stream(vidx) < 0) {
+		eznotify(NULL, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
+		video_close(vidx);
+		return EZ_ERR_VIDEOSTREAM;
+	}
+
+	vidx->vstream = vidx->formatx->streams[vidx->vsidx];
+	vidx->codecx  = vidx->vstream->codec;
+	/* discard frames; AVDISCARD_NONKEY,AVDISCARD_BIDIR */
+	vidx->codecx->skip_frame = AVDISCARD_NONREF;
+	//vidx->codecx->hurry_up = 1; /* fast decoding mode */
+
+	/* open the codec */
+	vidx->vstream->discard = AVDISCARD_ALL;
+	codec = avcodec_find_decoder(vidx->codecx->codec_id);
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
+#else
+	if (avcodec_open(vidx->codecx, codec) < 0) {
+#endif
+		eznotify(vidx->sysopt, EZ_ERR_CODEC_FAIL, 
+				vidx->codecx->codec_id, 0, vidx->codecx);
+		video_close(vidx);
+		return EZ_ERR_CODEC_FAIL;
+	}
+	vidx->vstream->discard = AVDISCARD_DEFAULT;
+
+	//dump_format_context(vidx->formatx);
+	return EZ_ERR_NONE;
+}
+
+static int video_close(EZVID *vidx)
+{
+	vidx->vstream = NULL;
 	if (vidx->codecx) {
 		avcodec_close(vidx->codecx);
+		vidx->codecx = NULL;
 	}
 	if (vidx->formatx) {
 #if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 10, 0))
@@ -1003,54 +983,30 @@ int video_free(EZVID *vidx)
 #else
 		av_close_input_file(vidx->formatx);
 #endif
+		vidx->formatx = NULL;
 	}
-	if (vidx->swsctx) {
-		sws_freeContext(vidx->swsctx);
-	}
-	if (vidx->swsbuffer) {
-		av_free(vidx->swsbuffer);
-	}
-	if (vidx->swsframe) {
-		av_free(vidx->swsframe);
-	}
-	vidx->keylib = dts_lib_free(vidx->keylib);
-	free(vidx);
 	return EZ_ERR_NONE;
 }
 
-static EZGRP *video_group_alloc(int vnum)
-{
-	int	len;
-
-	len = sizeof(EZGRP) + sizeof(EZMBR) * vnum;
-	return calloc(len, 1);
-}
-
-static int video_group_free(EZGRP *vgrp)
-{
-	free(vgrp);
-	return 0;
-}
-
-static int video_group_add(EZGRP *vgrp, char *filename, EZOPT *ezopt)
-{
-	EZVID	*vtmp;
-
-	if ((vtmp = video_allocate(filename, ezopt, NULL)) == NULL) {
-		return EZ_ERR_FORMAT;
-	}
-	vgrp->member[vgrp->avail].duration = vtmp->duration;
-	vgrp->member[vgrp->avail].filename = filename;
-
-	vgrp->avail++;
-	vgrp->duration += vtmp->duration;
-	video_free(vtmp);
-	return EZ_ERR_NONE;
-}
-
-static int video_alloc_scaler(EZVID *vidx, EZIMG *image)
+static int video_connect(EZVID *vidx, EZIMG *image)
 {
 	int	size;
+
+	/* allocate a reusable video frame structure */
+	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
+		return EZ_ERR_LOWMEM;
+	}
+	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
+		video_disconnect(vidx);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
+		return EZ_ERR_LOWMEM;
+	}
+
+	/* 20120723 Initialize the rf_dts to -1 to avoid the 
+	 * first-unavailable-frame issue */
+	vidx->fgroup[0].rf_dts = vidx->fgroup[1].rf_dts = -1;
+
 
 	/* allocate the swscale structure for scaling the screen image */
 	vidx->swsctx = sws_getContext(vidx->codecx->width, 
@@ -1058,12 +1014,16 @@ static int video_alloc_scaler(EZVID *vidx, EZIMG *image)
 			image->dst_width, image->dst_height,
 			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
 	if (vidx->swsctx == NULL) {
+		video_disconnect(vidx);
+		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
 		return EZ_ERR_SWSCALE;
 	}
 
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
 	if ((vidx->swsframe = avcodec_alloc_frame()) == NULL) {
+		video_disconnect(vidx);
+		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
 		return EZ_ERR_SWSCALE;
 	}
 
@@ -1072,13 +1032,106 @@ static int video_alloc_scaler(EZVID *vidx, EZIMG *image)
 	size = avpicture_get_size(image->dst_pixfmt, 
 			image->dst_width, image->dst_height);
 	if ((vidx->swsbuffer = av_malloc(size)) == NULL) {
-		return EZ_ERR_LOWMEM;
+		video_disconnect(vidx);
+		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
+		return EZ_ERR_SWSCALE;
 	}
 
 	/* link the RGB frame and the RBG pixel buffer */
 	avpicture_fill((AVPicture *) vidx->swsframe, vidx->swsbuffer, 
 		image->dst_pixfmt, image->dst_width, image->dst_height);
 	return EZ_ERR_NONE;
+}
+
+static int video_disconnect(EZVID *vidx)
+{
+	if (vidx->swsbuffer) {
+		av_free(vidx->swsbuffer);
+		vidx->swsbuffer = NULL;
+	}
+	if (vidx->swsframe) {
+		av_free(vidx->swsframe);
+		vidx->swsframe = NULL;
+	}
+	if (vidx->swsctx) {
+		sws_freeContext(vidx->swsctx);
+		vidx->swsctx = NULL;
+	}
+	if (vidx->fgroup[1].frame) {
+		av_free(vidx->fgroup[1].frame);
+		vidx->fgroup[1].frame = NULL;
+	}
+	if (vidx->fgroup[0].frame) {
+		av_free(vidx->fgroup[0].frame);
+		vidx->fgroup[0].frame = NULL;
+	}
+	return EZ_ERR_NONE;
+}
+
+
+/* This function is used to find the video stream in the clip 
+ * as well as open the related decoder driver */
+static int video_find_main_stream(EZVID *vidx)
+{
+	AVStream	*stream;
+	int	i;
+
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
+	int	wanted_stream[AVMEDIA_TYPE_NB] = {
+			[AVMEDIA_TYPE_AUDIO]=-1,
+			[AVMEDIA_TYPE_VIDEO]=-1,
+			[AVMEDIA_TYPE_SUBTITLE]=-1,
+	};
+#else
+	int		wanted_stream = -1;
+#endif
+	/* set all streams to be AVDISCARD_ALL to speed up the process.
+	 * Which selects which packets can be discarded at will and do not 
+	 * need to be demuxed. */
+	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+		eznotify(vidx->sysopt, EN_STREAM_FORMAT, i, 0, vidx);
+		stream = vidx->formatx->streams[i];
+		stream->discard = AVDISCARD_ALL;
+		switch (stream->codec->codec_type) {
+		case AVMEDIA_TYPE_VIDEO:
+			eznotify(vidx->sysopt, EN_TYPE_VIDEO, 
+					i, 0, stream->codec);
+			break;
+		case AVMEDIA_TYPE_AUDIO:
+			eznotify(vidx->sysopt, EN_TYPE_AUDIO, 
+					i, 0, stream->codec);
+			break;
+		default:
+			eznotify(vidx->sysopt, EN_TYPE_UNKNOWN, 
+					i, 0, stream->codec);
+			break;
+		}
+	}
+
+	vidx->vsidx = vidx->sysopt->vs_user;
+	if ((vidx->vsidx >= 0) && (vidx->vsidx < vidx->formatx->nb_streams)) {
+		stream = vidx->formatx->streams[vidx->vsidx];
+		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+			return vidx->vsidx;
+		}
+	}
+	
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
+	vidx->vsidx = av_find_best_stream(vidx->formatx, AVMEDIA_TYPE_VIDEO,
+			wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
+#else
+	vidx->vsidx = -1;
+	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+		stream = vidx->formatx->streams[i];
+		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+			if (wanted_stream < stream->codec_info_nb_frames) {
+				vidx->vsidx = i;
+				wanted_stream = stream->codec_info_nb_frames;
+			}
+		}
+	}
+#endif
+	return vidx->vsidx;
 }
 
 
@@ -1116,7 +1169,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 			break;	/* successfully located the keyframe */
 		}
 
-		if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
+		if (vidx->ses_flags & EZOP_DECODE_OTF) {
 			video_decode_next(vidx, packet);
 		} else {
 			av_free_packet(packet);
@@ -1147,20 +1200,23 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 	/* reset the key frame crediting */ 
 	if (dts < 0) {
 		vidx->keylast = -1;
-		eznotify(vidx, EN_IFRAME_CREDIT, ENX_IFRAME_RESET, 0, vidx);
+		eznotify(vidx->sysopt, EN_IFRAME_CREDIT, 
+				ENX_IFRAME_RESET, 0, vidx);
 		return vidx->keycount;
 	}
 
 	/* record the status of the first key frame since resetted */
 	if (vidx->keylast < 0) {
 		vidx->keylast = dts;
-		eznotify(vidx, EN_IFRAME_CREDIT, ENX_IFRAME_SET, 0, vidx);
+		eznotify(vidx->sysopt, EN_IFRAME_CREDIT, 
+				ENX_IFRAME_SET, 0, vidx);
 		return vidx->keycount;
 	}
 
 	if (dts - vidx->keylast > vidx->keygap) {
 		vidx->keygap = dts - vidx->keylast;
-		eznotify(vidx, EN_IFRAME_CREDIT, ENX_IFRAME_UPDATE, 0, vidx);
+		eznotify(vidx->sysopt, EN_IFRAME_CREDIT, 
+				ENX_IFRAME_UPDATE, 0, vidx);
 	}
 	vidx->keycount++;
 	vidx->keylast = dts;
@@ -1178,7 +1234,7 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 		 * is longer than the maximum gap of key frames, we would 
 		 * expect for another key frame */
 		if ((dts_diff = dts_snap - dts) > vidx->keygap) {
-			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
+			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, packet);
 			} else {
 				av_free_packet(packet);
@@ -1188,7 +1244,7 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 		}
 
 		/* setup the key frame decoding flag */
-		if (vidx->ses_acc) {
+		if (GETACCUR(vidx->ses_flags)) {
 			keyflag = 0;
 		} else if (vidx->keydelta < vidx->keygap) {
 			keyflag = 0;
@@ -1201,8 +1257,11 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 		 * gap of key frames. In that case, we must increate the gap
 		 * size and rewind to the previous key frame and run again */
 		if ((dts_diff < 0) && (keyflag == 0)) {
-			eznotify(vidx, EN_BUMP_BACK, 
-					(long)dts_diff, 0, &dts_last);
+			struct	ezntf	myntf;
+			myntf.varg1 = vidx;
+			myntf.iarg1 = dts_diff;
+			myntf.iarg2 = dts_last;
+			eznotify(vidx->sysopt, EN_BUMP_BACK, 0, 0, &myntf);
 			video_seeking(vidx, dts_last);
 			av_free_packet(packet);
 			continue;
@@ -1211,7 +1270,7 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 		/* if we only want to snapshot at key frames, we leap to the
 		 * next one and take sanpshot there */
 		if ((dts_diff > 0) && (keyflag == 1)) {
-			if (vidx->sysopt->flags & EZOP_DECODE_OTF) {
+			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, packet);
 			} else {
 				av_free_packet(packet);
@@ -1267,14 +1326,23 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	// FIXME: UTF-8 and wchar concern
 	/* Line 0: the filename */
 	strcpy(image->filename, "NAME: ");
-	meta_basename(vidx->filename, image->filename + 6);
+	if (vidx->dur_all) {	/* binding mode */
+		meta_basename(vidx->anchor->filename, image->filename + 6);
+		strcat(image->filename, " ...");
+	} else {
+		meta_basename(vidx->filename, image->filename + 6);
+	}
 	image_gdcanvas_print(image, 0, 0, image->filename);
 	puts(image->filename);
 
 	/* Line 1: the duration of the video clip, the file size, 
 	 * the frame rates and the bit rates */
 	strcpy(buffer, "Duration: ");
-	strcat(buffer, meta_timestamp(vidx->duration, 0, tmp));
+	if (vidx->dur_all) {	/* binding mode */
+		strcat(buffer, meta_timestamp(vidx->dur_all, 0, tmp));
+	} else {
+		strcat(buffer, meta_timestamp(vidx->duration, 0, tmp));
+	}
 
 	strcat(buffer, " (");
 	strcat(buffer, meta_filesize(vidx->filesize, tmp));
@@ -1316,85 +1384,6 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	}
 	return EZ_ERR_NONE;
 }
-
-/* This function is used to find the video stream in the clip 
- * as well as open the related decoder driver */
-static int video_find_stream(EZVID *vidx, int flags)
-{
-	AVCodec	*codec = NULL;
-	int	i;
-
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
-	int	wanted_stream[AVMEDIA_TYPE_NB] = {
-			[AVMEDIA_TYPE_AUDIO]=-1,
-			[AVMEDIA_TYPE_VIDEO]=-1,
-			[AVMEDIA_TYPE_SUBTITLE]=-1,
-	};
-
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
-		vidx->formatx->streams[i]->discard = AVDISCARD_ALL;
-	}
-	if (vidx->sysopt->vs_idx >= 0) {
-		vidx->vsidx = vidx->sysopt->vs_idx;
-	} else {
-		vidx->vsidx = av_find_best_stream(vidx->formatx, 
-				AVMEDIA_TYPE_VIDEO,
-				wanted_stream[AVMEDIA_TYPE_VIDEO], 
-				-1, NULL, 0);
-	}
-#else
-	AVStream	*stream;
-	int		wanted_stream = -1;
-
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
-		eznotify(vidx, EN_STREAM_FORMAT, i, 0, vidx->formatx);
-		stream = vidx->formatx->streams[i];
-		stream->discard = AVDISCARD_ALL;
-		switch (stream->codec->codec_type) {
-		case AVMEDIA_TYPE_VIDEO:
-			if (vidx->sysopt->vs_idx >= 0) {
-				vidx->vsidx = vidx->sysopt->vs_idx;
-			} else if (wanted_stream < 
-					stream->codec_info_nb_frames) {
-				vidx->vsidx = i;
-				wanted_stream = stream->codec_info_nb_frames;
-			}
-			break;
-		case AVMEDIA_TYPE_AUDIO:
-			eznotify(vidx, EN_TYPE_AUDIO, i, 0, stream->codec);
-			break;
-		default:
-			eznotify(vidx, EN_TYPE_UNKNOWN, i, 0, stream->codec);
-			break;
-		}
-	}
-#endif
-	if (vidx->vsidx < 0) {
-		return EZ_ERR_VIDEOSTREAM;
-	}
-
-	vidx->codecx = vidx->formatx->streams[vidx->vsidx]->codec;
-	eznotify(vidx, EN_TYPE_VIDEO, vidx->vsidx, 0, vidx->codecx);
-
-	/* discard frames; AVDISCARD_NONKEY,AVDISCARD_BIDIR */
-	vidx->codecx->skip_frame = AVDISCARD_NONREF;
-	//vidx->codecx->hurry_up = 1; /* fast decoding mode */
-
-	/* open the codec */
-	codec = avcodec_find_decoder(vidx->codecx->codec_id);
-#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
-	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
-#else
-	if (avcodec_open(vidx->codecx, codec) < 0) {
-#endif
-		eznotify(vidx, EZ_ERR_CODEC_FAIL, 
-				vidx->codecx->codec_id, 0, vidx->codecx);
-		return EZ_ERR_CODEC_FAIL;
-	}
-	vidx->formatx->streams[vidx->vsidx]->discard = AVDISCARD_DEFAULT;
-	return EZ_ERR_NONE;
-}
-
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
  * grab the duration data from the clip head, EZ_DUR_CLIPHEAD. It's already 
@@ -1416,8 +1405,8 @@ static EZTIME video_duration(EZVID *vidx)
 	 * by seek to tail. In that case a full stream scan is required */
 	if (video_duration_check(vidx) == 0) {	/* bad video header */
 		vidx->ses_dura = EZ_DUR_FULLSCAN; /* full scan is enforced */
-		if (vidx->ses_proc != EZOP_PROC_KEYRIP) {
-			vidx->ses_proc = EZOP_PROC_TWOPASS;
+		if (GETPROCS(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
+			SETPROCS(vidx->ses_flags, EZOP_PROC_TWOPASS);
 		}
 	}
 
@@ -1425,8 +1414,8 @@ static EZTIME video_duration(EZVID *vidx)
 	switch (vidx->ses_dura) {
 	case EZ_DUR_CLIPHEAD:
 		video_rewind(vidx);	/* rewind the stream */
-		eznotify(vidx, EN_DURATION, ENX_DUR_MHEAD,
-				(long) vidx->duration, NULL);
+		eznotify(vidx->sysopt, EN_DURATION, 
+				ENX_DUR_MHEAD, 0, &vidx->duration);
 		return vidx->duration;
 
 	case EZ_DUR_FULLSCAN:
@@ -1437,11 +1426,12 @@ static EZTIME video_duration(EZVID *vidx)
 	default:	/* EZ_DUR_QK_SCAN */
 		cur_dts = video_statistics(vidx);
 		if (vidx->seekable == ENX_SEEK_BW_YES) {
-			eznotify(vidx, EN_DURATION, ENX_DUR_JUMP, 0, &cur_dts);
+			eznotify(vidx->sysopt, EN_DURATION, 
+					ENX_DUR_JUMP, 0, &cur_dts);
 		} else {
 			vidx->ses_dura = EZ_DUR_FULLSCAN;
-			if (vidx->ses_proc != EZOP_PROC_KEYRIP) {
-				vidx->ses_proc = EZOP_PROC_TWOPASS;
+			if (GETPROCS(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
+				SETPROCS(vidx->ses_flags, EZOP_PROC_TWOPASS);
 			}
 		}
 		break;
@@ -1450,7 +1440,7 @@ static EZTIME video_duration(EZVID *vidx)
 
 	/* convert duration from video stream base to milliseconds */
 	vidx->duration = video_dts_to_ms(vidx, cur_dts);
-	eznotify(vidx, EN_DURATION, ENX_DUR_SCAN, (long)vidx->duration, NULL);
+	eznotify(vidx->sysopt, EN_DURATION, ENX_DUR_SCAN, 0, &vidx->duration);
 	return vidx->duration;
 }
 
@@ -1495,7 +1485,7 @@ static int video_duration_seek(EZVID *vidx)
 	} else {
 		vidx->seekable = ENX_SEEK_BW_YES;
 	}
-	eznotify(vidx, EN_SEEK_FRAME, vidx->seekable, 0, &cur_dts);
+	eznotify(vidx->sysopt, EN_SEEK_FRAME, vidx->seekable, 0, &cur_dts);
 	return vidx->seekable;
 }
 
@@ -1510,6 +1500,7 @@ static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 static int64_t video_statistics(EZVID *vidx)
 {
 	struct MeStat	mestat[EZ_ST_MAX_REC];	/* shoule be big enough */
+	struct ezntf	myntf;
 	AVPacket	packet;
 	int		i, imax = 0;
 
@@ -1533,7 +1524,8 @@ static int64_t video_statistics(EZVID *vidx)
 			if (packet.stream_index == vidx->vsidx) {
 				video_keyframe_credit(vidx, packet.dts);
 				vidx->keylib = dts_lib_add(vidx->keylib, packet.dts);
-				eznotify(vidx, EN_PACKET_KEY, 0, 0, &packet);
+				eznotify(vidx->sysopt, EN_PACKET_KEY, 
+						0, 0, &packet);
 			}
 		}
 		if (packet.dts != AV_NOPTS_VALUE) {
@@ -1545,49 +1537,80 @@ static int64_t video_statistics(EZVID *vidx)
 		}
 		av_free_packet(&packet);
 	}
-	eznotify(vidx, EN_MEDIA_STATIS, (long) mestat, imax + 1, vidx);
+	myntf.varg1 = mestat;
+	myntf.varg2 = vidx;
+	eznotify(vidx->sysopt, EN_MEDIA_STATIS, imax + 1, 0, &myntf);
 	return mestat[vidx->vsidx].dts_base + mestat[vidx->vsidx].dts_last;
 }
 
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 {
-	int64_t seekat;
+	EZTIME	vpos;
+	int64_t	seekat;
 
-	/* setup the starting PTS and ending PTS */
-	seekat = 0;
+	vpos = image->time_from;
+	if (!GETFFRAME(vidx->ses_flags)) {
+		index++;
+	}
+	vpos += image->time_step * index;
+	
+	if (vidx->dur_all) {		/* binding mode */
+		vpos -= vidx->dur_off;
+		if ((vpos < 0) || (vpos > vidx->duration)) {
+			return -1;	/* outside this clip */
+		}
+	}
+
+	seekat = video_ms_to_dts(vidx, vpos);
 	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
 		seekat += video_system_to_dts(vidx, vidx->formatx->start_time);
 	}
-	if (image->time_from > 0) {
-		seekat += video_ms_to_dts(vidx, image->time_from);
-	}
+	return seekat;
+}
+
+#if 0
+static int64_t video_snap_group_point(EZGRP *vgrp, EZIMG *image, int index)
+{
+	EZTIME	cur_clip_begin, cur_clip_end;
 
 	/* setup the initial seek position */
 	if ((image->sysopt->flags & EZOP_FFRAME) == 0) {
 		index++;
 	}
-
-	/* calculate the snap point */
-	seekat += video_ms_to_dts(vidx, image->time_step * index);
-	return seekat;
+	cur_ms = image->time_step * index;
+	if (cur_ms > cur_dur_end) {
+		close(vidx);
+		vidx = video_alloc();
+		cur_dur_begin = cur_dur_end;
+		cur_dur_end += cur_duration;
+	}
+	clip_ms = cur_ms - cur_dur_begin;
 }
-
+#endif
 
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 {
+	/* check if this is called by the first clip */
+	if (vidx->dur_all && vidx->dur_off) {
+		return 0;
+	}
+
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
 	image->gifx_fp = NULL;
 	if ((image->gifx_opt = image_cal_gif_animix(image->sysopt)) > 0) {
+		/* 20130627 using vidx->filename should be fine here because 
+		 * only the first clip would be processed by this function */
 		image->gifx_fp = image_gif_anim_open(image, vidx->filename);
 	}
 
-	eznotify(vidx, EN_PROC_BEGIN, (long)vidx->duration, method, NULL);
+	eznotify(vidx->sysopt, EN_PROC_BEGIN, method, 0, vidx);
 	return 0;
 }
 
 static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 {
+	struct	ezntf	myntf;
 	EZFRM	*ezfrm;
 	char	timestamp[64];
 	EZTIME	dtms;
@@ -1595,12 +1618,21 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	if ((ezfrm = video_frame_best(vidx, dts)) == NULL) {
 		return -1;	/* no proper frame */
 	}
-	eznotify(vidx, EN_FRAME_EFFECT, image->taken, 0, ezfrm);
+	myntf.varg1 = vidx;
+	myntf.varg2 = ezfrm;
+	eznotify(vidx->sysopt, EN_FRAME_EFFECT, image->taken, 0, &myntf);
 
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
 	dtms = video_dts_to_ms(vidx, ezfrm->rf_dts);
-	meta_timestamp(dtms, 1, timestamp);
+	dtms += vidx->dur_off;		/* aligning the binding clips */
+	if (vidx->dur_off == 0) {
+		meta_timestamp(dtms, 1, timestamp);
+	} else {
+		timestamp[0] = '(';
+		meta_timestamp(dtms, 1, timestamp + 1);
+		strcat(timestamp, ")");
+	}
 
 	/* scale the frame into GD frame structure */
 	video_frame_scale(vidx, ezfrm->frame);
@@ -1624,11 +1656,12 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	/* display the on-going information */
 	if (image->shots) {
-		eznotify(vidx, EN_PROC_CURRENT, 
+		eznotify(vidx->sysopt, EN_PROC_CURRENT, 
 				image->shots, image->taken, &dts);
 	} else {	/* i-frame ripping */
-		eznotify(vidx, EN_PROC_CURRENT, 
-				(long)vidx->duration, (long)dtms, &dts);
+		eznotify(vidx->sysopt, EN_PROC_CURRENT, 
+				(long)(vidx->duration/100), 
+				(long)(dtms/100), &dts);
 	}
 	return 0;
 }
@@ -1637,12 +1670,27 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 {
 	char	status[128];
 
+	if (vidx->dur_all && vidx->next) {	/* hasn't finished */
+		return 0;
+	}
+
+	/* check if all images been taken */
+	if (image->taken < image->shots) {
+		eznotify(vidx->sysopt, EN_STREAM_BROKEN, 
+				image->taken, image->shots, NULL);
+#ifdef	CFG_FILL_LAST_IMAGE
+		while (image->taken < image->shots) {
+			video_snap_update(vidx, image, -1);
+		}
+#endif
+	}
+
 	/* display the end of the process and generate the status line */
 	sprintf(status, "%dx%dx%d Thumbnails Generated by Ezthumb %s (%.3f s)",
 			image->dst_width, image->dst_height, image->taken,
 			EZTHUMB_VERSION, 
 			smm_time_diff(&vidx->tmark) / 1000.0);
-	eznotify(vidx, EN_PROC_END, image->canvas_width, 
+	eznotify(vidx->sysopt, EN_PROC_END, image->canvas_width, 
 			image->canvas_height, status);
 
 	if (image->gdcanvas) {
@@ -1652,7 +1700,11 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 			/* Insert as status line */
 			image_gdcanvas_print(image, -1, 0, status);
 		}
-		image_gdcanvas_save(image, vidx->filename);
+		if (vidx->anchor) {
+			image_gdcanvas_save(image, vidx->anchor->filename);
+		} else {
+			image_gdcanvas_save(image, vidx->filename);
+		}
 	} else if (image->gifx_fp) {
 		image_gif_anim_close(image, image->gifx_fp);
 	}
@@ -1701,7 +1753,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	ezfrm->rf_pac  = 0;
 
 	do {
-		eznotify(vidx, EN_PACKET_RECV, 0, 0, packet);
+		eznotify(vidx->sysopt, EN_PACKET_RECV, 0, 0, packet);
 		ezfrm->rf_size += packet->size;
 		ezfrm->rf_pac++;
 
@@ -1709,13 +1761,14 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 				ezfrm->frame, &ffin, packet);
 		if (ffin == 0) {
 			/* the packet is not finished */
-			eznotify(vidx, EN_FRAME_PARTIAL, 
+			eznotify(vidx->sysopt, EN_FRAME_PARTIAL, 
 					0, ffin, ezfrm->frame);
 			av_free_packet(packet);
 			continue;
 		}
 
-		eznotify(vidx, EN_FRAME_COMPLETE, 0, ffin, ezfrm->frame);
+		eznotify(vidx->sysopt, EN_FRAME_COMPLETE, 
+				0, ffin, ezfrm->frame);
 		av_free_packet(packet);
 		vidx->fdec++;
 		return ezfrm->rf_dts;	/* succeeded */
@@ -1751,7 +1804,7 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 #endif
 			return dts;	
 		}
-		eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, 
+		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, 
 				vidx->fgroup[vidx->fnow].frame);
 	} while (video_load_packet(vidx, packet) >= 0);
 	return -1;
@@ -1767,7 +1820,7 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 			return dts;
 		}
 
-		eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, 
+		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, 
 				vidx->fgroup[vidx->fnow].frame);
 	} while (video_load_packet(vidx, packet) >= 0);
 	return -1;
@@ -1804,7 +1857,7 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 			return dts;
 		}
 
-		eznotify(vidx, EN_FRAME_EXCEPTION, 0, 0, vidx->frame);
+		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, vidx->frame);
 		av_free_packet(packet);
 	}
 	return -1;
@@ -1980,10 +2033,10 @@ static int64_t video_packet_timestamp(AVPacket *packet)
  *   }
  * }    
  */   
-static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
+static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 {
 	EZIMG	*image;
-	EZTIME	rt_during;
+	EZOPT	*ezopt;
 	int	size, shots;
 	int	pro_col, pro_row, pro_width, pro_height, pro_facto;
 	int	pro_canvas;
@@ -1996,24 +2049,10 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		return NULL;
 	}
 	
-	image->sysopt = ezopt;
-	src_width  = vidx->codecx->width;
+	ezopt = image->sysopt = vidx->sysopt;
+	src_width = vidx->width;
+	ar_height = vidx->ar_height;	/* 20120720 Apply the AR correction */
 
-	/* 20120720 Apply the AR correction */
-	/* calculate the original video height by AR correction */
-	ar_height = vidx->codecx->height;
-	if (vidx->codecx->sample_aspect_ratio.num && 
-			vidx->codecx->sample_aspect_ratio.den) {
-		ar_height = vidx->codecx->height * 
-			vidx->codecx->sample_aspect_ratio.den /
-			vidx->codecx->sample_aspect_ratio.num;
-	}
-
-	/* calculate the expected time range */
-	rt_during = vidx->duration;
-	if (vidx->group) {
-		rt_during = vidx->group->duration;
-	}
 	image->time_from = image_cal_time_range(ezopt->time_from, rt_during);
 	if (image->time_from >= rt_during) {
 		image->time_from = 0;
@@ -2179,7 +2218,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 		/* we only need the font height plus the gap size */
 		size = EZ_LO_WORD(size) + EZ_TEXT_MINFO_GAP;
 		/* One rimedge plus media infos */
-		image->canvas_minfo = size * (vidx->formatx->nb_streams + 2) 
+		image->canvas_minfo = size * (vidx->streams + 2) 
 						+ EZ_TEXT_INSET_GAP;
 		image->canvas_height += image->canvas_minfo;
 		/* Plus the status line: font height + INSET_GAP */
@@ -2249,7 +2288,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZOPT *ezopt, int *errcode)
 
 	uperror(errcode, EZ_ERR_NONE);
 
-	eznotify(vidx, EN_IMAGE_CREATED, 0, 0, image);
+	eznotify(vidx->sysopt, EN_IMAGE_CREATED, 0, 0, image);
 	return image;	
 }
 
@@ -3491,6 +3530,64 @@ static int dts_lib_compress(void *anchor, int64_t *refdts, int num)
 /****************************************************************************
  * Utility Functions
  ****************************************************************************/
+
+/* this function is used to convert the PTS from the video stream
+ * based time to the millisecond based time. The formula is:
+ *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
+ * then
+ *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
+EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	/* the 'start_time' in the AVFormatContext should be offsetted from
+	 * the video stream's PTS */
+	if (vidx->formatx->start_time != AV_NOPTS_VALUE) {
+		dts -= video_system_to_dts(vidx, vidx->formatx->start_time);
+	}
+
+	return (EZTIME) av_rescale(dts * 1000, 
+			s->time_base.num, s->time_base.den);
+}
+
+/* this function is used to convert the timestamp from the millisecond 
+ * based time to the video stream based PTS time. The formula is:
+ *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
+ * then
+ *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
+int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale((int64_t) ms, s->time_base.den, 
+			(int64_t) s->time_base.num * (int64_t) 1000);
+}
+
+/* this function is used to convert the PTS from the video stream
+ * based time to the default system time base (microseconds). The formula is:
+ *   SYS = (PTS * s->time_base.num / s->time_base.den) * AV_TIME_BASE
+ * then
+ *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
+int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale(dts * (int64_t) AV_TIME_BASE,
+			s->time_base.num, s->time_base.den);
+}
+
+/* this function is used to convert the timestamp from the default 
+ * system time base (microsecond) to the millisecond based time. The formula:
+ *   PTS = (SYS / AV_TIME_BASE) * s->time_base.den / s->time_base.num 
+ * then
+ *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
+int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale(sysdts, s->time_base.den, 
+			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
+}
 
 char *meta_bitrate(int bitrate, char *buffer)
 {

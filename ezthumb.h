@@ -40,6 +40,7 @@
 #define EZ_ERR_FORMAT		-9	/* wrong video format */
 #define EZ_ERR_VIDEOSTREAM	-10	/* no viden stream */
 #define EZ_ERR_FILE		-11	/* can not open the video file */
+#define EZ_ERR_KEYCFG		-12	/* configure key doesn't exist */
 
 
 #define EN_FILE_OPEN		1000	/* successfully open a video file */
@@ -118,6 +119,17 @@
 #define EZOP_THUMB_OVERRIDE	0x400
 /* define the copy mode if not override */
 #define EZOP_THUMB_COPY		0x800
+
+#define SETFFRAME(m)	((m) | EZOP_FFRAME)
+#define CLRFFRAME(m)	((m) & ~EZOP_FFRAME)
+#define GETFFRAME(m)	((m) & EZOP_FFRAME)
+
+#define SETPROCS(m,p)	((m) &= ~EZOP_PROC_MASK, (m) |= (p))
+#define GETPROCS(m)	((m) & EZOP_PROC_MASK)
+
+#define SETACCUR(m)	((m) |= EZOP_P_FRAME)
+#define GETACCUR(m)	((m) & EZOP_P_FRAME)
+#define CLRACCUR(m)	((m) &= ~EZOP_P_FRAME)
 
 
 /* Display the debug log in the command line. */
@@ -305,7 +317,7 @@ typedef	struct	{
 	int	time_to;	/* to where the process end (ms) */
 	int	dur_mode;	/* howto get the clip's duration */
 
-	int	vs_idx;		/* specify the stream index */
+	int	vs_user;	/* specify the stream index */
 	int	key_ripno;	/* specify the number when ripping keyframes*/
 	char	*pathout;	/* output path */
 	int	grpclips;	/* number of grouped clips */
@@ -319,12 +331,25 @@ typedef	struct	{
 	
 	/* GUI pointer */
 	void	*gui;
-
+	
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
 	EZPROF	*pro_size;	/* profile of the size of each snapshots */
 	EZPROF	pro_pool[EZ_PROF_MAX_ENTRY];
 } EZOPT;
+
+
+typedef	struct	{
+	EZOPT	*sysopt;
+
+	/* callback functions to indicate the progress */
+	int	(*notify)(void *nobj, int event, long param, long, void *);
+
+	/* copy of runtime objects for signal breaking */
+	void	*vidobj;	/* copy of the runtime EZVID point */
+	void	*imgobj;	/* copy of the runtime EZIMG point */
+	
+} RTOPT;
 
 /* This structure is used to store the runtime parameters. Most parameters
  * are transformed from the EZOPT structure. Due to the difference of each
@@ -342,6 +367,7 @@ typedef	struct	{
 	int	canvas_width;
 	int	canvas_height;
 	int	shots;		/* the total screenshots */
+	int	taken;		/* number of shots already taken */
 
 	/* time setting: they are all calculated from the duration, not DTS */
 	EZTIME	time_from;	/* from where to take shots (ms) */
@@ -366,7 +392,6 @@ typedef	struct	{
 	gdImage	*gdcanvas;	/* gd context for the whole canvas */
 	FILE	*gifx_fp;	/* for GIF89 animation */
 	int	gifx_opt;	/* for GIF89 animation */
-	int	taken;		/* number of shots already taken */
 
 	EZOPT	*sysopt;	/* link to the EZOPT parameters */
 	void	*cbparam;	/* the callback parameter block */
@@ -382,39 +407,47 @@ typedef	struct		{
 	int		rf_pac;
 } EZFRM;
 
-typedef	struct		{
-	EZTIME		duration;
-	char		*filename;
-} EZMBR;
-
-typedef	struct		{
-	EZTIME		duration;	/* ==0 means ignoring it */
-	int		maxmem;		/* max members of grouped clips */
-	int		avail;		/* available clips in the group */
-	EZMBR		member[1];	/* must be the last field */
-} EZGRP;
 
 typedef	struct	_EzVid	{
-	AVFormatContext	*formatx;	/* must NULL it !! */
+	/*** video_open() / video_close() */
+	AVFormatContext	*formatx;	/* must NULL it before use!! */
+	AVStream	*vstream;	/* video stream */
 	AVCodecContext	*codecx;
-	int		vsidx;
+	int		vsidx;		/* the index of the video stream */
 
+	/*** video_allocate() */
+	EZOPT		*sysopt;	/* link to the EZOPT parameters */
+	char		*filename;
+	int64_t		filesize;
+	EZTIME		duration;	/* duration of file in ms */
+	int		width;	
+	int		height;
+	int		streams;	/* total streams in the file */
+	int		ar_height;	/* video height after AR correcting */
+
+	/*** video_alloc_queue() */
+	EZTIME		dur_all;	/* total duration of all clips */
+	EZTIME		dur_off;	/* total duration before this clip */
+
+	/*** override fields of EZOPT */
+	int		ses_dura;	/* session duration mode */
+	int		ses_flags;
+
+	/*** video_connect() / video_disconnect() */
 	/* frame extracted and scaled from the video stream */
-	struct	SwsContext	*swsctx;	/* scaler context */
-	AVFrame			*swsframe;	/* scaled frame */
-	uint8_t			*swsbuffer;	/* the buffer of the scaled */
+	struct	
+	SwsContext	*swsctx;	/* scaler context */
+	AVFrame		*swsframe;	/* scaled frame */
+	uint8_t		*swsbuffer;	/* the buffer of the scaled */
 	
 	EZFRM		fgroup[2];
 	int		fnow;
 	unsigned	fdec;
 
-	int		ses_dura;	/* session duration mode */
-	int		ses_proc;	/* session process mode */
-	int		ses_acc;	/* session accurate mode */
-
-	EZTIME		duration;	/* the stream duration in ms */
+	/*** runtime variables in each session */
 	int		seekable;	/* video keyframe seekable flag */
 	SMM_TIME	tmark;		/* the beginning timestamp */
+	EZTIME		time_begin;
 
 	int64_t		keygap;		/* maximum gap between keyframe */
 	int64_t		keylast;	/* the DTS of the last keyframe */
@@ -422,11 +455,8 @@ typedef	struct	_EzVid	{
 	int64_t		keydelta;	/* the delta DTS of snapshots */
 	void		*keylib;	/* the anchor to keyframe list */
 
-	EZOPT		*sysopt;	/* link to the EZOPT parameters */
-	char		*filename;	/* link to the file name */
-	long long	filesize;
-
-	EZGRP		*group;		/* extension for group opening */
+	struct	_EzVid	*anchor;	/* always pointing to the anchor */
+	struct	_EzVid	*next;
 } EZVID;
 
 
@@ -457,6 +487,19 @@ struct	DTSLIB	{
 	int64_t	dts[MAX_DTS_LIB];
 };
 
+
+/* this structure is used to shipping 64 bit argments to 
+ * notification functions */
+struct	ezntf	{
+	void	*varg1;
+	void	*varg2;
+	void	*varg3;
+	int64_t	iarg1;
+	int64_t	iarg2;
+	int64_t	iarg3;
+};
+
+
 typedef	int  (*F_BRK)(void*, void*);
 typedef	void (*F_HOOK)(F_BRK, void*, void*);
 
@@ -467,21 +510,8 @@ void ezopt_review(EZOPT *opt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezthumb_safe(char *filename, EZOPT *ezopt);
 int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt);
-int ezinfo(char *filename, EZOPT *ezopt);
+int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout);
 int ezthumb_break(EZOPT *ezopt);
-
-EZVID *video_allocate(char *filename, EZOPT *ezopt, int *errcode);
-int video_free(EZVID *vidx);
-int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
-int video_snapshot_skim(EZVID *vidx, EZIMG *image);
-int video_snapshot_safemode(EZVID *vidx, EZIMG *image);
-int video_snapshot_scan(EZVID *vidx, EZIMG *image);
-int video_snapshot_twopass(EZVID *vidx, EZIMG *image);
-int video_snapshot_heuristic(EZVID *vidx, EZIMG *image);
-EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
-int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
-int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
-int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
 int ezopt_profile_setup(EZOPT *opt, char *s);
 int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size);
@@ -490,6 +520,11 @@ int ezopt_profile_disable(EZOPT *ezopt, int prof);
 int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
 int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
 int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
+
+EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
+int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
+int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
+int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
 char *meta_bitrate(int bitrate, char *buffer);
 char *meta_filesize(int64_t size, char *buffer);
@@ -505,7 +540,7 @@ char *strncpy_safe(char *dest, const char *src, size_t n);
 
 
 /* eznotify.c */
-int eznotify(EZVID *vidx, int event, long param, long opt, void *block);
+int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block);
 int dump_format_context(AVFormatContext *format);
 int dump_video_context(AVCodecContext *codec);
 int dump_audio_context(AVCodecContext *codec);
