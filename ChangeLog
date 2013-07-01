@@ -1,3 +1,6 @@
+20130628: move to 2.2.0
+  + Major update to support binding mode.
+
 20120902: quickfix branch V2.1.10
   + ezgui.c: temporarily change the default codepage to UTF-8 to fix the
     file name issue. The problem is that ezthumb uses native codepage to 

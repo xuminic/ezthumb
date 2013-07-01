@@ -173,6 +173,8 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 
 	ezopt->bg_position = EZ_POS_MIDCENTER;
 	ezopt->vs_user = -1;	/* default: first found video stream */
+	ezopt->r_flags = SMM_PATH_DIR_FIFO;
+	ezopt->accept = ezflt_create(EZ_DEF_FILTER);
 
 	if (profile) {
 		ezopt_profile_setup(ezopt, profile);
@@ -3777,5 +3779,47 @@ char *strncpy_safe(char *dest, const char *src, size_t n)
 	dest[n - 1] = 0;
 	return dest;
 }
+
+EZFLT *ezflt_create(char *s)
+{
+	EZFLT	*flt;
+	int	len, fno;
+	char	*tmp;
+
+	len = strlen(s);
+	fno = len / 2;
+	len += fno * sizeof(char*) + sizeof(EZFLT) + 16;
+	if ((flt = malloc(len)) == NULL) {
+		return NULL;
+	}
+
+	memset(flt, 0, len);
+	tmp = (char*) &flt->filter[fno];
+	strcpy(tmp, s);
+	len = ziptoken(tmp, flt->filter, fno, ",;:");
+	flt->filter[len] = NULL;
+	return flt;
+}
+
+int ezflt_match(EZFLT *flt, char *fname)
+{
+	int	i, n;
+
+	if (flt == NULL) {
+		return 1;	/* no filter means total matched */
+	}
+
+	for (i = 0; flt->filter[i]; i++) {
+		n = strlen(fname) - strlen(flt->filter[i]) - 1;
+		if (fname[n] != '.') {
+			continue;
+		}
+		if (!strcasecmp(fname + n + 1, flt->filter[i])) {
+			return 1;
+		}
+	}
+	return 0;	/* not matched */
+}
+
 
 

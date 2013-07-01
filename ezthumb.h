@@ -119,6 +119,8 @@
 #define EZOP_THUMB_OVERRIDE	0x400
 /* define the copy mode if not override */
 #define EZOP_THUMB_COPY		0x800
+/* process the subdirectories if the file name is a folder */
+#define EZOP_RECURSIVE		0x1000
 
 #define SETFFRAME(m)	((m) | EZOP_FFRAME)
 #define CLRFFRAME(m)	((m) & ~EZOP_FFRAME)
@@ -209,6 +211,7 @@
  * if the video source file was broken. */
 #define EZ_BR_GATE_LOW		13000
 
+#define EZ_DEF_FILTER	"avi,flv,mkv,mov,mp4,mpg,mpeg,rm,rmvb,ts,vob,wmv"
 
 #define EZBYTE	unsigned char
 #define EZTIME	int64_t
@@ -242,6 +245,15 @@ typedef	struct	{
 
 	float	lbase;	/* the base of logarithm */
 } EZPROF;
+
+/* File name filter setting
+ * Input string could be "avi,wmv,mkv" or "+avi:wmv:-mkv"
+ * Stored format will be "*.avi", "*.wmv", "*.mkv"
+ */
+typedef struct	{
+	char	*filter[1];
+} EZFLT;
+
 
 
 /* This structure is used to store the user defined parameters.
@@ -331,12 +343,18 @@ typedef	struct	{
 	
 	/* GUI pointer */
 	void	*gui;
-	
+
+	/* file name filter */
+	EZFLT	*accept;
+	EZFLT	*refuse;
+	int	r_flags;	/* recursive flags for smm_pathtrek() */
+
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
 	EZPROF	*pro_size;	/* profile of the size of each snapshots */
 	EZPROF	pro_pool[EZ_PROF_MAX_ENTRY];
 } EZOPT;
+
 
 
 typedef	struct	{
@@ -537,6 +555,9 @@ int meta_image_format(char *input, char *fmt, int flen);
 
 char *strcpy_alloc(const char *src);
 char *strncpy_safe(char *dest, const char *src, size_t n);
+
+EZFLT *ezflt_create(char *s);
+int ezflt_match(EZFLT *flt, char *fname);
 
 
 /* eznotify.c */

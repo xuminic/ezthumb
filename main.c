@@ -52,7 +52,7 @@ static	struct	cliopt	clist[] = {
 	{ 'p', "process", 1, 
 		"the process method (skim|scan|2pass|heuri|safe|key[@N])" },
 	{ 'P', "profile", 2, "specify the profile string" },
-	{ 'R', "recursive", 2, "process files and directories recursively" },
+	{ 'R', "recursive", 0, "process files and directories recursively" },
 	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
 	{ 't', "timestep",1, "the time step between each shots in ms" }, 
 	{ 'v', "verbose", 1, "*verbose mode (0)(0-7)" },
@@ -61,8 +61,9 @@ static	struct	cliopt	clist[] = {
 	{   6, "accurate", 0, "take accurate shots including P-frames" },
 	{   7, "background", 2, "the background picture" },
 	{  14, "decode-otf", 0, "decoding on the fly mode for scan process" },
-	{  25, "depth",   1, "most levels of directories recursively" },
+	{  25, "depth",   1, "most levels of directories recursively (FF:0)" },
 	{  21, "edge",    1, "the width of the screen shot edge (0)" },
+	{  26, "filter",  1, "the filter of the extended file name" },
 	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
 	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
 	{  10, "opt-info", 2, "the media infomation (on)" },
@@ -109,22 +110,12 @@ static	char	*sysprof[] = {
 
 static	EZOPT	sysopt;
 
-/* Recursive filter, for example: -R "FF:avi,wmv,mkv"
- * The NULL filter means disable the recursive mode. 
- * The empty filter means allow all.
- * Magic words in first two characters: FF, DF, DL.
- * First-meet-Firt-process, Directory-First, Directory-Last */
-static	char	*r_filter = NULL;	
-static	char	*r_fidx[128];
-static	int	r_fnum;
-static	int	r_flag = SMM_PATH_DIR_FIFO;
-
 
 static int command_line_parser(int argc, char **argv, EZOPT *opt);
 static int signal_handler(int sig);
+static int main_close(EZOPT *opt);
 static int msg_info(void *option, char *path, int type, void *info);
 static int msg_shot(void *option, char *path, int type, void *info);
-static int filter_match(char *path);
 static int para_get_ratio(char *s);
 static int para_get_time_point(char *s);
 static int para_get_position(char *s);
@@ -150,15 +141,15 @@ int main(int argc, char **argv)
 	smm_init();				/* initialize the libsmm */
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 #ifdef	CFG_GUI_ON
-	ezgui_init(&sysopt, &argc, &argv);	/* the config file */
+	if (command_line_parser(argc, argv, NULL) == 'G') {
+		/* initialize the GUI module and read the configure file */
+		sysopt.gui =  ezgui_init(&sysopt, &argc, &argv);
+	}
 #endif
 
-	if ((todo = command_line_parser(argc, argv, &sysopt)) < 0) {
-		printf("Invalid parameters.\n");
-		return EZ_ERR_PARAM;
-	}
+	todo = command_line_parser(argc, argv, &sysopt);
 	//return printf("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc);
-
+	
 	/* review the command option structure to make sure there is no
 	 * controdicted options */
 	ezopt_review(&sysopt);
@@ -169,21 +160,55 @@ int main(int argc, char **argv)
 	av_register_all();
 
 	switch (todo) {
-	case 0:
+	case -2:
+		printf("Invalid parameters.\n");
+		todo = EZ_ERR_PARAM;
 		break;
+	case -1:
+		printf("No action applied\n");
+		todo = EZ_ERR_EOP;
+		break;
+	case 1:		/* help */
+		cli_print(clist);
+		todo = EZ_ERR_EOP;
+		break;
+	case 2:		/* version */
+		printf(version, EZTHUMB_VERSION);
+		version_ffmpeg();
+#ifdef	CFG_GUI_ON
+		ezgui_version();
+#endif
+		todo = EZ_ERR_EOP;
+		break;
+	case 3:		/* simple version */
+		printf("%s\n", EZTHUMB_VERSION);
+		todo = EZ_ERR_EOP;
+		break;
+	case 23:	/* test the profile */
+		runtime_profile_test(&sysopt, (void*)sysopt.pro_grid);
+		todo = EZ_ERR_EOP;
+		break;
+	case 'P':	/* print the internal profile table */
+		for (i = 0; i < PROFLIST; i++) {
+			printf("%2d: %s\n", i, sysprof[i]);
+		}
+		todo = EZ_ERR_EOP;
+		break;
+
 	case 'I':
 	case 'i':
 		sysopt.notify = event_list;
-		if (r_filter == NULL) {
+		if ((sysopt.flags & EZOP_RECURSIVE) == 0) {
 			for (i = optind; i < argc; i++) {
 				todo = ezinfo(argv[i], &sysopt, NULL);
 			}
 		} else if (optind >= argc) {
-			todo = smm_pathtrek(".", r_flag, msg_info, &sysopt);
+			todo = smm_pathtrek(".", sysopt.r_flags, 
+					msg_info, &sysopt);
 		} else {
 			for (i = optind; i < argc; i++) {
-				todo = smm_pathtrek(argv[i], 
-						r_flag, msg_info, &sysopt);
+				todo = smm_pathtrek(argv[i], sysopt.r_flags,
+						msg_info, &sysopt);
 			}
 		}
 		break;
@@ -196,69 +221,73 @@ int main(int argc, char **argv)
 		break;
 	case 'G':
 		todo = EZ_ERR_EOP;
-#ifdef	CFG_GUI_ON
-		if ((sysopt.gui = ezgui_open(&sysopt)) != NULL) {
-			todo = ezgui_run(sysopt.gui, argv+optind, argc-optind);
-			ezgui_close(sysopt.gui);
-			sysopt.gui = NULL;
-		}
-#endif
-		if (todo == EZ_ERR_EOP) {
+		if (sysopt.gui == NULL) {
 			cli_print(clist);
 		}
+#ifdef	CFG_GUI_ON
+		else {
+			todo = ezgui_run(sysopt.gui, argv+optind, argc-optind);
+		}
+#endif
 		break;
 	default:
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysopt.flags) <= EZOP_DEBUG_BRIEF) {
 			sysopt.notify = event_cb;
 		}
-		if (r_filter == NULL) {
+		if ((sysopt.flags & EZOP_RECURSIVE) == 0) {
 			for (i = optind; i < argc; i++) {
 				todo = ezthumb(argv[i], &sysopt);
 			}
 		} else if (optind >= argc) {
-			todo = smm_pathtrek(".", r_flag, msg_shot, &sysopt);
+			todo = smm_pathtrek(".", sysopt.r_flags, 
+					msg_shot, &sysopt);
 		} else {
 			for (i = optind; i < argc; i++) {
-				todo = smm_pathtrek(argv[i], 
-						r_flag, msg_shot, &sysopt);
+				todo = smm_pathtrek(argv[i], sysopt.r_flags, 
+						msg_shot, &sysopt);
 			}
 		}
 		break;
 	}
-	if (r_filter) {
-		free(r_filter);
-	}
+	main_close(&sysopt);
 	return todo;
 }
 
+
+/* return:
+ *  >= 0 : todo
+ *  == -1: unset
+ *  == -2: command line error
+ */
 static int command_line_parser(int argc, char **argv, EZOPT *opt)
 {
 	struct	option	*argtbl;
+	EZOPT	*dummy = NULL;
 	char	*p, *arglist;
-	int	c, todo = -1;
-	int	prof_grid, prof_size;
+	int	c, todo, prof_grid, prof_size;
 
-	prof_grid = prof_size = 1;	/* enable the profile */
+	if (opt == NULL) {
+		opt = dummy = malloc(sizeof(EZOPT));
+		if (opt == NULL) {
+			return -1;
+		}
+	}
 
 	arglist = cli_alloc_list(clist);
 	argtbl  = cli_alloc_table(clist);
 	//puts(arglist);
+
+	todo = -1;	/* UNSET yet */
+	prof_grid = prof_size = 1;	/* enable the profile */
 	while ((c = getopt_long(argc, argv, arglist, argtbl, NULL)) > 0) {
 		switch (c) {
 		case 1:
-			cli_print(clist);
-			goto command_line_break;
 		case 2:
-			printf(version, EZTHUMB_VERSION);
-			version_ffmpeg();
-#ifdef	CFG_GUI_ON
-			ezgui_version();
-#endif
-			goto command_line_break;
 		case 3:
-			printf("%s\n", EZTHUMB_VERSION);
-			goto command_line_break;
+			todo = c;
+			c = -1;		/* break the analysis */
+			break;
 		case 6:	/* nonkey */
 			opt->flags |= EZOP_P_FRAME;
 			break;
@@ -267,7 +296,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 8:	/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->grid_gap_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -278,7 +309,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 9:	/* gap-margin: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->grid_rim_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -293,7 +326,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_INFO;
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 11:	/* opt-time */
@@ -302,7 +336,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_TIMEST;
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 12:	/* opt-ffr */
@@ -311,7 +346,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_FFRAME;
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 13:	/* opt-lfr */
@@ -320,26 +356,30 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_LFRAME;
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 15:	/* "pos-bg" */
 			if ((c = para_get_position(optarg)) == -1) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			} else {
 				opt->bg_position = c;
 			}
 			break;
 		case 16:	/* "pos-time" */
 			if ((c = para_get_position(optarg)) == -1) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			} else {
 				opt->ins_position = c;
 			}
 			break;
 		case 17:	/* "pos-info" */
 			if ((c = para_get_position(optarg)) == -1) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			} else {
 				opt->mi_position = c;
 			}
@@ -351,14 +391,16 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			if (isdigit(*optarg)) {
 				opt->time_from = para_get_time_point(optarg);
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 19:	/* time-end */
 			if (isdigit(*optarg)) {
 				opt->time_to = para_get_time_point(optarg);
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 20:
@@ -367,14 +409,18 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 22:	/* index */
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			} else {
 				opt->vs_user = strtol(optarg, NULL, 0);
 			}
 			break;
 		case 23:
-			runtime_profile_test(opt, optarg);
-			goto command_line_break;
+			todo = c;
+			c = -1;		/* break the analysis */
+			/* borrow this pointer because it won't be used ever*/
+			opt->pro_grid = (void*) optarg;
+			break;
 		case 24:
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_THUMB_OVERRIDE;
@@ -386,20 +432,50 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->flags &= ~EZOP_THUMB_OVERRIDE;
 				opt->flags |= EZOP_THUMB_COPY;
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 25:
-			r_flag = SMM_PATH_DEPTH(r_flag, 
-					strtol(optarg, NULL, 0));
+			/* Recursive depth, for example: "FF:3"
+			 * Magic words in first two characters: FF, DF, DL.
+			 * First-meet-Firt-process, Directory-First, Directory-Last 
+			 * 0 means unlimited */
+			if ((optarg[2] == ':') || (optarg[2] == 0)) {
+				c = opt->r_flags;
+				if (!strncmp(optarg, "FF", 2)) {
+					c = SMM_PATH_DIR_FIFO;
+					optarg += 3;
+				} else if (!strncmp(optarg, "DF", 2)) {
+					c = SMM_PATH_DIR_FIRST;
+					optarg += 3;
+				} else if (!strncmp(optarg, "DL", 2)) {
+					c = SMM_PATH_DIR_LAST;
+					optarg += 3;
+				}
+				opt->r_flags = SMM_PATH_DIR(opt->r_flags, c);
+			}
+			if (isdigit(*optarg)) {
+				opt->r_flags = SMM_PATH_DEPTH(opt->r_flags,
+						strtol(optarg, NULL, 0));
+			}
+			break;
+		case 26:
+			/* file name filter, for example: "avi,wmv,mkv"
+ 			 * The NULL filter means allow all. */
+			if (opt->accept) {
+				free(opt->accept);
+			}
+			opt->accept = ezflt_create(optarg);
 			break;
 
 		case 'b':
-			todo = 'b';
+			todo = c;
 			break;
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
-			if (para_get_color(&sysopt, optarg) != EZ_ERR_NONE) {
-				goto command_line_error;
+			if (para_get_color(opt, optarg) != EZ_ERR_NONE) {
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 'd':	/* Examples: 0,1,quick,skim,scan */
@@ -412,12 +488,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "head")) {
 				opt->dur_mode = EZ_DUR_CLIPHEAD;
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 'e':
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			} else {
 				opt->edge_width = strtol(optarg, NULL, 0);
 			}
@@ -432,13 +510,16 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case 'F':	/* MI:TM */
-			if (para_get_fontsize(&sysopt, optarg) != EZ_ERR_NONE) {
-				goto command_line_error;
+			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 'g':	/* Examples: 4, 4x8, 0x8 */
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->grid_col = strtol(optarg, &p, 10);
 			if (*p == 0) {
@@ -504,46 +585,28 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				}
 				break;
 			}
-			goto command_line_error;
+			todo = -2;	/* command line error */
+			c = -1;		/* break the analysis */
+			break;
 		case 'P':
 			c = strtol(optarg, &p, 10);
 			if (*p != 0) {	/* command line profiles */
-				ezopt_profile_setup(&sysopt, optarg);
+				ezopt_profile_setup(opt, optarg);
 			} else if ((c >= 0) && (c < PROFLIST)) {
-				ezopt_profile_setup(&sysopt, sysprof[c]);
+				ezopt_profile_setup(opt, sysprof[c]);
 			} else {	/* wrong profile index */
-				for (c = 0; c < PROFLIST; c++) {
-					printf("%2d: %s\n", c, sysprof[c]);
-				}
-				goto command_line_break;
+				todo = c;
+				c = -1;		/* break the analysis */
 			}
 			break;
 		case 'R':
-			if (*optarg == '-') {
-				goto command_line_error;
-			}
-			if ((optarg[2] == ':') || (optarg[2] == 0)) {
-				c = r_flag;
-				if (!strncmp(optarg, "FF", 2)) {
-					c = SMM_PATH_DIR_FIFO;
-					optarg += 3;
-				} else if (!strncmp(optarg, "DF", 2)) {
-					c = SMM_PATH_DIR_FIRST;
-					optarg += 3;
-				} else if (!strncmp(optarg, "DL", 2)) {
-					c = SMM_PATH_DIR_LAST;
-					optarg += 3;
-				}
-				r_flag = SMM_PATH_DIR(r_flag, c);
-			}
-			if ((r_filter = strcpy_alloc(optarg)) != NULL) {
-				r_fnum = ziptoken(r_filter, r_fidx, 
-					sizeof(r_fidx)/sizeof(char*), ",;:");
-			}
+			opt->flags |= EZOP_RECURSIVE;
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->tn_width = opt->tn_height = 0;	/* 20120720 */
 			opt->canvas_width = 0;
@@ -560,7 +623,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 't':
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->grid_row = 0;
 			prof_grid = 0;	/* disable the profile */
@@ -589,13 +654,17 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
 			} else {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->flags |= EZOP_DEBUG_MAKE(c);
 			break;
 		case 'w':
 			if (!isdigit(*optarg)) {
-				goto command_line_error;
+				todo = -2;	/* command line error */
+				c = -1;		/* break the analysis */
+				break;
 			}
 			opt->canvas_width = strtol(optarg, NULL, 0);
 			prof_size = 0;	/* disable the profile */
@@ -604,7 +673,12 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			strncpy_safe(opt->suffix, optarg, 64);
 			break;
 		default:
-			goto command_line_error;
+			todo = -2;	/* command line error */
+			c = -1;		/* break the analysis */
+			break;
+		}
+		if (c < 0) {	/* break the analysis */
+			break;
 		}
 	}
 	free(argtbl);
@@ -624,21 +698,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	 * will start the GUI interface */
 	if (todo == -1) {
 		todo = 'G';
-		if ((optind < argc) || (r_filter != NULL)) {
+		if ((optind < argc) || (opt->flags & EZOP_RECURSIVE)) {
 			todo = 'S';
 		}
 	}
+	if (dummy) {
+		free(dummy);
+	}
 	return todo;
-
-command_line_break:
-	free(argtbl);
-	free(arglist);
-	return 0;
-
-command_line_error:
-	free(argtbl);
-	free(arglist);
-	return -1;
 }
 
 
@@ -646,25 +713,39 @@ static int signal_handler(int sig)
 {
 	//printf("Signal %d\n", sig);
 	sig = ezthumb_break(&sysopt);
-
-#ifdef	CFG_GUI_ON
-	ezgui_close(sysopt.gui);
-	sysopt.gui = NULL;
-#endif
-	if (r_filter) {
-		free(r_filter);
-	}
+	main_close(&sysopt);
 	return sig;
+}
+
+static int main_close(EZOPT *opt)
+{
+#ifdef	CFG_GUI_ON
+	if (opt->gui) {
+		ezgui_close(opt->gui);
+		opt->gui = NULL;
+	}
+#endif
+	if (opt->accept) {
+		free(opt->accept);
+		opt->accept = NULL;
+	}
+	if (opt->refuse) {
+		free(opt->refuse);
+		opt->refuse = NULL;
+	}
+	return 0;
 }
 
 static int msg_info(void *option, char *path, int type, void *info)
 {
+	EZOPT	*ezopt = option;
+
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
 		printf("Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		if (filter_match(path)) {
+		if (ezflt_match(ezopt->accept, path)) {
 			//printf(">>> %s\n", path);
 			ezinfo(path, option, NULL);
 		}
@@ -681,12 +762,14 @@ static int msg_info(void *option, char *path, int type, void *info)
 
 static int msg_shot(void *option, char *path, int type, void *info)
 {
+	EZOPT	*ezopt = option;
+
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
 		printf("Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		if (filter_match(path)) {
+		if (ezflt_match(ezopt->accept, path)) {
 			//printf("+++ %s\n", path);
 			ezthumb(path, option);
 		}
@@ -697,26 +780,6 @@ static int msg_shot(void *option, char *path, int type, void *info)
 	case SMM_MSG_PATH_LEAVE:
 		printf("Leaving %s\n", path);
 		break;
-	}
-	return 0;
-}
-
-static int filter_match(char *path)
-{
-	int	i, n;
-
-	if (r_fnum == 0) {
-		return 1;
-	}
-	
-	for (i = 0; i < r_fnum; i++) {
-		n = strlen(path) - strlen(r_fidx[i]) - 1;
-		if (path[n] != '.') {
-			continue;
-		}
-		if (!strcasecmp(path + n + 1, r_fidx[i])) {
-		       return 1;
-		}
 	}
 	return 0;
 }

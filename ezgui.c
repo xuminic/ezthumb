@@ -72,7 +72,6 @@ static EZCFG *ezgui_cfg_alloc(void);
 static int ezgui_cfg_free(EZCFG *cfg);
 static char *ezgui_cfg_read_alloc(EZCFG *cfg, char *key);
 static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s);
-static int ezgui_cfg_rdonly_int(EZCFG *cfg, char *key, int *readout);
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
 static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
 static int ezgui_cfg_flush(EZCFG *cfg);
@@ -96,78 +95,13 @@ static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y);
 static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n);
 static void ezgui_window_update(void);
 
-int ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
-{
-	EZCFG	*cfg;
-	char	*p;
-	int	prof_size, prof_grid;
 
-	gtk_init(argcs, argvs);
-
-#if 0
-	if ((cfg = ezgui_cfg_alloc()) == NULL) {
-		return EZ_ERR_LOWMEM;
-	}
-
-	prof_size = prof_grid = 1;
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_GRID_COLUMN, &ezopt->grid_col)
-			== EZ_ERR_NONE) {
-		prof_grid = 0;  /* disable the profile */
-	}
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_GRID_ROW, &ezopt->grid_row)
-			== EZ_ERR_NONE) {
-		prof_grid = 0;  /* disable the profile */
-	}
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_TIME_STEP, &ezopt->tm_step)
-			== EZ_ERR_NONE) {
-		prof_grid = 0;
-	}
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_ZOOM_RATIO, &ezopt->tn_facto)
-			== EZ_ERR_NONE) {
-		prof_size = 0;
-	}
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_ZOOM_WIDTH, &ezopt->tn_width)
-			== EZ_ERR_NONE) {
-		prof_size = 0;
-	}
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_ZOOM_HEIGHT, &ezopt->tn_height)
-			== EZ_ERR_NONE) {
-		prof_size = 0;
-	}
-	if (ezgui_cfg_rdonly_int(cfg, CFG_KEY_CANVAS_WIDTH, 
-				&ezopt->canvas_width) == EZ_ERR_NONE) {
-		prof_size = 0;
-	}
-	ezgui_cfg_rdonly_int(cfg, CFG_KEY_DURATION, &ezopt->dur_mode);
-
-
-	if ((p = ezgui_cfg_read_alloc(cfg, CFG_KEY_FILE_FORMAT)) != NULL) {
-		ezopt->img_quality = meta_image_format(p, ezopt->img_format, 8);
-		free(p);
-	}
-
-	/* setup the simple profile */
-	if ((p = ezgui_cfg_read_alloc(cfg, CFG_KEY_PROF_SIMPLE)) != NULL) {
-		ezopt_profile_setup(ezopt, p);
-		/* disable the unwanted profiles */
-		if (prof_grid == 0) {
-			ezopt_profile_disable(ezopt, EZ_PROF_LENGTH);
-		}
-		if (prof_size == 0) {
-			ezopt_profile_disable(ezopt, EZ_PROF_WIDTH);
-		}
-		free(p);
-	}
-	ezgui_cfg_free(cfg);
-#endif
-	return EZ_ERR_NONE;
-}
-
-
-EZGUI *ezgui_open(EZOPT *ezopt)
+EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
 	EZGUI	*gui;
 	char	*p;
+
+	gtk_init(argcs, argvs);
 
 	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
 		return NULL;
@@ -887,9 +821,10 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	EZADD	*ezadd;
 	char	*dir;
 	int	i;
-	char	*vidtab[] = { "*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", 
+	/*char	*vidtab[] = { "*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", 
 		"*.mpg", "*.mpeg", "*.rm", "*.rmvb", 
-		"*.ts", "*.vob", "*.wmv" };
+		"*.ts", "*.vob", "*.wmv" };*/
+	char	vidtab[64];
 
 	dialog = gtk_file_chooser_dialog_new ("Choose File", 
 			GTK_WINDOW(gui->gw_main),
@@ -908,9 +843,16 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	filter = gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All Videos");
 	gtk_file_filter_add_mime_type(filter, "video/*");
-	for (i = 0; i < sizeof(vidtab)/sizeof(char*); i++) {
+	/*for (i = 0; i < sizeof(vidtab)/sizeof(char*); i++) {
 		gtk_file_filter_add_pattern(filter, vidtab[i]);
+	}*/
+	if (gui->sysopt->accept) {
+		for (i = 0; gui->sysopt->accept->filter[i]; i++) {
+			strcpy(vidtab, "*.");
+			strcat(vidtab, gui->sysopt->accept->filter[i]);
+		}
 	}
+
 	gtk_file_chooser_add_filter(chooser, filter);
 
 	/*filter = gtk_file_filter_new();
@@ -1436,6 +1378,7 @@ static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s)
 	return cfg->mcount;
 }
 
+#if 0
 static int ezgui_cfg_rdonly_int(EZCFG *cfg, char *key, int *readout)
 {
 	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
@@ -1447,6 +1390,7 @@ static int ezgui_cfg_rdonly_int(EZCFG *cfg, char *key, int *readout)
 	}
 	return EZ_ERR_NONE;
 }
+#endif
 
 static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def)
 {
