@@ -25,10 +25,20 @@
 #include <math.h>
 
 #include "ezthumb.h"
-
 #ifdef	CFG_GUI_ON
 #include "ezgui.h"
 #endif
+
+
+#define TODO_ERROR	-2
+#define TODO_UNSET	-1
+#define TODO_UNKNOWN	0
+#define TODO_HELP	1
+#define TODO_VERSION	2
+#define TODO_QK_VER	3
+#define TODO_PROF_TST	23
+
+
 
 
 static	struct	cliopt	clist[] = {
@@ -158,19 +168,19 @@ int main(int argc, char **argv)
 	av_register_all();
 
 	switch (todo) {
-	case -2:
+	case TODO_ERROR:
 		printf("Invalid parameters.\n");
 		todo = EZ_ERR_PARAM;
 		break;
-	case -1:
+	case TODO_UNSET:
 		printf("No action applied\n");
 		todo = EZ_ERR_EOP;
 		break;
-	case 1:		/* help */
+	case TODO_HELP:		/* help */
 		cli_print(clist);
 		todo = EZ_ERR_EOP;
 		break;
-	case 2:		/* version */
+	case TODO_VERSION:	/* version */
 		printf(version, EZTHUMB_VERSION);
 		version_ffmpeg();
 #ifdef	CFG_GUI_ON
@@ -178,11 +188,11 @@ int main(int argc, char **argv)
 #endif
 		todo = EZ_ERR_EOP;
 		break;
-	case 3:		/* simple version */
+	case TODO_QK_VER:	/* simple version */
 		printf("%s\n", EZTHUMB_VERSION);
 		todo = EZ_ERR_EOP;
 		break;
-	case 23:	/* test the profile */
+	case TODO_PROF_TST:	/* test the profile */
 		runtime_profile_test(&sysopt, (void*)sysopt.pro_grid);
 		todo = EZ_ERR_EOP;
 		break;
@@ -268,7 +278,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	if (opt == NULL) {
 		opt = dummy = malloc(sizeof(EZOPT));
 		if (opt == NULL) {
-			return -1;
+			return TODO_UNSET;
 		}
 	}
 
@@ -276,7 +286,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	argtbl  = cli_alloc_table(clist);
 	//puts(arglist);
 
-	todo = -1;	/* UNSET yet */
+	todo = TODO_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	while ((c = getopt_long(argc, argv, arglist, argtbl, NULL)) > 0) {
 		switch (c) {
@@ -284,8 +294,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		case 2:
 		case 3:
 			todo = c;
-			c = -1;		/* break the analysis */
-			break;
+			goto break_parse;	/* break the analysis */
+
 		case 6:	/* nonkey */
 			opt->flags |= EZOP_P_FRAME;
 			break;
@@ -294,9 +304,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 8:	/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_gap_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -307,9 +316,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 9:	/* gap-margin: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_rim_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -324,8 +332,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_INFO;
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 11:	/* opt-time */
@@ -334,8 +342,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_TIMEST;
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 12:	/* opt-ffr */
@@ -344,8 +352,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_FFRAME;
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 13:	/* opt-lfr */
@@ -354,30 +362,30 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_LFRAME;
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 15:	/* "pos-bg" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			} else {
 				opt->bg_position = c;
 			}
 			break;
 		case 16:	/* "pos-time" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			} else {
 				opt->ins_position = c;
 			}
 			break;
 		case 17:	/* "pos-info" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			} else {
 				opt->mi_position = c;
 			}
@@ -389,16 +397,16 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			if (isdigit(*optarg)) {
 				opt->time_from = para_get_time_point(optarg);
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 19:	/* time-end */
 			if (isdigit(*optarg)) {
 				opt->time_to = para_get_time_point(optarg);
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 20:
@@ -407,18 +415,18 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 22:	/* index */
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			} else {
 				opt->vs_user = strtol(optarg, NULL, 0);
 			}
 			break;
 		case 23:
 			todo = c;
-			c = -1;		/* break the analysis */
 			/* borrow this pointer because it won't be used ever*/
 			opt->pro_grid = (void*) optarg;
-			break;
+			goto break_parse;	/* break the analysis */
+
 		case 24:
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_THUMB_OVERRIDE;
@@ -430,8 +438,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->flags &= ~EZOP_THUMB_OVERRIDE;
 				opt->flags |= EZOP_THUMB_COPY;
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 25:
@@ -472,8 +480,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
 			if (para_get_color(opt, optarg) != EZ_ERR_NONE) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 'd':	/* Examples: 0,1,quick,skim,scan */
@@ -486,14 +494,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "head")) {
 				opt->dur_mode = EZ_DUR_CLIPHEAD;
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 'e':
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			} else {
 				opt->edge_width = strtol(optarg, NULL, 0);
 			}
@@ -509,15 +517,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 'F':	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 'g':	/* Examples: 4, 4x8, 0x8 */
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_col = strtol(optarg, &p, 10);
 			if (*p == 0) {
@@ -583,9 +590,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				}
 				break;
 			}
-			todo = -2;	/* command line error */
-			c = -1;		/* break the analysis */
-			break;
+			todo = TODO_ERROR;	/* command line error */
+			goto break_parse;	/* break the analysis */
+
 		case 'P':
 			c = strtol(optarg, &p, 10);
 			if (*p != 0) {	/* command line profiles */
@@ -594,7 +601,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				ezopt_profile_setup(opt, sysprof[c]);
 			} else {	/* wrong profile index */
 				todo = c;
-				c = -1;		/* break the analysis */
+				goto break_parse;	/* break the analysis */
 			}
 			break;
 		case 'R':
@@ -602,9 +609,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 's':	/* Examples: 50, 50%, 320x240 */
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->tn_width = opt->tn_height = 0;	/* 20120720 */
 			opt->canvas_width = 0;
@@ -621,9 +627,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case 't':
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_row = 0;
 			prof_grid = 0;	/* disable the profile */
@@ -652,17 +657,15 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
 			} else {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->flags |= EZOP_DEBUG_MAKE(c);
 			break;
 		case 'w':
 			if (!isdigit(*optarg)) {
-				todo = -2;	/* command line error */
-				c = -1;		/* break the analysis */
-				break;
+				todo = TODO_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
 			}
 			opt->canvas_width = strtol(optarg, NULL, 0);
 			prof_size = 0;	/* disable the profile */
@@ -671,14 +674,12 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			strncpy_safe(opt->suffix, optarg, 64);
 			break;
 		default:
-			todo = -2;	/* command line error */
-			c = -1;		/* break the analysis */
-			break;
-		}
-		if (c < 0) {	/* break the analysis */
-			break;
+			todo = TODO_ERROR;	/* command line error */
+			goto break_parse;	/* break the analysis */
 		}
 	}
+
+break_parse:
 	free(argtbl);
 	free(arglist);
 
@@ -694,7 +695,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	 * was specified, which would regards the empty filename as current
 	 * path, ezthumb would work as a command line tool. Otherwise it
 	 * will start the GUI interface */
-	if (todo == -1) {
+	if (todo == TODO_UNSET) {
 		todo = 'G';
 		if ((optind < argc) || (opt->flags & EZOP_RECURSIVE)) {
 			todo = 'S';
