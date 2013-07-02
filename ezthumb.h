@@ -24,7 +24,7 @@
 #include "libavformat/avformat.h"
 #include "libswscale/swscale.h"
 #include "gd.h"
-#include "libsmm.h"
+#include "libcsoup.h"
 
 #define EZTHUMB_VERSION		"2.2.0"
 

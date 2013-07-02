@@ -26,7 +26,6 @@
 
 #include "ezthumb.h"
 #include "id_lookup.h"
-#include "libsmm.h"
 
 #include "gdfontt.h"
 #include "gdfonts.h"

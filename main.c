@@ -25,8 +25,6 @@
 #include <math.h>
 
 #include "ezthumb.h"
-#include "cliopt.h"
-#include "libsmm.h"
 
 #ifdef	CFG_GUI_ON
 #include "ezgui.h"
@@ -138,7 +136,7 @@ int main(int argc, char **argv)
 {
 	int	i, todo;
 
-	smm_init();				/* initialize the libsmm */
+	smm_init(0);				/* initialize the libsmm */
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 #ifdef	CFG_GUI_ON
 	if (command_line_parser(argc, argv, NULL) == 'G') {

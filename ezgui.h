@@ -25,7 +25,7 @@
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
 
-#include "libsmm.h"
+#include "libcsoup.h"
 #include "ezthumb.h"
 
 
