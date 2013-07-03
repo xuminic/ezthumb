@@ -120,10 +120,13 @@ static void *dts_lib_free(void *anchor);
 static void *dts_lib_add(void *anchor, int64_t dts);
 static int dts_lib_compress(void *anchor, int64_t *refdts, int num);
 
-extern int ziptoken(char *sour, char **idx, int ids, char *delim);
 #ifdef	CFG_GUI_ON
 extern FILE *g_fopen(const char *filename, const char *mode);
 #endif
+
+
+int csoup_cmp_file_extname(char *fname, char *ext);
+int csoup_cmp_file_extlist(char *fname, char **ext);
 
 
 void ezopt_init(EZOPT *ezopt, char *profile)
@@ -2967,9 +2970,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
 	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
 	 * still a path */
-	rc = strlen(ezopt->pathout) - strlen(ezopt->img_format);
-	if ((rc > 0) && (ezopt->pathout[rc-1] == '.') && 
-			!strcmp(&ezopt->pathout[rc], ezopt->img_format)) {
+	if (!csoup_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
 		if (buf) {
 			strcpy(buf, ezopt->pathout);
 		}
@@ -3819,23 +3820,62 @@ EZFLT *ezflt_create(char *s)
 
 int ezflt_match(EZFLT *flt, char *fname)
 {
-	int	i, n;
-
 	if (flt == NULL) {
 		return 1;	/* no filter means total matched */
 	}
-
-	for (i = 0; flt->filter[i]; i++) {
-		n = strlen(fname) - strlen(flt->filter[i]) - 1;
-		if (fname[n] != '.') {
-			continue;
-		}
-		if (!strcasecmp(fname + n + 1, flt->filter[i])) {
-			return 1;
-		}
+	if (!csoup_cmp_file_extlist(fname, flt->filter)) {
+		return 1;
 	}
 	return 0;	/* not matched */
 }
 
+/* if 'fname' has the same extension name to 'ext', it returns 0 
+ * (strcmp return protocol)
+ * the 'ext' can start with or without the '.'. 
+ * for example: "c", ".c" and "*.c" are all right 
+ * if 'fname' is NULL or empty, it always return non-0 whatever 'ext' is.
+ * on the other hand, if 'ext' is NULL or empty, it should return 0 */
+int csoup_cmp_file_extname(char *fname, char *ext)
+{
+	char	*p;
+	int	n;
 
+	if (!fname || !*fname) {
+		return -2;
+	}
+	if (!ext || !*ext) {
+		return 0;
+	}
+	if ((p = strrchr(ext, '.')) != NULL) {
+		ext = p + 1;
+	}
+
+	if ((n = strlen(fname) - strlen(ext)) <= 0) {
+		return -1;
+	}
+	if (fname[n-1] != '.') {
+		return n;
+	}
+	if (strcasecmp(fname + n, ext)) {
+		return n;
+	}
+	return 0;	/* matched */
+}
+
+
+int csoup_cmp_file_extlist(char *fname, char **ext)
+{
+	int	i;
+
+	/* no extension name filter or empty filter means 'allow-all' */
+	if (ext == NULL) {
+		return 0;
+	}
+	for (i = 0; ext[i]; i++) {
+		if (!csoup_cmp_file_extname(fname, ext[i])) {
+			return 0;
+		}
+	}
+	return i;
+}
 

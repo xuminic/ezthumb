@@ -199,7 +199,7 @@ install: ezthumb version
 endif
 
 debug: ezthumb
-	$(CP) ezthumb ~/bin
+	$(CP) ezthumb ezqiz ~/bin
 
 cleanobj:
 	$(RM) -r $(OBJDIR)

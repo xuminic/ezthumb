@@ -3,24 +3,36 @@
 VIEWER=eog
 TARGET=mytest.jpg
 
+
+do_test()
+{
+  echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  echo COMMAND: $TODO
+  echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  echo $COMM
+  eval $TODO
+  eval $VIEWER $TARGET
+  rm $TARGET
+  echo
+}
+
 if [ "$1" = "" ]; then
 	echo Sanity Test of ezthumb
 	echo usage: $0 video_file_name
 	exit 0;
 fi
 
-echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-echo CMD: ezthumb -g 4x4 -s 50% $1
-echo Generate 4x4 thumbnails, 50% screen size
-ezthumb -g 4x4 -s 50% -o $TARGET $1
-$VIEWER $TARGET
-rm $TARGET
 
-echo 
-echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-echo CMD: ezthumb -g 4x4 -s 50% --accurate $1
-echo Generate 4x4 thumbnails, 50% screen size with the most accurate frames
-ezthumb -g 4x4 -s 50% --accurate -o $TARGET $1
-$VIEWER $TARGET
-rm $TARGET
+COMM="Generate 4x4 thumbnails, 50% screen size"
+TODO="ezthumb -g 4x4 -s 50% -o $TARGET $1"
+do_test
+
+COMM="Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
+TODO="ezthumb -g 4x4 -s 50% --accurate -o $TARGET $1"
+do_test
+
+COMM="Generate thumbnails according to the default profile"
+TODO="ezthumb -o $TARGET $1"
+do_test
+
 
