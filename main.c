@@ -124,6 +124,7 @@ static int signal_handler(int sig);
 static int main_close(EZOPT *opt);
 static int msg_info(void *option, char *path, int type, void *info);
 static int msg_shot(void *option, char *path, int type, void *info);
+static int env_init(EZOPT *ezopt);
 static int para_get_ratio(char *s);
 static int para_get_time_point(char *s);
 static int para_get_position(char *s);
@@ -148,6 +149,8 @@ int main(int argc, char **argv)
 
 	smm_init(0);				/* initialize the libsmm */
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
+	env_init(&sysopt);
+
 #ifdef	CFG_GUI_ON
 	if (command_line_parser(argc, argv, NULL) == 'G') {
 		/* initialize the GUI module and read the configure file */
@@ -288,6 +291,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 
 	todo = TODO_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
+	optind = 1;			/* reset the getopt() function */
 	while ((c = getopt_long(argc, argv, arglist, argtbl, NULL)) > 0) {
 		switch (c) {
 		case 1:
@@ -780,6 +784,38 @@ static int msg_shot(void *option, char *path, int type, void *info)
 		printf("Leaving %s\n", path);
 		break;
 	}
+	return 0;
+}
+
+static int env_init(EZOPT *ezopt)
+{
+	EZFLT	*arg;
+	//char	*env = "-g 3x5 -s 300x100 -w 1024 -m gif -p 2pass";
+	char	*env;
+	int	num, len;
+
+	if ((env = getenv("EZTHUMB")) == NULL) {
+		return 0;
+	}
+
+	len = strlen(env) + 1;
+	num = len / 3;
+	if ((arg = calloc(num * sizeof(char*) + len + 16, 1)) == NULL) {
+		return -1;
+	}
+
+	strcpy((char*) &arg->filter[num], "ezthumb ");
+	strcat((char*) &arg->filter[num], env);
+	env = (char*) &arg->filter[num];
+
+	len = mkargv(env, arg->filter, num);
+
+	/*for (num = 0; num <= len; num++) {
+		printf("%d: %s\n", num, arg->filter[num]);
+	}*/
+
+	command_line_parser(len, arg->filter, ezopt);
+	free(arg);
 	return 0;
 }
 

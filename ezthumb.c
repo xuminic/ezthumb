@@ -2960,6 +2960,22 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	char	tmp[128], *inbuf = NULL;
 	int	i, rc = 0;
 
+	/* special case for testing purpose
+	 * If the output path has the same suffix to the specified suffix,
+	 * it will NOT be treated as a path but the output file.
+	 * For example, if the 'img_format' was defined as "jpg", and the
+	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
+	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
+	 * still a path */
+	rc = strlen(ezopt->pathout) - strlen(ezopt->img_format);
+	if ((rc > 0) && (ezopt->pathout[rc-1] == '.') && 
+			!strcmp(&ezopt->pathout[rc], ezopt->img_format)) {
+		if (buf) {
+			strcpy(buf, ezopt->pathout);
+		}
+		return EZ_THUMB_VACANT;	/* debug mode always vacant */
+	}
+
 	if (buf == NULL) {
 		buf = inbuf = malloc(strlen(fname) + 128 + 32);
 		if (buf == NULL) {

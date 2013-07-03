@@ -1,0 +1,26 @@
+#!/bin/sh
+
+VIEWER=eog
+TARGET=mytest.jpg
+
+if [ "$1" = "" ]; then
+	echo Sanity Test of ezthumb
+	echo usage: $0 video_file_name
+	exit 0;
+fi
+
+echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+echo CMD: ezthumb -g 4x4 -s 50% $1
+echo Generate 4x4 thumbnails, 50% screen size
+ezthumb -g 4x4 -s 50% -o $TARGET $1
+$VIEWER $TARGET
+rm $TARGET
+
+echo 
+echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+echo CMD: ezthumb -g 4x4 -s 50% --accurate $1
+echo Generate 4x4 thumbnails, 50% screen size with the most accurate frames
+ezthumb -g 4x4 -s 50% --accurate -o $TARGET $1
+$VIEWER $TARGET
+rm $TARGET
+
