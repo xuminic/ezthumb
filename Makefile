@@ -220,10 +220,12 @@ cleanall: clean
 rel_source:
 	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* COPYING ChangeLog $(RELDIR)
-	-$(CP) SMirC-thumbsup.svg $(RELDIR)
-	-tar czf $(RELDIR).tar.gz $(RELDIR)
-	-$(RM) -r $(RELDIR)
+	RELCS=`pwd`/$(RELDIR)/libcsoup make -C $(CSOUP) release
+	-mkdir $(RELDIR)/ezthumb
+	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* $(RELDIR)/ezthumb
+	-$(CP) COPYING ChangeLog SMirC-thumbsup.svg $(RELDIR)/ezthumb
+	#-tar czf $(RELDIR).tar.gz $(RELDIR)
+	#-$(RM) -r $(RELDIR)
 
 rel_win_dev:
 	-tar czf ezthumb-libmingw-$(RELDATE).tar.gz libmingw

@@ -125,10 +125,6 @@ extern FILE *g_fopen(const char *filename, const char *mode);
 #endif
 
 
-int csoup_cmp_file_extname(char *fname, char *ext);
-int csoup_cmp_file_extlist(char *fname, char **ext);
-
-
 void ezopt_init(EZOPT *ezopt, char *profile)
 {
 	memset(ezopt, 0, sizeof(EZOPT));
@@ -3823,59 +3819,12 @@ int ezflt_match(EZFLT *flt, char *fname)
 	if (flt == NULL) {
 		return 1;	/* no filter means total matched */
 	}
+	if (!flt->filter || !*flt->filter) {
+		return 1;
+	}
 	if (!csoup_cmp_file_extlist(fname, flt->filter)) {
 		return 1;
 	}
 	return 0;	/* not matched */
-}
-
-/* if 'fname' has the same extension name to 'ext', it returns 0 
- * (strcmp return protocol)
- * the 'ext' can start with or without the '.'. 
- * for example: "c", ".c" and "*.c" are all right 
- * if 'fname' is NULL or empty, it always return non-0 whatever 'ext' is.
- * on the other hand, if 'ext' is NULL or empty, it should return 0 */
-int csoup_cmp_file_extname(char *fname, char *ext)
-{
-	char	*p;
-	int	n;
-
-	if (!fname || !*fname) {
-		return -2;
-	}
-	if (!ext || !*ext) {
-		return 0;
-	}
-	if ((p = strrchr(ext, '.')) != NULL) {
-		ext = p + 1;
-	}
-
-	if ((n = strlen(fname) - strlen(ext)) <= 0) {
-		return -1;
-	}
-	if (fname[n-1] != '.') {
-		return n;
-	}
-	if (strcasecmp(fname + n, ext)) {
-		return n;
-	}
-	return 0;	/* matched */
-}
-
-
-int csoup_cmp_file_extlist(char *fname, char **ext)
-{
-	int	i;
-
-	/* no extension name filter or empty filter means 'allow-all' */
-	if (ext == NULL) {
-		return 0;
-	}
-	for (i = 0; ext[i]; i++) {
-		if (!csoup_cmp_file_extname(fname, ext[i])) {
-			return 0;
-		}
-	}
-	return i;
 }
 
