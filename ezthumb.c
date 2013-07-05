@@ -3267,7 +3267,7 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 	char	pbuf[256], *argv[8];
 	int	val;
 
-	strncpy_safe(pbuf, ps, sizeof(pbuf));
+	strlcopy(pbuf, ps, sizeof(pbuf));
 
 	val = (int) strtol(pbuf, &ps, 10);
 	if (*ps == 0) {	/* pointed to the EOL; no flag error */
@@ -3751,12 +3751,12 @@ int meta_image_format(char *input, char *fmt, int flen)
 	char	*p, arg[128];
 	int	quality = 0;
 
-	strncpy_safe(arg, input, sizeof(arg));
+	strlcopy(arg, input, sizeof(arg));
 	if ((p = strchr(arg, '@')) != NULL) {
 		*p++ = 0;
 		quality = strtol(p, NULL, 0);
 	}
-	strncpy_safe(fmt, arg, flen);
+	strlcopy(fmt, arg, flen);
 
 	/* foolproof of the quality parameter */
 	if (!strcmp(fmt, "jpg") || !strcmp(fmt, "jpeg")) {
@@ -3776,22 +3776,6 @@ int meta_image_format(char *input, char *fmt, int flen)
 	return quality;
 }
 
-char *strcpy_alloc(const char *src)
-{
-	char	*dest;
-	
-	if ((dest = malloc(strlen(src) + 4)) == NULL) {
-		return NULL;
-	}
-	return strcpy(dest, src);
-}
-
-char *strncpy_safe(char *dest, const char *src, size_t n)
-{
-	strncpy(dest, src, n - 1);
-	dest[n - 1] = 0;
-	return dest;
-}
 
 EZFLT *ezflt_create(char *s)
 {

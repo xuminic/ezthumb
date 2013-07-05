@@ -273,26 +273,29 @@ int main(int argc, char **argv)
  */
 static int command_line_parser(int argc, char **argv, EZOPT *opt)
 {
-	struct	option	*argtbl;
+	struct	clirun	*rtbuf;
 	EZOPT	*dummy = NULL;
-	char	*p, *arglist;
+	char	*p;
 	int	c, todo, prof_grid, prof_size;
+
+	if ((rtbuf = cli_alloc_getopt(clist)) == NULL) {
+		return TODO_UNSET;
+	}
+	//puts(rtbuf->optarg);
 
 	if (opt == NULL) {
 		opt = dummy = malloc(sizeof(EZOPT));
 		if (opt == NULL) {
+			free(rtbuf);
 			return TODO_UNSET;
 		}
 	}
 
-	arglist = cli_alloc_list(clist);
-	argtbl  = cli_alloc_table(clist);
-	//puts(arglist);
-
 	todo = TODO_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	optind = 1;			/* reset the getopt() function */
-	while ((c = getopt_long(argc, argv, arglist, argtbl, NULL)) > 0) {
+	while ((c = getopt_long(argc, argv, 
+				rtbuf->optarg, rtbuf->oplst, NULL)) > 0) {
 		switch (c) {
 		case 1:
 		case 2:
@@ -675,7 +678,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			prof_size = 0;	/* disable the profile */
 			break;
 		case 'x':
-			strncpy_safe(opt->suffix, optarg, 64);
+			strlcopy(opt->suffix, optarg, 64);
 			break;
 		default:
 			todo = TODO_ERROR;	/* command line error */
@@ -684,9 +687,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	}
 
 break_parse:
-	free(argtbl);
-	free(arglist);
-
 	/* disable the unwanted profiles */
 	if (prof_grid == 0) {
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
@@ -708,6 +708,7 @@ break_parse:
 	if (dummy) {
 		free(dummy);
 	}
+	free(rtbuf);
 	return todo;
 }
 
@@ -837,7 +838,7 @@ static int para_get_ratio(char *s)
  * and hour:minute:second:millisecond */
 static int para_get_time_point(char *s)
 {
-	char	*argvs[8];
+	char	*tmp, *argvs[8];
 	int	argcs, val = 0;
 
 	if (strchr(s, '%')) {
@@ -848,7 +849,10 @@ static int para_get_time_point(char *s)
 		return val;
 	}
 
-	argcs = ziptoken(s, argvs, sizeof(argvs)/sizeof(char*), ":");
+	if ((tmp = strcpy_alloc(s)) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
 		puts("Incorrect time format. Try HH:MM:SS or NN%.");
@@ -869,8 +873,10 @@ static int para_get_time_point(char *s)
 		val = strtol(argvs[0], NULL, 0) * 3600 +
 			strtol(argvs[1], NULL, 0) * 60 +
 			strtol(argvs[2], NULL, 0);
+		free(tmp);
 		return val * 1000 + strtol(argvs[3], NULL, 0);
 	}
+	free(tmp);
 	return val * 1000;
 }
 
@@ -881,14 +887,21 @@ static int para_get_time_point(char *s)
  * For example: "lt", "lt:st" */
 static int para_get_position(char *s)
 {
-	char	*argvs[4];
+	char	*tmp, *argvs[4];
 	int	argcs;
 
-	argcs = ziptoken(s, argvs, sizeof(argvs)/sizeof(char*), ":");
+	if ((tmp = strcpy_alloc(s)) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	if (argcs < 2) {
-		return para_make_postition(s);
-	} 
-	return para_make_postition(argvs[0]) | para_make_postition(argvs[1]);
+		argcs = para_make_postition(s);
+	} else {
+		argcs = para_make_postition(argvs[0]) | 
+			para_make_postition(argvs[1]);
+	}
+	free(tmp);
+	return argcs;
 }
 
 static int para_make_postition(char *s)
@@ -934,12 +947,16 @@ static int para_make_postition(char *s)
 static int para_get_color(EZOPT *opt, char *s)
 {
 	unsigned long	rc;
-	char	*clist[3];
+	char	*tmp, *clist[3];
 
-	fixtoken(s, clist, sizeof(clist)/sizeof(char*), ":");
+	if ((tmp = strcpy_alloc(s)) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+	fixtoken(tmp, clist, sizeof(clist)/sizeof(char*), ":");
 
 	if (clist[0] && *clist[0]) {
 		if (!isxdigit(*clist[0])) {
+			free(tmp);
 			return EZ_ERR_PARAM;
 		}
 		rc = strtoul(clist[0], NULL, 16);
@@ -949,6 +966,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	}
 	if (clist[1] && *clist[1]) {
 		if (!isxdigit(*clist[1])) {
+			free(tmp);
 			return EZ_ERR_PARAM;
 		}
 		rc = strtoul(clist[1], NULL, 16);
@@ -958,6 +976,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	}
 	if (clist[2] && *clist[2]) {
 		if (!isxdigit(*clist[2])) {
+			free(tmp);
 			return EZ_ERR_PARAM;
 		}
 		rc = strtoul(clist[2], NULL, 16);
@@ -965,19 +984,24 @@ static int para_get_color(EZOPT *opt, char *s)
 		opt->canvas_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->canvas_color[2] = (unsigned char)(rc & 0xff);
 	}
+	free(tmp);
 	return EZ_ERR_NONE;
 }
 
 static int para_get_fontsize(EZOPT *opt, char *s)
 {
-	char	*clist[3];
+	char	*tmp, *clist[3];
 
-	fixtoken(s, clist, sizeof(clist)/sizeof(char*), ":");
+	if ((tmp = strcpy_alloc(s)) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+	fixtoken(tmp, clist, sizeof(clist)/sizeof(char*), ":");
 
 	if (clist[0] && *clist[0]) {
 		if (isdigit(*clist[0])) {
 			opt->mi_size = (int) strtol(clist[0], NULL, 0);
 		} else {
+			free(tmp);
 			return EZ_ERR_PARAM;
 		}
 	}
@@ -985,9 +1009,11 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 		if (isdigit(*clist[0])) {
 			opt->ins_size = (int) strtol(clist[1], NULL, 0);
 		} else {
+			free(tmp);
 			return EZ_ERR_PARAM;
 		}
 	}
+	free(tmp);
 	return EZ_ERR_NONE;
 }
 

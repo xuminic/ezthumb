@@ -553,9 +553,6 @@ char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
 int meta_image_format(char *input, char *fmt, int flen);
 
-char *strcpy_alloc(const char *src);
-char *strncpy_safe(char *dest, const char *src, size_t n);
-
 EZFLT *ezflt_create(char *s);
 int ezflt_match(EZFLT *flt, char *fname);
 
@@ -574,10 +571,6 @@ int dump_frame(AVFrame *frame, int got_pic);
 int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
 int dump_stream(AVStream *stream);
 int dump_ezimage(EZIMG *image);
-
-/* fixtoken.c */
-int fixtoken(char *sour, char **idx, int ids, char *delim);
-int ziptoken(char *sour, char **idx, int ids, char *delim);
 
 
 #endif	/* _EZTHUMB_H_ */

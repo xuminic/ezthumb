@@ -141,9 +141,8 @@ ifeq	($(SYSGUI),CFG_GUI_ON)
 LIBS	+= $(GTKLIB)
 endif
 
-VERSION	= `grep EZTHUMB_VERSION ezthumb.h | cut -d\" -f 2`
-RELDATE	= `date  +%Y%m%d`
-RELDIR	= ezthumb-$(VERSION)
+RELDATE	= $(shell date  +%Y%m%d)
+RELDIR	= ezthumb-$(shell version.sh)
 
 
 
