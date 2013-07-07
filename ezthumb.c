@@ -1334,7 +1334,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		meta_basename(vidx->filename, image->filename + 6);
 	}
 	image_gdcanvas_print(image, 0, 0, image->filename);
-	puts(image->filename);
+	slog(SLSHOW, "%s\n", image->filename);
 
 	/* Line 1: the duration of the video clip, the file size, 
 	 * the frame rates and the bit rates */
@@ -1358,7 +1358,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	i = (int) (vidx->filesize * 1000 / vidx->duration);
 	strcat(buffer, meta_bitrate(i, tmp));
 	image_gdcanvas_print(image, 1, 0, buffer);
-	puts(buffer);
+	slog(SLSHOW, "%s\n", buffer);
 
 	/* Line 2+: the stream information */
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
@@ -1381,7 +1381,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 			break;
 		}
 		image_gdcanvas_print(image, i + 2, 0, buffer);
-		puts(buffer);
+		slog(SLSHOW, "%s\n", buffer);
 	}
 	return EZ_ERR_NONE;
 }

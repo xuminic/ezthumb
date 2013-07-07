@@ -2,17 +2,19 @@
 
 VIEWER=eog
 TARGET=mytest.jpg
+VIDEO=$1
 
-
-do_test()
+run()
 {
   echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  echo COMMAND: $TODO
-  echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   echo $COMM
-  eval $TODO
-  eval $VIEWER $TARGET
-  rm $TARGET
+  echo CMD: ezthumb $1 -o $TARGET $VIDEO
+  echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  eval ezthumb $1 -o $TARGET $VIDEO
+  if [ -f $TARGET ]; then
+    eval $VIEWER $TARGET
+    rm $TARGET
+  fi
   echo
 }
 
@@ -23,16 +25,25 @@ if [ "$1" = "" ]; then
 fi
 
 
-COMM="Generate 4x4 thumbnails, 50% screen size"
-TODO="ezthumb -g 4x4 -s 50% -o $TARGET $1"
-do_test
+if false; then
+COMM="001: Generate 4x4 thumbnails, 50% screen size"
+run "-g 4x4 -s 50%"
 
-COMM="Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
-TODO="ezthumb -g 4x4 -s 50% --accurate -o $TARGET $1"
-do_test
+COMM="002: Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
+run "-g 4x4 -s 50% --accurate"
 
-COMM="Generate thumbnails according to the default profile"
-TODO="ezthumb -o $TARGET $1"
-do_test
+COMM="003: Generate thumbnails according to the default profile"
+run
+
+COMM="004: Specify the canvas colour: Media information is BLUE, Timestamp is RED, The background is grey"
+run "-c 0000ff:ff0000:7f7f7f"
+
+COMM="005: Only setup the background colour"
+run "-c ::7f7f7f"
+fi
+
+COMM="006: Set up the thumbnail edge to 4 pixel width"
+run "--edge 4"
+
 
 
