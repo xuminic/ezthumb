@@ -96,7 +96,7 @@ static	struct	cliopt	clist[] = {
 
 
 static	char	*version = "\
-ezthumb %s, to generate the thumbnails from video files.\n\n\
+ezthumb " EZTHUMB_VERSION ", to generate the thumbnails from video files.\n\n\
 Copyright (C) 2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
@@ -172,11 +172,11 @@ int main(int argc, char **argv)
 
 	switch (todo) {
 	case TODO_ERROR:
-		printf("Invalid parameters.\n");
+		slos(SLERR, "Invalid parameters.\n");
 		todo = EZ_ERR_PARAM;
 		break;
 	case TODO_UNSET:
-		printf("No action applied\n");
+		slos(SLERR, "No action applied\n");
 		todo = EZ_ERR_EOP;
 		break;
 	case TODO_HELP:		/* help */
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_EOP;
 		break;
 	case TODO_VERSION:	/* version */
-		printf(version, EZTHUMB_VERSION);
+		slos(SLSHOW, version);
 		version_ffmpeg();
 #ifdef	CFG_GUI_ON
 		ezgui_version();
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_EOP;
 		break;
 	case TODO_QK_VER:	/* simple version */
-		printf("%s\n", EZTHUMB_VERSION);
+		slog(SLSHOW, "%s\n", EZTHUMB_VERSION);
 		todo = EZ_ERR_EOP;
 		break;
 	case TODO_PROF_TST:	/* test the profile */
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 		break;
 	case 'P':	/* print the internal profile table */
 		for (i = 0; i < PROFLIST; i++) {
-			printf("%2d: %s\n", i, sysprof[i]);
+			slog(SLSHOW, "%2d: %s\n", i, sysprof[i]);
 		}
 		todo = EZ_ERR_EOP;
 		break;
@@ -281,7 +281,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	if ((rtbuf = cli_alloc_getopt(clist)) == NULL) {
 		return TODO_UNSET;
 	}
-	//puts(rtbuf->optarg);
+	slog(SLFUNC, "%s\n", rtbuf->optarg);
 
 	if (opt == NULL) {
 		opt = dummy = malloc(sizeof(EZOPT));
@@ -715,7 +715,7 @@ break_parse:
 
 static int signal_handler(int sig)
 {
-	//printf("Signal %d\n", sig);
+	slog(SLFUNC, "Signal %d\n", sig);
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
 	return sig;
@@ -746,19 +746,18 @@ static int msg_info(void *option, char *path, int type, void *info)
 
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		printf("Entering %s:\n", path);
+		slog(SLSHOW, "Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
 		if (ezflt_match(ezopt->accept, path)) {
-			//printf(">>> %s\n", path);
 			ezinfo(path, option, NULL);
 		}
 		break;
 	case SMM_MSG_PATH_BREAK:
-		printf("Failed to process %s\n", path);
+		slog(SLWARN, "Failed to process %s\n", path);
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		printf("Leaving %s\n", path);
+		slog(SLSHOW, "Leaving %s\n", path);
 		break;
 	}
 	return 0;
@@ -770,7 +769,7 @@ static int msg_shot(void *option, char *path, int type, void *info)
 
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		printf("Entering %s:\n", path);
+		slog(SLSHOW, "Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
 		if (ezflt_match(ezopt->accept, path)) {
@@ -779,10 +778,10 @@ static int msg_shot(void *option, char *path, int type, void *info)
 		}
 		break;
 	case SMM_MSG_PATH_BREAK:
-		printf("Failed to process %s\n", path);
+		slog(SLWARN, "Failed to process %s\n", path);
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		printf("Leaving %s\n", path);
+		slog(SLSHOW, "Leaving %s\n", path);
 		break;
 	}
 	return 0;
@@ -855,7 +854,7 @@ static int para_get_time_point(char *s)
 	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
-		puts("Incorrect time format. Try HH:MM:SS or NN%.");
+		slos(SLERR, "Incorrect time format. Try HH:MM:SS or NN%.\n");
 		break;
 	case 1:
 		val = strtol(argvs[0], NULL, 0);
@@ -1026,20 +1025,20 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	case EN_PROC_BEGIN:
 		switch (param) {
 		case ENX_SS_SCAN:
-			printf("Building (Scan)      ");
+			slog(SLSHOW, "Building (Scan)      ");
 			break;
 		case ENX_SS_TWOPASS:
-			printf("Building (2Pass)     ");
+			slog(SLSHOW, "Building (2Pass)     ");
 			break;
 		case ENX_SS_HEURIS:
-			printf("Building (Heur)      ");
+			slog(SLSHOW, "Building (Heur)      ");
 			break;
 		case ENX_SS_IFRAMES:
-			printf("Building (iFrame)      ");
+			slog(SLSHOW, "Building (iFrame)      ");
 			break;
 		case ENX_SS_SKIM:
 		default:
-			printf("Building (Fast)      ");
+			slog(SLSHOW, "Building (Fast)      ");
 			break;
 		}
 		dotted = 0;
@@ -1047,15 +1046,15 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 
 	case EN_PROC_CURRENT:
 		if (param == 0) {	/* for key frame saving only */
-			printf(".");
+			slog(SLSHOW, ".");
 			break;
 		}
 
 		expect = opt * 100 / param / 2;
 		if (dotted >= expect) {
-			printf("\b\b\b\b%3ld%%", opt * 100 / param);
+			slog(SLSHOW, "\b\b\b\b%3ld%%", opt * 100 / param);
 		} else while (dotted < expect) {
-			printf("\b\b\b\b\b. %3ld%%", opt * 100 / param);
+			slog(SLSHOW, "\b\b\b\b\b. %3ld%%", opt * 100 / param);
 			dotted++;
 		}
 		break;
@@ -1063,11 +1062,11 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	case EN_PROC_END:
 		if (param == 0) {       /* for key frame saving only */
 			//printf(" done\n");
-			printf("\b\b\b\b100%% done\n");
+			slog(SLSHOW, "\b\b\b\b100%% done\n");
 		} else {
-			printf("\b\b\b\bdone\n");
+			slog(SLSHOW, "\b\b\b\bdone\n");
 		}
-		printf("%s: %ldx%ld canvas.\n", 
+		slog(SLSHOW, "%s: %ldx%ld canvas.\n", 
 				block ? (char*) block : "", param, opt);
 		break;
 
@@ -1077,7 +1076,6 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	default:
 		return EN_EVENT_PASSTHROUGH;
 	}
-	fflush(stdout);
 	return event;
 }
 
@@ -1092,13 +1090,13 @@ static int event_list(void *vobj, int event, long param, long opt, void *block)
 
 static void version_ffmpeg(void)
 {
-	printf("FFMPEG: libavcodec %d.%d.%d; ", LIBAVCODEC_VERSION_MAJOR, 
+	slog(SLSHOW, "FFMPEG: libavcodec %d.%d.%d; ", LIBAVCODEC_VERSION_MAJOR,
 			LIBAVCODEC_VERSION_MINOR, LIBAVCODEC_VERSION_MICRO);
-	printf("libavformat %d.%d.%d; ", LIBAVFORMAT_VERSION_MAJOR, 
+	slog(SLSHOW, "libavformat %d.%d.%d; ", LIBAVFORMAT_VERSION_MAJOR, 
 			LIBAVFORMAT_VERSION_MINOR, LIBAVFORMAT_VERSION_MICRO);
-	printf("libavutil %d.%d.%d; ", LIBAVUTIL_VERSION_MAJOR, 
+	slog(SLSHOW, "libavutil %d.%d.%d; ", LIBAVUTIL_VERSION_MAJOR, 
 			LIBAVUTIL_VERSION_MINOR, LIBAVUTIL_VERSION_MICRO);
-	printf("libswscale %d.%d.%d\n", LIBSWSCALE_VERSION_MAJOR, 
+	slog(SLSHOW, "libswscale %d.%d.%d\n", LIBSWSCALE_VERSION_MAJOR, 
 			LIBSWSCALE_VERSION_MINOR, LIBSWSCALE_VERSION_MICRO);
 }
 
