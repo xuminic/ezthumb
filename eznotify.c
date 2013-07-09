@@ -59,25 +59,29 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	struct	ezntf	*myntf;
 	EZVID	*vidx;
 	int	i;
+	char	tmp[64];
 
 	switch (event) {
 	case EZ_ERR_LOWMEM:
-		printf("%s: low memory [%ld]\n", (char*) block, param);
+		slog(EZDBG_WARNING, "%s: low memory [%ld]\n", 
+				(char*) block, param);
 		break;
 	case EZ_ERR_FORMAT:
-		printf("%s: unknown format.\n", (char*) block);
+		slog(EZDBG_WARNING, "%s: unknown format.\n", (char*) block);
 		break;
 	case EZ_ERR_STREAM:
-		printf("%s: no stream info found.\n", (char*) block);
+		slog(EZDBG_WARNING, "%s: no stream info found.\n", 
+				(char*) block);
 		break;
 	case EZ_ERR_VIDEOSTREAM:
-		printf("%s: no video stream found.\n", (char*) block);
+		slog(EZDBG_WARNING, "%s: no video stream found.\n", 
+				(char*) block);
 		break;
 	case EZ_ERR_CODEC_FAIL:
-		printf("Could not open codec! %ld\n", param);
+		slog(EZDBG_WARNING, "Could not open codec! %ld\n", param);
 		break;
 	case EZ_ERR_FILE:
-		printf("%s: file not found.\n", (char*) block);
+		slog(EZDBG_WARNING, "%s: file not found.\n", (char*) block);
 		break;
 
 	case EN_FILE_OPEN:
@@ -88,49 +92,37 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
 #if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
-			av_dump_format(vidx->formatx, 0, block, 0);
+			av_dump_format(vidx->formatx, 0, vidx->filename, 0);
 #else
-			dump_format(vidx->formatx, 0, block, 0);
+			dump_format(vidx->formatx, 0, vidx->filename, 0);
 #endif
 			av_log_set_level(i);
 		}
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_WARNING) {
-			printf("%s: open successed (%ld ms)\n", 
-					vidx->filename, opt);
-		}
+		slog(EZDBG_INFO, "%s: open successed (%ld ms)\n",
+				vidx->filename, opt);
 		break;
 	case EN_MEDIA_OPEN:
 		vidx = block;
-		if (EZOP_DEBUG(vidx->ses_flags) >= EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(vidx->ses_flags) >= EZDBG_INFO) {
 			dump_format_context(vidx->formatx);
 		}
 		if (vidx->ses_flags & EZOP_CLI_INFO) {
-			printf("Duration in millisecond by ");
-			/*if (vidx->sysopt->dur_mode == EZ_DUR_FULLSCAN) {
-				printf("full scan: ");
-			} else if (vidx->sysopt->dur_mode == EZ_DUR_QK_SCAN) {
-				printf("fast scan: ");
-			} else {
-				printf("stream head: ");
-			}*/
 			if (vidx->ses_dura == EZ_DUR_FULLSCAN) {
-				printf("full scan: ");
+				strcpy(tmp, "full scan");
 			} else if (vidx->ses_dura == EZ_DUR_QK_SCAN) {
-				printf("fast scan: ");
+				strcpy(tmp, "fast scan");
 			} else {
-				printf("stream head: ");
+				strcpy(tmp, "media header");
 			}
-			/*printf("%d (%d:%ld)\n", vidx->duration,
-					vidx->seekable, opt);*/
-			SMM_PRINT("%lld (%ld ms)\n", 
-					(long long) vidx->duration, opt);
+			slogz("Duration read by %s: %lld (%ld ms)\n", 
+					tmp, (long long) vidx->duration, opt);
 		}
 		if (vidx->ses_flags & EZOP_CLI_LIST) {
 			ezdump_video_info(vidx);
 		}
 		break;
 	case EN_IMAGE_CREATED:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
 			dump_ezimage(block);
 		}
 		break;
@@ -140,8 +132,8 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	case EN_PROC_CURRENT:
 		break;
 	case EN_PROC_END:
-		printf("%s: %ldx%ld Canvas.\n", block ? (char*) block : "",
-				param, opt);
+		slogz("%s: %ldx%ld Canvas.\n", 
+				block ? (char*) block : "", param, opt);
 		break;
 	/**/
 
@@ -149,89 +141,89 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		//dump_packet(block);
 		break;
 	case EN_PACKET_KEY:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_PACKET) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_PACKET) {
 			dump_packet(block);
 		}
 		break;
 	case EN_FRAME_COMPLETE:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_VERBS) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_VERBS) {
 			dump_frame(block, opt);
 		}
 		break;
 	case EN_FRAME_PARTIAL:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_VERBS) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_VERBS) {
 			dump_frame(block, opt);
 		}
 		break;
 	case EN_FRAME_EFFECT:
 		myntf = block;
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_IFRAME) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
 			dump_frame_packet(myntf->varg1, param, myntf->varg2);
 		}
 		break;
 	case EN_SCAN_PACKET:
-		//SMM_PRINT("Key Frame %d: %lld\n", param, *((long long *)block));
+		//slogz("Key Frame %d: %lld\n", param, *((long long *)block));
 		break;
 	case EN_SCAN_IFRAME:
 		vidx = block;
-		if (EZOP_DEBUG(vidx->ses_flags) >= EZOP_DEBUG_BRIEF) {
-			printf("I-Frame Scanned (%ld ms):\n", opt);
+		if (EZOP_DEBUG(vidx->ses_flags) >= EZDBG_BRIEF) {
+			slogz("I-Frame Scanned (%ld ms):\n", opt);
 			for (i = 0; i < param; i++) {
-				SMM_PRINT("%9lld", ((long long *)block)[i]);
+				slogz("%9lld", ((long long *)block)[i]);
 				if ((i % 8) == 7) {
-					printf("\n");
+					slosz("\n");
 				}
 			}
 			if ((i % 8) != 0) {
-				printf("\n");
+				slosz("\n");
 			}
 		}
 		break;
 	case EN_STREAM_FORMAT:
 		vidx = block;
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
 			dump_stream(vidx->formatx->streams[param]);
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
 			dump_codec_attr(vidx->formatx, (int) param);
 		}
 		break;
 	case EN_TYPE_VIDEO:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_IFRAME) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
 			dump_video_context(block);
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
 			dump_codec_video(block);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_IFRAME) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
 			dump_audio_context(block);
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
 			dump_codec_audio(block);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
 			dump_other_context(block);
 		}
 		break;
 	case EN_DURATION:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_WARNING) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_WARNING) {
 			if (param == ENX_DUR_MHEAD) {
-				SMM_PRINT("Duration from Media head: "
-					"%lld (ms)\n", *((long long *)block));
+				slogz("Duration by Media header: %lld (ms)\n",
+						*((long long *)block));
 			} else if (param == ENX_DUR_JUMP) {
-				SMM_PRINT("Duration from fast scan at "
-					"%lld\n", *((long long *)block));
+				slogz("Duration by fast scan: %lld (ms)\n", 
+						*((long long *)block));
 			} else if (param == ENX_DUR_SCAN) {
-				SMM_PRINT("Duration from scanning: "
-					"%lld (ms)\n", *((long long *)block));
+				slogz("Duration by full scan: %lld (ms)\n", 
+						*((long long *)block));
 			}
 		}
 		break;
 	case EN_BUMP_BACK:
 		myntf = block;
 		vidx = myntf->varg1;
-		SMM_PRINT("Bump back to %lld: %lld (%lld < %lld)\n",
+		slogz("Bump back to %lld: %lld (%lld < %lld)\n",
 				(long long) myntf->iarg2, 
 				(long long) myntf->iarg1,
 				(long long) vidx->keydelta, 
@@ -239,9 +231,9 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		break;
 	case EN_SEEK_FRAME:
 		if (param == ENX_SEEK_BW_NO) {
-			printf("WARNING: Backward Seeking Disabled.\n");
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_WARNING) {
-			SMM_PRINT("Backward Seeking Test successed to %lld\n",
+			slogz("WARNING: Backward Seeking Disabled.\n");
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_WARNING) {
+			slogz("Backward Seeking Test successed to %lld\n",
 					*((long long *) block));
 		}
 		break;
@@ -258,23 +250,23 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		case ENX_IFRAME_RESET:
 			break;
 		case ENX_IFRAME_SET:
-			SMM_PRINT("Key Frame start from: %lld\n", 
+			slogz("Key Frame start from: %lld\n", 
 					(long long) vidx->keylast);
 			break;
 		case ENX_IFRAME_UPDATE:
-			SMM_PRINT("Key Frame Gap Update: %lld\n", 
+			slogz("Key Frame Gap Update: %lld\n", 
 					(long long) vidx->keygap);
 			break;
 		}*/
 		break;
 	case EN_FRAME_EXCEPTION:
-		if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_VERBS) {
-			printf("Discard ");
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_VERBS) {
+			slogz("Discard ");
 			dump_frame(block, 1);
 		}
 		break;
 	case EN_SKIP_EXIST:
-		printf("Thumbnail Existed: %s\n", (char*) block);
+		slog(EZDBG_WARNING, "Thumbnail Existed: %s\n", (char*) block);
 		break;
 	}
 	return event;
@@ -294,7 +286,7 @@ static int ezdump_video_info(EZVID *vidx)
 			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
 			sec = vidx->duration / 1000;
 			sprintf(tmp, "%dx%d", codecx->width, codecx->height);
-			printf("%2d:%02d:%02d %10s [%d]: %s\n",
+			slogz("%2d:%02d:%02d %10s [%d]: %s\n",
 					sec / 3600,
 					(sec % 3600) / 60, 
 					(sec % 3600) % 60,
@@ -308,56 +300,56 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 {
 	int	i, ms;
 
-	printf("Media: %s\n", vidx->filename);
+	slogz("Media: %s\n", vidx->filename);
 	for (i = 0; i < n; i++) {
-		printf("[%d] ", i);
+		slogz("[%d] ", i);
 		if (i >= vidx->formatx->nb_streams) {
-			printf("ERROR  %8lu\n", mestat[i].received);
+			slogz("ERROR  %8lu\n", mestat[i].received);
 			continue;
 		}
 		
 		switch(vidx->formatx->streams[i]->codec->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:
-			printf("VIDEO  ");
+			slogz("VIDEO  ");
 			break;
 		case AVMEDIA_TYPE_AUDIO:
-			printf("AUDIO  ");
+			slogz("AUDIO  ");
 			break;
 		case AVMEDIA_TYPE_SUBTITLE:
-			printf("SUBTITL");
+			slogz("SUBTITL");
 			break;
 		default:
-			printf("UNKNOWN");
+			slogz("UNKNOWN");
 			break;
 		}
 		ms = video_dts_to_ms(vidx, 
 				mestat[i].dts_base + mestat[i].dts_last);
-		printf(":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
+		slogz(":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
 				mestat[i].received, mestat[i].key, 
 				mestat[i].rewound, ms / 1000);
 	}
-	SMM_PRINT("Maximum Gap of key frames: %lld\n", 
+	slogz("Maximum Gap of key frames: %lld\n", 
 			(long long) vidx->keygap);
-	printf("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0);
+	slogz("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0);
 	return 0;
 }
 
 int dump_format_context(AVFormatContext *format)
 {
 #if	LIBAVFORMAT_VERSION_INT < (53<<16)
-	SMM_PRINT("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+	slogz("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) format->file_size,
 			format->bit_rate);
 #else
-	SMM_PRINT("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+	slogz("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) avio_size(format->pb),
 			format->bit_rate);
 #endif
-	SMM_PRINT("  Streams: %d, Start time: %lld, Duration: %lld\n",
+	slogz("  Streams: %d, Start time: %lld, Duration: %lld\n",
 			format->nb_streams,
 			(long long) format->start_time,
 			(long long) format->duration);
@@ -366,7 +358,7 @@ int dump_format_context(AVFormatContext *format)
 
 int dump_video_context(AVCodecContext *codec)
 {
-	printf("    Stream Video: %s %s, Time Base: %d/%d, Sample_AR: %d/%d\n",
+	slogz("    Stream Video: %s %s, Time Base: %d/%d, Sample_AR: %d/%d\n",
 			id_lookup(id_codec, codec->codec_id),
 			id_lookup(id_pix_fmt, codec->pix_fmt),
 			codec->time_base.num, codec->time_base.den,
@@ -377,7 +369,7 @@ int dump_video_context(AVCodecContext *codec)
 
 int dump_audio_context(AVCodecContext *codec)
 {
-	printf("    Stream Audio: %s, Time Base: %d/%d, CH=%d SR=%d %s BR=%d\n",
+	slogz("    Stream Audio: %s, Time Base: %d/%d, CH=%d SR=%d %s BR=%d\n",
 			id_lookup(id_codec, codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->channels, codec->sample_rate,
@@ -388,7 +380,7 @@ int dump_audio_context(AVCodecContext *codec)
 
 int dump_other_context(AVCodecContext *codec)
 {
-	printf("    Stream %s:\n",
+	slogz("    Stream %s:\n",
 			id_lookup_tail(id_codec_type, codec->codec_type));
 	return 0;
 }
@@ -398,7 +390,7 @@ int dump_codec_attr(AVFormatContext *format, int i)
 	AVCodec	*codec;
 
 	codec = avcodec_find_decoder(format->streams[i]->codec->codec_id);
-	printf("Stream #%d: %s Codec ID: %s '%s' %s\n", i, 
+	slogz("Stream #%d: %s Codec ID: %s '%s' %s\n", i, 
 			id_lookup(id_codec_type, 
 				format->streams[i]->codec->codec_type),
 			id_lookup(id_codec, 
@@ -410,19 +402,19 @@ int dump_codec_attr(AVFormatContext *format, int i)
 
 int dump_codec_video(AVCodecContext *codec)
 {
-	printf("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
+	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
 			id_lookup(id_codec_type, codec->codec_type), 
 			id_lookup(id_codec, codec->codec_id));
-	printf("  Bit Rates   : %d, Time Base: %d/%d\n", 
+	slogz("  Bit Rates   : %d, Time Base: %d/%d\n", 
 			codec->bit_rate,
 			codec->time_base.num, codec->time_base.den);
-	printf("  Frame Number: %d, Width: %d, Height: %d, "
+	slogz("  Frame Number: %d, Width: %d, Height: %d, "
 				"Sample_AR: %d/%d%s\n",
 			codec->frame_number, codec->width, codec->height, 
 			codec->sample_aspect_ratio.num, 
 			codec->sample_aspect_ratio.den,
 			(0 == codec->sample_aspect_ratio.num) ? "(-)" : "(+)");
-	printf("  Pixel Format: %s (pixfmt.h), Has B-Frame: %d\n", 
+	slogz("  Pixel Format: %s (pixfmt.h), Has B-Frame: %d\n", 
 			id_lookup(id_pix_fmt, codec->pix_fmt), 
 			codec->has_b_frames);
 	return 0;
@@ -430,13 +422,13 @@ int dump_codec_video(AVCodecContext *codec)
 
 int dump_codec_audio(AVCodecContext *codec)
 {
-	printf("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
+	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
 			id_lookup(id_codec_type, codec->codec_type), 
 			id_lookup(id_codec, codec->codec_id));
-	printf("  Bit Rates   : %d, Time Base: %d/%d\n", 
+	slogz("  Bit Rates   : %d, Time Base: %d/%d\n", 
 			codec->bit_rate,
 			codec->time_base.num, codec->time_base.den);
-	printf("  Channel     : %d, Sample Rate: %d, Sample Format: %d\n",
+	slogz("  Channel     : %d, Sample Rate: %d, Sample Format: %d\n",
 			codec->channels, 
 			codec->sample_rate, codec->sample_fmt);
 	return 0;
@@ -445,7 +437,7 @@ int dump_codec_audio(AVCodecContext *codec)
 int dump_packet(AVPacket *p)
 {
 	/* PTS:Presentation timestamp.  DTS:Decompression timestamp */
-	printf("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
+	slogz("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
 			", Dur:%d, Siz:%d, Flag:%d, SI:%d\n",
 			p->pos, p->pts,	p->dts, p->duration, p->size,
 			p->flags, p->stream_index);
@@ -454,7 +446,7 @@ int dump_packet(AVPacket *p)
 
 int dump_frame(AVFrame *frame, int got_pic)
 {
-	printf("Frame %s, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
+	slogz("Frame %s, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
 			got_pic == 0 ? "Partial" : "Complet", 
 			frame->key_frame, 
 			frame->coded_picture_number, 
@@ -475,7 +467,7 @@ int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 				vidx->formatx->start_time);
 	}
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	SMM_PRINT("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
+	slogz("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
 			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type));
@@ -484,7 +476,7 @@ int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 
 int dump_stream(AVStream *stream)
 {
-	SMM_PRINT("Stream:%d, FRate:%d/%d, Time Base:%d/%d, Start Time:%" 
+	slogz("Stream:%d, FRate:%d/%d, Time Base:%d/%d, Start Time:%" 
 			PRId64 ", Duration:%" PRId64 ", Lang:%s, AR:%d/%d\n",
 			stream->id, 
 			stream->r_frame_rate.num, stream->r_frame_rate.den,
@@ -498,48 +490,48 @@ int dump_stream(AVStream *stream)
 
 int dump_ezimage(EZIMG *image)
 {
-	printf("\n>>>>>>>>>>>>>>>>>>\n");
-	printf("Single shot size:  %dx%dx%d-%d\n", 
+	slogz("\n>>>>>>>>>>>>>>>>>>\n");
+	slogz("Single shot size:  %dx%dx%d-%d\n", 
 			image->dst_width, image->dst_height, image->dst_pixfmt,
 			image->sysopt->edge_width);
-	printf("Grid size:         %dx%d+%d\n", 
+	slogz("Grid size:         %dx%d+%d\n", 
 			image->grid_col, image->grid_row,
 			image->sysopt->shadow_width);
-	printf("Canvas size:       %dx%d-%d\n", 
+	slogz("Canvas size:       %dx%d-%d\n", 
 			image->canvas_width, image->canvas_height, 
 			image->canvas_minfo);
-	SMM_PRINT("Time setting:      %lld-%lld %lld (ms)\n", 
+	slogz("Time setting:      %lld-%lld %lld (ms)\n", 
 			(long long) image->time_from, 
 			(long long) image->time_during, 
 			(long long) image->time_step);
-	printf("Margin of canvas:  %dx%d\n", 
+	slogz("Margin of canvas:  %dx%d\n", 
 			image->rim_width, image->rim_height);
-	printf("Gap of shots:      %dx%d\n", 
+	slogz("Gap of shots:      %dx%d\n", 
 			image->gap_width, image->gap_height);
-	printf("Color of Canvas:   BG#%08X SH#%08X MI#%08X\n",
+	slogz("Color of Canvas:   BG#%08X SH#%08X MI#%08X\n",
 			(unsigned) image->color_canvas,
 			(unsigned) image->color_shadow,
 			(unsigned) image->color_minfo);
-	printf("Color of Shots:    ED#%08X IN#%08X SH#%08X\n",
+	slogz("Color of Shots:    ED#%08X IN#%08X SH#%08X\n",
 			(unsigned) image->color_edge,
 			(unsigned) image->color_inset,
 			(unsigned) image->color_inshadow);
-	printf("Font size:         MI=%d IN=%d (SH: %d %d)\n", 
+	slogz("Font size:         MI=%d IN=%d (SH: %d %d)\n", 
 			image->sysopt->mi_size, image->sysopt->ins_size,
 			image->sysopt->mi_shadow, image->sysopt->ins_shadow);
-	printf("Font position:     MI=%d IN=%d\n",
+	slogz("Font position:     MI=%d IN=%d\n",
 			image->sysopt->mi_position, 
 			image->sysopt->ins_position);
 	if (image->sysopt->mi_font) {
-		printf("Font MediaInfo:    %s\n", image->sysopt->mi_font);
+		slogz("Font MediaInfo:    %s\n", image->sysopt->mi_font);
 	}
 	if (image->sysopt->ins_font) {
-		printf("Font Inset Shots:  %s\n", image->sysopt->ins_font);
+		slogz("Font Inset Shots:  %s\n", image->sysopt->ins_font);
 	}
-	printf("Output file name:  %s.%s (%d)\n", 
+	slogz("Output file name:  %s.%s (%d)\n", 
 			image->sysopt->suffix, image->sysopt->img_format,
 			image->sysopt->img_quality);
-	printf("Flags:             %s %s %s %s %s %s %s %s D%d P%d\n", 
+	slogz("Flags:             %s %s %s %s %s %s %s %s D%d P%d\n", 
 			image->sysopt->flags & EZOP_INFO ? "MI" : "",
 			image->sysopt->flags & EZOP_TIMEST ? "TS" : "",
 			image->sysopt->flags & EZOP_FFRAME ? "FF" : "",
@@ -550,18 +542,18 @@ int dump_ezimage(EZIMG *image)
 			image->sysopt->flags & EZOP_TRANSPARENT ? "TP" : "",
 			EZOP_DEBUG(image->sysopt->flags) >> 12,
 			((image->sysopt->flags & EZOP_PROC_MASK) >> 16) & 15);
-	printf("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
+	slogz("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
 			gdFontGetTiny()->w, gdFontGetTiny()->h,
 			gdFontGetSmall()->w, gdFontGetSmall()->h,
 			gdFontGetMediumBold()->w, gdFontGetMediumBold()->h,
 			gdFontGetLarge()->w, gdFontGetLarge()->h,
 			gdFontGetGiant()->w, gdFontGetGiant()->h);
-	printf("Background Image:  %s (0x%x)\n", image->sysopt->background,
+	slogz("Background Image:  %s (0x%x)\n", image->sysopt->background,
 			image->sysopt->bg_position);
 
 	ezopt_profile_dump(image->sysopt, 
 			"Profile of Grid:   ", "Profile of Shots:  ");
-	printf("<<<<<<<<<<<<<<<<<<\n");
+	slogz("<<<<<<<<<<<<<<<<<<\n");
 	return 0;
 }
 

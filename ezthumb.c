@@ -348,7 +348,7 @@ int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout)
 		memcpy(vout, vidx, sizeof(EZVID));
 	}
 
-	if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_INFO) {
+	if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
 		image = image_allocate(vidx, vidx->duration, &rc);
 		if (image != NULL) {
 			//dump_ezimage(image);
@@ -444,7 +444,7 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	dts_from += video_ms_to_dts(vidx, image->time_from);
 	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
 
-	//SMM_PRINT("video_snapshot_keyframes: %lld to %lld\n", 
+	//slogz("video_snapshot_keyframes: %lld to %lld\n", 
 	//dts_from, dts_to);
 	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
@@ -591,7 +591,7 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			 * The workaround is the option to decode the
 			 * next frame instead of searching an i-frame. */
 			if (GETACCUR(vidx->ses_flags)) {
-				//SMM_PRINT("DTS=%lld to %lld\n", dts, dts_snap);
+				//slogz("DTS=%lld to %lld\n", dts, dts_snap);
 				dts = video_decode_next(vidx, &packet);
 			} else {
 				dts = video_decode_keyframe(vidx, &packet);
@@ -627,10 +627,10 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 
 	/*
 	for (i = 0; i < image->shots; i++) {
-		SMM_PRINT("(%lld %lld %lld)", 
+		slogz("(%lld %lld %lld)", 
 				refdts[i*3], refdts[i*3+1], refdts[i*3+2]);
 	}
-	printf("\n");
+	slogz("\n");
 	*/
 	/* review if more than one snapshots were taken inside nearby 
 	 * keyframes. If more than one shots, we will take p-frames instead 
@@ -690,7 +690,7 @@ static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		/*SMM_PRINT("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
+		/*slogz("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
 				dts_snap, dts, dts_snap - dts, vidx->keygap);*/
 		if (dts_snap - dts > vidx->keygap) {
 			dts = video_keyframe_seekat(vidx, &packet, dts_snap);
@@ -744,9 +744,9 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 
 	/* On second thought, the FFMPEG log is better to be enabled while 
 	 * loading codecs so we would've known if the video files buggy */
-	if (EZOP_DEBUG(ezopt->flags) == EZOP_DEBUG_FFM) {
+	if (EZOP_DEBUG(ezopt->flags) == EZDBG_FFM) {
 		av_log_set_level(AV_LOG_VERBOSE);	/* enable all logs */
-	} else if (EZOP_DEBUG(ezopt->flags) >= EZOP_DEBUG_BRIEF) {
+	} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
 		av_log_set_level(AV_LOG_INFO);
 	} else {
 		av_log_set_level(0);
@@ -783,6 +783,8 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		}
 	}
 #endif
+	eznotify(ezopt, EN_FILE_OPEN, 0, 0, vidx);
+
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library
 	 * so it would be wiser to avoid the still image stream, which duration
@@ -823,7 +825,6 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	}
 
 	//dump_format_context(vidx->formatx);
-	//eznotify(ezopt, EN_FILE_OPEN, 0, 0, vidx);
 	eznotify(vidx->sysopt, EN_MEDIA_OPEN, 0, 
 			smm_time_diff(&vidx->tmark), vidx);
 	uperror(errcode, EZ_ERR_NONE);
@@ -1334,7 +1335,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		meta_basename(vidx->filename, image->filename + 6);
 	}
 	image_gdcanvas_print(image, 0, 0, image->filename);
-	slog(SLSHOW, "%s\n", image->filename);
+	slogz("%s\n", image->filename);
 
 	/* Line 1: the duration of the video clip, the file size, 
 	 * the frame rates and the bit rates */
@@ -1358,7 +1359,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	i = (int) (vidx->filesize * 1000 / vidx->duration);
 	strcat(buffer, meta_bitrate(i, tmp));
 	image_gdcanvas_print(image, 1, 0, buffer);
-	slog(SLSHOW, "%s\n", buffer);
+	slogz("%s\n", buffer);
 
 	/* Line 2+: the stream information */
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
@@ -1381,7 +1382,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 			break;
 		}
 		image_gdcanvas_print(image, i + 2, 0, buffer);
-		slog(SLSHOW, "%s\n", buffer);
+		slogz("%s\n", buffer);
 	}
 	return EZ_ERR_NONE;
 }
@@ -1454,7 +1455,7 @@ static int video_duration_check(EZVID *vidx)
 	}
 
 	br = (int)(vidx->filesize * 1000 / vidx->duration);
-	//printf("video_duration_check: dur=%d br=%d\n", vidx->duration, br);
+	//slogz("video_duration_check: dur=%d br=%d\n", vidx->duration, br);
 	if (br < EZ_BR_GATE_LOW) {	/* very suspecious bitrates */
 		return 0;
 	}
@@ -1477,8 +1478,8 @@ static int video_duration_seek(EZVID *vidx)
 	video_seeking(vidx, cur_dts * 9 / 10);
 	cur_dts = video_current_dts(vidx);
 
-	//SMM_PRINT("DTS: %lld %lld\n", first_dts, cur_dts);
-	//SMM_PRINT("POS: %lld\n", vidx->formatx->pb->pos);
+	//slogz("DTS: %lld %lld\n", first_dts, cur_dts);
+	//slogz("POS: %lld\n", vidx->formatx->pb->pos);
 	if ((first_dts < 0) || (cur_dts < 0)) {
 		vidx->seekable = ENX_SEEK_BW_NO;
 	} else if (cur_dts <= first_dts) {
@@ -1736,7 +1737,7 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 		i = 1;
 	}
 
-	/*SMM_PRINT("FRAME of %s: %lld in (%lld %lld)\n", 
+	/*slogz("FRAME of %s: %lld in (%lld %lld)\n", 
 			i == vidx->fnow ? "Current" : "Previous", dts,
 			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts);*/
 	return &vidx->fgroup[i];
@@ -2517,7 +2518,7 @@ static int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char
 {
 	int	brect[8];
 
-	//printf("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", x, y, fsize, s, c);
+	//slogz("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", x, y, fsize, s, c);
 	fsize = meta_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
 		gdImageString(image->gdframe, image_fontset(fsize),
@@ -3018,7 +3019,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	if (inbuf) {
 		free(inbuf);
 	}
-	//printf("ezopt_thumb_name: %d\n", rc);
+	//slogz("ezopt_thumb_name: %d\n", rc);
 	return rc;
 }
 
@@ -3056,17 +3057,17 @@ int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size)
 	EZPROF	*node;
 	char	tmp[64];
 
-	printf("%s", pmt_grid);		/* "Grid: " */
+	slogz("%s", pmt_grid);		/* "Grid: " */
 	for (node = opt->pro_grid; node != NULL; node = node->next) {
-		printf("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
+		slogz("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
 	}
-	printf("\n");
+	slogz("\n");
 
-	printf("%s", pmt_size);		/* "Size: " */
+	slogz("%s", pmt_size);		/* "Size: " */
 	for (node = opt->pro_size; node != NULL; node = node->next) {
-		printf("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
+		slogz("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
 	}
-	printf("\n");
+	slogz("\n");
 	return 0;
 }
 
@@ -3101,7 +3102,7 @@ char *ezopt_profile_export_alloc(EZOPT *ezopt)
 			strcat(buf, tmp);
 		}
 	}
-	//printf("ezopt_profile_export: %s\n", buf);
+	//slogz("ezopt_profile_export: %s\n", buf);
 	return buf;
 }
 
@@ -3144,14 +3145,14 @@ int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row)
 		if (row) {
 			*row = node->y;
 		}
-		//printf("ezopt_profile_sampling: %d x %d\n", node->x, node->y);
+		//slogz("ezopt_profile_sampling: %d x %d\n", node->x, node->y);
 		return 0;	/* returned the matrix */
 
 	case 'l':
 	case 'L':
 		snap = (int)(log(vidsec / 60 + node->x) / log(node->lbase)) 
 			- node->y;
-		//printf("ezopt_profile_sampling: %d+\n", snap);
+		//slogz("ezopt_profile_sampling: %d+\n", snap);
 		return snap;	/* need more info to decide the matrix */
 	}
 	return -2;	/* no effective profile found */
@@ -3185,7 +3186,7 @@ int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row)
 		}
 		break;
 	}
-	//printf("ezopt_profile_sampled: %d\n", bs);
+	//slogz("ezopt_profile_sampled: %d\n", bs);
 	return bs;
 }
 
@@ -3238,7 +3239,7 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
 		}
 		/* quantized the zoom ratio to base-2 exponential 1,2,4,8.. */
 		neari = 1 << (int)(log(ratio) / log(2) + 0.5);
-		//printf("ez.._zooming: ratio=%f quant=%d\n", ratio, neari);
+		//slogz("ez.._zooming: ratio=%f quant=%d\n", ratio, neari);
 		/* checking the error between the reference width and the 
 		 * zoomed width. The error should be less than 20% */
 		ratio = abs(neari * node->y - vw) / (float) node->y;
@@ -3443,7 +3444,7 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
 		return root;	/* do nothing */
 	}
 
-	//printf("ezopt_profile_insert: %d\n", leaf->weight);
+	//slogz("ezopt_profile_insert: %d\n", leaf->weight);
 	if (root == NULL) {
 		return leaf;
 	}
@@ -3477,7 +3478,7 @@ static void *dts_lib_free(void *anchor)
 
 	lp = anchor; 
 	while (lp) {
-		//printf("dts_lib_free: %d\n", lp->num);
+		//slogz("dts_lib_free: %d\n", lp->num);
 		now = lp;
  		lp = lp->next;
 		free(now);

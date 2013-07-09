@@ -206,11 +206,11 @@ void ezgui_version(void)
 {
 	char	*path;
 
-	printf("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION, 
+	slogz("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION, 
 			GTK_MINOR_VERSION, GTK_MICRO_VERSION);
 	path = g_build_filename(g_get_user_config_dir(),
 			CFG_SUBPATH, CFG_FILENAME, NULL);
-	printf("Profile: %s\n", path);
+	slogz("Profile: %s\n", path);
 	g_free(path);
 }
 
@@ -305,7 +305,7 @@ static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter)
 	idx = gtk_tree_path_get_indices(path);
 	gui->list_index = *idx;
 	gtk_tree_path_free(path);
-	printf("process %d\n", gui->list_index);
+	slogz("process %d\n", gui->list_index);
 	*/
 	gui->list_model = model;
 	gui->list_iter  = iter;
@@ -399,7 +399,7 @@ static int ezgui_create_window(EZGUI *gui)
 static void ezgui_signal_win_state(EZGUI *gui, GdkEvent *event, 
 		GtkWidget *widget)
 {
-	//printf("Envent %d\n", event->type);
+	//slogz("Envent %d\n", event->type);
 	if (event->type == GDK_WINDOW_STATE) {
 		gui->gw_win_state = event->window_state.new_window_state;
 	}
@@ -414,7 +414,7 @@ static void ezgui_signal_resize(EZGUI *gui, GdkRectangle *rect,
 		return;
 	}
 
-	//printf("X=%d Y=%d Width=%d Height=%d\n",
+	//slogz("X=%d Y=%d Width=%d Height=%d\n",
 	//		rect->x, rect->y, rect->width, rect->height);
 	gui->w_width  = rect->width;
 	gui->w_height = rect->height;
@@ -742,16 +742,16 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 		} while (gtk_tree_model_iter_next(ezadd->app_model, &row));
 	}
 
-	/*printf("ezgui_page_main_listview_append: %s\n", s);
+	/*slogz("ezgui_page_main_listview_append: %s\n", s);
 	{
 		unsigned char *p;
 		if ((p = strstr(s, "\\User\\")) != NULL) {
 			p += 6;
 			while (*p != '\\') {
-				printf("%d ", *p++);
+				slogz("%d ", *p++);
 			}
 		}
-		printf("\n");
+		slogz("\n");
 	}*/
 	/* 20120903 Bugfix: set the codepage to utf-8 before calling
 	 * ezthumb core. In Win32 version, the ezthumb core uses the 
@@ -1213,14 +1213,14 @@ static int ezgui_signal_setup_update(EZGUI *gui)
 		rc += ezgui_cfg_write(gui->config, CFG_KEY_GRID, pic);
 		g_free(pic);
 	}
-	//printf("ezgui_signal_setup_update: grid %d\n", rc);
+	//slogz("ezgui_signal_setup_update: grid %d\n", rc);
 
 	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_zoom));
 	if (pic) {
 		rc += ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, pic);
 		g_free(pic);
 	}
-	//printf("ezgui_signal_setup_update: zoom %d\n", rc);
+	//slogz("ezgui_signal_setup_update: zoom %d\n", rc);
 
 	if (rc) {
 		gtk_widget_destroy(gui->prof_group);
@@ -1425,7 +1425,7 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 		return 0;
 	}
 
-	printf("ezgui_cfg_flush: %d\n", cfg->mcount);
+	slog(EZDBG_INFO, "ezgui_cfg_flush: %d\n", cfg->mcount);
 	
 	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
 
