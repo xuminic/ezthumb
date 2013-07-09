@@ -30,13 +30,53 @@
 #endif
 
 
-#define TODO_ERROR	-2
-#define TODO_UNSET	-1
-#define TODO_UNKNOWN	0
-#define TODO_HELP	1
-#define TODO_VERSION	2
-#define TODO_QK_VER	3
-#define TODO_PROF_TST	23
+#define CMD_ERROR	-2
+#define CMD_UNSET	-1
+#define CMD_UNKNOWN	0
+#define CMD_HELP	1
+#define CMD_VERSION	2
+#define CMD_VERSIMPL	3
+#define CMD_ACCURATE	4
+#define CMD_BKGROUND	5
+#define CMD_OTF		6
+#define CMD_DEPTH	7
+#define CMD_EDGE	8
+#define CMD_FILTER	9
+#define CMD_GAP_SHOT	10
+#define CMD_GAP_MARG	11
+#define CMD_OPT_INFO	12
+#define CMD_OPT_TIME	13
+#define CMD_OPT_FFR	14
+#define CMD_OPT_LFR	15
+#define CMD_OVERRIDE	16
+#define CMD_POS_BG	17
+#define CMD_POS_TIME	18
+#define CMD_POS_INFO	19
+#define CMD_TIME_FROM	20
+#define CMD_TIME_END	21
+#define CMD_TRANSPRT	22
+#define CMD_VID_IDX	23
+#define CMD_PRO_TEST	24
+
+#define CMD_B_IND	'b'
+#define CMD_C_OLOR	'c'
+#define CMD_D_URING	'd'
+#define CMD_F_ONT	'f'
+#define CMD_F_ONTSZ	'F'
+#define CMD_G_RID	'g'
+#define CMD_G_UI	'G'
+#define CMD_I_NFO	'i'
+#define CMD_I_NSIDE	'I'
+#define CMD_FOR_M_AT	'm'
+#define CMD_O_UTPUT	'o'
+#define CMD_P_ROCESS	'p'
+#define CMD_P_ROFILE	'P'
+#define CMD_R_ECURS	'R'
+#define CMD_S_IZE	's'
+#define CMD_T_IMES	't'
+#define CMD_V_ERBOSE	'v'
+#define CMD_W_IDTH	'w'
+#define CMD_SUFFI_X	'x'
 
 
 
@@ -44,53 +84,95 @@
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: ezthumb [OPTIONS] video_clip ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
-	{ 'b', "bind",    0, "binding multiple video sources" },
-	{ 'c', "colour",  2, "the colour setting (MI:TM:BG)(RRGGBB)" },
-	{ 'd', "during",  2, "the duration finding mode (head)(fast|scan)" },
-	{ 'f', "font",    2, "the TrueType font name with the full path" },
-	{ 'F', "fontsize",2, "the size setting of the font" },
-	{ 'g', "grid",    2, "the thumbnail grid in the canvas." },
+	{ CMD_B_IND, "bind",
+		0, "binding multiple video sources" },
+	{ CMD_C_OLOR, "colour",
+		2, "the colour setting (MI:TM:BG)(RRGGBB)" },
+	{ CMD_D_URING, "during",  
+		2, "the duration finding mode (head)(fast|scan)" },
+	{ CMD_F_ONT, "font",
+		2, "the TrueType font name with the full path" },
+	{ CMD_F_ONTSZ, "fontsize",
+		2, "the size setting of the font" },
+	{ CMD_G_RID, "grid", 
+		2, "the thumbnail grid in the canvas." },
 #ifdef	CFG_GUI_ON
-	{ 'G', "gui",     0, "enable the graphic user interface" },
+	{ CMD_G_UI, "gui",
+		0, "enable the graphic user interface" },
 #endif
-	{ 'i', "list",    0, "display the media information in list form" },
-	{ 'I', "info",    0, "display the media information" },
-	{ 'm', "format",  2, "the output format (jpg@85)" },
-	{ 'o', "outdir",  2, "the directory for storing output images" },
-	{ 'p', "process", 1, 
-		"the process method (skim|scan|2pass|heuri|safe|key[@N])" },
-	{ 'P', "profile", 2, "specify the profile string" },
-	{ 'R', "recursive", 0, "process files and directories recursively" },
-	{ 's', "ssize",   2, "the size of each screen shots (WxH|RR%)" },
-	{ 't', "timestep",1, "the time step between each shots in ms" }, 
-	{ 'v', "verbose", 1, "*verbose mode (0)(0-7)" },
-	{ 'w', "width",   1, "the whole width of the thumbnail canvas" },
-	{ 'x', "suffix",  2, "the suffix of output filename (_thumb)" },
-	{   6, "accurate", 0, "take accurate shots including P-frames" },
-	{   7, "background", 2, "the background picture" },
-	{  14, "decode-otf", 0, "decoding on the fly mode for scan process" },
-	{  25, "depth",   1, "most levels of directories recursively (FF:0)" },
-	{  21, "edge",    1, "the width of the screen shot edge (0)" },
-	{  26, "filter",  1, "the filter of the extended file name" },
-	{   8, "gap-shots",  1, "the gaps between the screen shots (4)" },
-	{   9, "gap-margin", 1, "the margin in the canvas (8)" },
-	{  10, "opt-info", 2, "the media infomation (on)" },
-	{  11, "opt-time", 2, "the timestamp inside the screen shots (on)" },
-	{  12, "opt-ffr",  2, "start from the first frame (off)" },
-	{  13, "opt-lfr",  2, "end at the last frame (off)" },
-	{  24, "override", 2, "override existed thumbnails (copy)"},
-	{  15, "pos-bg",   2, "the position of the background image (mc)" },
-	{  16, "pos-time", 2, "the position of the timestamp (rt)" },
-	{  17, "pos-info", 2, "the position of the media infomation (lt)" },
-	{   0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
-	{  18, "time-from",2, "the time in video where begins shooting" },
-	{  19, "time-end", 2, "the time in video where ends shooting" },
-	{  20, "transparent", 0, "generate the transparent background" },
-	{  22, "vindex",   1, "the index of the video stream" },
-	{   1, "help",    0, "*Display the help message" },
-	{   2, "version", 0, "*Display the version message" },
-	{   3, "vernum",  0, "*Display the version number" },
-	{  23, "protest",  2, "*testing the profile (@length, +width)" },
+	{ CMD_I_NFO, "info",
+		0, "display the simple information of videos" },
+	{ CMD_I_NSIDE, "inside",
+		0, "display the detail information of videos" },
+	{ CMD_FOR_M_AT, "format",
+		2, "the output format (jpg@85)" },
+	{ CMD_O_UTPUT, "outdir",  
+		2, "the directory for storing output images" },
+	{ CMD_P_ROCESS, "process", 
+		1, "the process method (skim|scan|2pass|heuri|safe|key[@N])"},
+	{ CMD_P_ROFILE, "profile", 
+		2, "specify the profile string" },
+	{ CMD_R_ECURS, "recursive", 
+		0, "process files and directories recursively" },
+	{ CMD_S_IZE, "ssize",
+		2, "the size of each screen shots (WxH|RR%)" },
+	{ CMD_T_IMES, "timestep",
+		1, "the time step between each shots in ms" }, 
+	{ CMD_V_ERBOSE, "verbose", 
+		1, "*verbose mode (0)(0-7)" },
+	{ CMD_W_IDTH, "width",
+		1, "the whole width of the thumbnail canvas" },
+	{ CMD_SUFFI_X, "suffix",  
+		2, "the suffix of output filename (_thumb)" },
+	{ CMD_ACCURATE, "accurate", 
+		0, "take accurate shots including P-frames" },
+	{ CMD_BKGROUND, "background", 
+		2, "the background picture" },
+	{ CMD_OTF, "decode-otf", 
+		0, "decoding on the fly mode for scan process" },
+	{ CMD_DEPTH, "depth",   
+		1, "most levels of directories recursively (FF:0)" },
+	{ CMD_EDGE, "edge",
+		1, "the width of the screen shot edge (0)" },
+	{ CMD_FILTER, "filter",  
+		1, "the filter of the extended file name" },
+	{ CMD_GAP_SHOT, "gap-shots",  
+		1, "the gaps between the screen shots (4)" },
+	{ CMD_GAP_MARG, "gap-margin", 
+		1, "the margin in the canvas (8)" },
+	{ CMD_OPT_INFO, "opt-info", 
+		2, "the media infomation (on)" },
+	{ CMD_OPT_TIME, "opt-time", 
+		2, "the timestamp inside the screen shots (on)" },
+	{ CMD_OPT_FFR, "opt-ffr",  
+		2, "start from the first frame (off)" },
+	{ CMD_OPT_LFR, "opt-lfr",  
+		2, "end at the last frame (off)" },
+	{ CMD_OVERRIDE, "override", 
+		2, "override existed thumbnails (copy)"},
+	{ CMD_POS_BG, "pos-bg",
+		2, "the position of the background image (mc)" },
+	{ CMD_POS_TIME, "pos-time", 
+		2, "the position of the timestamp (rt)" },
+	{ CMD_POS_INFO, "pos-info", 
+		2, "the position of the media infomation (lt)" },
+	{ 0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
+	{ CMD_TIME_FROM, "time-from",
+		2, "the time in video where begins shooting" },
+	{ CMD_TIME_END, "time-end", 
+		2, "the time in video where ends shooting" },
+	{ CMD_TRANSPRT, "transparent", 
+		0, "generate the transparent background" },
+	{ CMD_VID_IDX, "vindex",
+		1, "the index of the video stream" },
+	{ CMD_HELP, "help",
+		0, "*Display the help message" },
+	{ CMD_VERSION, "version", 
+		0, "*Display the version message" },
+	{ CMD_VERSIMPL, "vernum",
+		0, "*Display the version number" },
+	{ CMD_PRO_TEST, "protest",  
+		2, "*testing the profile (@length, +width)" },
 	{ 0, NULL, 0, NULL }
 };
 
@@ -172,19 +254,19 @@ int main(int argc, char **argv)
 	av_register_all();
 
 	switch (todo) {
-	case TODO_ERROR:
+	case CMD_ERROR:
 		slos(EZDBG_WARNING, "Invalid parameters.\n");
 		todo = EZ_ERR_PARAM;
 		break;
-	case TODO_UNSET:
+	case CMD_UNSET:
 		slos(EZDBG_WARNING, "No action applied\n");
 		todo = EZ_ERR_EOP;
 		break;
-	case TODO_HELP:		/* help */
+	case CMD_HELP:		/* help */
 		cli_print(clist);
 		todo = EZ_ERR_EOP;
 		break;
-	case TODO_VERSION:	/* version */
+	case CMD_VERSION:	/* version */
 		slosz(version);
 		version_ffmpeg();
 #ifdef	CFG_GUI_ON
@@ -192,23 +274,23 @@ int main(int argc, char **argv)
 #endif
 		todo = EZ_ERR_EOP;
 		break;
-	case TODO_QK_VER:	/* simple version */
+	case CMD_VERSIMPL:	/* simple version */
 		slogz("%s\n", EZTHUMB_VERSION);
 		todo = EZ_ERR_EOP;
 		break;
-	case TODO_PROF_TST:	/* test the profile */
+	case CMD_PRO_TEST:	/* test the profile */
 		runtime_profile_test(&sysopt, (void*)sysopt.pro_grid);
 		todo = EZ_ERR_EOP;
 		break;
-	case 'P':	/* print the internal profile table */
+	case CMD_P_ROFILE:	/* print the internal profile table */
 		for (i = 0; i < PROFLIST; i++) {
 			slogz("%2d: %s\n", i, sysprof[i]);
 		}
 		todo = EZ_ERR_EOP;
 		break;
 
-	case 'I':
-	case 'i':
+	case CMD_I_NFO:
+	case CMD_I_NSIDE:
 		sysopt.notify = event_list;
 		if ((sysopt.flags & EZOP_RECURSIVE) == 0) {
 			for (i = optind; i < argc; i++) {
@@ -224,14 +306,14 @@ int main(int argc, char **argv)
 			}
 		}
 		break;
-	case 'b':
+	case CMD_B_IND:
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysopt.flags) <= EZDBG_BRIEF) {
 			sysopt.notify = event_cb;
 		}
 		todo = ezthumb_bind(argv + optind, argc - optind, &sysopt);
 		break;
-	case 'G':
+	case CMD_G_UI:
 		todo = EZ_ERR_EOP;
 		if (sysopt.gui == NULL) {
 			cli_print(clist);
@@ -280,7 +362,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	int	c, todo, prof_grid, prof_size;
 
 	if ((rtbuf = cli_alloc_getopt(clist)) == NULL) {
-		return TODO_UNSET;
+		return CMD_UNSET;
 	}
 	slog(SLFUNC, "%s\n", rtbuf->optarg);
 
@@ -288,31 +370,32 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		opt = dummy = malloc(sizeof(EZOPT));
 		if (opt == NULL) {
 			free(rtbuf);
-			return TODO_UNSET;
+			return CMD_UNSET;
 		}
 	}
 
-	todo = TODO_UNSET;		/* UNSET yet */
+	todo = CMD_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	optind = 1;			/* reset the getopt() function */
 	while ((c = getopt_long(argc, argv, 
 				rtbuf->optarg, rtbuf->oplst, NULL)) > 0) {
 		switch (c) {
-		case 1:
-		case 2:
-		case 3:
+		case CMD_HELP:
+		case CMD_VERSION:
+		case CMD_VERSIMPL:
 			todo = c;
 			goto break_parse;	/* break the analysis */
 
-		case 6:	/* nonkey */
+		case CMD_ACCURATE:	/* nonkey */
 			opt->flags |= EZOP_P_FRAME;
 			break;
-		case 7:
+		case CMD_BKGROUND:
 			opt->background = optarg;
 			break;
-		case 8:	/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
+		case CMD_GAP_SHOT:	
+			/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_gap_w = para_get_ratio(optarg);
@@ -322,9 +405,10 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->grid_gap_h = para_get_ratio(++p);
 			}
 			break;
-		case 9:	/* gap-margin: Examples: 5, 5%, 5x8, 5%x8% */
+		case CMD_GAP_MARG:	
+			/* gap-margin: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_rim_w = para_get_ratio(optarg);
@@ -334,108 +418,108 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->grid_rim_h = para_get_ratio(++p);
 			}
 			break;
-		case 10:	/* opt-info */
+		case CMD_OPT_INFO:	/* opt-info */
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_INFO;
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_INFO;
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 11:	/* opt-time */
+		case CMD_OPT_TIME:	/* opt-time */
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_TIMEST;
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_TIMEST;
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 12:	/* opt-ffr */
+		case CMD_OPT_FFR:	/* opt-ffr */
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_FFRAME;
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_FFRAME;
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 13:	/* opt-lfr */
+		case CMD_OPT_LFR:	/* opt-lfr */
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_LFRAME;
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_LFRAME;
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 15:	/* "pos-bg" */
+		case CMD_POS_BG:	/* "pos-bg" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			} else {
 				opt->bg_position = c;
 			}
 			break;
-		case 16:	/* "pos-time" */
+		case CMD_POS_TIME:	/* "pos-time" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			} else {
 				opt->ins_position = c;
 			}
 			break;
-		case 17:	/* "pos-info" */
+		case CMD_POS_INFO:	/* "pos-info" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			} else {
 				opt->mi_position = c;
 			}
 			break;
-		case 14:	/* decode-on-the-fly */
+		case CMD_OTF:	/* decode-on-the-fly */
 			opt->flags |= EZOP_DECODE_OTF;
 			break;
-		case 18:	/* time-from */
+		case CMD_TIME_FROM:	/* time-from */
 			if (isdigit(*optarg)) {
 				opt->time_from = para_get_time_point(optarg);
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 19:	/* time-end */
+		case CMD_TIME_END:	/* time-end */
 			if (isdigit(*optarg)) {
 				opt->time_to = para_get_time_point(optarg);
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 20:
+		case CMD_TRANSPRT:
 			opt->flags |= EZOP_TRANSPARENT;
 			opt->canvas_color[3] = 0;
 			break;
-		case 22:	/* index */
+		case CMD_VID_IDX:	/* index */
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			} else {
 				opt->vs_user = strtol(optarg, NULL, 0);
 			}
 			break;
-		case 23:
+		case CMD_PRO_TEST:
 			todo = c;
 			/* borrow this pointer because it won't be used ever*/
 			opt->pro_grid = (void*) optarg;
 			goto break_parse;	/* break the analysis */
 
-		case 24:
+		case CMD_OVERRIDE:
 			if (!strcmp(optarg, "on")) {
 				opt->flags |= EZOP_THUMB_OVERRIDE;
 				opt->flags &= ~EZOP_THUMB_COPY;
@@ -446,11 +530,11 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->flags &= ~EZOP_THUMB_OVERRIDE;
 				opt->flags |= EZOP_THUMB_COPY;
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 25:
+		case CMD_DEPTH:
 			/* Recursive depth, for example: "FF:3"
 			 * Magic words in first two characters: FF, DF, DL.
 			 * First-meet-Firt-process, Directory-First, Directory-Last 
@@ -474,7 +558,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 						strtol(optarg, NULL, 0));
 			}
 			break;
-		case 26:
+		case CMD_FILTER:
 			/* file name filter, for example: "avi,wmv,mkv"
  			 * The NULL filter means allow all. */
 			if (opt->accept) {
@@ -483,16 +567,16 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			opt->accept = ezflt_create(optarg);
 			break;
 
-		case 'b':
+		case CMD_B_IND:
 			todo = c;
 			break;
-		case 'c':	/* RRGGBB:RRGGBB:RRGGBB */
+		case CMD_C_OLOR:	/* RRGGBB:RRGGBB:RRGGBB */
 			if (para_get_color(opt, optarg) != EZ_ERR_NONE) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 'd':	/* Examples: 0,1,quick,skim,scan */
+		case CMD_D_URING:	/* Examples: 0,1,quick,skim,scan */
 			if (isdigit((int) optarg[0])) {
 				opt->dur_mode = strtol(optarg, NULL, 0);
 			} else if (!strcmp(optarg, "fast")) {
@@ -502,19 +586,19 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "head")) {
 				opt->dur_mode = EZ_DUR_CLIPHEAD;
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 'e':
+		case CMD_EDGE:
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			} else {
 				opt->edge_width = strtol(optarg, NULL, 0);
 			}
 			break;
-		case 'f':
+		case CMD_F_ONT:
 			opt->mi_font = opt->ins_font = optarg;
 			/* enable fontconfig patterns like "times:bold:italic"
 			 * instead of the full path of the font like
@@ -523,15 +607,15 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				gdFTUseFontConfig(1);
 			}
 			break;
-		case 'F':	/* MI:TM */
+		case CMD_F_ONTSZ:	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 'g':	/* Examples: 4, 4x8, 0x8 */
+		case CMD_G_RID:	/* Examples: 4, 4x8, 0x8 */
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_col = strtol(optarg, &p, 10);
@@ -542,26 +626,27 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			prof_grid = 0;	/* disable the profile */
 			break;
-		case 'G':
+		case CMD_G_UI:
 			todo = c;
 			break;
-		case 'I':
+		case CMD_I_NSIDE:
 			todo = c;
 			/* make these options default */
+			opt->flags |= EZOP_CLI_INSIDE;
+			break;
+		case CMD_I_NFO:
+			todo = c;
 			opt->flags |= EZOP_CLI_INFO;
 			break;
-		case 'i':
-			todo = c;
-			opt->flags |= EZOP_CLI_LIST;
-			break;
-		case 'm':	/* Examples: png, jpg@90, gif, gif@1000 */
+		case CMD_FOR_M_AT:	
+			/* Examples: png, jpg@90, gif, gif@1000 */
 			opt->img_quality = meta_image_format(optarg, 
 					opt->img_format, 8);
 			break;
-		case 'o':
+		case CMD_O_UTPUT:
 			opt->pathout = optarg;
 			break;
-		case 'p':
+		case CMD_P_ROCESS:
 			if (!strcmp(optarg, "auto")) {
 				opt->flags |= EZOP_PROC_AUTO;
 				break;
@@ -598,10 +683,10 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				}
 				break;
 			}
-			todo = TODO_ERROR;	/* command line error */
+			todo = CMD_ERROR;	/* command line error */
 			goto break_parse;	/* break the analysis */
 
-		case 'P':
+		case CMD_P_ROFILE:
 			c = strtol(optarg, &p, 10);
 			if (*p != 0) {	/* command line profiles */
 				ezopt_profile_setup(opt, optarg);
@@ -612,12 +697,12 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				goto break_parse;	/* break the analysis */
 			}
 			break;
-		case 'R':
+		case CMD_R_ECURS:
 			opt->flags |= EZOP_RECURSIVE;
 			break;
-		case 's':	/* Examples: 50, 50%, 320x240 */
+		case CMD_S_IZE:	/* Examples: 50, 50%, 320x240 */
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->tn_width = opt->tn_height = 0;	/* 20120720 */
@@ -633,9 +718,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			prof_size = 0;	/* disable the profile */
 			break;
-		case 't':
+		case CMD_T_IMES:
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->grid_row = 0;
@@ -645,7 +730,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			//	opt->tm_step = 0;
 			//}
 			break;
-		case 'v':
+		case CMD_V_ERBOSE:
 			if (!strcmp(optarg, "none")) {
 				c = EZDBG_NONE;
 			} else if (!strcmp(optarg, "warning")) {
@@ -665,25 +750,25 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
 			} else {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->flags = EZOP_DEBUG_MAKE(opt->flags, c);
 			slog_control_word_write(NULL, c);
 			break;
-		case 'w':
+		case CMD_W_IDTH:
 			if (!isdigit(*optarg)) {
-				todo = TODO_ERROR;	/* command line error */
+				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
 			opt->canvas_width = strtol(optarg, NULL, 0);
 			prof_size = 0;	/* disable the profile */
 			break;
-		case 'x':
+		case CMD_SUFFI_X:
 			strlcopy(opt->suffix, optarg, 64);
 			break;
 		default:
-			todo = TODO_ERROR;	/* command line error */
+			todo = CMD_ERROR;	/* command line error */
 			goto break_parse;	/* break the analysis */
 		}
 	}
@@ -701,10 +786,10 @@ break_parse:
 	 * was specified, which would regards the empty filename as current
 	 * path, ezthumb would work as a command line tool. Otherwise it
 	 * will start the GUI interface */
-	if (todo == TODO_UNSET) {
-		todo = 'G';
+	if (todo == CMD_UNSET) {
+		todo = CMD_G_UI;
 		if ((optind < argc) || (opt->flags & EZOP_RECURSIVE)) {
-			todo = 'S';
+			todo = CMD_R_ECURS;
 		}
 	}
 	if (dummy) {

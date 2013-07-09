@@ -106,9 +106,9 @@
 #define EZOP_P_FRAME		0x10	
 /* Display media information in the command line. It just displays the
  * common information, not includes the debug info */
-#define EZOP_CLI_INFO		0x20
+#define EZOP_CLI_INSIDE		0x20
 /* Display a short list of the media information in the command line */
-#define EZOP_CLI_LIST		0x40
+#define EZOP_CLI_INFO		0x40
 /* Setup the transparent background */
 #define EZOP_TRANSPARENT	0x80
 /* decoding on the fly */
@@ -144,7 +144,7 @@
 #define EZDBG_PACKET	SLPROG	/* key packet dump */
 #define EZDBG_VERBS	SLMOD	/* broken frames, scanned frames */
 #define EZDBG_FFM	SLMOD	/* the FFMPEG debug output */
-/* debug use 0x7000 mask in the flag word */
+/* debug use 0xf000 mask in the flag word */
 #define EZDBG_FIELD		12
 #define EZOP_DEBUG(x)		(((x) >> EZDBG_FIELD) & SLOG_LVL_MASK)
 #define EZOP_DEBUG_MAKE(f,x)	(((f) & ~(SLOG_LVL_MASK << EZDBG_FIELD))|\

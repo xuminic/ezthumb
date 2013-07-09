@@ -86,7 +86,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 
 	case EN_FILE_OPEN:
 		vidx = block;
-		if (ezopt->flags & EZOP_CLI_INFO) {
+		if (ezopt->flags & EZOP_CLI_INSIDE) {
 			/* This is the ffmpeg function so it must run before
 			 * disabling the av_log */
 			i = av_log_get_level();
@@ -106,7 +106,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		if (EZOP_DEBUG(vidx->ses_flags) >= EZDBG_INFO) {
 			dump_format_context(vidx->formatx);
 		}
-		if (vidx->ses_flags & EZOP_CLI_INFO) {
+		if (vidx->ses_flags & EZOP_CLI_INSIDE) {
 			if (vidx->ses_dura == EZ_DUR_FULLSCAN) {
 				strcpy(tmp, "full scan");
 			} else if (vidx->ses_dura == EZ_DUR_QK_SCAN) {
@@ -117,7 +117,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 			slogz("Duration read by %s: %lld (%ld ms)\n", 
 					tmp, (long long) vidx->duration, opt);
 		}
-		if (vidx->ses_flags & EZOP_CLI_LIST) {
+		if (vidx->ses_flags & EZOP_CLI_INFO) {
 			ezdump_video_info(vidx);
 		}
 		break;
@@ -239,7 +239,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		break;
 	case EN_MEDIA_STATIS:
 		myntf = block;
-		if (ezopt->flags & EZOP_CLI_INFO) {
+		if (ezopt->flags & EZOP_CLI_INSIDE) {
 			ezdump_media_statistics(myntf->varg1, 
 					(int) param, myntf->varg2);
 		}
@@ -537,8 +537,8 @@ int dump_ezimage(EZIMG *image)
 			image->sysopt->flags & EZOP_FFRAME ? "FF" : "",
 			image->sysopt->flags & EZOP_LFRAME ? "LF" : "",
 			image->sysopt->flags & EZOP_P_FRAME ? "PF" : "",
-			image->sysopt->flags & EZOP_CLI_INFO ? "CI" : "",
-			image->sysopt->flags & EZOP_CLI_LIST ? "CL" : "",
+			image->sysopt->flags & EZOP_CLI_INSIDE ? "CI" : "",
+			image->sysopt->flags & EZOP_CLI_INFO ? "CO" : "",
 			image->sysopt->flags & EZOP_TRANSPARENT ? "TP" : "",
 			EZOP_DEBUG(image->sysopt->flags) >> 12,
 			((image->sysopt->flags & EZOP_PROC_MASK) >> 16) & 15);
