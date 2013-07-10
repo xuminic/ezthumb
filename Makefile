@@ -179,18 +179,12 @@ ezicon.h: SMirC-thumbsup.svg
 $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
-version: version.c ezthumb.h
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $<
-
-vidlen : vidlen.c
-	$(CC) -o $@ $^ $(CFLAGS) -lavformat
-
 ifeq	($(SYSTOOL),unix)
 install: ezthumb
 	install -s ezthumb $(BINDIR)
 	install ezthumb.1 $(MANDIR)
 else
-install: ezthumb version
+install: ezthumb 
 	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
@@ -205,12 +199,12 @@ cleanobj:
 
 ifeq	($(SYSTOOL),unix)
 clean: cleanobj
-	$(RM) ezthumb version
+	$(RM) ezthumb 
 else
 clean:
 	SYSGUI=CFG_GUI_OFF make cleanobj
 	SYSGUI=CFG_GUI_ON  make cleanobj
-	$(RM) ezthumb.exe ezthumb_win.exe version.exe
+	$(RM) ezthumb.exe ezthumb_win.exe 
 endif
 
 cleanall: clean
@@ -234,9 +228,9 @@ rel_win_bin: install
 	-$(RM) -r $(RELDIR)-win-bin
 
 ifeq	($(SYSTOOL),unix)
-release: version rel_source
+release: rel_source
 else
-release: version rel_source rel_win_dev rel_win_bin
+release: rel_source rel_win_dev rel_win_bin
 endif
 	
 

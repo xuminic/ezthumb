@@ -1,8 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
 VIEWER=eog
-TARGET=mytest.jpg
-THPATH=./mydir/thumbnails
 
 # $1: command line options
 # $2: case number like 01.03
@@ -11,20 +9,25 @@ THPATH=./mydir/thumbnails
 # $5+: video file name
 run()
 {
+  local LOGNAME=quicklog
+  local TARGET=
   echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
   echo $2: $3
   echo $4
-  echo CMD: ezthumb $1 -o $TARGET ${@:5}
+  echo CMD: ezthumb $1 ${@:5}
   echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  eval ezthumb $1 -o $TARGET ${@:5}
-  if [ -f $TARGET ]; then
-    eval $VIEWER $TARGET
-    rm $TARGET
-  fi
-  if [ -d $TARGET ]; then
-    eval $VIEWER $TARGET/*
-  fi
+  eval ezthumb $1 ${@:5} | tee $LOGNAME
+  TARGET=`grep OUTPUT $LOGNAME | cut -d" " -f2`
+  rm $LOGNAME
   echo
+
+  for i in $TARGET
+  do
+    if [ -f $i ]; then
+      eval $VIEWER $i
+      rm $i
+    fi
+  done
 }
 
 # test_NN_MM($1 $2 $3) function definitions
@@ -37,44 +40,44 @@ run()
 #############################################################################
 test_01_01()
 {
-  COMM="Generate 4x4 thumbnails, 50% screen size"
+  local COMM="Generate 4x4 thumbnails, 50% screen size"
   run "-g 4x4 -s 50%" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_01_02()
 {
-  COMM="Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
+  local COMM="Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
   run "-g 4x4 -s 50% --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_01_03()
 {
-  COMM="Generate thumbnails according to the default profile"
+  local COMM="Generate thumbnails according to the default profile"
   run " " "$1" "$2" "$COMM" ${@:3}
 }
 
 test_01_04()
 {
-  COMM="Save thumbnails at specified directory ($THPATH)"
-  TMPDIR=$TARGET
-
-  TARGET=$THPATH
-  if [ ! -d $TARGET ]; then 
-    mkdir -p $TARGET
+  local THPATH=./mydir/thumbnails
+  local COMM="Save thumbnails at specified directory ($THPATH)"
+  if [ ! -d $THPATH ]; then 
+    mkdir -p $THPATH
   fi
-  run " " "$1" "$2" "$COMM" ${@:3}
-  
-  rm -rf $TARGET
-  TARGET=$TMPDIR
+  run "-o $THPATH" "$1" "$2" "$COMM" ${@:3}
+  rm -r $THPATH
 }
 
 test_01_05()
 {
-  COMM="Specify the suffix of the output files"
-  TMPDIR=$TARGET
-  TARGET=.
+  local FILE="mythumb.jpg"
+  local COMM="Specify the file name of the thumbnail ($FILE)"
+  run "-o $FILE" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_06()
+{
+  local COMM="Specify the suffix of the output files"
   run "-x _pi.c-th_" "$1" "$2" "$COMM" ${@:3}
-  TARGET=$TMPDIR
 }
 
 #############################################################################
@@ -82,31 +85,31 @@ test_01_05()
 #############################################################################
 test_02_01()
 {
-  COMM="Display the SIMPLE information of specified media file"
+  local COMM="Display the SIMPLE information of specified media file"
   run "-i" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_02_02()
 {
-  COMM="Display the DETAILED information of specified media file"
+  local COMM="Display the DETAILED information of specified media file"
   run "-I" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_02_03()
 {
-  COMM="Display the detail information with a FULL SCAN of the media file"
+  local COMM="Display the detail information with a FULL SCAN of the media file"
   run "-I -d scan" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_02_04()
 {
-  COMM="Display the detail information with a QUICK SCAN of the media file"
+  local COMM="Display the detail information with a QUICK SCAN of the media file"
   run "-I -d fast" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_02_05()
 {
-  COMM="Check the result of '-d' option: see the difference in a broken file"
+  local COMM="Check the result of '-d' option: see the difference in a broken file"
   run "-i" "$1" "$2" "$COMM" ${@:3}
   run "-i -d fast" "$1" "$2" "$COMM" ${@:3}
 }
@@ -116,19 +119,19 @@ test_02_05()
 #############################################################################
 test_03_01()
 {
-  COMM="Specify the colours: Information is BLUE, Timestamp is RED, Background is grey"
+  local COMM="Specify the colours: Information is BLUE, Timestamp is RED, Background is grey"
   run "-c 0000ff:ff0000:7f7f7f" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_03_02()
 {
-  COMM="Only setup the background colour to grey"
+  local COMM="Only setup the background colour to grey"
   run "-c ::7f7f7f" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_03_03()
 {
-  COMM="Set up a 4-pixel-width black edge around each thumbnail"
+  local COMM="Set up a 4-pixel-width black edge around each thumbnail"
   run "--edge 4" "$1" "$2" "$COMM" ${@:3}
 }
 
@@ -143,7 +146,7 @@ group_test()
   TGROUP=`printf %02d $1`
   case $TGROUP in
     01) GRPCOMM='Basic Functionality Test';
-	GRPCASE=`echo {01..04}` ;;
+	GRPCASE=`echo {01..06}` ;;
     02) GRPCOMM='Media Information Test';
 	GRPCASE=`echo {01..05}` ;;
     03) GRPCOMM='Canvas Attribution Test';
@@ -190,6 +193,7 @@ do  case "$1" in
     if [ "$CASES" = "" ]; then
       CASES="00"
     fi
+    #echo $GROUP $CASES
     ;;
   *) 
     break ;;

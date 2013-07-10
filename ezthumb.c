@@ -1709,7 +1709,10 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 		}
 	} else if (image->gifx_fp) {
 		image_gif_anim_close(image, image->gifx_fp);
+	} else {
+		return 0;	/* nothing to save */
 	}
+	slogz("OUTPUT: %s\n", image->filename);
 	return 0;
 }
 
