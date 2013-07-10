@@ -2,48 +2,215 @@
 
 VIEWER=eog
 TARGET=mytest.jpg
-VIDEO=$1
+THPATH=./mydir/thumbnails
 
+# $1: command line options
+# $2: case number like 01.03
+# $3: group comments
+# $4: case comments
+# $5+: video file name
 run()
 {
   echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  echo $COMM
-  echo CMD: ezthumb $1 -o $TARGET $VIDEO
+  echo $2: $3
+  echo $4
+  echo CMD: ezthumb $1 -o $TARGET ${@:5}
   echo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  eval ezthumb $1 -o $TARGET $VIDEO
+  eval ezthumb $1 -o $TARGET ${@:5}
   if [ -f $TARGET ]; then
     eval $VIEWER $TARGET
     rm $TARGET
   fi
+  if [ -d $TARGET ]; then
+    eval $VIEWER $TARGET/*
+  fi
   echo
 }
 
+# test_NN_MM($1 $2 $3) function definitions
+# $1: case number like 01.03
+# $2: group comments
+# $3+: video file name
+
+#############################################################################
+# Group 01: Basic functions
+#############################################################################
+test_01_01()
+{
+  COMM="Generate 4x4 thumbnails, 50% screen size"
+  run "-g 4x4 -s 50%" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_02()
+{
+  COMM="Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
+  run "-g 4x4 -s 50% --accurate" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_03()
+{
+  COMM="Generate thumbnails according to the default profile"
+  run " " "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_04()
+{
+  COMM="Save thumbnails at specified directory ($THPATH)"
+  TMPDIR=$TARGET
+
+  TARGET=$THPATH
+  if [ ! -d $TARGET ]; then 
+    mkdir -p $TARGET
+  fi
+  run " " "$1" "$2" "$COMM" ${@:3}
+  
+  rm -rf $TARGET
+  TARGET=$TMPDIR
+}
+
+test_01_05()
+{
+  COMM="Specify the suffix of the output files"
+  TMPDIR=$TARGET
+  TARGET=.
+  run "-x _pi.c-th_" "$1" "$2" "$COMM" ${@:3}
+  TARGET=$TMPDIR
+}
+
+#############################################################################
+# Group 02: Media information
+#############################################################################
+test_02_01()
+{
+  COMM="Display the SIMPLE information of specified media file"
+  run "-i" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_02_02()
+{
+  COMM="Display the DETAILED information of specified media file"
+  run "-I" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_02_03()
+{
+  COMM="Display the detail information with a FULL SCAN of the media file"
+  run "-I -d scan" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_02_04()
+{
+  COMM="Display the detail information with a QUICK SCAN of the media file"
+  run "-I -d fast" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_02_05()
+{
+  COMM="Check the result of '-d' option: see the difference in a broken file"
+  run "-i" "$1" "$2" "$COMM" ${@:3}
+  run "-i -d fast" "$1" "$2" "$COMM" ${@:3}
+}
+
+#############################################################################
+# Group 03: Canvas attribution
+#############################################################################
+test_03_01()
+{
+  COMM="Specify the colours: Information is BLUE, Timestamp is RED, Background is grey"
+  run "-c 0000ff:ff0000:7f7f7f" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_02()
+{
+  COMM="Only setup the background colour to grey"
+  run "-c ::7f7f7f" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_03()
+{
+  COMM="Set up a 4-pixel-width black edge around each thumbnail"
+  run "--edge 4" "$1" "$2" "$COMM" ${@:3}
+}
+
+
+# automatic test inside a specified group
+# it will maintain a list of each testing group with group number and cases
+# $1: group number
+# $2: case number in the group (0=all)
+# $3+: video file name
+group_test()
+{
+  TGROUP=`printf %02d $1`
+  case $TGROUP in
+    01) GRPCOMM='Basic Functionality Test';
+	GRPCASE=`echo {01..04}` ;;
+    02) GRPCOMM='Media Information Test';
+	GRPCASE=`echo {01..05}` ;;
+    03) GRPCOMM='Canvas Attribution Test';
+	GRPCASE=`echo {01..03}` ;;
+    *) return ;;
+  esac
+
+  if [ "$2" = "00" ]; then
+    for i in $GRPCASE
+    do
+      test\_$TGROUP\_$i $TGROUP.$i "$GRPCOMM" ${@:3}
+    done
+  else
+    i=`printf %02d $2`
+    test\_$TGROUP\_$i $TGROUP.$i "$GRPCOMM" ${@:3}
+  fi
+}
+
+usage_exit()
+{
+  cat << my_usage
+usage: ezqiz [-nn.mm] video_file_name
+  nn: the test group number
+  mm: the test case number
+my_usage
+  exit 0
+}
+
+
+while [ $# != 0 ]
+do  case "$1" in
+  -h|--help)
+    usage_exit ;;
+  -auto)
+    GROUP=auto ;;
+  -dir)
+    echo $1
+    shift
+    echo REST:$@ 
+    exit;;
+  -*)
+    GROUP=`echo ${1:1} | cut -d. -f1`
+    CASES=`echo ${1:1} | cut -s -d. -f2`
+    if [ "$CASES" = "" ]; then
+      CASES="00"
+    fi
+    ;;
+  *) 
+    break ;;
+  esac
+  shift
+done
+
 if [ "$1" = "" ]; then
-	echo Sanity Test of ezthumb
-	echo usage: $0 video_file_name
-	exit 0;
+  usage_exit
 fi
 
-
-if false; then
-COMM="001: Generate 4x4 thumbnails, 50% screen size"
-run "-g 4x4 -s 50%"
-
-COMM="002: Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
-run "-g 4x4 -s 50% --accurate"
-
-COMM="003: Generate thumbnails according to the default profile"
-run
-
-COMM="004: Specify the canvas colour: Media information is BLUE, Timestamp is RED, The background is grey"
-run "-c 0000ff:ff0000:7f7f7f"
-
-COMM="005: Only setup the background colour"
-run "-c ::7f7f7f"
+if [ "$GROUP" = "auto" ]; then
+  for GROUP in {01..03}
+  do
+    group_test $GROUP 00 $@
+  done
+  exit
+elif [ ! "$GROUP" = "" ]; then
+  group_test $GROUP $CASES $@
+  exit
 fi
-
-COMM="006: Set up the thumbnail edge to 4 pixel width"
-run "--edge 4"
 
 
 

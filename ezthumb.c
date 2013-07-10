@@ -2482,7 +2482,6 @@ static int image_gdframe_save(EZIMG *image, char *filename, int idx)
 	FILE	*fout;
 
 	if ((fout = image_create_file(image, filename, idx)) == NULL) {
-		perror(image->filename);
 		return EZ_ERR_FILE;
 	}
 
@@ -2542,7 +2541,6 @@ static int image_gdcanvas_save(EZIMG *image, char *filename)
 	FILE	*fout;
 
 	if ((fout = image_create_file(image, filename, -1)) == NULL) {
-		perror(image->filename);
 		return EZ_ERR_FILE;
 	}
 
@@ -2808,7 +2806,6 @@ static FILE *image_gif_anim_open(EZIMG *image, char *filename)
 	FILE	*fout;
 
 	if ((fout = image_create_file(image, filename, -1)) == NULL) {
-		perror(image->filename);
 		return NULL;
 	}
 
@@ -2856,17 +2853,24 @@ static int image_gif_anim_close(EZIMG *image, FILE *fout)
 
 static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 {
+	FILE	*fp;
+
 	if (ezopt_thumb_name(image->sysopt, image->filename, filename, idx) 
 			== EZ_THUMB_SKIP) {
 		errno = EEXIST;
+		slog(EZDBG_BRIEF, "%s: skipped.\n", image->filename);
 		return NULL;	/* skip the existed files */
 	}
 
 #ifdef	CFG_GUI_ON
-	return g_fopen(image->filename, "wb");
+	fp = g_fopen(image->filename, "wb");
 #else
-	return fopen(image->filename, "wb");
+	fp = fopen(image->filename, "wb");
 #endif
+	if (fp == NULL) {
+		slog(EZDBG_WARNING, "%s: failed to create\n", image->filename);
+	}
+	return fp;
 }
 
 static int image_cal_ratio(int ratio, int refsize)
