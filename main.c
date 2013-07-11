@@ -50,8 +50,6 @@
 #define CMD_OPT_LFR	15
 #define CMD_OVERRIDE	16
 #define CMD_POS_BG	17
-#define CMD_POS_TIME	18
-#define CMD_POS_INFO	19
 #define CMD_TIME_FROM	20
 #define CMD_TIME_END	21
 #define CMD_TRANSPRT	22
@@ -141,9 +139,9 @@ static	struct	cliopt	clist[] = {
 	{ CMD_GAP_MARG, "gap-margin", 
 		1, "the margin in the canvas (8)" },
 	{ CMD_OPT_INFO, "opt-info", 
-		2, "the media infomation (on)" },
+		2, "the media infomation (lt)(on|off|mt|rt)" },
 	{ CMD_OPT_TIME, "opt-time", 
-		2, "the timestamp inside the screen shots (on)" },
+		2, "the timestamp inside the screen shots (rt)(lt|mt|lb}|mb|rb)" },
 	{ CMD_OPT_FFR, "opt-ffr",  
 		2, "start from the first frame (off)" },
 	{ CMD_OPT_LFR, "opt-lfr",  
@@ -152,10 +150,6 @@ static	struct	cliopt	clist[] = {
 		2, "override existed thumbnails (copy)"},
 	{ CMD_POS_BG, "pos-bg",
 		2, "the position of the background image (mc)" },
-	{ CMD_POS_TIME, "pos-time", 
-		2, "the position of the timestamp (rt)" },
-	{ CMD_POS_INFO, "pos-info", 
-		2, "the position of the media infomation (lt)" },
 	{ 0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
 	{ CMD_TIME_FROM, "time-from",
 		2, "the time in video where begins shooting" },
@@ -423,9 +417,12 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->flags |= EZOP_INFO;
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_INFO;
-			} else {
+			} else if ((c = para_get_position(optarg)) == -1) {
 				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
+			} else {
+				opt->flags |= EZOP_INFO;
+				opt->mi_position = c;
 			}
 			break;
 		case CMD_OPT_TIME:	/* opt-time */
@@ -433,9 +430,12 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->flags |= EZOP_TIMEST;
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_TIMEST;
-			} else {
+			} else if ((c = para_get_position(optarg)) == -1) {
 				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
+			} else {
+				opt->flags |= EZOP_TIMEST;
+				opt->ins_position = c;
 			}
 			break;
 		case CMD_OPT_FFR:	/* opt-ffr */
@@ -464,22 +464,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				goto break_parse;	/* break the analysis */
 			} else {
 				opt->bg_position = c;
-			}
-			break;
-		case CMD_POS_TIME:	/* "pos-time" */
-			if ((c = para_get_position(optarg)) == -1) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
-			} else {
-				opt->ins_position = c;
-			}
-			break;
-		case CMD_POS_INFO:	/* "pos-info" */
-			if ((c = para_get_position(optarg)) == -1) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
-			} else {
-				opt->mi_position = c;
 			}
 			break;
 		case CMD_OTF:	/* decode-on-the-fly */

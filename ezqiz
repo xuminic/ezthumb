@@ -87,6 +87,48 @@ test_01_07()
   run "--vindex 3" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_08()
+{
+  local COMM="Generate the JPG files with a poor qualities."
+  run "-m jpg@20" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_09()
+{
+  local COMM="Generate PNG outputs. The tailing '@20' should be ignored"
+  run "-m png@20" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_10()
+{
+  local COMM="Generate GIF outputs"
+  run "-m gif" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_11()
+{
+  local COMM="Generate the animation GIF outputs. The time interval is 500 ms"
+  run "-m gif@500" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_12()
+{
+  local COMM="Generate the animation GIF outputs by key-frames without timestamps"
+  run "-m gif@250 --opt-time off -g 0" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_13()
+{
+  local COMM="Generate GIF output and transparent background with specified bgcolour"
+  run "-m gif -c ::ff0000 --transparent" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_14()
+{
+  local COMM="Generate PNG output and transparent background with specified bgcolour"
+  run "-m png -c ::ff0000 --transparent" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 #############################################################################
@@ -183,14 +225,38 @@ test_03_09()
 test_03_10()
 {
   local COMM="Place the media information to the right corner"
-  run "--pos-info rc" "$1" "$2" "$COMM" ${@:3}
+  run "--opt-info rc" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_03_11()
+{
+  local COMM="Place the media information to the center"
+  run "--opt-info mc" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_12()
+{
+  local COMM="Turn off the timestamp in the thumbnail"
+  run "--opt-time off" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_13()
+{
+  local COMM="Turn off the timestamp in the thumbnail"
+  run "--opt-time off" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_14()
+{
+  local COMM="Move the timestamp to the left-bottom of thumbnail"
+  run "--opt-time lb" "$1" "$2" "$COMM" ${@:3}
+}
 
 test_03_15()
 {
-  local COMM="Turn off the timestamp"
-  run "--opt-time off" "$1" "$2" "$COMM" ${@:3}
+  local COMM="Make sure the 'tt' place does NOT work for media information and timestamp"
+  run "--opt-info tt" "$1" "$2" "$COMM" ${@:3}
+  run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
 }
 
 
@@ -313,7 +379,7 @@ group_test()
     02) GRPCOMM='Media Information Test';
 	GRPCASE=`echo {01..05}` ;;
     03) GRPCOMM='Canvas Attribution Test';
-	GRPCASE=`echo {01..08}` ;;
+	GRPCASE=`echo {01..15}` ;;
     04) GRPCOMM='Thumbnail Grid Test';
 	GRPCASE=`echo {01..14}` ;;
     *) return ;;

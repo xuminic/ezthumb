@@ -383,15 +383,32 @@ means to keep 4 pixels blank margin.
 means the margin is 4% of the width of a single screen shot.
 
 .TP
-.BR "\-\-opt\-info \fIon|off\fP"
+.BR "\-\-opt\-info \fIon|off|position_code\fP"
 Turn on or turn off displaying the media information on the top of the
-thumbnail canvas. The default is
-.I on.
+thumbnail canvas. If a 
+.I position_code
+was set, it would be regarded as turning on the displaying. The default is
+.I lt.
+Note that the media information can only be placed on the top of the canvas.
+.br
+See
+.B POSITION CODES
+for the details.
 
 .TP
-.BR "\-\-opt\-time \fIon|off\fP"
-Turn on or turn off displaying the timestamp inside each screen shots. The default is
-.I on.
+.BR "\-\-opt\-time \fIon|off|position_code\fP"
+Turn on or turn off displaying the timestamp inside each screen shots. If a
+.I position_code
+was set, it would be regarded as turning on the displaying. The default is
+.I lt.
+Set up the position of the timestamp inside the screenshots. 
+The default setting is
+.I rt.
+.br
+See 
+.B POSITION CODES
+for the details.
+
 
 .TP
 .BR "\-\-opt\-ffr \fIon|off\fP"
@@ -438,26 +455,6 @@ Set up the position of the background picture. The default setting is
 .I mc.
 .br
 See 
-.B POSITION CODES
-for the details.
-
-.TP
-.BR "\-\-pos\-time \fIposition_code\fP"
-Set up the position of the timestamp inside the screenshots. 
-The default setting is
-.I rt.
-.br
-See 
-.B POSITION CODES
-for the details.
-
-.TP
-.BR "\-\-pos\-info \fIposition_code\fP"
-Set up the position of the media information. The default setting is
-.I lt.
-Note that the media information can only be placed on the top of the canvas.
-.br
-See
 .B POSITION CODES
 for the details.
 
