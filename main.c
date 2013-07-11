@@ -1035,39 +1035,42 @@ static int para_make_postition(char *s)
 static int para_get_color(EZOPT *opt, char *s)
 {
 	unsigned long	rc;
-	char	*tmp, *clist[3];
+	char	*rp, *tmp, *argvs[3];
 
 	if ((tmp = strcpy_alloc(s)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
-	fixtoken(tmp, clist, sizeof(clist)/sizeof(char*), ":");
+	fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 
-	if (clist[0] && *clist[0]) {
-		if (!isxdigit(*clist[0])) {
+	rp = argvs[0];
+	if (rp && *rp) {
+		if (!isxdigit(*rp)) {
 			free(tmp);
 			return EZ_ERR_PARAM;
 		}
-		rc = strtoul(clist[0], NULL, 16);
+		rc = strtoul(rp, NULL, 16);
 		opt->mi_color[0] = (unsigned char)((rc >> 16) & 0xff);
 		opt->mi_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->mi_color[2] = (unsigned char)(rc & 0xff);
 	}
-	if (clist[1] && *clist[1]) {
-		if (!isxdigit(*clist[1])) {
+	rp = argvs[1];
+	if (rp && *rp) {
+		if (!isxdigit(*rp)) {
 			free(tmp);
 			return EZ_ERR_PARAM;
 		}
-		rc = strtoul(clist[1], NULL, 16);
+		rc = strtoul(rp, NULL, 16);
 		opt->ins_color[0] = (unsigned char)((rc >> 16) & 0xff);
 		opt->ins_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->ins_color[2] = (unsigned char)(rc & 0xff);
 	}
-	if (clist[2] && *clist[2]) {
-		if (!isxdigit(*clist[2])) {
+	rp = argvs[2];
+	if (rp && *rp) {
+		if (!isxdigit(*rp)) {
 			free(tmp);
 			return EZ_ERR_PARAM;
 		}
-		rc = strtoul(clist[2], NULL, 16);
+		rc = strtoul(rp, NULL, 16);
 		opt->canvas_color[0] = (unsigned char)((rc >> 16) & 0xff);
 		opt->canvas_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->canvas_color[2] = (unsigned char)(rc & 0xff);
@@ -1078,24 +1081,26 @@ static int para_get_color(EZOPT *opt, char *s)
 
 static int para_get_fontsize(EZOPT *opt, char *s)
 {
-	char	*tmp, *clist[3];
+	char	*rp, *tmp, *argvs[3];
 
 	if ((tmp = strcpy_alloc(s)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
-	fixtoken(tmp, clist, sizeof(clist)/sizeof(char*), ":");
+	fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 
-	if (clist[0] && *clist[0]) {
-		if (isdigit(*clist[0])) {
-			opt->mi_size = (int) strtol(clist[0], NULL, 0);
+	rp = argvs[0];
+	if (rp && *rp) {
+		if (isdigit(*rp)) {
+			opt->mi_size = (int) strtol(rp, NULL, 0);
 		} else {
 			free(tmp);
 			return EZ_ERR_PARAM;
 		}
 	}
-	if (clist[1] && *clist[1]) {
-		if (isdigit(*clist[0])) {
-			opt->ins_size = (int) strtol(clist[1], NULL, 0);
+	rp = argvs[1];
+	if (rp && *rp) {
+		if (isdigit(*rp)) {
+			opt->ins_size = (int) strtol(rp, NULL, 0);
 		} else {
 			free(tmp);
 			return EZ_ERR_PARAM;

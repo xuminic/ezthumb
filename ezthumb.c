@@ -1322,20 +1322,34 @@ static int64_t video_current_dts(EZVID *vidx)
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 {
 	AVStream	*stream;
-	char		buffer[256], tmp[32];
+	char		*buffer, tmp[32];
 	int		i;
 
 	// FIXME: UTF-8 and wchar concern
 	/* Line 0: the filename */
-	strcpy(image->filename, "NAME: ");
 	if (vidx->dur_all) {	/* binding mode */
-		meta_basename(vidx->anchor->filename, image->filename + 6);
-		strcat(image->filename, " ...");
+		i = strlen(vidx->anchor->filename) + 32;
 	} else {
-		meta_basename(vidx->filename, image->filename + 6);
+		i = strlen(vidx->filename) + 32;
 	}
-	image_gdcanvas_print(image, 0, 0, image->filename);
-	slogz("%s\n", image->filename);
+	if (i < 256) {
+		i = 256;
+	}
+	if ((buffer = malloc(i)) == NULL) {
+		return EZ_ERR_LOWMEM;
+	}
+
+	strcpy(buffer, "NAME: ");
+	if (vidx->dur_all) {	/* binding mode */
+		meta_basename(vidx->anchor->filename, buffer + 6);
+		strcat(buffer, " ...");
+	} else {
+		meta_basename(vidx->filename, buffer + 6);
+	}
+	if (image) {
+		image_gdcanvas_print(image, 0, 0, buffer);
+	}
+	slogz("%s\n", buffer);
 
 	/* Line 1: the duration of the video clip, the file size, 
 	 * the frame rates and the bit rates */
@@ -1358,7 +1372,9 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	 * so we calculate its combined bit rate here */
 	i = (int) (vidx->filesize * 1000 / vidx->duration);
 	strcat(buffer, meta_bitrate(i, tmp));
-	image_gdcanvas_print(image, 1, 0, buffer);
+	if (image) {
+		image_gdcanvas_print(image, 1, 0, buffer);
+	}
 	slogz("%s\n", buffer);
 
 	/* Line 2+: the stream information */
@@ -1381,9 +1397,12 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 			strcat(buffer, "Unknown");
 			break;
 		}
-		image_gdcanvas_print(image, i + 2, 0, buffer);
+		if (image) {
+			image_gdcanvas_print(image, i + 2, 0, buffer);
+		}
 		slogz("%s\n", buffer);
 	}
+	free(buffer);
 	return EZ_ERR_NONE;
 }
 /* This function is used to find the video clip's duration. There are three
@@ -1695,13 +1714,16 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 	eznotify(vidx->sysopt, EN_PROC_END, image->canvas_width, 
 			image->canvas_height, status);
 
-	if (image->gdcanvas) {
+	if (image->gdcanvas && (image->sysopt->flags & EZOP_INFO)) {
 		/* update the media information area */
-		if (image->sysopt->flags & EZOP_INFO) {
-			video_media_on_canvas(vidx, image);
-			/* Insert as status line */
-			image_gdcanvas_print(image, -1, 0, status);
-		}
+		video_media_on_canvas(vidx, image);
+		/* Insert as status line */
+		image_gdcanvas_print(image, -1, 0, status);
+	} else {
+		/* display the media information in console */
+		video_media_on_canvas(vidx, NULL);
+	}
+	if (image->gdcanvas) {
 		if (vidx->anchor) {
 			image_gdcanvas_save(image, vidx->anchor->filename);
 		} else {
@@ -1709,8 +1731,6 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 		}
 	} else if (image->gifx_fp) {
 		image_gif_anim_close(image, image->gifx_fp);
-	} else {
-		return 0;	/* nothing to save */
 	}
 	slogz("OUTPUT: %s\n", image->filename);
 	return 0;

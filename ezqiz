@@ -1,6 +1,7 @@
 #!/bin/bash
 
 VIEWER=eog
+FONT="./DejaVuSans.ttf"
 
 # $1: command line options
 # $2: case number like 01.03
@@ -80,6 +81,14 @@ test_01_06()
   run "-x _pi.c-th_" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_07()
+{
+  local COMM="Specify the video stream index explicitly (Need test stream)"
+  run "--vindex 3" "$1" "$2" "$COMM" ${@:3}
+}
+
+
+
 #############################################################################
 # Group 02: Media information
 #############################################################################
@@ -135,6 +144,157 @@ test_03_03()
   run "--edge 4" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_03_04()
+{
+  local COMM="Test the internal font with different size: media infor 16, timestamp 8"
+  run "-F 16:8" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_05()
+{
+  local COMM="Test the internal font with different size and colour"
+  run "-F 16:8 -c 00ff00:0000ff" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_06()
+{
+  local COMM="Test the external TTF font: $FONT"
+  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_07()
+{
+  local COMM="Test the external TTF font with a different size: $FONT"
+  run "-f $FONT -F 16:8" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_08()
+{
+  local COMM="Test the external TTF font with timestamp size and colour: $FONT"
+  run "-f $FONT -F :16 -c :ff0000:" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_09()
+{
+  local COMM="Turn off the media information"
+  run "--opt-info off" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_10()
+{
+  local COMM="Place the media information to the right corner"
+  run "--pos-info rc" "$1" "$2" "$COMM" ${@:3}
+}
+
+
+test_03_15()
+{
+  local COMM="Turn off the timestamp"
+  run "--opt-time off" "$1" "$2" "$COMM" ${@:3}
+}
+
+
+
+#############################################################################
+# Group 04: Thumbnail Grid Test
+#############################################################################
+test_04_01()
+{
+  local COMM="Set up an 8x1 grid"
+  run "-g 8x1" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_02()
+{
+  local COMM="Set up an 1x8 grid"
+  run "-g 1x8" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_03()
+{
+  local COMM="Specify the grid in width and let Ezthumb decide the height (by time step or 4)"
+  run "-g 5" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_04()
+{
+  local COMM="No grid and canvas at all, save to separate 8 screen shots"
+  run "-g 0x8" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_05()
+{
+  local COMM="No grid and canvas, save all i-frame separately"
+  run "-g 0x0" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_06()
+{
+  local COMM="Take snapshots and change to expected size in percentage"
+  run "-g 3x5 -s 20%" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_07()
+{
+  local COMM="Take snapshots and change to expected size in pixel"
+  run "-g 3x5 -s 300x100" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_08()
+{
+  local COMM="Limit the width of the canvas and automatically fit the snapshots"
+  run "-g 3x5 -s 300x100 -w 1024" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_09()
+{
+  local COMM="Remove the gap between each snapshots"
+  run "-g 3x5 --gap-shots 0" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_10()
+{
+  local COMM="Adjust the gap between each snapshots to specified size in pixel"
+  run "-g 3x5 --gap-shots 12" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_11()
+{
+  local COMM="Adjust the gap between each snapshots in proportion of the thumbnail width"
+  run "-g 3x5 --gap-shots 10%" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_12()
+{
+  local COMM="Remove the canvas margin"
+  run "-g 3x5 --gap-margin 0" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_13()
+{
+  local COMM="Adjust the canvas margin to specified size in pixel"
+  run "-g 3x5 --gap-margin 20" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_14()
+{
+  local COMM="Adjust the canvas margin in proportion of the thumbnail width"
+  run "-g 3x5 --gap-margin 10%" "$1" "$2" "$COMM" ${@:3}
+}
+
+
+
+
+
+test_04_20()
+{
+  local COMM="Foolproof test, no crash is required"
+  run "-g x4" "$1" "$2" "$COMM" ${@:3}
+  run "-g 5x" "$1" "$2" "$COMM" ${@:3}
+  run "-g 0" "$1" "$2" "$COMM" ${@:3}
+}
+
+
 
 # automatic test inside a specified group
 # it will maintain a list of each testing group with group number and cases
@@ -143,14 +303,19 @@ test_03_03()
 # $3+: video file name
 group_test()
 {
-  TGROUP=`printf %02d $1`
+  local TGROUP=`printf %02d $1`
+  local GRPCOMM=
+  local GRPCASE=
+
   case $TGROUP in
     01) GRPCOMM='Basic Functionality Test';
-	GRPCASE=`echo {01..06}` ;;
+	GRPCASE=`echo {01..07}` ;;
     02) GRPCOMM='Media Information Test';
 	GRPCASE=`echo {01..05}` ;;
     03) GRPCOMM='Canvas Attribution Test';
-	GRPCASE=`echo {01..03}` ;;
+	GRPCASE=`echo {01..08}` ;;
+    04) GRPCOMM='Thumbnail Grid Test';
+	GRPCASE=`echo {01..14}` ;;
     *) return ;;
   esac
 
