@@ -51,7 +51,6 @@ static int video_disconnect(EZVID *vidx);
 static int video_find_main_stream(EZVID *vidx);
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
-//static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, int64_t);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
 static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
@@ -220,6 +219,8 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		video_free(vidx);
 		return rc;
 	}
+
+	video_open(vidx);
 	if ((rc = video_connect(vidx, image)) != EZ_ERR_NONE) {
 		image_free(image);
 		video_free(vidx);
@@ -249,47 +250,9 @@ int ezthumb(char *filename, EZOPT *ezopt)
 	 * After weighed by balance, I think it may be a good idea to 
 	 * restart the ezthumb in the safe mode if it found no thumbnail
 	 * was generated in the required process, better than nothing */
-	if (rc == 0) {
+	/*if (rc == 0) {
 		ezthumb_safe(filename, ezopt);
-	}
-	return EZ_ERR_NONE;
-}
-
-int ezthumb_safe(char *filename, EZOPT *ezopt)
-{
-	EZIMG	*image;
-	EZVID	*vidx;
-	int	rc;
-
-	if ((vidx = video_allocate(ezopt, filename, &rc)) == NULL) {
-		return rc;
-	}
-	if ((image = image_allocate(vidx, vidx->duration, &rc)) == NULL) {
-		video_free(vidx);
-		return rc;
-	}
-	if ((rc = video_connect(vidx, image)) != EZ_ERR_NONE) {
-		image_free(image);
-		video_free(vidx);
-		return rc;
-	}
-
-	/* Register the video and image object so unix signal can intervene */
-	ezopt->vidobj = vidx;
-	ezopt->imgobj = image;
-
-	if (image->time_step > 0) {	/* no i-frame rip in safe mode */
-		video_snap_begin(vidx, image, GETPROCS(vidx->ses_flags));
-		video_snapshot_safemode(vidx, image);
-		video_snap_end(vidx, image);
-	}
-
-	/* deregister the video and image object so they can be reused */
-	ezopt->vidobj = NULL;
-	ezopt->imgobj = NULL;
-
-	image_free(image);
-	video_free(vidx);
+	}*/
 	return EZ_ERR_NONE;
 }
 
@@ -502,7 +465,6 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 		video_seeking(vidx, dts_snap);
 
 		dts = video_keyframe_next(vidx, &packet);
-		//dts = video_keyframe_rectify(vidx, &packet, dts_snap);
 		if (dts < 0) {
 			break;
 		}
@@ -534,12 +496,15 @@ static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 	int64_t		dts, dts_snap;
 	int		scnt = 0;
 
-	dts_snap = video_snap_point(vidx, image, image->taken);
-	if (dts_snap < 0) {
-		return scnt;
+	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
+		return 0;
 	}
+	video_snap_begin(vidx, image, ENX_SS_SAFE);
+	while (image->taken < image->shots) {
+		if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
+			break;
+		}
 
-	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
 		/* use video_decode_next() instead of video_decode_keyframe()
 		 * because sometimes it's good for debugging doggy clips */
 		if (video_decode_next(vidx, &packet) < 0) {
@@ -548,9 +513,7 @@ static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 		if (dts >= dts_snap) {
 			video_snap_update(vidx, image, dts_snap);
 			scnt++;
-			if (image->taken >= image->shots) {
-				break;
-			}
+
 			dts_snap = video_snap_point(vidx, image, image->taken);
 			if (dts_snap < 0) {
 				break;
@@ -600,7 +563,6 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 				break;
 			}
 		}
-		//video_snap_update(vidx, image, dts);
 		video_snap_update(vidx, image, dts_snap);
 		scnt++;
 	}
@@ -710,7 +672,7 @@ static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 			break;
 		}
 
-		video_snap_update(vidx, image, dts);	//FIXME: dts or dts_snap?
+		video_snap_update(vidx, image, dts_snap);
 		scnt++;
 	}
 	video_snap_end(vidx, image);
@@ -828,6 +790,8 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	eznotify(vidx->sysopt, EN_MEDIA_OPEN, 0, 
 			smm_time_diff(&vidx->tmark), vidx);
 	uperror(errcode, EZ_ERR_NONE);
+
+	video_close(vidx);	/* do not rewinding, reopen it instead */
 	return vidx;
 }
 
@@ -857,7 +821,6 @@ static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 			vp->next = vidx;
 		}
 		vidx->anchor = vanchor;
-		video_close(vidx);
 	}
 	for (vp = vanchor; vp; vp = vp->next) {
 		vp->dur_all = dur_all;
@@ -1180,23 +1143,6 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 	return dts;
 }
 
-#if 0
-static int64_t video_keyframe_rectify(EZVID *vidx, AVPacket *packet, 
-		int64_t dtsto)
-{
-	int64_t	dts;
-
-	dts = video_keyframe_next(vidx, packet);
-	if (dts >= dtsto) {
-		return dts;
-	}
-	if (video_dts_to_ms(vidx, dtsto - dts) < 10000) {	/* magic 10s*/
-		return dts;
-	}
-	return video_keyframe_to(vidx, packet, dtsto);
-}
-#endif
-
 static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
@@ -1405,6 +1351,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	free(buffer);
 	return EZ_ERR_NONE;
 }
+
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
  * grab the duration data from the clip head, EZ_DUR_CLIPHEAD. It's already 
@@ -1467,8 +1414,10 @@ static EZTIME video_duration(EZVID *vidx)
 
 static int video_duration_check(EZVID *vidx)
 {
+	EZTIME	during;
 	int	br;
 
+	during = (EZTIME)(vidx->formatx->duration / AV_TIME_BASE * 1000);
 	if (vidx->duration <= 0) {
 		return 0;	/* bad duration */
 	}
@@ -1588,26 +1537,6 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 	}
 	return seekat;
 }
-
-#if 0
-static int64_t video_snap_group_point(EZGRP *vgrp, EZIMG *image, int index)
-{
-	EZTIME	cur_clip_begin, cur_clip_end;
-
-	/* setup the initial seek position */
-	if ((image->sysopt->flags & EZOP_FFRAME) == 0) {
-		index++;
-	}
-	cur_ms = image->time_step * index;
-	if (cur_ms > cur_dur_end) {
-		close(vidx);
-		vidx = video_alloc();
-		cur_dur_begin = cur_dur_end;
-		cur_dur_end += cur_duration;
-	}
-	clip_ms = cur_ms - cur_dur_begin;
-}
-#endif
 
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 {
@@ -1806,11 +1735,12 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 
 static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 {
-	int64_t	dts;
+	int64_t	dts = 0;
+	int	i = 0;
 
 	do {
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
-			break;
+			return -1;	/* failed to decode */
 		}
 
 		/* A workaroud for B-frame error when investigating the DS9 
@@ -1821,18 +1751,23 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 		 * previous key frame information. The workaround is continuing
 		 * decoding until a proper key frame met */
 		/* FF_I_TYPE has been deprecated since 4 Jan 2012. */
-#ifdef	FF_I_TYPE
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
-#else
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == 
-				AV_PICTURE_TYPE_I) {
+#ifndef	FF_I_TYPE
+#define FF_I_TYPE	AV_PICTURE_TYPE_I
 #endif
-			return dts;	
+		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
+			break;	/* successfully decoded a key frame */
 		}
+
 		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, 
 				vidx->fgroup[vidx->fnow].frame);
+
+		/* In case of decoding indefinitly, some files do not have
+		 * a proper i-frame at all, it is limited to 3-try at most */
+		if (++i == 3) {
+			break;
+		}
 	} while (video_load_packet(vidx, packet) >= 0);
-	return -1;
+	return dts;
 }
 
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)

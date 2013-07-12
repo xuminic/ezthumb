@@ -2,6 +2,8 @@
 
 VIEWER=eog
 FONT="./DejaVuSans.ttf"
+BGJPG="background.jpg"
+BGPNG="bigground.png"
 
 # $1: command line options
 # $2: case number like 01.03
@@ -83,8 +85,8 @@ test_01_06()
 
 test_01_07()
 {
-  local COMM="Specify the video stream index explicitly (Need test stream)"
-  run "--vindex 3" "$1" "$2" "$COMM" ${@:3}
+  local COMM="Safe mode test"
+  run "-p safe" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_01_08()
@@ -129,6 +131,23 @@ test_01_14()
   run "-m png -c ::ff0000 --transparent" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_15()
+{
+  local COMM="Take screen shots by setting time steps"
+  run "-t 6000 -g 5" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_16()
+{
+  local COMM="Take seperate screen shots by setting time steps"
+  run "-t 30000 -g 0" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_17()
+{
+  local COMM="Recursive test: Level unlimited, most recognizable video files"
+  run "-R" "$1" "$2" "$COMM" ${@:3}
+}
 
 
 #############################################################################
@@ -254,6 +273,78 @@ test_03_14()
 
 test_03_15()
 {
+  local COMM="Specify a background picture"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_16()
+{
+  local COMM="Place the background picture to other places (from lt to rb)"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg lt" "$1" "$2" "$COMM" ${@:3}
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg mc" "$1" "$2" "$COMM" ${@:3}
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg rb" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_17()
+{
+  local COMM="Tilt background picture"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg tt" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_18()
+{
+  local COMM="Enlarge the background picture to the whole canvas"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg st" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_19()
+{
+  local COMM="Shrink the background picture to the canvas"
+  run "-c ::7f7f7f --background $BGPNG --gap-shots 20 --gap-margin 40" "$1" "$2" "$COMM" ${@:3}
+  run "-c ::7f7f7f --background $BGPNG --gap-shots 20 --gap-margin 40 --pos-bg st" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_20()
+{
+  local COMM="Enlarge or shrink the background picture to the width of the canvas while keeping proportion"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg ex" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_21()
+{
+  local COMM="Enlarge or shrink the background picture to the height of the canvas while keeping proportion"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg ey" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_22()
+{
+  local COMM="Enlarge or shrink the background picture to the width of the canvas without keeping proportion"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg sx" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_23()
+{
+  local COMM="Enlarge or shrink the background picture to the width of the canvas without keeping proportion, then relocate it to center and bottom"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg mc:sx" "$1" "$2" "$COMM" ${@:3}
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg rb:sx" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_24()
+{
+  local COMM="Enlarge or shrink the background picture to the height of the canvas without keeping proportion"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg sy" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_25()
+{
+  local COMM="Enlarge or shrink the background picture to the height of the canvas without keeping proportion, then relocate it to center and right"
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg mc:sy" "$1" "$2" "$COMM" ${@:3}
+  run "-c ::7f7f7f --background $BGJPG --gap-shots 20 --gap-margin 40 --pos-bg rb:sy" "$1" "$2" "$COMM" ${@:3}
+}
+
+
+test_03_99()
+{
   local COMM="Make sure the 'tt' place does NOT work for media information and timestamp"
   run "--opt-info tt" "$1" "$2" "$COMM" ${@:3}
   run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
@@ -352,7 +443,7 @@ test_04_14()
 
 
 
-test_04_20()
+test_04_99()
 {
   local COMM="Foolproof test, no crash is required"
   run "-g x4" "$1" "$2" "$COMM" ${@:3}
@@ -360,6 +451,57 @@ test_04_20()
   run "-g 0" "$1" "$2" "$COMM" ${@:3}
 }
 
+#############################################################################
+# Group 05: Advanced functions
+#############################################################################
+
+test_05_01()
+{
+  local COMM="Specify the video stream index explicitly (Need test stream)"
+  run "--vindex 3" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_02()
+{
+  local COMM="Comparision test: default screen shots, include the first frame, include the last frame"
+  run "" "$1" "$2" "$COMM" ${@:3}
+  COMM="including the first frame"
+  run "--opt-ffr on" "$1" "$2" "$COMM" ${@:3}
+  COMM="including the last frame"
+  run "--opt-lfr on" "$1" "$2" "$COMM" ${@:3}
+  COMM="including the first and the last frame"
+  run "--opt-ffr on --opt-lfr on" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_03()
+{
+  local COMM="Take screen shots from 1m30s, first frame included"
+  run "--opt-ffr on --time-from 1:30 " "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_04()
+{
+  local COMM="Take screen shots from 30%"
+  run "--time-from 30% " "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_05()
+{
+  local COMM="Take screen shots up to 4m30s, accurate mode, last frame included"
+  run "--time-end 0:4:30 --opt-lfr on --accurate" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_06()
+{
+  local COMM="Take screen shots up to 70%, last frame included"
+  run "--time-end 70% --opt-lfr on" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_07()
+{
+  local COMM="Reversed time position test: End time should be ignored "
+  run "--time-from 70% --time-end 10% --opt-ffr on --opt-lfr on --accurate" "$1" "$2" "$COMM" ${@:3}
+}
 
 
 # automatic test inside a specified group
@@ -381,6 +523,8 @@ group_test()
     03) GRPCOMM='Canvas Attribution Test';
 	GRPCASE=`echo {01..15}` ;;
     04) GRPCOMM='Thumbnail Grid Test';
+	GRPCASE=`echo {01..14}` ;;
+    05) GRPCOMM='Advanced functions';
 	GRPCASE=`echo {01..14}` ;;
     *) return ;;
   esac
@@ -418,7 +562,7 @@ do  case "$1" in
     shift
     echo REST:$@ 
     exit;;
-  -*)
+  -[0-9]*)
     GROUP=`echo ${1:1} | cut -d. -f1`
     CASES=`echo ${1:1} | cut -s -d. -f2`
     if [ "$CASES" = "" ]; then

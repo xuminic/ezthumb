@@ -260,8 +260,8 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		}*/
 		break;
 	case EN_FRAME_EXCEPTION:
-		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_VERBS) {
-			slogz("Discard ");
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			slogz("Discard Dodge I");
 			dump_frame(block, 1);
 		}
 		break;

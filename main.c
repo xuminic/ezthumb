@@ -1105,6 +1105,9 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		case ENX_SS_SCAN:
 			slog(EZDBG_SHOW, "Building (Scan)      ");
 			break;
+		case ENX_SS_SAFE:
+			slog(EZDBG_SHOW, "Building (Safe)      ");
+			break;
 		case ENX_SS_TWOPASS:
 			slog(EZDBG_SHOW, "Building (2Pass)     ");
 			break;

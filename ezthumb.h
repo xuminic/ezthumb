@@ -82,6 +82,7 @@
 #define ENX_SS_TWOPASS		2
 #define ENX_SS_HEURIS		3
 #define ENX_SS_IFRAMES		4
+#define ENX_SS_SAFE		5
 
 #define ENX_SEEK_BW_YES		1
 #define ENX_SEEK_BW_NO		0
@@ -529,7 +530,6 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 void ezopt_init(EZOPT *ezopt, char *profile);
 void ezopt_review(EZOPT *opt);
 int ezthumb(char *filename, EZOPT *ezopt);
-int ezthumb_safe(char *filename, EZOPT *ezopt);
 int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout);
 int ezthumb_break(EZOPT *ezopt);
