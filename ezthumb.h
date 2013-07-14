@@ -84,17 +84,27 @@
 #define ENX_SS_IFRAMES		4
 #define ENX_SS_SAFE		5
 
-#define ENX_SEEK_BW_YES		1
-#define ENX_SEEK_BW_NO		0
+
+#define ENX_SEEK_UNKNOWN	0	/* seeking capablity unknown */
+#define ENX_SEEK_NONE		1	/* can not seek at all */
+#define ENX_SEEK_FORWARD	2	/* support seeking forward only */
+#define ENX_SEEK_FREE		3	/* support seeking freely */
 
 #define ENX_IFRAME_RESET	0
 #define ENX_IFRAME_SET		1
 #define ENX_IFRAME_UPDATE	2
 
 
-#define EZ_DUR_CLIPHEAD		0
-#define EZ_DUR_QK_SCAN		1
-#define EZ_DUR_FULLSCAN		2
+/* Display the debug log in the command line. */
+#define EZDBG_NONE	SLSHOW	/* no debug information at all */
+#define EZDBG_SHOW	(SLSHOW | SLOG_FLUSH)
+#define EZDBG_WARNING	SLERR	/* open, close, duration */
+#define EZDBG_INFO	SLWARN	/* av info, image info */
+#define EZDBG_BRIEF	SLINFO	/* warning from FFMPEG */
+#define EZDBG_IFRAME	SLDBG	/* key frame received */
+#define EZDBG_PACKET	SLPROG	/* key packet dump */
+#define EZDBG_VERBS	SLMOD	/* broken frames, scanned frames */
+#define EZDBG_FFM	SLMOD	/* the FFMPEG debug output */
 
 
 #define EZOP_INFO		1	/* include the media info area */
@@ -120,31 +130,14 @@
 #define EZOP_THUMB_OVERRIDE	0x400
 /* define the copy mode if not override */
 #define EZOP_THUMB_COPY		0x800
+/* define the video duration finding mode */
+#define EZOP_DUR_HEAD		0		/* no scan, read from head */
+#define EZOP_DUR_QSCAN		0x1000		/* quick scan */
+#define EZOP_DUR_FSCAN		0x2000		/* full scan */
+#define EZOP_DUR_MASK		0x3000
 /* process the subdirectories if the file name is a folder */
-#define EZOP_RECURSIVE		0x1000
+#define EZOP_RECURSIVE		0x4000
 
-#define SETFFRAME(m)	((m) | EZOP_FFRAME)
-#define CLRFFRAME(m)	((m) & ~EZOP_FFRAME)
-#define GETFFRAME(m)	((m) & EZOP_FFRAME)
-
-#define SETPROCS(m,p)	((m) &= ~EZOP_PROC_MASK, (m) |= (p))
-#define GETPROCS(m)	((m) & EZOP_PROC_MASK)
-
-#define SETACCUR(m)	((m) |= EZOP_P_FRAME)
-#define GETACCUR(m)	((m) & EZOP_P_FRAME)
-#define CLRACCUR(m)	((m) &= ~EZOP_P_FRAME)
-
-
-/* Display the debug log in the command line. */
-#define EZDBG_NONE	SLSHOW	/* no debug information at all */
-#define EZDBG_SHOW	(SLSHOW | SLOG_FLUSH)
-#define EZDBG_WARNING	SLERR	/* open, close, duration */
-#define EZDBG_INFO	SLWARN	/* av info, image info */
-#define EZDBG_BRIEF	SLINFO	/* warning from FFMPEG */
-#define EZDBG_IFRAME	SLDBG	/* key frame received */
-#define EZDBG_PACKET	SLPROG	/* key packet dump */
-#define EZDBG_VERBS	SLMOD	/* broken frames, scanned frames */
-#define EZDBG_FFM	SLMOD	/* the FFMPEG debug output */
 /* debug use 0xf000 mask in the flag word */
 #define EZDBG_FIELD		12
 #define EZOP_DEBUG(x)		(((x) >> EZDBG_FIELD) & SLOG_LVL_MASK)
@@ -159,6 +152,24 @@
 #define EZOP_PROC_HEURIS	0x40000 /* heuristic scan */
 #define EZOP_PROC_KEYRIP	0x50000	/* rip key frames */
 #define EZOP_PROC_SAFE		0x60000	/* safe mode */
+
+
+#define SETFFRAME(m)	((m) | EZOP_FFRAME)
+#define CLRFFRAME(m)	((m) & ~EZOP_FFRAME)
+#define GETFFRAME(m)	((m) & EZOP_FFRAME)
+
+#define SETPROCS(m,p)	((m) &= ~EZOP_PROC_MASK, (m) |= (p))
+#define GETPROCS(m)	((m) & EZOP_PROC_MASK)
+
+#define SETDURMOD(m,d)	((m) &= ~EZOP_DUR_MASK, (m) |= (d))
+#define GETDURMOD(m)	((m) & EZOP_DUR_MASK)
+
+#define SETACCUR(m)	((m) |= EZOP_P_FRAME)
+#define GETACCUR(m)	((m) & EZOP_P_FRAME)
+#define CLRACCUR(m)	((m) &= ~EZOP_P_FRAME)
+
+
+
 
 
 #define EZ_POS_LEFTTOP		0

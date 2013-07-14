@@ -561,14 +561,12 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case CMD_D_URING:	/* Examples: 0,1,quick,skim,scan */
-			if (isdigit((int) optarg[0])) {
-				opt->dur_mode = strtol(optarg, NULL, 0);
-			} else if (!strcmp(optarg, "fast")) {
-				opt->dur_mode = EZ_DUR_QK_SCAN;
-			} else if (!strcmp(optarg, "scan")) {
-				opt->dur_mode = EZ_DUR_FULLSCAN;
+			if (!strcmp(optarg, "scan")) {
+				SETDURMOD(opt->flags, EZOP_DUR_FSCAN);
 			} else if (!strcmp(optarg, "head")) {
-				opt->dur_mode = EZ_DUR_CLIPHEAD;
+				SETDURMOD(opt->flags, EZOP_DUR_HEAD);
+			} else if (!strcmp(optarg, "fast")) {
+				SETDURMOD(opt->flags, EZOP_DUR_QSCAN);
 			} else {
 				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
@@ -632,31 +630,31 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_P_ROCESS:
 			if (!strcmp(optarg, "auto")) {
-				opt->flags |= EZOP_PROC_AUTO;
+				SETPROCS(opt->flags, EZOP_PROC_AUTO);
 				break;
 			}
 			if (!strcmp(optarg, "skim")) {
-				opt->flags |= EZOP_PROC_SKIM;
+				SETPROCS(opt->flags, EZOP_PROC_SKIM);
 				break;
 			}
 			if (!strcmp(optarg, "scan")) {
-				opt->flags |= EZOP_PROC_SCAN;
+				SETPROCS(opt->flags, EZOP_PROC_SCAN);
 				break;
 			}
 			if (!strcmp(optarg, "2pass")) {
-				opt->flags |= EZOP_PROC_TWOPASS;
+				SETPROCS(opt->flags, EZOP_PROC_TWOPASS);
 				break;
 			}
 			if (!strcmp(optarg, "heuri")) {
-				opt->flags |= EZOP_PROC_HEURIS;
+				SETPROCS(opt->flags, EZOP_PROC_HEURIS);
 				break;
 			}
 			if (!strcmp(optarg, "safe")) {
-				opt->flags |= EZOP_PROC_SAFE;
+				SETPROCS(opt->flags, EZOP_PROC_SAFE);
 				break;
 			}
 			if (!strncmp(optarg, "key", 3)) {
-				opt->flags |= EZOP_PROC_KEYRIP;
+				SETPROCS(opt->flags, EZOP_PROC_KEYRIP);
 				opt->grid_col = 0;
 				opt->grid_row = 0;
 				prof_grid = 0;	/* disable the profile */

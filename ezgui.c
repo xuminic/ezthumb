@@ -100,6 +100,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
 	EZGUI	*gui;
 	char	*p;
+	int	tmp;
 
 	gtk_init(argcs, argvs);
 
@@ -155,8 +156,10 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 			CFG_KEY_ZOOM_HEIGHT, ezopt->tn_height);
 	ezopt->canvas_width = ezgui_cfg_read_int(gui->config,
 			CFG_KEY_CANVAS_WIDTH, ezopt->canvas_width);
-	ezopt->dur_mode = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_DURATION, ezopt->dur_mode);
+
+	tmp = GETDURMOD(ezopt->flags);
+	tmp = ezgui_cfg_read_int(gui->config, CFG_KEY_DURATION, tmp);
+	SETDURMOD(ezopt->flags, tmp);
 
 	ezgui_format_reset(gui, EZUI_FMR_RDWR);
 	return gui;
@@ -243,7 +246,7 @@ static int ezgui_option_save(EZGUI *gui)
 	ezgui_cfg_write_int(gui->config,
 			CFG_KEY_CANVAS_WIDTH, opt->canvas_width);
 	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_DURATION, opt->dur_mode);
+			CFG_KEY_DURATION, GETDURMOD(opt->flags));
 
 	sprintf(tmp, "%s@%d", opt->img_format, opt->img_quality);
 	ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, tmp);
@@ -1160,13 +1163,13 @@ static int ezgui_signal_setup_reset(EZGUI *gui)
 	}
 	g_free(pic);
 
-	switch (ezgui_cfg_read_int(gui->config, 
-				CFG_KEY_DURATION, gui->sysopt->dur_mode)) {
-	case EZ_DUR_QK_SCAN:
+	switch (ezgui_cfg_read_int(gui->config, CFG_KEY_DURATION, 
+				GETDURMOD(gui->sysopt->flags))) {
+	case EZOP_DUR_QSCAN:
 		gtk_toggle_button_set_active
 			(GTK_TOGGLE_BUTTON(gui->dfm_fast), TRUE);
 		break;
-	case EZ_DUR_FULLSCAN:
+	case EZOP_DUR_FSCAN:
 		gtk_toggle_button_set_active
 			(GTK_TOGGLE_BUTTON(gui->dfm_slow), TRUE);
 		break;
@@ -1230,11 +1233,11 @@ static int ezgui_signal_setup_update(EZGUI *gui)
 	}
 
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->dfm_head))) {
-		gui->sysopt->dur_mode = EZ_DUR_CLIPHEAD;
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_HEAD);
 	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->dfm_fast))) {
-		gui->sysopt->dur_mode = EZ_DUR_QK_SCAN;
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_QSCAN);
 	} else {
-		gui->sysopt->dur_mode = EZ_DUR_FULLSCAN;
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_FSCAN);
 	}
 
 	/* receive the output file format setting group */

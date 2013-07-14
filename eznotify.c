@@ -106,10 +106,11 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		if (EZOP_DEBUG(vidx->ses_flags) >= EZDBG_INFO) {
 			dump_format_context(vidx->formatx);
 		}
-		if (vidx->ses_flags & EZOP_CLI_INSIDE) {
-			if (vidx->ses_dura == EZ_DUR_FULLSCAN) {
+		if (vidx->ses_flags & EZOP_CLI_INSIDE) {	// FIXME
+			if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
 				strcpy(tmp, "full scan");
-			} else if (vidx->ses_dura == EZ_DUR_QK_SCAN) {
+			} else if (GETDURMOD(vidx->ses_flags) == 
+					EZOP_DUR_QSCAN) {
 				strcpy(tmp, "fast scan");
 			} else {
 				strcpy(tmp, "media header");
@@ -230,11 +231,19 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 				(long long) vidx->keygap);
 		break;
 	case EN_SEEK_FRAME:
-		if (param == ENX_SEEK_BW_NO) {
-			slogz("WARNING: Backward Seeking Disabled.\n");
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_WARNING) {
-			slogz("Backward Seeking Test successed to %lld\n",
-					*((long long *) block));
+		switch (param) {
+		case ENX_SEEK_NONE:
+			slogz("WARNING: Video seeking not supported.\n");
+			break;
+		case ENX_SEEK_FORWARD:
+			slog(EZDBG_INFO, "Video can seek forward only.\n");
+			break;
+		case ENX_SEEK_FREE:
+			slog(EZDBG_INFO, "Video seeking both direction.\n");
+			break;
+		default:
+			slogz("WARNING: Seeking capability unknown.\n");
+			break;
 		}
 		break;
 	case EN_MEDIA_STATIS:
