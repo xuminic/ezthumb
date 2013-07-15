@@ -630,31 +630,31 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_P_ROCESS:
 			if (!strcmp(optarg, "auto")) {
-				SETPROCS(opt->flags, EZOP_PROC_AUTO);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_AUTO);
 				break;
 			}
 			if (!strcmp(optarg, "skim")) {
-				SETPROCS(opt->flags, EZOP_PROC_SKIM);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_SKIM);
 				break;
 			}
 			if (!strcmp(optarg, "scan")) {
-				SETPROCS(opt->flags, EZOP_PROC_SCAN);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_SCAN);
 				break;
 			}
 			if (!strcmp(optarg, "2pass")) {
-				SETPROCS(opt->flags, EZOP_PROC_TWOPASS);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_TWOPASS);
 				break;
 			}
 			if (!strcmp(optarg, "heuri")) {
-				SETPROCS(opt->flags, EZOP_PROC_HEURIS);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_HEURIS);
 				break;
 			}
 			if (!strcmp(optarg, "safe")) {
-				SETPROCS(opt->flags, EZOP_PROC_SAFE);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_SAFE);
 				break;
 			}
 			if (!strncmp(optarg, "key", 3)) {
-				SETPROCS(opt->flags, EZOP_PROC_KEYRIP);
+				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_KEYRIP);
 				opt->grid_col = 0;
 				opt->grid_row = 0;
 				prof_grid = 0;	/* disable the profile */
@@ -735,7 +735,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
 			}
-			opt->flags = EZOP_DEBUG_MAKE(opt->flags, c);
+			EZOP_DEBUG_MAKE(opt->flags, c);
 			slog_control_word_write(NULL, c);
 			break;
 		case CMD_W_IDTH:

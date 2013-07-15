@@ -62,7 +62,6 @@
 #define EN_PACKET_KEY		1016
 #define EN_BUMP_BACK		1017
 #define EN_DTS_LIST		1019
-#define EN_SEEK_FRAME		1020
 #define EN_STREAM_FORMAT	1021
 #define EN_STREAM_INFO		1022
 #define EN_MEDIA_STATIS		1023
@@ -95,17 +94,6 @@
 #define ENX_IFRAME_UPDATE	2
 
 
-/* Display the debug log in the command line. */
-#define EZDBG_NONE	SLSHOW	/* no debug information at all */
-#define EZDBG_SHOW	(SLSHOW | SLOG_FLUSH)
-#define EZDBG_WARNING	SLERR	/* open, close, duration */
-#define EZDBG_INFO	SLWARN	/* av info, image info */
-#define EZDBG_BRIEF	SLINFO	/* warning from FFMPEG */
-#define EZDBG_IFRAME	SLDBG	/* key frame received */
-#define EZDBG_PACKET	SLPROG	/* key packet dump */
-#define EZDBG_VERBS	SLMOD	/* broken frames, scanned frames */
-#define EZDBG_FFM	SLMOD	/* the FFMPEG debug output */
-
 
 #define EZOP_INFO		1	/* include the media info area */
 #define EZOP_TIMEST		2	/* include the inset timestamp */
@@ -136,30 +124,44 @@
 #define EZOP_DUR_FSCAN		0x2000		/* full scan */
 #define EZOP_DUR_MASK		0x3000
 /* process the subdirectories if the file name is a folder */
-#define EZOP_RECURSIVE		0x4000
+#define EZOP_RECURSIVE		0x8000
 
-/* debug use 0xf000 mask in the flag word */
-#define EZDBG_FIELD		12
-#define EZOP_DEBUG(x)		(((x) >> EZDBG_FIELD) & SLOG_LVL_MASK)
-#define EZOP_DEBUG_MAKE(f,x)	(((f) & ~(SLOG_LVL_MASK << EZDBG_FIELD))|\
-				(((x) & SLOG_LVL_MASK) << EZDBG_FIELD))
-
-#define EZOP_PROC_MASK		0xf0000
+/* Process method uses 0xF0000 field */
 #define EZOP_PROC_AUTO		0
-#define EZOP_PROC_SKIM		0x10000	/* use av_seek_frame() */
-#define EZOP_PROC_SCAN		0x20000	/* single pass i-frame scan */
-#define EZOP_PROC_TWOPASS	0x30000	/* two pass scan support p-frame */
-#define EZOP_PROC_HEURIS	0x40000 /* heuristic scan */
-#define EZOP_PROC_KEYRIP	0x50000	/* rip key frames */
-#define EZOP_PROC_SAFE		0x60000	/* safe mode */
+#define EZOP_PROC_SKIM		1	/* use av_seek_frame() */
+#define EZOP_PROC_SCAN		2	/* single pass i-frame scan */
+#define EZOP_PROC_TWOPASS	3	/* two pass scan support p-frame */
+#define EZOP_PROC_HEURIS	4	/* heuristic scan */
+#define EZOP_PROC_KEYRIP	5	/* rip key frames */
+#define EZOP_PROC_SAFE		6	/* safe mode */
+#define EZOP_PROC_MASK		15
+#define EZOP_PROC_FIELD		16
+#define EZOP_PROC(f)		(((f) >> EZOP_PROC_FIELD) & EZOP_PROC_MASK)
+#define EZOP_PROC_CLEAR(f)	((f) &= ~(EZOP_PROC_MASK << EZOP_PROC_FIELD))
+#define EZOP_PROC_SET(f,p)	((f) |= (((p) & EZOP_PROC_MASK) << \
+							EZOP_PROC_FIELD))
+#define EZOP_PROC_MAKE(f,p)	(EZOP_PROC_CLEAR(f), EZOP_PROC_SET(f,p))
 
+
+/* debug use 0xF0000000 mask in the flag word */
+#define EZDBG_NONE		SLSHOW	/* no debug information at all */
+#define EZDBG_SHOW		(SLSHOW | SLOG_FLUSH)
+#define EZDBG_WARNING		SLERR	/* open, close, duration */
+#define EZDBG_INFO		SLWARN	/* av info, image info */
+#define EZDBG_BRIEF		SLINFO	/* warning from FFMPEG */
+#define EZDBG_IFRAME		SLDBG	/* key frame received */
+#define EZDBG_PACKET		SLPROG	/* key packet dump */
+#define EZDBG_VERBS		SLMOD	/* broken frames, scanned frames */
+#define EZDBG_FFM		SLFUNC	/* the FFMPEG debug output */
+#define EZDBG_FIELD		28
+#define EZOP_DEBUG(f)		(((f) >> EZDBG_FIELD) & SLOG_LVL_MASK)
+#define EZOP_DEBUG_CLEAR(f)	((f) &= ~(SLOG_LVL_MASK << EZDBG_FIELD))
+#define EZOP_DEBUG_SET(f,x)	((f) |= (((x) & SLOG_LVL_MASK) << EZDBG_FIELD))
+#define EZOP_DEBUG_MAKE(f,x)	(EZOP_DEBUG_CLEAR(f),EZOP_DEBUG_SET(f,x))
 
 #define SETFFRAME(m)	((m) | EZOP_FFRAME)
 #define CLRFFRAME(m)	((m) & ~EZOP_FFRAME)
 #define GETFFRAME(m)	((m) & EZOP_FFRAME)
-
-#define SETPROCS(m,p)	((m) &= ~EZOP_PROC_MASK, (m) |= (p))
-#define GETPROCS(m)	((m) & EZOP_PROC_MASK)
 
 #define SETDURMOD(m,d)	((m) &= ~EZOP_DUR_MASK, (m) |= (d))
 #define GETDURMOD(m)	((m) & EZOP_DUR_MASK)
@@ -167,8 +169,6 @@
 #define SETACCUR(m)	((m) |= EZOP_P_FRAME)
 #define GETACCUR(m)	((m) & EZOP_P_FRAME)
 #define CLRACCUR(m)	((m) &= ~EZOP_P_FRAME)
-
-
 
 
 
@@ -584,7 +584,8 @@ int dump_packet(AVPacket *p);
 int dump_frame(AVFrame *frame, int got_pic);
 int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
 int dump_stream(AVStream *stream);
-int dump_ezimage(EZIMG *image);
+int dump_duration(EZVID *vidx, int use_ms);
+int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
 
 
 #endif	/* _EZTHUMB_H_ */

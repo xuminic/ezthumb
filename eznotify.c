@@ -59,7 +59,6 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	struct	ezntf	*myntf;
 	EZVID	*vidx;
 	int	i;
-	char	tmp[64];
 
 	switch (event) {
 	case EZ_ERR_LOWMEM:
@@ -107,16 +106,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 			dump_format_context(vidx->formatx);
 		}
 		if (vidx->ses_flags & EZOP_CLI_INSIDE) {	// FIXME
-			if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
-				strcpy(tmp, "full scan");
-			} else if (GETDURMOD(vidx->ses_flags) == 
-					EZOP_DUR_QSCAN) {
-				strcpy(tmp, "fast scan");
-			} else {
-				strcpy(tmp, "media header");
-			}
-			slogz("Duration read by %s: %lld (%ld ms)\n", 
-					tmp, (long long) vidx->duration, opt);
+			dump_duration(vidx, (int) opt);
 		}
 		if (vidx->ses_flags & EZOP_CLI_INFO) {
 			ezdump_video_info(vidx);
@@ -124,7 +114,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		break;
 	case EN_IMAGE_CREATED:
 		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
-			dump_ezimage(block);
+			dump_ezthumb(ezopt, block);
 		}
 		break;
 	/**/
@@ -208,17 +198,9 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_DURATION:
+		vidx = block;
 		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_WARNING) {
-			if (param == ENX_DUR_MHEAD) {
-				slogz("Duration by Media header: %lld (ms)\n",
-						*((long long *)block));
-			} else if (param == ENX_DUR_JUMP) {
-				slogz("Duration by fast scan: %lld (ms)\n", 
-						*((long long *)block));
-			} else if (param == ENX_DUR_SCAN) {
-				slogz("Duration by full scan: %lld (ms)\n", 
-						*((long long *)block));
-			}
+			dump_duration(vidx, 0);
 		}
 		break;
 	case EN_BUMP_BACK:
@@ -229,22 +211,6 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 				(long long) myntf->iarg1,
 				(long long) vidx->keydelta, 
 				(long long) vidx->keygap);
-		break;
-	case EN_SEEK_FRAME:
-		switch (param) {
-		case ENX_SEEK_NONE:
-			slogz("WARNING: Video seeking not supported.\n");
-			break;
-		case ENX_SEEK_FORWARD:
-			slog(EZDBG_INFO, "Video can seek forward only.\n");
-			break;
-		case ENX_SEEK_FREE:
-			slog(EZDBG_INFO, "Video seeking both direction.\n");
-			break;
-		default:
-			slogz("WARNING: Seeking capability unknown.\n");
-			break;
-		}
 		break;
 	case EN_MEDIA_STATIS:
 		myntf = block;
@@ -497,15 +463,52 @@ int dump_stream(AVStream *stream)
 	return 0;
 }
 
-int dump_ezimage(EZIMG *image)
+int dump_duration(EZVID *vidx, int use_ms)
+{
+	char	buf[128], tmp[32];
+
+	switch (vidx->seekable) {
+	case ENX_SEEK_NONE:
+		strcpy(tmp, "Unseekable");
+		break;
+	case ENX_SEEK_FORWARD:
+		strcpy(tmp, "Forward Only");
+		break;
+	case ENX_SEEK_FREE:
+		strcpy(tmp, "Free Seeking");
+		break;
+	default:
+		strcpy(tmp, "Unknown");
+		break;
+	}
+	switch (GETDURMOD(vidx->ses_flags)) {
+	case EZOP_DUR_HEAD:
+		strcpy(buf, "reading media header");
+		break;
+	case EZOP_DUR_QSCAN:
+		strcpy(buf, "Fast Scanning");
+		break;
+	case EZOP_DUR_FSCAN:
+		strcpy(buf, "Full Scanning");
+		break;
+	default:
+		strcpy(buf, "Mistake");
+		break;
+	}
+	slogz("Duration found by %s: %lld (%d ms); Seeking capability: %s\n",
+			buf, vidx->duration, use_ms, tmp);
+	return 0;
+}
+
+int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
 {
 	slogz("\n>>>>>>>>>>>>>>>>>>\n");
 	slogz("Single shot size:  %dx%dx%d-%d\n", 
-			image->dst_width, image->dst_height, image->dst_pixfmt,
-			image->sysopt->edge_width);
+			image->dst_width, image->dst_height, 
+			image->dst_pixfmt, ezopt->edge_width);
 	slogz("Grid size:         %dx%d+%d\n", 
-			image->grid_col, image->grid_row,
-			image->sysopt->shadow_width);
+			image->grid_col, image->grid_row, 
+			ezopt->shadow_width);
 	slogz("Canvas size:       %dx%d-%d\n", 
 			image->canvas_width, image->canvas_height, 
 			image->canvas_minfo);
@@ -526,42 +529,40 @@ int dump_ezimage(EZIMG *image)
 			(unsigned) image->color_inset,
 			(unsigned) image->color_inshadow);
 	slogz("Font size:         MI=%d IN=%d (SH: %d %d)\n", 
-			image->sysopt->mi_size, image->sysopt->ins_size,
-			image->sysopt->mi_shadow, image->sysopt->ins_shadow);
+			ezopt->mi_size, ezopt->ins_size,
+			ezopt->mi_shadow, ezopt->ins_shadow);
 	slogz("Font position:     MI=%d IN=%d\n",
-			image->sysopt->mi_position, 
-			image->sysopt->ins_position);
-	if (image->sysopt->mi_font) {
-		slogz("Font MediaInfo:    %s\n", image->sysopt->mi_font);
+			ezopt->mi_position, ezopt->ins_position);
+	if (ezopt->mi_font) {
+		slogz("Font MediaInfo:    %s\n", ezopt->mi_font);
 	}
-	if (image->sysopt->ins_font) {
-		slogz("Font Inset Shots:  %s\n", image->sysopt->ins_font);
+	if (ezopt->ins_font) {
+		slogz("Font Inset Shots:  %s\n", ezopt->ins_font);
 	}
 	slogz("Output file name:  %s.%s (%d)\n", 
-			image->sysopt->suffix, image->sysopt->img_format,
-			image->sysopt->img_quality);
-	slogz("Flags:             %s %s %s %s %s %s %s %s D%d P%d\n", 
-			image->sysopt->flags & EZOP_INFO ? "MI" : "",
-			image->sysopt->flags & EZOP_TIMEST ? "TS" : "",
-			image->sysopt->flags & EZOP_FFRAME ? "FF" : "",
-			image->sysopt->flags & EZOP_LFRAME ? "LF" : "",
-			image->sysopt->flags & EZOP_P_FRAME ? "PF" : "",
-			image->sysopt->flags & EZOP_CLI_INSIDE ? "CI" : "",
-			image->sysopt->flags & EZOP_CLI_INFO ? "CO" : "",
-			image->sysopt->flags & EZOP_TRANSPARENT ? "TP" : "",
-			EZOP_DEBUG(image->sysopt->flags) >> 12,
-			((image->sysopt->flags & EZOP_PROC_MASK) >> 16) & 15);
+			ezopt->suffix, ezopt->img_format, ezopt->img_quality);
+	slogz("Flags:             %s %s %s %s %s %s %s %s %s 0x%x D%d P%d\n", 
+			ezopt->flags & EZOP_INFO ? "MI" : "",
+			ezopt->flags & EZOP_TIMEST ? "TS" : "",
+			ezopt->flags & EZOP_FFRAME ? "FF" : "",
+			ezopt->flags & EZOP_LFRAME ? "LF" : "",
+			ezopt->flags & EZOP_P_FRAME ? "PF" : "",
+			ezopt->flags & EZOP_CLI_INSIDE ? "CI" : "",
+			ezopt->flags & EZOP_CLI_INFO ? "CO" : "",
+			ezopt->flags & EZOP_TRANSPARENT ? "TP" : "",
+			ezopt->flags & EZOP_DECODE_OTF ? "OT" : "",
+			GETDURMOD(ezopt->flags),
+			EZOP_DEBUG(ezopt->flags), EZOP_PROC(ezopt->flags));
 	slogz("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
 			gdFontGetTiny()->w, gdFontGetTiny()->h,
 			gdFontGetSmall()->w, gdFontGetSmall()->h,
 			gdFontGetMediumBold()->w, gdFontGetMediumBold()->h,
 			gdFontGetLarge()->w, gdFontGetLarge()->h,
 			gdFontGetGiant()->w, gdFontGetGiant()->h);
-	slogz("Background Image:  %s (0x%x)\n", image->sysopt->background,
-			image->sysopt->bg_position);
+	slogz("Background Image:  %s (0x%x)\n", 
+			ezopt->background, ezopt->bg_position);
 
-	ezopt_profile_dump(image->sysopt, 
-			"Profile of Grid:   ", "Profile of Shots:  ");
+	ezopt_profile_dump(ezopt,"Profile of Grid:   ", "Profile of Shots:  ");
 	slogz("<<<<<<<<<<<<<<<<<<\n");
 	return 0;
 }
