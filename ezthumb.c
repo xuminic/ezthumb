@@ -58,9 +58,9 @@ static int64_t video_dts_next_frame(EZVID *vidx);
 static int64_t video_dts_key_frame(EZVID *vidx);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static EZTIME video_duration(EZVID *vidx);
-static int video_duration_check(EZVID *vidx);
-static int video_dseek_forward(EZVID *vidx, int64_t dbegin, int64_t delta);
-static int video_dseek_backward(EZVID *vidx, int64_t dbegin, int64_t delta);
+static EZTIME video_duration_header(EZVID *vidx);
+static int video_seek_challenge(EZVID *vidx);
+static int video_seek_forward(EZVID *vidx);
 static int video_frame_scale(EZVID *vidx, AVFrame *frame);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
@@ -718,7 +718,6 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	/* 20120723 Moved from ezopt_review() */
 	vidx->ses_flags = ezopt->flags;
 	if (EZOP_PROC(vidx->ses_flags) == EZOP_PROC_TWOPASS) {
-		puts("review");
 		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
 	} else if (EZOP_PROC(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
 		if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
@@ -892,7 +891,6 @@ static int video_open(EZVID *vidx)
 		}
 	}
 
-	/* FIXME: what are these for? */
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
 #if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
 	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
@@ -1375,90 +1373,135 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
  * User need to specify the scan method. */
 static EZTIME video_duration(EZVID *vidx)
 {
-	int64_t	cur_dts, dbegin, delta;
+	int64_t	cur_dts;
 
 	/* find the duration in the header */
-	vidx->duration = (EZTIME)(vidx->formatx->duration / 
-			AV_TIME_BASE * 1000);
-
 	/* It seems the header missing issue can not be fixed simply
 	 * by seeking to tail. In that case a full media scan is enforced */
-	if (video_duration_check(vidx) == 0) {	/* bad video header */
+	if ((vidx->duration = video_duration_header(vidx)) == 0) {
+		/* bad video header */
 		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
 		if (EZOP_PROC(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
 			EZOP_PROC_MAKE(vidx->ses_flags, EZOP_PROC_TWOPASS);
 		}
 	}
 
-	/* read a couple of packet to wait it stable. the DTS in the last 
-	 * packet is set to the start time stamp */
-	dbegin = video_dts_key_frame(vidx);
-	cur_dts = video_dts_key_frame(vidx);
-	delta  = cur_dts - dbegin;
-	printf("begin %lld %lld %lld\n", dbegin, cur_dts, delta);
-
-
-	/* trying seek to 90% of the media file */
-	vidx->seekable = video_dseek_forward(vidx, dbegin, delta);
-
 	switch (GETDURMOD(vidx->ses_flags)) {
 	case EZOP_DUR_HEAD:
-		if (vidx->seekable == ENX_SEEK_FORWARD) {
-			vidx->seekable = 
-				video_dseek_backward(vidx, dbegin, delta);
-		}
-		eznotify(vidx->sysopt, EN_DURATION, 0, 0, vidx);
+		/* test the seekability of the media file */
+		vidx->seekable = video_seek_challenge(vidx);
 		break;
+
+	case EZOP_DUR_QSCAN:
+		/* test the seekability of the media file and 
+		 * trying move to 90% of the video */
+		vidx->seekable = video_seek_forward(vidx);
+		if (vidx->seekable != ENX_SEEK_NONE) {
+			cur_dts = video_statistics(vidx);
+			vidx->duration = video_dts_to_ms(vidx, cur_dts);
+			break;
+		}
+
+		/* if it is unable to seek through the media file,
+		 * fall into the full scan mode */
+		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
+		if (EZOP_PROC(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
+			EZOP_PROC_MAKE(vidx->ses_flags, EZOP_PROC_TWOPASS);
+		}
+		/* so no break here */
 
 	case EZOP_DUR_FSCAN:
-		if (vidx->seekable == ENX_SEEK_FORWARD) {
-			vidx->seekable = 
-				video_dseek_backward(vidx, dbegin, delta);
-		}
+	default:
 		cur_dts = video_statistics(vidx);
 		vidx->duration = video_dts_to_ms(vidx, cur_dts);
-		if (vidx->seekable == ENX_SEEK_FORWARD) {
-			/* if it can not rewind the stream to do a full scan,
-			 * it should change to quick scan instead */
-			SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);
-		}
-		eznotify(vidx->sysopt, EN_DURATION, 0, 0, vidx);
-		break;
-
-	default:	/* EZOP_DUR_QSCAN */
-		cur_dts = video_statistics(vidx);
-		vidx->duration = video_dts_to_ms(vidx, cur_dts);
-		if (vidx->seekable == ENX_SEEK_FORWARD) {
-			vidx->seekable = 
-				video_dseek_backward(vidx, dbegin, delta);
-		} else {
-			/* if the 90% seek failed, the ezthumb must have done
-			 * a full scan. */
-			SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
-			if (EZOP_PROC(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
-				EZOP_PROC_MAKE(vidx->ses_flags, EZOP_PROC_TWOPASS);
-			}
-		}
-		eznotify(vidx->sysopt, EN_DURATION, 0, 0, vidx);
+		/* rewind the media file and test the seekability */
+		video_seeking(vidx, 0);
+		vidx->seekable = video_seek_challenge(vidx);
 		break;
 	}
+	eznotify(vidx->sysopt, EN_DURATION, 0, 0, vidx);
 	return vidx->duration;
 }
 
-static int video_duration_check(EZVID *vidx)
+static EZTIME video_duration_header(EZVID *vidx)
 {
-	int	br;
+	EZTIME	during, br;
 
-	if (vidx->duration <= 0) {
-		return 0;	/* bad duration */
+	during = (EZTIME)(vidx->formatx->duration / AV_TIME_BASE * 1000);
+	if (during <= 0) {
+		return 0;	/* bad duration in head */
 	}
 
-	br = (int)(vidx->filesize * 1000 / vidx->duration);
-	//slogz("video_duration_check: dur=%d br=%d\n", vidx->duration, br);
+	br = vidx->filesize * 1000 / during;
+	//slogz("video_duration_header: dur=%d br=%d\n", vidx->duration, br);
 	if (br < EZ_BR_GATE_LOW) {	/* very suspecious bitrates */
 		return 0;
 	}
-	return 1;
+	return during;
+}
+
+static int video_seek_challenge(EZVID *vidx)
+{
+	AVPacket	packet;
+	int64_t		fst_dts, fst_pos, sec_dts, sec_pos, seek1, seek2, seek3;
+	int64_t		dts, ref_dur = -1;
+	int		i;
+
+	/* read to the first key frame */
+	if ((fst_dts = video_keyframe_next(vidx, &packet)) < 0) {
+		return ENX_SEEK_UNKNOWN;
+	}
+	fst_pos = packet.pos;
+	av_free_packet(&packet);
+
+	/* read over 1 seocnd key frames to calculate the rough bitrates */
+	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
+		sec_dts = dts;
+		sec_pos = packet.pos;
+		av_free_packet(&packet);
+		ref_dur = video_dts_to_ms(vidx, sec_dts - fst_dts);
+		if (ref_dur > 1000) {
+			break;
+		}
+	}
+	if (ref_dur <= 0) {
+		return ENX_SEEK_UNKNOWN;
+	}
+	
+	vidx->bitrates = (int)((sec_pos - fst_pos) * 8000 / ref_dur);
+
+	/* calculate the reference duration */
+	ref_dur = vidx->filesize * 8000 / vidx->bitrates;
+
+
+
+
+
+
+	return ENX_SEEK_FORWARD;
+}
+
+
+static int video_seek_error(EZVID *vidx, int64_t cur_dts, int step, int rpt)
+{
+	int64_t	dts_step, next_dts;
+	int	i, dts_err;
+
+	dts_step = video_ms_to_dts(vidx, abs(step));
+
+	dts_err = 0;
+	for (i = 0; i < rpt; i++) {
+		if (step < 0) {
+			next_dts = cur_dts - dts_step;
+		} else {
+			next_dts = cur_dts + dts_step;
+		}
+		video_seeking(vidx, next_dts);
+		cur_dts = video_dts_next_frame(vidx);
+		dts_err += abs((int)(cur_dts - next_dts));
+	}
+
+	return dts_err * 1000 / (dts_step * rpt);
 }
 
 /* 20120308: should seek to position according to the length of the 
@@ -1466,6 +1509,19 @@ static int video_duration_check(EZVID *vidx)
  * need the scan mode, the duration must has been wrong already.
  * 20120313: AVSEEK_FLAG_BYTE is incapable to seek through some video file.
  */
+static int video_seek_forward(EZVID *vidx)
+{
+	int64_t	cur_dts;
+	int	rc;
+
+	rc = video_seek_challenge(vidx);
+
+	cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
+	video_seeking(vidx, cur_dts * 9 / 10);
+
+	return rc;
+}
+
 static int video_dseek_forward(EZVID *vidx, int64_t dbegin, int64_t delta)
 {
 	int64_t	cur_dts;
@@ -1505,27 +1561,6 @@ static int video_dseek_forward(EZVID *vidx, int64_t dbegin, int64_t delta)
 	return ENX_SEEK_NONE;
 }
 
-static int video_dseek_backward(EZVID *vidx, int64_t dbegin, int64_t delta)
-{
-	int64_t	cur_dts;
-
-	delta *= 6;
-
-	/* forward seeking succeed, try backward now */
-	video_seeking(vidx, dbegin);
-	cur_dts = video_dts_next_frame(vidx);
-	if (cur_dts > dbegin) {
-		cur_dts = cur_dts - dbegin;
-	} else {
-		cur_dts = dbegin - cur_dts;
-	}
-	slog(EZDBG_BRIEF, "video_dseek_backward: %lld %lld\n",
-				dbegin, cur_dts);
-	if (cur_dts > delta) {
-		return ENX_SEEK_FORWARD;
-	}
-	return ENX_SEEK_FREE;
-}
 
 static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 {
@@ -1566,6 +1601,9 @@ static int64_t video_statistics(EZVID *vidx)
 						0, 0, &packet);
 			}
 		}
+		/*else {
+			dump_packet(&packet);
+		}*/
 		if (packet.dts != AV_NOPTS_VALUE) {
 			if (packet.dts < mestat[i].dts_last) {
 				mestat[i].rewound++;

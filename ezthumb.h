@@ -457,6 +457,7 @@ typedef	struct	_EzVid	{
 	int		height;
 	int		streams;	/* total streams in the file */
 	int		ar_height;	/* video height after AR correcting */
+	int		bitrates;	/* calculated by seek challenge */
 
 	/*** video_alloc_queue() */
 	EZTIME		dur_all;	/* total duration of all clips */
