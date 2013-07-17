@@ -1443,9 +1443,9 @@ static EZTIME video_duration_header(EZVID *vidx)
 static int video_seek_challenge(EZVID *vidx)
 {
 	AVPacket	packet;
-	int64_t		fst_dts, fst_pos, sec_dts, sec_pos, seek1, seek2, seek3;
-	int64_t		dts, ref_dur = -1;
-	int		i;
+	int64_t		fst_dts, fst_pos, sec_dts, sec_pos, cur_dts, cur_pos;
+	int64_t		next_dts, seek_step, ref_dur;
+	int		i, error;
 
 	/* read to the first key frame */
 	if ((fst_dts = video_keyframe_next(vidx, &packet)) < 0) {
@@ -1453,10 +1453,13 @@ static int video_seek_challenge(EZVID *vidx)
 	}
 	fst_pos = packet.pos;
 	av_free_packet(&packet);
+	slogz("video_seek_challenge: first i-frame DTS=%lld POS=%lld\n", fst_dts, fst_pos);
 
 	/* read over 1 seocnd key frames to calculate the rough bitrates */
-	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
-		sec_dts = dts;
+	ref_dur = -1;
+	sec_dts = sec_pos = 0;
+	while ((cur_dts = video_keyframe_next(vidx, &packet)) >= 0) {
+		sec_dts = cur_dts;
 		sec_pos = packet.pos;
 		av_free_packet(&packet);
 		ref_dur = video_dts_to_ms(vidx, sec_dts - fst_dts);
@@ -1467,42 +1470,75 @@ static int video_seek_challenge(EZVID *vidx)
 	if (ref_dur <= 0) {
 		return ENX_SEEK_UNKNOWN;
 	}
+	slogz("video_seek_challenge: reference i-frame DTS=%lld POS=%lld\n", sec_dts, sec_pos);
 	
 	vidx->bitrates = (int)((sec_pos - fst_pos) * 8000 / ref_dur);
 
-	/* calculate the reference duration */
+	/* calculate the reference duration and seek steps */
 	ref_dur = vidx->filesize * 8000 / vidx->bitrates;
 
+	/* The default seek step is 10 seconds and we will test 5 steps
+	 * to get an average error. If the whole video is smaller than 
+	 * 60 seconds however, we'll change to 10-percentage basis */
+	seek_step = 10000;
+	if (ref_dur < 60000) {
+		seek_step = ref_dur / 10;
+	}
+	seek_step = video_ms_to_dts(vidx, seek_step);
+	slogz("video_seek_challenge: BR=%d DUR=%lld STEP=%lld\n", vidx->bitrates, ref_dur, seek_step);
 
-
-
-
-
-	return ENX_SEEK_FORWARD;
-}
-
-
-static int video_seek_error(EZVID *vidx, int64_t cur_dts, int step, int rpt)
-{
-	int64_t	dts_step, next_dts;
-	int	i, dts_err;
-
-	dts_step = video_ms_to_dts(vidx, abs(step));
-
-	dts_err = 0;
-	for (i = 0; i < rpt; i++) {
-		if (step < 0) {
-			next_dts = cur_dts - dts_step;
-		} else {
-			next_dts = cur_dts + dts_step;
-		}
+	/* seeking forward test */
+	cur_dts = sec_dts;
+	cur_pos = 0;
+	for (i = error = 0; i < 5; i++) {
+		next_dts = cur_dts + seek_step;
 		video_seeking(vidx, next_dts);
-		cur_dts = video_dts_next_frame(vidx);
-		dts_err += abs((int)(cur_dts - next_dts));
+
+		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
+			break;
+		}
+		cur_pos = packet.pos;
+		//av_free_packet(&packet);
+		
+		error += abs((int)((cur_dts - next_dts) * 1000 / seek_step));
+		slogz("video_seek_challenge: forward seeking %lld/%lld %d\n", cur_dts, next_dts, error);
+	}
+	if ((i < 1) || (error / i > 300)) {
+		/* unable to seek or error > 30% */
+		slogz("video_seek_challenge: forward seeking failed %d\n", error/i);
+		return ENX_SEEK_NONE;
 	}
 
-	return dts_err * 1000 / (dts_step * rpt);
+	/* update the reference bitrates by recent seeking results */
+	if (cur_dts > sec_dts) {
+		ref_dur = video_dts_to_ms(vidx, cur_dts - fst_dts);
+		vidx->bitrates = (int)((cur_pos - fst_pos) * 8000 / ref_dur);
+		slogz("video_seek_challenge: BR=%d DUR=%lld\n", vidx->bitrates, ref_dur);
+	}
+
+	/* seeking backward test */
+	for (i = error = 0; i < 5; i++) {
+		next_dts = cur_dts - seek_step;
+		if (next_dts < fst_dts) {
+			break;
+		}
+		video_seeking(vidx, next_dts);
+
+		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
+			break;
+		}
+		av_free_packet(&packet);
+		
+		error += abs((int)((cur_dts - next_dts) * 1000 / seek_step));
+		slogz("video_seek_challenge: backward seeking %lld/%lld %d\n", cur_dts, next_dts, error);
+	}
+	if ((i < 1) || (error / i > 300)) {
+		slogz("video_seek_challenge: backward seeking failed %d\n", error/i);
+		return ENX_SEEK_FORWARD;
+	}
+	return ENX_SEEK_FREE;
 }
+
 
 /* 20120308: should seek to position according to the length of the 
  * file rather than the duration. It's quite obvious that when one 
@@ -1522,6 +1558,7 @@ static int video_seek_forward(EZVID *vidx)
 	return rc;
 }
 
+#if 0
 static int video_dseek_forward(EZVID *vidx, int64_t dbegin, int64_t delta)
 {
 	int64_t	cur_dts;
@@ -1560,7 +1597,7 @@ static int video_dseek_forward(EZVID *vidx, int64_t dbegin, int64_t delta)
 				dbegin, cur_dts);
 	return ENX_SEEK_NONE;
 }
-
+#endif
 
 static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 {
