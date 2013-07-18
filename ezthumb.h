@@ -119,9 +119,10 @@
 /* define the copy mode if not override */
 #define EZOP_THUMB_COPY		0x800
 /* define the video duration finding mode */
-#define EZOP_DUR_HEAD		0		/* no scan, read from head */
+#define EZOP_DUR_AUTO		0		/* try head first or scan */
 #define EZOP_DUR_QSCAN		0x1000		/* quick scan */
 #define EZOP_DUR_FSCAN		0x2000		/* full scan */
+#define EZOP_DUR_HEAD		0x3000		/* head only */
 #define EZOP_DUR_MASK		0x3000
 /* process the subdirectories if the file name is a folder */
 #define EZOP_RECURSIVE		0x8000
@@ -221,10 +222,16 @@
 #define EZ_THUMB_COPIABLE	3	/* file existed: make a copy */
 #define EZ_THUMB_OVERCOPY	4	/* copy full: override the last one */
 
-/* the threshold of "normal" byte rates. 
- * Ezthumb calcuates the rough byterates as a reference to find out
- * if the video source file was broken. */
-#define EZ_BR_GATE_LOW		13000
+/* Duration Seeking Challenge Profile */
+#define EZ_DSCP_RANGE_INIT	1000	/* range of initial scan (ms) */
+#define EZ_DSCP_RANGE_SCND	10000	/* range of secondary scan */
+#define EZ_DSCP_GATE_SCND	30000	/* gate to enter secondary scan */
+#define EZ_DSCP_GATE_SMALL	60000	/* gate of small video clip (ms) */
+#define EZ_DSCP_GATE_MIDL	300000	/* gate of medium video clip (5m) */
+#define EZ_DSCP_STEP_MIDL	15000	/* seek step of medium video clip */
+#define EZ_DSCP_STEP_LARGE	60000	/* seek step of large video clip */
+#define EZ_DSCP_STEP_ERROR	300	/* acceptable step error in %% */
+#define EZ_DSCP_N_STEP		5	/* number of seeks */
 
 #define EZ_DEF_FILTER	"avi,flv,mkv,mov,mp4,mpg,mpeg,rm,rmvb,ts,vob,wmv"
 
@@ -457,7 +464,8 @@ typedef	struct	_EzVid	{
 	int		height;
 	int		streams;	/* total streams in the file */
 	int		ar_height;	/* video height after AR correcting */
-	int		bitrates;	/* calculated by seek challenge */
+	int		bitrates;	/* referenced by seek challenge */
+	EZTIME		dts_offset;	/* DTS could start from here */
 
 	/*** video_alloc_queue() */
 	EZTIME		dur_all;	/* total duration of all clips */

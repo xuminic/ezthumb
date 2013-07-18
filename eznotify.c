@@ -273,7 +273,8 @@ static int ezdump_video_info(EZVID *vidx)
 
 static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 {
-	int	i, ms;
+	int64_t	dts;
+	int	i, sec;
 
 	slogz("Media: %s\n", vidx->filename);
 	for (i = 0; i < n; i++) {
@@ -297,11 +298,12 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 			slogz("UNKNOWN");
 			break;
 		}
-		ms = video_dts_to_ms(vidx, 
-				mestat[i].dts_base + mestat[i].dts_last);
+		dts = mestat[i].dts_base + mestat[i].dts_last;
+		dts -= vidx->dts_offset;
+		sec = (int) (video_dts_to_ms(vidx, dts) / 1000);
 		slogz(":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
 				mestat[i].received, mestat[i].key, 
-				mestat[i].rewound, ms / 1000);
+				mestat[i].rewound, sec);
 	}
 	slogz("Maximum Gap of key frames: %lld\n", 
 			(long long) vidx->keygap);
@@ -436,11 +438,7 @@ int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 	int64_t	dts;
 	char	timestamp[64];
 
-	dts = ezfrm->rf_dts;
-	if (vidx->formatx->start_time) {
-		dts -= video_system_to_dts(vidx,
-				vidx->formatx->start_time);
-	}
+	dts = ezfrm->rf_dts - vidx->dts_offset;
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
 	slogz("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 

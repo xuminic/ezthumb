@@ -1,3 +1,7 @@
+20130718:
+  + video_dts_to_ms(): removed the offset adjustment to formatx->start_time
+    because it made confusing and not consistent to other convert functions.
+
 20130628: move to 2.2.0
   + Major update to support binding mode.
 

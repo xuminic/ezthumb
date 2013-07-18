@@ -87,7 +87,7 @@ static	struct	cliopt	clist[] = {
 	{ CMD_C_OLOR, "colour",
 		2, "the colour setting (MI:TM:BG)(RRGGBB)" },
 	{ CMD_D_URING, "during",  
-		2, "the duration finding mode (head)(fast|scan)" },
+		2, "the duration finding mode (auto)(head|fast|scan)" },
 	{ CMD_F_ONT, "font",
 		2, "the TrueType font name with the full path" },
 	{ CMD_F_ONTSZ, "fontsize",
@@ -567,6 +567,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				SETDURMOD(opt->flags, EZOP_DUR_HEAD);
 			} else if (!strcmp(optarg, "fast")) {
 				SETDURMOD(opt->flags, EZOP_DUR_QSCAN);
+			} else if (!strcmp(optarg, "auto")) {
+				SETDURMOD(opt->flags, EZOP_DUR_AUTO);
 			} else {
 				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */

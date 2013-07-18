@@ -46,9 +46,9 @@ for example:
 .TP
 .BR \-d , " \-\-during \fIhead\fP"
 Specify the method to retrieve the duration of videos. Normally the duration can be
-retrieved from the head of the video container, which is the default mode
-.B " 'head' " .
-However, some dodgy files were broken or included the inaccurate duration value.
+retrieved from the head of the video container, which is the 
+.B " 'head' " 
+mode. However, some dodgy files were broken or included the inaccurate duration value.
 As an alternative the duration could be retrieved by
 .B " 'scan' "
 mode.
@@ -56,7 +56,15 @@ mode.
 would scan the whole video file to locate the last packet. It is accurate but slow.
 The compromise mode is 
 .B "'fast'" ,
-which only scans the tail part of the video.
+which only scans the tail part of the video. The default is
+.B "'auto'" 
+mode, which would use the 
+.B " 'head' " 
+mode first. If the result is apparently too ridiculus, it will change to
+.B "'fast'" 
+or
+.B " 'scan' "
+according to the video attribute.
 
 If
 .B ezthumb
