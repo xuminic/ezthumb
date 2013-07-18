@@ -200,7 +200,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	case EN_DURATION:
 		vidx = block;
 		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_WARNING) {
-			dump_duration(vidx, 0);
+			dump_duration(vidx, (int)opt);
 		}
 		break;
 	case EN_BUMP_BACK:

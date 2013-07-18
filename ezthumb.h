@@ -233,6 +233,16 @@
 #define EZ_DSCP_STEP_ERROR	300	/* acceptable step error in %% */
 #define EZ_DSCP_N_STEP		5	/* number of seeks */
 
+/* define the array of progress time stamp */
+#define EZ_PTS_MOPEN		'M'	/* media open */
+#define EZ_PTS_DSEEK		'S'	/* video_seek_challenge */
+#define EZ_PTS_DSCAN		'A'	/* video_duration_scan */
+#define EZ_PTS_COPEN		'C'	/* codec open */
+#define EZ_PTS_UPDATE		'U'	/* longest update */
+#define EZ_PTS_RESET		0
+#define EZ_PTS_CLEAR		1
+#define EZ_PTS_MAX		16
+
 #define EZ_DEF_FILTER	"avi,flv,mkv,mov,mp4,mpg,mpeg,rm,rmvb,ts,vob,wmv"
 
 #define EZBYTE	unsigned char
@@ -466,6 +476,7 @@ typedef	struct	_EzVid	{
 	int		ar_height;	/* video height after AR correcting */
 	int		bitrates;	/* referenced by seek challenge */
 	EZTIME		dts_offset;	/* DTS could start from here */
+	int		seekable;	/* video keyframe seekable flag */
 
 	/*** video_alloc_queue() */
 	EZTIME		dur_all;	/* total duration of all clips */
@@ -487,9 +498,9 @@ typedef	struct	_EzVid	{
 	unsigned	fdec;
 
 	/*** runtime variables in each session */
-	int		seekable;	/* video keyframe seekable flag */
 	SMM_TIME	tmark;		/* the beginning timestamp */
-	EZTIME		time_begin;
+	int		pts[EZ_PTS_MAX<<1]; /* progress timestamp array */
+	int		pidx;		/* PTS array index */
 
 	int64_t		keygap;		/* maximum gap between keyframe */
 	int64_t		keylast;	/* the DTS of the last keyframe */

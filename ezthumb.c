@@ -74,6 +74,8 @@ static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
 static char *video_media_subtitle(AVStream *stream, char *buffer);
 static int64_t video_packet_timestamp(AVPacket *packet);
+static int video_timing(EZVID *vidx, int type);
+
 
 static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode);
 static int image_free(EZIMG *image);
@@ -224,6 +226,7 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		video_free(vidx);
 		return rc;
 	}
+
 	/* Register the video and image object so unix signal can intervene */
 	ezopt->vidobj = vidx;
 	ezopt->imgobj = image;
@@ -688,7 +691,9 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;
 	vidx->seekable = ENX_SEEK_UNKNOWN;
-	smm_time_get_epoch(&vidx->tmark);	/* get current time */
+
+	smm_time_get_epoch(&vidx->tmark);	/* get current time stamp */
+	video_timing(vidx, EZ_PTS_RESET);	/* clear progress timestamp*/
 
 	/* check if the nominated file existed */
 	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
@@ -864,6 +869,8 @@ static int video_open(EZVID *vidx)
 	char	*mblock[] = { "mp3", "image2" };
 	int	i;
 
+	video_timing(vidx, EZ_PTS_CLEAR);
+
 	/* apparently the ubuntu 10.10 still use av_open_input_file() */
 	/* FFMPEG/doc/APIchanes claim the avformat_open_input() was introduced
 	 * since 53.2.0. Apparently it is wrong. It is at least appeared in
@@ -880,6 +887,7 @@ static int video_open(EZVID *vidx)
 		eznotify(NULL, EZ_ERR_FORMAT, 0, 0, vidx->filename);
 		return EZ_ERR_FORMAT;
 	}
+	video_timing(vidx, EZ_PTS_MOPEN);
 
 	/* 20120814 Implemented a media type filter to block the unwanted
 	 * media files like jpg, mp3, etc */
@@ -932,6 +940,7 @@ static int video_open(EZVID *vidx)
 		return EZ_ERR_CODEC_FAIL;
 	}
 	vidx->vstream->discard = AVDISCARD_DEFAULT;
+	video_timing(vidx, EZ_PTS_COPEN);
 
 	//dump_format_context(vidx->formatx);
 	return EZ_ERR_NONE;
@@ -1365,7 +1374,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	}
 	free(buffer);
 	return EZ_ERR_NONE;
-}
+} //FIXME: SHOULD REMOVE UNKNOWN STREAMS
 
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
@@ -1376,9 +1385,13 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
  * to decide the final PTS. To speed up the process, the third method,
  * EZOP_DUR_QSCAN, only scan the last 90% clip. 
  * User need to specify the scan method. */
+#define DBGVSC	EZDBG_VERBS
+//#define DBGVSC	EZDBG_NONE
 static EZTIME video_duration(EZVID *vidx)
 {
 	int64_t	ref_dur;
+
+	video_timing(vidx, EZ_PTS_CLEAR);
 
 	/* find the duration in the header */
 	vidx->seekable = ENX_SEEK_UNKNOWN;
@@ -1388,33 +1401,46 @@ static EZTIME video_duration(EZVID *vidx)
 	switch (GETDURMOD(vidx->ses_flags)) {
 	case EZOP_DUR_HEAD:
 		/* test the seekability of the media file */
-		vidx->seekable = video_seek_challenge(vidx);
+		/*vidx->seekable = video_seek_challenge(vidx);*/
+		/* On second thought, it perhaps is a good idea that leave
+		 * EZOP_DUR_HEAD mode the quickest mode. If user knew the 
+		 * video is good, there's no need to do the time consuming
+		 * video_seek_challenge */
+		vidx->seekable = ENX_SEEK_FREE;
 		break;
 
 	case EZOP_DUR_QSCAN:
 		/* test the seekability of the media file */
 		vidx->seekable = video_seek_challenge(vidx);
+		video_timing(vidx, EZ_PTS_DSEEK);
 		vidx->duration = video_duration_scan(vidx);
+		video_timing(vidx, EZ_PTS_DSCAN);
 		break;
 
 	case EZOP_DUR_FSCAN:
 		vidx->duration = video_duration_scan(vidx);
+		video_timing(vidx, EZ_PTS_DSCAN);
 		/* rewind the media file and test the seekability */
 		video_seeking(vidx, 0);
 		vidx->seekable = video_seek_challenge(vidx);
+		video_timing(vidx, EZ_PTS_DSEEK);
 		break;
 
 	default:
 	case EZOP_DUR_AUTO:
 		/* test the seekability of the media file */
 		vidx->seekable = video_seek_challenge(vidx);
+		video_timing(vidx, EZ_PTS_DSEEK);
 		/* get the error of the duration by head and by calculation */
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
 		ref_dur = (vidx->duration - ref_dur) * 1000 / vidx->duration;
 		/* if the duration error is greater than 10%, we'll enforce
 		 * a quick scan or a full scan to get an accurate reading */
 		if (abs((int)ref_dur) > 100) {
+			slog(DBGVSC, "video_duration: fall into scan mode by "
+				"unmatched duration (%d)\n", (int)ref_dur);
 			vidx->duration = video_duration_scan(vidx);
+			video_timing(vidx, EZ_PTS_DSCAN);
 		}
 		break;
 	}
@@ -1431,7 +1457,10 @@ static EZTIME video_duration(EZVID *vidx)
 			break;
 		}
 	}
-	eznotify(vidx->sysopt, EN_DURATION, 0, 0, vidx);
+	eznotify(vidx->sysopt, EN_DURATION, 0,
+			smm_time_diff(&vidx->tmark), vidx);
+	slog(DBGVSC, "video_duration: %lld S:%d (%d ms)\n", vidx->duration,
+			vidx->seekable, smm_time_diff(&vidx->tmark));
 	return vidx->duration;
 }
 
@@ -1454,7 +1483,9 @@ static EZTIME video_duration_scan(EZVID *vidx)
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
 		dts = vidx->dts_offset;
 		dts += video_ms_to_dts(vidx, ref_dur * 9 / 10);
-		video_seeking(vidx, dts * 9 / 10);
+		dts = dts * 9 / 10;
+		video_seeking(vidx, dts);
+		slog(DBGVSC, "video_duration_scan: scan from %lld\n", dts);
 	}
 
 	dts = video_statistics(vidx) - vidx->dts_offset;
@@ -1485,7 +1516,7 @@ static int video_seek_challenge(EZVID *vidx)
 	if (ref_dur <= 0) {
 		return ENX_SEEK_UNKNOWN;
 	}
-	slog(EZDBG_VERBS, "video_seek_challenge: reference i-frame "
+	slog(DBGVSC, "video_seek_challenge: reference i-frame "
 			"DTS=%lld POS=%lld\n", sec_dts, sec_pos);
 	
 	/* calculate the reference bitrates and duration */
@@ -1522,7 +1553,7 @@ static int video_seek_challenge(EZVID *vidx)
 		seek_step = EZ_DSCP_STEP_LARGE;
 	}
 	seek_step = video_ms_to_dts(vidx, seek_step);
-	slog(EZDBG_VERBS, "video_seek_challenge: BR=%d DUR=%lld "
+	slog(DBGVSC, "video_seek_challenge: BR=%d DUR=%lld "
 			"STEP=%lld\n", vidx->bitrates, ref_dur, seek_step);
 
 	/* seeking forward test */
@@ -1547,13 +1578,13 @@ static int video_seek_challenge(EZVID *vidx)
 		av_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
-		slog(EZDBG_VERBS, "video_seek_challenge: forward seeking "
+		slog(DBGVSC, "video_seek_challenge: forward seeking "
 				"%lld/%lld %d\n", cur_dts, next_dts, error);
 		errmin = (error < errmin) ? error : errmin;
 	}
 	if (errmin > EZ_DSCP_STEP_ERROR) {
 		/* unable to seek or error > 30% */
-		slog(EZDBG_VERBS, "video_seek_challenge: forward seeking "
+		slog(DBGVSC, "video_seek_challenge: forward seeking "
 				"failed %d\n", errmin);
 		return ENX_SEEK_NONE;
 	}
@@ -1563,7 +1594,7 @@ static int video_seek_challenge(EZVID *vidx)
 		ref_dur = video_dts_to_ms(vidx, cur_dts - vidx->dts_offset);
 		vidx->bitrates = (int)(cur_pos * 8000 / ref_dur);
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
-		slog(EZDBG_VERBS, "video_seek_challenge: updated "
+		slog(DBGVSC, "video_seek_challenge: updated "
 				"BR=%d DUR=%lld\n", vidx->bitrates, ref_dur);
 	}
 
@@ -1581,15 +1612,17 @@ static int video_seek_challenge(EZVID *vidx)
 		av_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
-		slog(EZDBG_VERBS, "video_seek_challenge: backward seeking "
+		slog(DBGVSC, "video_seek_challenge: backward seeking "
 				"%lld/%lld %d\n", cur_dts, next_dts, error);
 		errmin = (error < errmin) ? error : errmin;
 	}
 	if (errmin > EZ_DSCP_STEP_ERROR) {
-		slog(EZDBG_VERBS, "video_seek_challenge: backward seeking "
+		slog(DBGVSC, "video_seek_challenge: backward seeking "
 				"failed %d\n", errmin);
 		return ENX_SEEK_FORWARD;
 	}
+	slog(DBGVSC, "video_seek_challenge: bi-direction seekable. (%d ms)\n",
+			smm_time_diff(&vidx->tmark));
 	return ENX_SEEK_FREE;
 }
 
@@ -1787,12 +1820,16 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 				(long)(vidx->duration/100), 
 				(long)(dtms/100), &dts);
 	}
+
+	/* update the progress time stamp array */
+	video_timing(vidx, EZ_PTS_UPDATE);
 	return 0;
 }
 
 static int video_snap_end(EZVID *vidx, EZIMG *image)
 {
 	char	status[128];
+	int	i;
 
 	if (vidx->dur_all && vidx->next) {	/* hasn't finished */
 		return 0;
@@ -1836,6 +1873,11 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 		image_gif_anim_close(image, image->gifx_fp);
 	}
 	slogz("OUTPUT: %s\n", image->filename);
+	slogz("MAGIC: ");
+	for (i = 0; i < vidx->pidx; i++) {
+		slogz("%c%d ", vidx->pts[i*2], vidx->pts[i*2+1]);
+	}
+	slogz("\n");
 	return 0;
 }
 
@@ -2013,11 +2055,18 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
  * Don't forget to flush the buffers if you change the location while playing.
  * ff_read_frame_flush()? avcodec_flush_buffers()?
  */
+/* 20130718 A new thought about seeking video file.
+ * Setup the minimum requirement could be a good idea. Otherwise some times
+ * ffmpeg just won't moving its packet position. The question is where the 
+ * minimum DTS is. Maybe 10 second is big enough */
 static int video_seeking(EZVID *vidx, int64_t dts)
 {
+	int64_t	mindts;
+
 	//av_seek_frame(vidx->formatx, vidx->vsidx, dts, AVSEEK_FLAG_BACKWARD);
+	mindts = dts - video_ms_to_dts(vidx, 10000);
 	avformat_seek_file(vidx->formatx, vidx->vsidx, 
-			INT64_MIN, dts, INT64_MAX, AVSEEK_FLAG_FRAME);
+			mindts, dts, INT64_MAX, AVSEEK_FLAG_FRAME);
 	avcodec_flush_buffers(vidx->codecx);
 	video_keyframe_credit(vidx, -1);
 	return 0;
@@ -2097,6 +2146,33 @@ static int64_t video_packet_timestamp(AVPacket *packet)
 	}
 	return dts;
 }
+
+static int video_timing(EZVID *vidx, int type)
+{
+	static	SMM_TIME	last;
+	int	acc;
+
+	if (type == EZ_PTS_RESET) {
+		smm_time_get_epoch(&last);
+		memset(vidx->pts, 0, sizeof(vidx->pts));
+		vidx->pidx = 0;
+		return 0;
+	}
+
+	acc = smm_time_diff(&last);
+	smm_time_get_epoch(&last);
+	if (type == EZ_PTS_CLEAR) {
+		return acc;
+	}
+
+	if (vidx->pidx < EZ_PTS_MAX) {
+		vidx->pts[vidx->pidx*2]   = type;
+		vidx->pts[vidx->pidx*2+1] = acc;
+		vidx->pidx++;
+	}
+	return acc;
+}
+
 
 /* Allocate the EZIMG structure and translate the used defined parameter
  * group, EZOPT into this structure.
@@ -3076,8 +3152,6 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
 	}
 	return 0;
 }
-
-
 
 static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 {
