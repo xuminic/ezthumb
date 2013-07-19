@@ -360,7 +360,8 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 
 	switch (EZOP_PROC(vidx->ses_flags)) {
 	case EZOP_PROC_SKIM:
-		if (vidx->seekable != ENX_SEEK_NONE) {	//FIXME
+		if ((vidx->seekable == ENX_SEEK_FORWARD) || 
+				(vidx->seekable == ENX_SEEK_FREE)) {
 			rc = video_snapshot_skim(vidx, image);
 			break;
 		}
@@ -381,8 +382,11 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 		rc = video_snapshot_keyframes(vidx, image);
 		break;
 	default:
-		if (vidx->seekable != ENX_SEEK_NONE) {
+		if ((vidx->seekable == ENX_SEEK_FORWARD) || 
+				(vidx->seekable == ENX_SEEK_FREE)) {
 			rc = video_snapshot_skim(vidx, image);
+		} else if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
+			rc = video_snapshot_twopass(vidx, image);
 		} else {
 			rc = video_snapshot_heuristic(vidx, image);
 		}
@@ -717,11 +721,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	vidx->ses_flags = ezopt->flags;
 	if (EZOP_PROC(vidx->ses_flags) == EZOP_PROC_TWOPASS) {
 		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
-	} else if (EZOP_PROC(vidx->ses_flags) != EZOP_PROC_KEYRIP) {
-		if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
-			EZOP_PROC_MAKE(vidx->ses_flags, EZOP_PROC_TWOPASS);
-		}
-	}
+	} 
 
 	if ((rc = video_open(vidx)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
@@ -1064,6 +1064,9 @@ static int video_find_main_stream(EZVID *vidx)
 	/* set all streams to be AVDISCARD_ALL to speed up the process.
 	 * Which selects which packets can be discarded at will and do not 
 	 * need to be demuxed. */
+	/* 20130719 Remove the unknown streams in display. Currently Ezthumb 
+	 * only recognize video, audio and subtitle stream */
+	vidx->ezstream = 0;
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		eznotify(vidx->sysopt, EN_STREAM_FORMAT, i, 0, vidx);
 		stream = vidx->formatx->streams[i];
@@ -1072,11 +1075,15 @@ static int video_find_main_stream(EZVID *vidx)
 		case AVMEDIA_TYPE_VIDEO:
 			eznotify(vidx->sysopt, EN_TYPE_VIDEO, 
 					i, 0, stream->codec);
+			vidx->ezstream++;
 			break;
 		case AVMEDIA_TYPE_AUDIO:
 			eznotify(vidx->sysopt, EN_TYPE_AUDIO, 
 					i, 0, stream->codec);
+			vidx->ezstream++;
 			break;
+		case AVMEDIA_TYPE_SUBTITLE:
+			vidx->ezstream++;
 		default:
 			eznotify(vidx->sysopt, EN_TYPE_UNKNOWN, 
 					i, 0, stream->codec);
@@ -1292,7 +1299,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 {
 	AVStream	*stream;
 	char		*buffer, tmp[32];
-	int		i;
+	int		i, line = 0;
 
 	// FIXME: UTF-8 and wchar concern
 	/* Line 0: the filename */
@@ -1315,10 +1322,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	} else {
 		meta_basename(vidx->filename, buffer + 6);
 	}
-	if (image) {
-		image_gdcanvas_print(image, 0, 0, buffer);
-	}
-	slogz("%s\n", buffer);
+	image_gdcanvas_print(image, line++, 0, buffer);
 
 	/* Line 1: the duration of the video clip, the file size, 
 	 * the frame rates and the bit rates */
@@ -1342,10 +1346,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	 * so we calculate an overall bit rate here */
 	i = (int) (vidx->filesize * 1000 / vidx->duration);
 	strcat(buffer, meta_bitrate(i, tmp));
-	if (image) {
-		image_gdcanvas_print(image, 1, 0, buffer);
-	}
-	slogz("%s\n", buffer);
+	image_gdcanvas_print(image, line++, 0, buffer);
 
 	/* Line 2+: the stream information */
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
@@ -1364,17 +1365,16 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 			video_media_subtitle(stream, buffer);
 			break;
 		default:
+			/* 20130719 Remove the unknown streams in display */
 			strcat(buffer, "Unknown");
-			break;
+			slogz("%s\n", buffer);
+			continue;
 		}
-		if (image) {
-			image_gdcanvas_print(image, i + 2, 0, buffer);
-		}
-		slogz("%s\n", buffer);
+		image_gdcanvas_print(image, line++, 0, buffer);
 	}
 	free(buffer);
 	return EZ_ERR_NONE;
-} //FIXME: SHOULD REMOVE UNKNOWN STREAMS
+}
 
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
@@ -1389,7 +1389,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 //#define DBGVSC	EZDBG_NONE
 static EZTIME video_duration(EZVID *vidx)
 {
-	int64_t	ref_dur;
+	int64_t	ref_dur, ref_err;
 
 	video_timing(vidx, EZ_PTS_CLEAR);
 
@@ -1433,12 +1433,17 @@ static EZTIME video_duration(EZVID *vidx)
 		video_timing(vidx, EZ_PTS_DSEEK);
 		/* get the error of the duration by head and by calculation */
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
-		ref_dur = (vidx->duration - ref_dur) * 1000 / vidx->duration;
-		/* if the duration error is greater than 10%, we'll enforce
+		ref_err = (vidx->duration - ref_dur) * 1000 / vidx->duration;
+		/* if the duration error is greater than 20%, we'll enforce
 		 * a quick scan or a full scan to get an accurate reading */
-		if (abs((int)ref_dur) > 100) {
+		if (abs((int)ref_err) > 200) { 
 			slog(DBGVSC, "video_duration: fall into scan mode by "
-				"unmatched duration (%d)\n", (int)ref_dur);
+				"unmatched duration (%d)\n", (int)ref_err);
+			vidx->duration = video_duration_scan(vidx);
+			video_timing(vidx, EZ_PTS_DSCAN);
+		} else if (ref_dur < EZ_DSCP_GATE_SMALL) {
+			/* if the video clip is too short, we use scan mode */
+			video_seeking(vidx, 0);
 			vidx->duration = video_duration_scan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
 		}
@@ -1449,14 +1454,14 @@ static EZTIME video_duration(EZVID *vidx)
 	 * the video duration, it would be better to convert its scan mode to
 	 * two pass scan mode, because the first pass had already done by the
 	 * duration retrieving process */
-	if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
+	/*if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
 		switch (EZOP_PROC(vidx->ses_flags)) {
 		case EZOP_PROC_SCAN:
 		case EZOP_PROC_HEURIS:
 			EZOP_PROC_MAKE(vidx->ses_flags, EZOP_PROC_TWOPASS);
 			break;
 		}
-	}
+	}*/
 	eznotify(vidx->sysopt, EN_DURATION, 0,
 			smm_time_diff(&vidx->tmark), vidx);
 	slog(DBGVSC, "video_duration: %lld S:%d (%d ms)\n", vidx->duration,
@@ -1473,11 +1478,9 @@ static EZTIME video_duration_scan(EZVID *vidx)
 {
 	EZTIME	dts, ref_dur;
 
-	if ((vidx->seekable == ENX_SEEK_NONE) || 
-			(vidx->seekable == ENX_SEEK_UNKNOWN)) {	
-		/* full scan */
-		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
-	} else {	
+	if ((vidx->seekable != ENX_SEEK_NONE) &&
+			(vidx->seekable != ENX_SEEK_UNKNOWN) && 
+			(ref_dur > EZ_DSCP_GATE_SMALL)) {	
 		/* quick scan */
 		SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
@@ -1486,10 +1489,24 @@ static EZTIME video_duration_scan(EZVID *vidx)
 		dts = dts * 9 / 10;
 		video_seeking(vidx, dts);
 		slog(DBGVSC, "video_duration_scan: scan from %lld\n", dts);
+
+		dts = video_statistics(vidx) - vidx->dts_offset;
+		vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
+
+		/* the scanned duration should be at least half of estimated
+		 * duration. Otherwise we starts the full scan */
+		if (vidx->duration > ref_dur / 2) {
+			return vidx->duration;
+		}
+		slog(DBGVSC, "video_duration_scan: quick scan failed.\n");
+		video_seeking(vidx, 0);
 	}
 
+	/* full scan */
+	SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
 	dts = video_statistics(vidx) - vidx->dts_offset;
-	vidx->duration = video_dts_to_ms(vidx, dts);
+	vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
+	slog(DBGVSC, "video_duration_scan: full scan %lld\n", vidx->duration);
 	return vidx->duration;
 }
 
@@ -1508,7 +1525,8 @@ static int video_seek_challenge(EZVID *vidx)
 		sec_dts = cur_dts;
 		sec_pos = packet.pos;
 		av_free_packet(&packet);
-		ref_dur = video_dts_to_ms(vidx, sec_dts - vidx->dts_offset);
+		ref_dur = sec_dts - vidx->dts_offset;
+		ref_dur = video_dts_to_ms(vidx, ref_dur > 0 ? ref_dur : 0);
 		if (ref_dur > EZ_DSCP_RANGE_INIT) {
 			break;
 		}
@@ -1532,8 +1550,8 @@ static int video_seek_challenge(EZVID *vidx)
 			sec_dts = cur_dts;
 			sec_pos = packet.pos;
 			av_free_packet(&packet);
-			ref_dur = video_dts_to_ms(vidx, 
-					sec_dts - vidx->dts_offset);
+			ref_dur = sec_dts - vidx->dts_offset;
+			ref_dur = video_dts_to_ms(vidx, ref_dur>0?ref_dur:0);
 			if (ref_dur > seek_step) {
 				break;
 			}
@@ -1781,7 +1799,8 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
-	dtms = video_dts_to_ms(vidx, ezfrm->rf_dts - vidx->dts_offset);
+	dtms = ezfrm->rf_dts - vidx->dts_offset;
+	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
 	dtms += vidx->dur_off;		/* aligning the binding clips */
 	if (vidx->dur_off == 0) {
 		meta_timestamp(dtms, 1, timestamp);
@@ -1828,8 +1847,8 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 static int video_snap_end(EZVID *vidx, EZIMG *image)
 {
+	struct	ezntf	myntf;
 	char	status[128];
-	int	i;
 
 	if (vidx->dur_all && vidx->next) {	/* hasn't finished */
 		return 0;
@@ -1846,13 +1865,14 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 #endif
 	}
 
+	eznotify(vidx->sysopt, EN_PROC_END, image->canvas_width, 
+			image->canvas_height, image);
+
 	/* display the end of the process and generate the status line */
 	sprintf(status, "%dx%dx%d Thumbnails Generated by Ezthumb %s (%.3f s)",
 			image->dst_width, image->dst_height, image->taken,
 			EZTHUMB_VERSION, 
 			smm_time_diff(&vidx->tmark) / 1000.0);
-	eznotify(vidx->sysopt, EN_PROC_END, image->canvas_width, 
-			image->canvas_height, status);
 
 	if (image->gdcanvas && (image->sysopt->flags & EZOP_INFO)) {
 		/* update the media information area */
@@ -1872,12 +1892,10 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 	} else if (image->gifx_fp) {
 		image_gif_anim_close(image, image->gifx_fp);
 	}
-	slogz("OUTPUT: %s\n", image->filename);
-	slogz("MAGIC: ");
-	for (i = 0; i < vidx->pidx; i++) {
-		slogz("%c%d ", vidx->pts[i*2], vidx->pts[i*2+1]);
-	}
-	slogz("\n");
+
+	myntf.varg1 = vidx;
+	myntf.varg2 = image;
+	eznotify(vidx->sysopt, EN_PROC_SAVED, 0, 0, &myntf);
 	return 0;
 }
 
@@ -2416,7 +2434,8 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 		/* we only need the font height plus the gap size */
 		size = EZ_LO_WORD(size) + EZ_TEXT_MINFO_GAP;
 		/* One rimedge plus media infos */
-		image->canvas_minfo = size * (vidx->streams + 2) 
+		/* 20130719 Remove the unknown streams in display */
+		image->canvas_minfo = size * (vidx->ezstream + 2)
 						+ EZ_TEXT_INSET_GAP;
 		image->canvas_height += image->canvas_minfo;
 		/* Plus the status line: font height + INSET_GAP */
@@ -2799,6 +2818,13 @@ static int image_gdcanvas_print(EZIMG *image, int row, int off, char *s)
 {
 	int	x, y, ts_width, ts_height;
 	
+	/* 20130719 copy the display to console and avoid NULL pointer */
+	slosz(s);
+	slosz("\n");
+	if (image == NULL) {
+		return 0;
+	}
+
 	/* calculate the rectangle size of the string. The height of
 	 * the string is fixed to the maximum size */
 	x = image_gdcanvas_strlen(image, image->sysopt->mi_size, "bqBQ");

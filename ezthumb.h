@@ -49,6 +49,7 @@
 #define EN_PROC_BEGIN		1003	/* start to process the video */
 #define EN_PROC_CURRENT		1004	/* current process */
 #define EN_PROC_END		1005	/* end of the process */
+#define EN_PROC_SAVED		1018
 #define EN_PACKET_RECV		1006	/* received an effective packet */
 #define EN_FRAME_COMPLETE	1007	/* decoded a complete frame */
 #define EN_FRAME_PARTIAL	1008	/* frame partially decoded */
@@ -473,6 +474,7 @@ typedef	struct	_EzVid	{
 	int		width;	
 	int		height;
 	int		streams;	/* total streams in the file */
+	int		ezstream;	/* 20130719 recognizable streams */
 	int		ar_height;	/* video height after AR correcting */
 	int		bitrates;	/* referenced by seek challenge */
 	EZTIME		dts_offset;	/* DTS could start from here */

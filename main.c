@@ -1101,29 +1101,8 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 
 	switch (event) {
 	case EN_PROC_BEGIN:
-		switch (param) {
-		case ENX_SS_SCAN:
-			slog(EZDBG_SHOW, "Building (Scan)      ");
-			break;
-		case ENX_SS_SAFE:
-			slog(EZDBG_SHOW, "Building (Safe)      ");
-			break;
-		case ENX_SS_TWOPASS:
-			slog(EZDBG_SHOW, "Building (2Pass)     ");
-			break;
-		case ENX_SS_HEURIS:
-			slog(EZDBG_SHOW, "Building (Heur)      ");
-			break;
-		case ENX_SS_IFRAMES:
-			slog(EZDBG_SHOW, "Building (iFrame)      ");
-			break;
-		case ENX_SS_SKIM:
-		default:
-			slog(EZDBG_SHOW, "Building (Fast)      ");
-			break;
-		}
 		dotted = 0;
-		break;
+		return EN_EVENT_PASSTHROUGH;
 
 	case EN_PROC_CURRENT:
 		if (param == 0) {	/* for key frame saving only */
@@ -1146,13 +1125,9 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		if (param == 0) {       /* for key frame saving only */
 			slog(EZDBG_SHOW, "\b\b\b\b100%% done\n");
 		} else {
-			slog(EZDBG_SHOW, "\b\b\b\bdone\n");
+			slog(EZDBG_SHOW, "\b\b\b\b%ldx%ld done\n", 
+					param, opt);
 		}
-		slog(EZDBG_SHOW, "%s: %ldx%ld canvas.\n", 
-				block ? (char*) block : "", param, opt);
-		break;
-
-	case EN_STREAM_BROKEN:
 		break;
 
 	default:

@@ -58,7 +58,11 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 {
 	struct	ezntf	*myntf;
 	EZVID	*vidx;
-	int	i;
+	EZIMG	*image;
+	char	buf[256];
+	char	*seekm[] = { "SU", "SN", "SF", "SB" };	/* seekable codes */
+	char	*dmod[] = { "AU", "QS", "FS", "HD" };	/* duration mode */
+	int	i, n;
 
 	switch (event) {
 	case EZ_ERR_LOWMEM:
@@ -119,15 +123,52 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		break;
 	/**/
 	case EN_PROC_BEGIN:
+		switch (param) {
+		case ENX_SS_SCAN:
+			slog(EZDBG_SHOW, "Building (Scan)      ");
+			break;
+		case ENX_SS_SAFE:
+			slog(EZDBG_SHOW, "Building (Safe)      ");
+			break;
+		case ENX_SS_TWOPASS:
+			slog(EZDBG_SHOW, "Building (2Pass)     ");
+			break;
+		case ENX_SS_HEURIS:
+			slog(EZDBG_SHOW, "Building (Heur)      ");
+			break;
+		case ENX_SS_IFRAMES:
+			slog(EZDBG_SHOW, "Building (iFrame)      ");
+			break;
+		case ENX_SS_SKIM:
+		default:
+			slog(EZDBG_SHOW, "Building (Fast)      ");
+			break;
+		}
 		break;
 	case EN_PROC_CURRENT:
+		//slog(EZDBG_SHOW, ".");
 		break;
 	case EN_PROC_END:
-		slogz("%s: %ldx%ld Canvas.\n", 
-				block ? (char*) block : "", param, opt);
+		slog(EZDBG_SHOW, " %ldx%ld done\n", param, opt);
 		break;
-	/**/
+	case EN_PROC_SAVED:
+		myntf = block;
+		vidx  = myntf->varg1;
+		image = myntf->varg2;
+		slog(EZDBG_SHOW, "OUTPUT: %s\n", image->filename);
 
+		n = sprintf(buf, "MAGIC: %s %s ", 
+				seekm[vidx->seekable%4],
+				dmod[GETDURMOD(vidx->ses_flags)>>12]);
+		for (i = 0; i < vidx->pidx; i++) {
+			n += sprintf(buf + n, "%c%d ", 
+					vidx->pts[i*2], vidx->pts[i*2+1]);
+		}
+		strcat(buf, "\n");
+		slos(EZDBG_SHOW, buf);
+		break;
+	case EN_STREAM_BROKEN:
+		break;
 	case EN_PACKET_RECV:
 		//dump_packet(block);
 		break;
