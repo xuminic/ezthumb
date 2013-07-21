@@ -56,7 +56,8 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static EZTIME video_duration(EZVID *vidx);
-static EZTIME video_duration_scan(EZVID *vidx);
+static EZTIME video_duration_quickscan(EZVID *vidx);
+static EZTIME video_duration_fullscan(EZVID *vidx);
 static int video_seek_challenge(EZVID *vidx);
 static int video_frame_scale(EZVID *vidx, AVFrame *frame);
 static int64_t video_statistics(EZVID *vidx);
@@ -360,8 +361,7 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 
 	switch (EZOP_PROC(vidx->ses_flags)) {
 	case EZOP_PROC_SKIM:
-		if ((vidx->seekable == ENX_SEEK_FORWARD) || 
-				(vidx->seekable == ENX_SEEK_FREE)) {
+		if (SEEKABLE(vidx->seekable)) {
 			rc = video_snapshot_skim(vidx, image);
 			break;
 		}
@@ -382,8 +382,7 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 		rc = video_snapshot_keyframes(vidx, image);
 		break;
 	default:
-		if ((vidx->seekable == ENX_SEEK_FORWARD) || 
-				(vidx->seekable == ENX_SEEK_FREE)) {
+		if (SEEKABLE(vidx->seekable)) {
 			rc = video_snapshot_skim(vidx, image);
 		} else if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
 			rc = video_snapshot_twopass(vidx, image);
@@ -752,17 +751,6 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 #endif
 	eznotify(ezopt, EN_FILE_OPEN, 0, 0, vidx);
 
-	/* find out the clip duration in millisecond */
-	/* 20110301: the still images are acceptable by the ffmpeg library
-	 * so it would be wiser to avoid the still image stream, which duration
-	 * is only several milliseconds. FIXME if this assumption is wrong */
-	if (video_duration(vidx) < 500) {
-		uperror(errcode, EZ_ERR_FILE);
-		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
-		video_free(vidx);
-		return NULL;
-	}
-
 	/* 20111213: It seems detecting media length could not block some 
 	 * unwanted files. For example, in guidev branch, the ezthumb.o
 	 * was treated as a 3 seconds long MP3 file. Thus I set another
@@ -774,7 +762,6 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		video_free(vidx);
 		return NULL;
 	}
-
 
 	/* collecting other information */
 	vidx->width    = vidx->codecx->width;
@@ -789,6 +776,17 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		vidx->ar_height = vidx->codecx->height *
 			vidx->codecx->sample_aspect_ratio.den /
 			vidx->codecx->sample_aspect_ratio.num;
+	}
+
+	/* find out the clip duration in millisecond */
+	/* 20110301: the still images are acceptable by the ffmpeg library
+	 * so it would be wiser to avoid the still image stream, which duration
+	 * is only several milliseconds. FIXME if this assumption is wrong */
+	if (video_duration(vidx) < 500) {
+		uperror(errcode, EZ_ERR_FILE);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
+		video_free(vidx);
+		return NULL;
 	}
 
 	//dump_format_context(vidx->formatx);
@@ -867,7 +865,7 @@ static int video_open(EZVID *vidx)
 {
 	AVCodec	*codec;
 	char	*mblock[] = { "mp3", "image2" };
-	int	i;
+	int	i, den, num;
 
 	video_timing(vidx, EZ_PTS_CLEAR);
 
@@ -940,6 +938,14 @@ static int video_open(EZVID *vidx)
 		return EZ_ERR_CODEC_FAIL;
 	}
 	vidx->vstream->discard = AVDISCARD_DEFAULT;
+
+	/* calculate the DTS per frame */
+	num = vidx->vstream->r_frame_rate.num * vidx->vstream->time_base.num;
+	den = vidx->vstream->r_frame_rate.den * vidx->vstream->time_base.den;
+	if (den) {
+		vidx->dts_rate = (num + den - 1) / den;
+	}
+
 	video_timing(vidx, EZ_PTS_COPEN);
 
 	//dump_format_context(vidx->formatx);
@@ -1164,8 +1170,14 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
+	/* note that we never reset the keygap */
 	if (dts < 0) {
-		vidx->keylast = -1;
+		/* save (top up) the recent session before reset */
+		vidx->keyalldts += vidx->keylast - vidx->keyfirst;
+		vidx->keyallkey += vidx->keycount;
+		/* reset the current session */
+		vidx->keylast  = vidx->keyfirst = -1;
+		vidx->keycount = 0;
 		eznotify(vidx->sysopt, EN_IFRAME_CREDIT, 
 				ENX_IFRAME_RESET, 0, vidx);
 		return vidx->keycount;
@@ -1173,7 +1185,7 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 
 	/* record the status of the first key frame since resetted */
 	if (vidx->keylast < 0) {
-		vidx->keylast = dts;
+		vidx->keylast = vidx->keyfirst = dts;
 		eznotify(vidx->sysopt, EN_IFRAME_CREDIT, 
 				ENX_IFRAME_SET, 0, vidx);
 		return vidx->keycount;
@@ -1385,11 +1397,13 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
  * to decide the final PTS. To speed up the process, the third method,
  * EZOP_DUR_QSCAN, only scan the last 90% clip. 
  * User need to specify the scan method. */
-#define DBGVSC	EZDBG_VERBS
-//#define DBGVSC	EZDBG_NONE
+//#define DBGVSC	EZDBG_VERBS
+#define DBGVSC	EZDBG_NONE
 static EZTIME video_duration(EZVID *vidx)
 {
-	int64_t	ref_dur, ref_err;
+	EZIMG	*image;
+	int64_t	ref_dur, key_dts;
+	int	ref_err, shots, key_num;
 
 	video_timing(vidx, EZ_PTS_CLEAR);
 
@@ -1407,18 +1421,29 @@ static EZTIME video_duration(EZVID *vidx)
 		 * video is good, there's no need to do the time consuming
 		 * video_seek_challenge */
 		vidx->seekable = ENX_SEEK_FREE;
+		vidx->bitrates = (int)(vidx->filesize * 8000 /vidx->duration);
 		break;
 
 	case EZOP_DUR_QSCAN:
 		/* test the seekability of the media file */
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
-		vidx->duration = video_duration_scan(vidx);
+		if (!SEEKABLE(vidx->seekable)) {
+			slos(DBGVSC, "video_duration: [Q] fullscan\n");
+			vidx->duration = video_duration_fullscan(vidx);
+		} else if ((ref_dur = video_duration_quickscan(vidx)) > 0) {
+			slos(DBGVSC, "video_duration: [Q] quickscan\n");
+			vidx->duration = ref_dur;
+		} else {
+			slos(DBGVSC, "video_duration: [Q] fullscan back\n");
+			video_seeking(vidx, 0);
+			vidx->duration = video_duration_fullscan(vidx);
+		}
 		video_timing(vidx, EZ_PTS_DSCAN);
 		break;
 
 	case EZOP_DUR_FSCAN:
-		vidx->duration = video_duration_scan(vidx);
+		vidx->duration = video_duration_fullscan(vidx);
 		video_timing(vidx, EZ_PTS_DSCAN);
 		/* rewind the media file and test the seekability */
 		video_seeking(vidx, 0);
@@ -1426,29 +1451,50 @@ static EZTIME video_duration(EZVID *vidx)
 		video_timing(vidx, EZ_PTS_DSEEK);
 		break;
 
-	default:
 	case EZOP_DUR_AUTO:
+	default:
 		/* test the seekability of the media file */
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
-		/* get the error of the duration by head and by calculation */
+		/* estimate the duration of the video file */
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
-		ref_err = (vidx->duration - ref_dur) * 1000 / vidx->duration;
-		/* if the duration error is greater than 20%, we'll enforce
-		 * a quick scan or a full scan to get an accurate reading */
-		if (abs((int)ref_err) > 200) { 
-			slog(DBGVSC, "video_duration: fall into scan mode by "
-				"unmatched duration (%d)\n", (int)ref_err);
-			vidx->duration = video_duration_scan(vidx);
+		/* get the error of the duration by head and by calculation */
+		ref_err = (int)((vidx->duration - ref_dur) * 1000 
+					/ vidx->duration);
+		slog(DBGVSC, "video_duration: compared (%lld/%lld/%d)\n", 
+				vidx->duration, ref_dur, ref_err);
+
+		/* calculate the avarage DTS of a keyframe */
+		key_dts = (vidx->keyalldts + vidx->keylast - vidx->keyfirst) /
+				(vidx->keyallkey + vidx->keycount);
+		/* calculate the possible keyframes in the video file */
+		key_num = (int)(video_ms_to_dts(vidx, ref_dur) / key_dts);
+		/* estimate the total shots */
+		shots = 0;
+		if ((image = image_allocate(vidx, ref_dur, NULL)) != NULL) {
+			shots = image->shots;
+			image_free(image);
+		}
+
+		if (shots > key_num / 2) {
+			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
-		} else if (ref_dur < EZ_DSCP_GATE_SMALL) {
-			/* if the video clip is too short, we use scan mode */
+		} else if (abs(ref_err) < 200) { 
+			break;
+		} else if (!SEEKABLE(vidx->seekable)) {
+			vidx->duration = video_duration_fullscan(vidx);
+			video_timing(vidx, EZ_PTS_DSCAN);
+		} else if ((ref_dur = video_duration_quickscan(vidx)) > 0) {
+			vidx->duration = ref_dur;
+			video_timing(vidx, EZ_PTS_DSCAN);
+		} else {
 			video_seeking(vidx, 0);
-			vidx->duration = video_duration_scan(vidx);
+			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
 		}
 		break;
 	}
+	vidx->bitrates = (int)(vidx->filesize * 8000 / vidx->duration);
 
 	/* if the program was enforced into the Full Scan mode when retrieving
 	 * the video duration, it would be better to convert its scan mode to
@@ -1464,8 +1510,9 @@ static EZTIME video_duration(EZVID *vidx)
 	}*/
 	eznotify(vidx->sysopt, EN_DURATION, 0,
 			smm_time_diff(&vidx->tmark), vidx);
-	slog(DBGVSC, "video_duration: %lld S:%d (%d ms)\n", vidx->duration,
-			vidx->seekable, smm_time_diff(&vidx->tmark));
+	slog(DBGVSC, "video_duration: %lld S:%d BR:%d (%d ms)\n", 
+			vidx->duration, vidx->seekable, vidx->bitrates, 
+			smm_time_diff(&vidx->tmark));
 	return vidx->duration;
 }
 
@@ -1474,112 +1521,128 @@ static EZTIME video_duration(EZVID *vidx)
  * need the scan mode, the duration must has been wrong already.
  * 20120313: AVSEEK_FLAG_BYTE is incapable to seek through some video file.
  */
-static EZTIME video_duration_scan(EZVID *vidx)
+static EZTIME video_duration_quickscan(EZVID *vidx)
 {
 	EZTIME	dts, ref_dur;
 
-	if ((vidx->seekable != ENX_SEEK_NONE) &&
-			(vidx->seekable != ENX_SEEK_UNKNOWN) && 
-			(ref_dur > EZ_DSCP_GATE_SMALL)) {	
-		/* quick scan */
-		SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);
-		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
-		dts = vidx->dts_offset;
-		dts += video_ms_to_dts(vidx, ref_dur * 9 / 10);
-		dts = dts * 9 / 10;
-		video_seeking(vidx, dts);
-		slog(DBGVSC, "video_duration_scan: scan from %lld\n", dts);
+	/* quick scan */
+	SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);
+	ref_dur = vidx->filesize * 8000 / vidx->bitrates;
+	dts = video_ms_to_dts(vidx, ref_dur * 9 / 10);
+	dts = (dts + vidx->dts_offset) * 9 / 10;
 
-		dts = video_statistics(vidx) - vidx->dts_offset;
-		vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
+	video_seeking(vidx, dts);
+	slog(DBGVSC, "video_duration_quickscan: scan from %lld\n", dts);
 
-		/* the scanned duration should be at least half of estimated
-		 * duration. Otherwise we starts the full scan */
-		if (vidx->duration > ref_dur / 2) {
-			return vidx->duration;
-		}
-		slog(DBGVSC, "video_duration_scan: quick scan failed.\n");
-		video_seeking(vidx, 0);
+	dts = video_statistics(vidx) - vidx->dts_offset;
+	vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
+
+	/* the scanned duration should be at least half of estimated
+	 * duration. Otherwise we starts the full scan */
+	if (vidx->duration < ref_dur / 2) {
+		slog(DBGVSC, "video_duration_quickscan: quick scan failed. "
+				"(%lld/%lld)\n", vidx->duration, ref_dur);
+		return -1;
 	}
+	slog(DBGVSC, "video_duration_quickscan: %lld\n", vidx->duration);
+	return vidx->duration;
+}
 
-	/* full scan */
+static EZTIME video_duration_fullscan(EZVID *vidx)
+{
+	EZTIME	dts;
+
 	SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
 	dts = video_statistics(vidx) - vidx->dts_offset;
 	vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
-	slog(DBGVSC, "video_duration_scan: full scan %lld\n", vidx->duration);
+	slog(DBGVSC, "video_duration_fullscan: %lld\n", vidx->duration);
 	return vidx->duration;
 }
 
 static int video_seek_challenge(EZVID *vidx)
 {
 	AVPacket	packet;
-	int64_t		sec_dts, sec_pos, cur_dts, cur_pos;
-	int64_t		next_dts, seek_step, dts_span, ref_dur;
+	int64_t		dts_first, pos_first, dts_second, pos_second;
+	int64_t		dts_begin, dts_target, dts_span, cur_dts, next_dts;
+	int64_t		key_dts, key_num;
 	int		i, error, errmin;
 
 	/* initial scan the beginning part of the video up to 1 second
-	 * to calculate the bitrates */
-	ref_dur = -1;
-	sec_dts = sec_pos = 0;
+	 * (EZ_DSCP_RANGE_INIT) to calculate the bitrates */
+	dts_first = pos_first = 0;
+	dts_target = video_ms_to_dts(vidx, EZ_DSCP_RANGE_INIT);
+	dts_target += vidx->dts_offset;
+	video_keyframe_credit(vidx, -1);
 	while ((cur_dts = video_keyframe_next(vidx, &packet)) >= 0) {
-		sec_dts = cur_dts;
-		sec_pos = packet.pos;
+		dts_first = cur_dts;
+		pos_first = packet.pos;
 		av_free_packet(&packet);
-		ref_dur = sec_dts - vidx->dts_offset;
-		ref_dur = video_dts_to_ms(vidx, ref_dur > 0 ? ref_dur : 0);
-		if (ref_dur > EZ_DSCP_RANGE_INIT) {
+		if (vidx->keycount && (dts_first > dts_target)) {
 			break;
 		}
 	}
-	if (ref_dur <= 0) {
-		return ENX_SEEK_UNKNOWN;
+	if (dts_first <= 0) {
+		return -1;	/* no keyframe in the media, abort */
 	}
 	slog(DBGVSC, "video_seek_challenge: reference i-frame "
-			"DTS=%lld POS=%lld\n", sec_dts, sec_pos);
-	
-	/* calculate the reference bitrates and duration */
-	vidx->bitrates = (int)(sec_pos * 8000 / ref_dur);
-	seek_step = ref_dur;
-	ref_dur = vidx->filesize * 8000 / vidx->bitrates;
+			"DTS=%lld POS=%lld\n", dts_first, pos_first);
 
-	/* if the reference duration is longer than EZ_DSCP_GATE_SCND, 
-	 * it's worth extending the calculating range to EZ_DSCP_RANGE_SCND */
-	if (ref_dur > EZ_DSCP_GATE_SCND) {
-		seek_step += EZ_DSCP_RANGE_SCND;
+	/* The current postion should be around the first second in the video
+	 * file. If it's smaller than 1/10 (EZ_DSCP_RANGE_EXT) of the whole 
+	 * file, we will extend the sample range to around 10 second to get 
+	 * an accurate reading */
+	if (vidx->filesize / pos_first > EZ_DSCP_RANGE_EXT) {
+		dts_target = dts_first * EZ_DSCP_RANGE_EXT - 
+				vidx->dts_offset * (EZ_DSCP_RANGE_EXT - 1);
 		while ((cur_dts = video_keyframe_next(vidx, &packet)) >= 0) {
-			sec_dts = cur_dts;
-			sec_pos = packet.pos;
+			dts_first = cur_dts;
+			pos_first = packet.pos;
 			av_free_packet(&packet);
-			ref_dur = sec_dts - vidx->dts_offset;
-			ref_dur = video_dts_to_ms(vidx, ref_dur>0?ref_dur:0);
-			if (ref_dur > seek_step) {
+			if (dts_first > dts_target) {
 				break;
 			}
 		}
-		vidx->bitrates = (int)(sec_pos * 8000 / ref_dur);
-		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
+		slog(DBGVSC, "video_seek_challenge: reference extended "
+				"DTS=%lld POS=%lld\n", dts_first, pos_first);
+	}
+	
+	/* calculate the key-frame rate in dts. I use this rate instead
+	 * of bitrate to simply the calculation.
+	 * key frame rate means how many dts in avarage per key frame */
+	key_dts = (vidx->keylast - vidx->keyfirst) / vidx->keycount;
+	key_num = av_rescale(vidx->filesize, vidx->keycount, pos_first);
+	slog(DBGVSC, "video_seek_challenge: keyframe %lld dts, %lld\n",
+			key_dts, key_num);
+
+	if (key_num - vidx->keycount > 50) {
+		dts_begin  = dts_first;
+		dts_target = key_dts * 5;
+	} else if (key_num - vidx->keycount > 20) {
+		dts_begin  = dts_first;
+		dts_target = key_dts * 2;
+	} else {
+		/* tricky thing could be here. There's not enough key frames
+		 * left in the video file, probably a too small clip. The
+		 * compromise is seeking back to head and start again */
+		video_seeking(vidx, 0);
+		dts_begin  = video_keyframe_next(vidx, &packet);
+		/* estimate the end DTS in the file */
+		dts_target = av_rescale(vidx->filesize, 
+				dts_first - vidx->dts_offset, pos_first);
+		/* apply 1/10th of available DTS as sampling step */
+		dts_target = (dts_target - dts_begin + vidx->dts_offset)
+				/ EZ_DSCP_N_STEP;
 	}
 
-	/* The default seek step is 10 seconds and we will test 5 steps
-	 * to get an average error. If the whole video is smaller than 
-	 * 60 seconds however, we'll change to 10-percentage basis */
-	if (ref_dur < EZ_DSCP_GATE_SMALL) {
-		seek_step = ref_dur / 10;
-	} else if (ref_dur < EZ_DSCP_GATE_MIDL) {
-		seek_step = EZ_DSCP_STEP_MIDL;
-	} else {
-		seek_step = EZ_DSCP_STEP_LARGE;
-	}
-	seek_step = video_ms_to_dts(vidx, seek_step);
-	slog(DBGVSC, "video_seek_challenge: BR=%d DUR=%lld "
-			"STEP=%lld\n", vidx->bitrates, ref_dur, seek_step);
+	slog(DBGVSC, "video_seek_challenge: seek forward from %lld by %lld\n",
+			dts_begin, dts_target);
 
 	/* seeking forward test */
-	cur_dts = sec_dts;
-	cur_pos = 0;
+	dts_second = dts_begin;
+	pos_second = 0;
 	errmin  = 10000;
 	for (i = 1; i <= EZ_DSCP_N_STEP; i++) {
-		next_dts = sec_dts + seek_step * i;
+		next_dts = dts_begin + dts_target * i;
 		dts_span = next_dts - cur_dts;
 		/* 20130718 Changed from
 		 * video_seeking(vidx, next_dts);
@@ -1592,7 +1655,8 @@ static int video_seek_challenge(EZVID *vidx)
 		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
 			break;
 		}
-		cur_pos = packet.pos;
+		dts_second = cur_dts;
+		pos_second = packet.pos;
 		av_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
@@ -1600,6 +1664,20 @@ static int video_seek_challenge(EZVID *vidx)
 				"%lld/%lld %d\n", cur_dts, next_dts, error);
 		errmin = (error < errmin) ? error : errmin;
 	}
+
+	/* calculate the reference bitrates by recent seeking results */
+	if (dts_second > dts_first) {
+		dts_span = dts_second - vidx->dts_offset;
+		dts_span = video_dts_to_ms(vidx, dts_span);
+		vidx->bitrates = (int)(pos_second * 8000 / dts_span);
+	} else {
+		dts_span = dts_first - vidx->dts_offset;
+		dts_span = video_dts_to_ms(vidx, dts_span);
+		vidx->bitrates = (int)(pos_first * 8000 / dts_span);
+	}
+	slog(DBGVSC, "video_seek_challenge: reference bitrate is %d\n", 
+			vidx->bitrates);
+
 	if (errmin > EZ_DSCP_STEP_ERROR) {
 		/* unable to seek or error > 30% */
 		slog(DBGVSC, "video_seek_challenge: forward seeking "
@@ -1607,19 +1685,11 @@ static int video_seek_challenge(EZVID *vidx)
 		return ENX_SEEK_NONE;
 	}
 
-	/* update the reference bitrates by recent seeking results */
-	if (cur_dts > sec_dts) {
-		ref_dur = video_dts_to_ms(vidx, cur_dts - vidx->dts_offset);
-		vidx->bitrates = (int)(cur_pos * 8000 / ref_dur);
-		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
-		slog(DBGVSC, "video_seek_challenge: updated "
-				"BR=%d DUR=%lld\n", vidx->bitrates, ref_dur);
-	}
-
 	/* seeking backward test */
 	errmin  = 10000;
+	cur_dts = dts_second;
 	for (i = EZ_DSCP_N_STEP - 1; i >= 0; i--) {
-		next_dts = sec_dts + seek_step * i;
+		next_dts = dts_begin + dts_target * i;
 		dts_span = cur_dts - next_dts;
 		avformat_seek_file(vidx->formatx, vidx->vsidx, next_dts, 
 				next_dts, INT64_MAX, AVSEEK_FLAG_ANY);

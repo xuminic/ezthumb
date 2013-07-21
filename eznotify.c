@@ -261,19 +261,20 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_IFRAME_CREDIT:
-		/*
 		switch (param) {
 		case ENX_IFRAME_RESET:
+			slog(EZDBG_WARNING, 
+				"Key Frame accrediting system reset.\n");
 			break;
 		case ENX_IFRAME_SET:
-			slogz("Key Frame start from: %lld\n", 
-					(long long) vidx->keylast);
+			/*slogz("Key Frame start from: %lld\n", 
+					(long long) vidx->keylast);*/
 			break;
 		case ENX_IFRAME_UPDATE:
-			slogz("Key Frame Gap Update: %lld\n", 
-					(long long) vidx->keygap);
+			/*slogz("Key Frame Gap Update: %lld\n", 
+					(long long) vidx->keygap);*/
 			break;
-		}*/
+		}
 		break;
 	case EN_FRAME_EXCEPTION:
 		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
@@ -529,6 +530,9 @@ int dump_duration(EZVID *vidx, int use_ms)
 		break;
 	case EZOP_DUR_FSCAN:
 		strcpy(buf, "Full Scanning");
+		break;
+	case EZOP_DUR_AUTO:
+		strcpy(buf, "Auto Scanning");
 		break;
 	default:
 		strcpy(buf, "Mistake");

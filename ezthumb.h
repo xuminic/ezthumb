@@ -89,6 +89,7 @@
 #define ENX_SEEK_NONE		1	/* can not seek at all */
 #define ENX_SEEK_FORWARD	2	/* support seeking forward only */
 #define ENX_SEEK_FREE		3	/* support seeking freely */
+#define SEEKABLE(x)		((x) > ENX_SEEK_NONE)
 
 #define ENX_IFRAME_RESET	0
 #define ENX_IFRAME_SET		1
@@ -225,13 +226,8 @@
 
 /* Duration Seeking Challenge Profile */
 #define EZ_DSCP_RANGE_INIT	1000	/* range of initial scan (ms) */
-#define EZ_DSCP_RANGE_SCND	10000	/* range of secondary scan */
-#define EZ_DSCP_GATE_SCND	30000	/* gate to enter secondary scan */
-#define EZ_DSCP_GATE_SMALL	60000	/* gate of small video clip (ms) */
-#define EZ_DSCP_GATE_MIDL	300000	/* gate of medium video clip (5m) */
-#define EZ_DSCP_STEP_MIDL	15000	/* seek step of medium video clip */
-#define EZ_DSCP_STEP_LARGE	60000	/* seek step of large video clip */
-#define EZ_DSCP_STEP_ERROR	300	/* acceptable step error in %% */
+#define EZ_DSCP_RANGE_EXT	10	/* extended rate of initial range */
+#define EZ_DSCP_STEP_ERROR	300	/* 30% error acceptable */
 #define EZ_DSCP_N_STEP		5	/* number of seeks */
 
 /* define the array of progress time stamp */
@@ -465,6 +461,8 @@ typedef	struct	_EzVid	{
 	AVStream	*vstream;	/* video stream */
 	AVCodecContext	*codecx;
 	int		vsidx;		/* the index of the video stream */
+	int		ezstream;	/* 20130719 recognizable streams */
+	int		dts_rate;	/* DTS per frame */
 
 	/*** video_allocate() */
 	EZOPT		*sysopt;	/* link to the EZOPT parameters */
@@ -474,7 +472,6 @@ typedef	struct	_EzVid	{
 	int		width;	
 	int		height;
 	int		streams;	/* total streams in the file */
-	int		ezstream;	/* 20130719 recognizable streams */
 	int		ar_height;	/* video height after AR correcting */
 	int		bitrates;	/* referenced by seek challenge */
 	EZTIME		dts_offset;	/* DTS could start from here */
@@ -505,8 +502,11 @@ typedef	struct	_EzVid	{
 	int		pidx;		/* PTS array index */
 
 	int64_t		keygap;		/* maximum gap between keyframe */
-	int64_t		keylast;	/* the DTS of the last keyframe */
-	int		keycount;
+	int64_t		keyalldts;	/* total surveyed DTS */
+	int64_t		keyallkey;	/* total surveyed key frame */
+	int64_t		keyfirst;	/* first DTS since reset */
+	int64_t		keylast;	/* the DTS of recent keyframe */
+	unsigned	keycount;	/* received keyframes since reset */
 	int64_t		keydelta;	/* the delta DTS of snapshots */
 	void		*keylib;	/* the anchor to keyframe list */
 
