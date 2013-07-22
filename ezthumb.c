@@ -595,8 +595,8 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	slogz("\n");
 	*/
 	/* review if more than one snapshots were taken inside nearby 
-	 * keyframes. If more than one shots, we will take p-frames instead 
-	 * even the EZOP_P_FRAME was not set */
+	 * keyframes. If more than one shots, ezthumb will take p-frames 
+	 * instead even the EZOP_P_FRAME was not set */
 	if (!GETACCUR(vidx->ses_flags)) {
 		for (i = 0; i < image->shots; i++) {
 			if (refdts[i*3] < 0) {
@@ -1170,7 +1170,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
-	/* note that we never reset the keygap */
+	/* note that ezthumb never reset the keygap */
 	if (dts < 0) {
 		/* save (top up) the recent session before reset */
 		vidx->keyalldts += vidx->keylast - vidx->keyfirst;
@@ -1209,8 +1209,8 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 	dts_last = 0;
 	while ((dts = video_keyframe_next(vidx, packet)) >= 0) {
 		/* if the distance between the snap point and this key frame
-		 * is longer than the maximum gap of key frames, we would 
-		 * expect for another key frame */
+		 * is longer than the maximum gap of key frames, another key 
+		 * frame is expected. */
 		if ((dts_diff = dts_snap - dts) > vidx->keygap) {
 			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, packet);
@@ -1230,10 +1230,11 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 			keyflag = 1;
 		}
 
-		/* if the distance is negative, we must have overread to the
-		 * next key frame, which is caused by the incomplete maximum
-		 * gap of key frames. In that case, we must increate the gap
-		 * size and rewind to the previous key frame and run again */
+		/* if the distance is negative, ezthumb must have overread to 
+		 * the next key frame, which is caused by the incomplete 
+		 * maximum gap of key frames. In that case, ezthumb must 
+		 * increase the gap size and rewind to the previous key frame 
+		 * and run again */
 		if ((dts_diff < 0) && (keyflag == 0)) {
 			struct	ezntf	myntf;
 			myntf.varg1 = vidx;
@@ -1397,8 +1398,8 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
  * to decide the final PTS. To speed up the process, the third method,
  * EZOP_DUR_QSCAN, only scan the last 90% clip. 
  * User need to specify the scan method. */
-//#define DBGVSC	EZDBG_VERBS
-#define DBGVSC	EZDBG_NONE
+#define DBGVSC	EZDBG_VERBS
+//#define DBGVSC	EZDBG_NONE
 static EZTIME video_duration(EZVID *vidx)
 {
 	EZIMG	*image;
@@ -1477,17 +1478,31 @@ static EZTIME video_duration(EZVID *vidx)
 		}
 
 		if (shots > key_num / 2) {
+			/* if the estimated shots are more than half of 
+			 * estimate keyframe, ezthumb enforce the full scan */
+			slog(DBGVSC, "video_duration: few keyframes %d/%d\n",
+					shots, key_num);
 			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
-		} else if (abs(ref_err) < 200) { 
+		} else if (abs(ref_err) < 200) {
+			/* In auto mode, ezthumb intends to use the duration
+			 * read from the head. However if the error to the 
+			 * estimated duration is greater than 20%, ezthumb
+			 * will turn to scan mode */
 			break;
 		} else if (!SEEKABLE(vidx->seekable)) {
+			slog(DBGVSC, "video_duration: error %d fullscan\n",
+					ref_err);
 			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
 		} else if ((ref_dur = video_duration_quickscan(vidx)) > 0) {
+			slog(DBGVSC, "video_duration: error %d quickscan\n",
+					ref_err);
 			vidx->duration = ref_dur;
 			video_timing(vidx, EZ_PTS_DSCAN);
 		} else {
+			slog(DBGVSC, "video_duration: error %d full\n",
+					ref_err);
 			video_seeking(vidx, 0);
 			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
@@ -1538,7 +1553,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 	vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
 
 	/* the scanned duration should be at least half of estimated
-	 * duration. Otherwise we starts the full scan */
+	 * duration. Otherwise ezthumb starts the full scan */
 	if (vidx->duration < ref_dur / 2) {
 		slog(DBGVSC, "video_duration_quickscan: quick scan failed. "
 				"(%lld/%lld)\n", vidx->duration, ref_dur);
@@ -1589,8 +1604,8 @@ static int video_seek_challenge(EZVID *vidx)
 
 	/* The current postion should be around the first second in the video
 	 * file. If it's smaller than 1/10 (EZ_DSCP_RANGE_EXT) of the whole 
-	 * file, we will extend the sample range to around 10 second to get 
-	 * an accurate reading */
+	 * file, ezthumb will extend the sample range to around 10 second to 
+	 * get an accurate reading */
 	if (vidx->filesize / pos_first > EZ_DSCP_RANGE_EXT) {
 		dts_target = dts_first * EZ_DSCP_RANGE_EXT - 
 				vidx->dts_offset * (EZ_DSCP_RANGE_EXT - 1);
@@ -1638,12 +1653,14 @@ static int video_seek_challenge(EZVID *vidx)
 			dts_begin, dts_target);
 
 	/* seeking forward test */
-	dts_second = dts_begin;
+	dts_second = next_dts =dts_begin;
 	pos_second = 0;
 	errmin  = 10000;
-	for (i = 1; i <= EZ_DSCP_N_STEP; i++) {
-		next_dts = dts_begin + dts_target * i;
-		dts_span = next_dts - cur_dts;
+	for (i = 0; i < EZ_DSCP_N_STEP; i++) {
+		next_dts += dts_target;
+		if ((dts_span = next_dts - cur_dts) == 0) {
+			break;
+		}
 		/* 20130718 Changed from
 		 * video_seeking(vidx, next_dts);
 		 * to avformat_seek_file() with minimum dts requirement.
@@ -1653,6 +1670,7 @@ static int video_seek_challenge(EZVID *vidx)
 				next_dts, INT64_MAX, AVSEEK_FLAG_ANY);
 
 		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
+			next_dts -= dts_target;	/* reverse the last attempt */
 			break;
 		}
 		dts_second = cur_dts;
@@ -1682,15 +1700,21 @@ static int video_seek_challenge(EZVID *vidx)
 		/* unable to seek or error > 30% */
 		slog(DBGVSC, "video_seek_challenge: forward seeking "
 				"failed %d\n", errmin);
+		/* reset the keyframe accrediting because of many seeking */
+		video_keyframe_credit(vidx, -1);
 		return ENX_SEEK_NONE;
 	}
 
 	/* seeking backward test */
 	errmin  = 10000;
 	cur_dts = dts_second;
-	for (i = EZ_DSCP_N_STEP - 1; i >= 0; i--) {
-		next_dts = dts_begin + dts_target * i;
-		dts_span = cur_dts - next_dts;
+	for (i = 0; i < EZ_DSCP_N_STEP; i++) {
+		if ((next_dts -= dts_target) < 0) {
+			next_dts = 0;
+		}
+		if ((dts_span = cur_dts - next_dts) == 0) {
+			break;
+		}
 		avformat_seek_file(vidx->formatx, vidx->vsidx, next_dts, 
 				next_dts, INT64_MAX, AVSEEK_FLAG_ANY);
 
@@ -1704,6 +1728,9 @@ static int video_seek_challenge(EZVID *vidx)
 				"%lld/%lld %d\n", cur_dts, next_dts, error);
 		errmin = (error < errmin) ? error : errmin;
 	}
+	/* reset the keyframe accrediting because of many seeking */
+	video_keyframe_credit(vidx, -1);
+	
 	if (errmin > EZ_DSCP_STEP_ERROR) {
 		slog(DBGVSC, "video_seek_challenge: backward seeking "
 				"failed %d\n", errmin);
@@ -2384,7 +2411,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 	image->dst_pixfmt = PIX_FMT_RGB24;
 
 	/* calculte the canvas, the screenshots, timestep and the gaps */
-	if (pro_col < 1) {	/* we want separated screen shots */
+	if (pro_col < 1) {	/* user wants separated screen shots */
 		image->grid_col  = pro_col;
 		image->grid_row  = pro_row;
 		image->time_step = ezopt->tm_step;

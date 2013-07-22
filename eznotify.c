@@ -263,7 +263,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	case EN_IFRAME_CREDIT:
 		switch (param) {
 		case ENX_IFRAME_RESET:
-			slog(EZDBG_WARNING, 
+			slog(EZDBG_BRIEF,
 				"Key Frame accrediting system reset.\n");
 			break;
 		case ENX_IFRAME_SET:
