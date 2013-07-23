@@ -76,6 +76,8 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, 
 		int64_t dtsto, int64_t *lastkey);
+static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, 
+		int64_t dtsto, int64_t *lastkey);
 static int video_seeking(EZVID *vidx, int64_t dts);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
@@ -458,7 +460,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap, last_key;
-	int		scnt = 0;
+	int		scnt = 0, disable_seeking = 0;
 
 	video_snap_begin(vidx, image, ENX_SS_SKIM);
 	/* read the first key frame as a reference start point */
@@ -486,24 +488,13 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			continue;
 		}
 
-		video_seeking(vidx, dts_snap);
+		if (disable_seeking == 0) {
+			video_seeking(vidx, dts_snap);
+		}
 
 		dts = video_keyframe_next(vidx, &packet);
 		if (dts < 0) {
 			/* do nothing, let it break */
-		} else if (dts <= last_key) {
-			/* sought backward or to the same i-frame */
-			last_key = dts;
-			if (video_dts_ruler(vidx, dts, dts_snap) < 3) {
-				slog(DBGSNP, "video_snapshot_skim: [CR] "
-						"%lld/%lld\n", dts, dts_snap);
-				dts = video_decode_to(vidx, &packet, 
-						dts_snap, &last_key);
-			} else {
-			 	/* fail, decode the next frame */
-				slog(DBGSNP, "video_snapshot_skim: [SCAN]\n");
-				dts = video_decode_next(vidx, &packet);
-			}
 		} else  if (dts > dts_snap) {
 			/* overread the packets. Skim mode doesn't seek back
 			 * so ezthumb just decode the nearest one */
@@ -511,6 +502,15 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 					dts, dts_snap);
 			last_key = dts;
 			dts = video_decode_next(vidx, &packet);
+		} else if ((dts <= last_key) ||
+				(video_dts_ruler(vidx, dts, dts_snap) > 10)) {
+			/* sought backward or stopped or big error in 
+			 * seeking, ezthumb will change to safe mode */
+			slog(DBGSNP, "video_snapshot_skim: [CR] %lld/%lld\n",
+					dts, dts_snap);
+			dts = video_decode_safe(vidx, &packet, dts_snap, 
+					&last_key);
+			disable_seeking = 1;	/* no seeking any more */
 		} else if (GETACCUR(vidx->ses_flags)) {
 			slog(DBGSNP, "video_snapshot_skim: [AR] %lld/%lld\n",
 					dts, dts_snap);
@@ -577,37 +577,55 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 	int64_t		dts, dts_snap;
 	int		scnt = 0;
 
+	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
+		return 0;
+	}
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
-	dts = 0;
 	while (image->taken < image->shots) {
-		dts_snap = video_snap_point(vidx, image, image->taken);
-		if (dts_snap < 0) {
+		if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
 			break;
 		}
-
-		if (dts < dts_snap) {
-			dts = video_keyframe_to(vidx, &packet, dts_snap);
-			if (dts < 0) {
-				break;
-			}
+		if (dts >= dts_snap) {
+			/* it's already overread, decode next at once */
 			/* Argus_20120222-114427384.ts case:
 			 * the HD DVB rip file has some dodge i-frame, 
 			 * after decoding, they turned to P/B frames.
 			 * This issue may also happen on H.264 streams.
 			 * The workaround is the option to decode the
 			 * next frame instead of searching an i-frame. */
-			if (GETACCUR(vidx->ses_flags)) {
-				//slogz("DTS=%lld to %lld\n", dts, dts_snap);
-				dts = video_decode_next(vidx, &packet);
-			} else {
-				dts = video_decode_keyframe(vidx, &packet);
-			}
-			if (dts < 0) {
+			slog(DBGSNP, "video_snapshot_scan: [OR] %lld/%lld\n",
+					dts, dts_snap);
+			// dts = video_decode_keyframe(vidx, &packet);
+			dts = video_decode_next(vidx, &packet);
+		} else if (GETACCUR(vidx->ses_flags) &&
+				video_dts_ruler(vidx, dts, dts_snap) < 1) {
+			/* if accurate mode is set and the current DTS
+			 * position is quite close to the snap point, 
+			 * ezthumb will commence decoding to the target */
+			slog(DBGSNP, "video_snapshot_scan: [AR] %lld/%lld\n",
+					dts, dts_snap);
+			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+		} else if (vidx->ses_flags & EZOP_DECODE_OTF) {
+			/* if the decode-on-the-fly flag is set, ezthumb will
+			 * decode every keyframe and simply discard them */
+			if (video_decode_next(vidx, &packet) < 0) {
 				break;
 			}
+			continue;
+		} else {
+			/* go to next key frame */
+			continue;
+		}
+		if (dts < 0) {
+			break;
 		}
 		video_snap_update(vidx, image, dts_snap);
 		scnt++;
+		
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
+			break;
+		}
 	}
 	video_snap_end(vidx, image);
 	return scnt;	/* return the number of thumbnails */
@@ -2179,6 +2197,37 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet,
 	} while (video_load_packet(vidx, packet) >= 0);
 	return -1;
 }
+
+static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, 
+		int64_t dtsto, int64_t *lastkey)
+{
+	int64_t	dts;
+
+	do {
+		/* if the distance of current key frame to the snap point is 
+		 * less than 2 average-key-frame-distance, ezthumb will start
+		 * to decode every frames till the snap point */
+		if (video_dts_ruler(vidx, packet->dts, dtsto) < 2) {
+			return video_decode_to(vidx, packet, dtsto, lastkey);
+		}
+		if (packet->flags != AV_PKT_FLAG_KEY) {
+			continue;
+		}
+
+		video_keyframe_credit(vidx, packet->dts);
+		if (lastkey) {
+			*lastkey = packet->dts;
+		}
+
+		/* working on OTF mode as default */
+		dts = video_decode_next(vidx, packet);
+		if ((dts < 0) || (dts >= dtsto)) {
+			return dts;
+		}
+	} while (video_keyframe_next(vidx, packet) >= 0);
+	return -1;
+}
+
 
 /* remove the key frame requirement in video_decode_to() because it causes
  * inaccurate results in short video clips. the integrity now rely on
