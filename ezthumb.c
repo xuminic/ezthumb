@@ -32,6 +32,10 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
+#define DBGVSC	EZDBG_VERBS
+//#define DBGVSC	EZDBG_NONE
+//#define DBGSNP	EZDBG_VERBS
+#define DBGSNP	EZDBG_NONE
 
 static int video_snapping(EZVID *vidx, EZIMG *image);
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
@@ -53,6 +57,7 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
 static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
+static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static EZTIME video_duration(EZVID *vidx);
@@ -69,7 +74,8 @@ static EZFRM *video_frame_next(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
-static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
+static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, 
+		int64_t dtsto, int64_t *lastkey);
 static int video_seeking(EZVID *vidx, int64_t dts);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
@@ -455,29 +461,66 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 	int		scnt = 0;
 
 	video_snap_begin(vidx, image, ENX_SS_SKIM);
-	last_key = 0;
+	/* read the first key frame as a reference start point */
+	last_key = dts = video_keyframe_next(vidx, &packet);
 	while (image->taken < image->shots) {
 		dts_snap = video_snap_point(vidx, image, image->taken);
 		if (dts_snap < 0) {
 			break;
+		}
+		
+		if (video_dts_ruler(vidx, dts, dts_snap) < 2) {
+			/* distance between current position to the snap point
+			 * is too close to seek, ezthumb will decode to
+			 * the snap point directly */
+			slog(DBGSNP, "video_snapshot_skim: [SD] %lld/%lld\n",
+					dts, dts_snap);
+			dts = video_decode_to(vidx, &packet, 
+					dts_snap, &last_key);
+			if (dts < 0) {
+				break;
+			}
+		
+			video_snap_update(vidx, image, dts_snap);
+			scnt++;
+			continue;
 		}
 
 		video_seeking(vidx, dts_snap);
 
 		dts = video_keyframe_next(vidx, &packet);
 		if (dts < 0) {
-			break;
-		}
-
-		if (dts == last_key) {
-			dts = video_decode_to(vidx, &packet, dts_snap);
-		} else {
+			/* do nothing, let it break */
+		} else if (dts <= last_key) {
+			/* sought backward or to the same i-frame */
 			last_key = dts;
-			if (GETACCUR(vidx->ses_flags)) {
-				dts = video_decode_to(vidx, &packet, dts_snap);
+			if (video_dts_ruler(vidx, dts, dts_snap) < 3) {
+				slog(DBGSNP, "video_snapshot_skim: [CR] "
+						"%lld/%lld\n", dts, dts_snap);
+				dts = video_decode_to(vidx, &packet, 
+						dts_snap, &last_key);
 			} else {
-				dts = video_decode_keyframe(vidx, &packet);
+			 	/* fail, decode the next frame */
+				slog(DBGSNP, "video_snapshot_skim: [SCAN]\n");
+				dts = video_decode_next(vidx, &packet);
 			}
+		} else  if (dts > dts_snap) {
+			/* overread the packets. Skim mode doesn't seek back
+			 * so ezthumb just decode the nearest one */
+			slog(DBGSNP, "video_snapshot_skim: [OR] %lld/%lld\n",
+					dts, dts_snap);
+			last_key = dts;
+			dts = video_decode_next(vidx, &packet);
+		} else if (GETACCUR(vidx->ses_flags)) {
+			slog(DBGSNP, "video_snapshot_skim: [AR] %lld/%lld\n",
+					dts, dts_snap);
+			dts = video_decode_to(vidx, &packet, 
+					dts_snap, &last_key);
+		} else {
+			slog(DBGSNP, "video_snapshot_skim: [IF] %lld/%lld\n",
+					dts, dts_snap);
+			last_key = dts;
+			dts = video_decode_keyframe(vidx, &packet);
 		}
 		if (dts < 0) {
 			break;
@@ -621,7 +664,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		}
 		if (GETACCUR(vidx->ses_flags)) {
 			dts = video_load_packet(vidx, &packet);
-			video_decode_to(vidx, &packet, refdts[i*3]);
+			video_decode_to(vidx, &packet, refdts[i*3], NULL);
 		} else if (dts < refdts[i*3+2]) {
 			dts = video_keyframe_to(vidx, &packet, refdts[i*3+2]);
 			video_decode_next(vidx, &packet);
@@ -666,7 +709,7 @@ static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
 		if (dts >= dts_snap) {
 			dts = video_decode_keyframe(vidx, &packet);
 		} else {
-			dts = video_decode_to(vidx, &packet, dts_snap);
+			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
 		}
 		if (dts < 0) {
 			break;
@@ -1264,6 +1307,21 @@ static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_
 	return -1;
 }
 
+static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts)
+{
+	int64_t	span;
+
+	if (ndts > cdts) {
+		span = ndts - cdts;
+	} else {
+		span = cdts - ndts;
+	}
+	if (vidx->keygap <= 0) {
+		return (int)span;	/* should be far far away */
+	}
+	return (int)(span / vidx->keygap);
+}
+
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 {
 	int64_t	dts;
@@ -1398,8 +1456,6 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
  * to decide the final PTS. To speed up the process, the third method,
  * EZOP_DUR_QSCAN, only scan the last 90% clip. 
  * User need to specify the scan method. */
-#define DBGVSC	EZDBG_VERBS
-//#define DBGVSC	EZDBG_NONE
 static EZTIME video_duration(EZVID *vidx)
 {
 	EZIMG	*image;
@@ -2101,11 +2157,18 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 	return dts;
 }
 
-static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
+static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, 
+		int64_t dtsto, int64_t *lastkey)
 {
 	int64_t	dts;
 
 	do {
+		if (packet->flags == AV_PKT_FLAG_KEY) {
+			video_keyframe_credit(vidx, packet->dts);
+			if (lastkey) {
+				*lastkey = packet->dts;
+			}
+		}
 		dts = video_decode_next(vidx, packet);
 		if ((dts < 0) || (dts >= dtsto)) {
 			return dts;
@@ -2179,9 +2242,10 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 	int64_t	mindts;
 
 	//av_seek_frame(vidx->formatx, vidx->vsidx, dts, AVSEEK_FLAG_BACKWARD);
-	mindts = dts - video_ms_to_dts(vidx, 10000);
+	mindts = dts - video_ms_to_dts(vidx, 60000);
 	avformat_seek_file(vidx->formatx, vidx->vsidx, 
-			mindts, dts, INT64_MAX, AVSEEK_FLAG_FRAME);
+			//mindts, dts, INT64_MAX, AVSEEK_FLAG_FRAME);
+			mindts, dts, INT64_MAX, AVSEEK_FLAG_BACKWARD);
 	avcodec_flush_buffers(vidx->codecx);
 	video_keyframe_credit(vidx, -1);
 	return 0;
