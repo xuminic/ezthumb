@@ -73,10 +73,8 @@ static EZFRM *video_frame_next(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
-static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, 
-		int64_t dtsto, int64_t *lastkey);
-static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, 
-		int64_t dtsto, int64_t *lastkey);
+static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
+static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int video_seeking(EZVID *vidx, int64_t dts);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
@@ -443,8 +441,6 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	return i;	/* return the number of thumbnails */
 }
 
-//FIXME: review video_keyframe_next() to find memory leak
-
 /* for these conditions: backward seeking available, key frame only,
  * snap interval is larger than maximum key frame interval and no rewind
  * clips */
@@ -456,24 +452,27 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 
 	video_snap_begin(vidx, image, ENX_SS_SKIM);
 	/* read the first key frame as a reference start point */
-	last_key = dts = video_keyframe_next(vidx, &packet);
+	last_key = dts = vidx->dts_offset;
 	while (image->taken < image->shots) {
 		dts_snap = video_snap_point(vidx, image, image->taken);
 		if (dts_snap < 0) {
 			break;
 		}
-		
+
 		if (video_dts_ruler(vidx, dts, dts_snap) < 2) {
 			/* distance between current position to the snap point
 			 * is too close to seek, ezthumb will decode to
 			 * the snap point directly */
 			slog(DBGSNP, "video_snapshot_skim: [SD] %lld/%lld\n",
 					dts, dts_snap);
-			dts = video_decode_to(vidx, &packet, 
-					dts_snap, &last_key);
+			if (video_load_packet(vidx, &packet) < 0) {
+				break;
+			}
+			dts = video_decode_to(vidx, &packet, dts_snap);
 			if (dts < 0) {
 				break;
 			}
+			last_key = dts;
 		
 			video_snap_update(vidx, image, dts_snap);
 			scnt++;
@@ -492,7 +491,6 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			 * so ezthumb just decode the nearest one */
 			slog(DBGSNP, "video_snapshot_skim: [OR] %lld/%lld\n",
 					dts, dts_snap);
-			last_key = dts;
 			dts = video_decode_next(vidx, &packet);
 		} else if ((dts <= last_key) ||
 				(video_dts_ruler(vidx, dts, dts_snap) > 10)) {
@@ -500,23 +498,21 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			 * seeking, ezthumb will change to safe mode */
 			slog(DBGSNP, "video_snapshot_skim: [CR] %lld/%lld\n",
 					dts, dts_snap);
-			dts = video_decode_safe(vidx, &packet, dts_snap, 
-					&last_key);
+			dts = video_decode_safe(vidx, &packet, dts_snap);
 			disable_seeking = 1;	/* no seeking any more */
 		} else if (GETACCUR(vidx->ses_flags)) {
 			slog(DBGSNP, "video_snapshot_skim: [AR] %lld/%lld\n",
 					dts, dts_snap);
-			dts = video_decode_to(vidx, &packet, 
-					dts_snap, &last_key);
+			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else {
 			slog(DBGSNP, "video_snapshot_skim: [IF] %lld/%lld\n",
 					dts, dts_snap);
-			last_key = dts;
 			dts = video_decode_keyframe(vidx, &packet);
 		}
 		if (dts < 0) {
 			break;
 		}
+		last_key = dts;
 		
 		video_snap_update(vidx, image, dts_snap);
 		scnt++;
@@ -562,7 +558,7 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			 * ezthumb will commence decoding to the target */
 			slog(DBGSNP, "video_snapshot_scan: [AR] %lld/%lld\n",
 					dts, dts_snap);
-			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else if (vidx->ses_flags & EZOP_DECODE_OTF) {
 			/* if the decode-on-the-fly flag is set, ezthumb will
 			 * decode every keyframe and simply discard them */
@@ -609,12 +605,17 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	}
 
 	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
+
+	/* the first pass to locate the key frames just ahead of the 
+	 * snap points */
 	dts = lastkey;
 	for (i = image->taken; i < image->shots; i++) {
 		if ((dts_snap = video_snap_point(vidx, image, i)) < 0) {
 			break;
 		}
 		if (dts_snap < dts) {
+			/* reuse the last key frame because there are more 
+			 * than 1 snap point in the nearby key frames */
 			refdts[i] = lastkey;
 			slog(DBGSNP, "video_snapshot_twopass: [KF] "
 					"%lld/%lld/%lld\n",
@@ -623,8 +624,11 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		}
 		lastkey = dts;
 		while (1) {
-			dts = video_keyframe_next(vidx, &packet);
-			if ((dts < 0) || (dts > dts_snap)) {
+			if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
+				break;
+			}
+			av_free_packet(&packet);
+			if (dts > dts_snap) {
 				refdts[i] = lastkey;
 				slog(DBGSNP, "video_snapshot_twopass: [KF] "
 						"%lld/%lld/%lld\n",
@@ -635,52 +639,54 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		}
 	}
 
-	/* rewind the video */
+	/* rewind the video and begin the second pass */
 	video_seeking(vidx, 0);
 	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
 		free(refdts);
 		return 0;
 	}
-	dts = video_keyframe_next(vidx, &packet);
+	dts = -1;
 	while (image->taken < image->shots) {
-		if (dts < refdts[image->taken]) {
+		while (dts < refdts[image->taken]) {
+			/* hasn't entered the range yet, go read more */
+			if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
+				break;
+			}
+			if (dts >= refdts[image->taken]) {
+				break;
+			}
 			/* discard the current packet */
 			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
 			} else {
 				av_free_packet(&packet);
 			}
-			/* hasn't entered the range yet, go read more */
-			if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
-				break;
-			}
-			continue;
+		}
+
+		if (dts < 0) {
+			/* do nothing, let it break */
 		} else if (dts > dts_snap) {
 			/* overreaded already, just update the shots */
+			dts = video_decode_next(vidx, &packet);
 		} else if (dts > refdts[image->taken]) {
-			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
-		} else if ((image->taken < image->shots - 1) && 
-				(refdts[image->taken] == refdts[image->taken + 1])) {
-			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else if (GETACCUR(vidx->ses_flags)) {
-			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else {
 			dts = video_decode_next(vidx, &packet);
 		}
+		if (dts < 0) {
+			break;
+		}
 
+		slog(DBGSNP, "video_snapshot_twopass: [UP] %lld/%lld/%lld\n", 
+				refdts[image->taken], dts_snap, dts);
+		video_snap_update(vidx, image, dts_snap);
+		scnt++;
 
-		if (dts == refdts[image->taken]) {
-			slog(DBGSNP, "video_snapshot_twopass: [UP] "
-					"%lld/%lld/%lld\n", 
-					refdts[image->taken], dts_snap, dts);
-			video_snap_update(vidx, image, dts_snap);
-			scnt++;
-
-			dts_snap = video_snap_point(vidx, image, image->taken);
-			if (dts_snap < 0) {
-				break;
-			}
-			continue;
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
+			break;
 		}
 	}
 
@@ -1682,6 +1688,7 @@ static int video_seek_challenge(EZVID *vidx)
 		 * compromise is seeking back to head and start again */
 		video_seeking(vidx, 0);
 		dts_begin  = video_keyframe_next(vidx, &packet);
+		av_free_packet(&packet);
 		/* estimate the end DTS in the file */
 		dts_target = av_rescale(vidx->filesize, 
 				dts_first - vidx->dts_offset, pos_first);
@@ -2141,17 +2148,13 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 	return dts;
 }
 
-static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, 
-		int64_t dtsto, int64_t *lastkey)
+static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
 
 	do {
 		if (packet->flags == AV_PKT_FLAG_KEY) {
 			video_keyframe_credit(vidx, packet->dts);
-			if (lastkey) {
-				*lastkey = packet->dts;
-			}
 		}
 		dts = video_decode_next(vidx, packet);
 		if ((dts < 0) || (dts >= dtsto)) {
@@ -2164,31 +2167,24 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet,
 	return -1;
 }
 
-static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, 
-		int64_t dtsto, int64_t *lastkey)
+static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
-	int64_t	dts;
-
 	do {
+		if (packet->dts >= dtsto) {	/* overread */
+			return video_decode_next(vidx, packet);
+		}
 		/* if the distance of current key frame to the snap point is 
 		 * less than 2 average-key-frame-distance, ezthumb will start
 		 * to decode every frames till the snap point */
 		if (video_dts_ruler(vidx, packet->dts, dtsto) < 2) {
-			return video_decode_to(vidx, packet, dtsto, lastkey);
-		}
-		if (packet->flags != AV_PKT_FLAG_KEY) {
-			continue;
-		}
-
-		video_keyframe_credit(vidx, packet->dts);
-		if (lastkey) {
-			*lastkey = packet->dts;
+			return video_decode_to(vidx, packet, dtsto);
 		}
 
 		/* working on OTF mode as default */
-		dts = video_decode_next(vidx, packet);
-		if ((dts < 0) || (dts >= dtsto)) {
-			return dts;
+		if ((vidx->ses_flags & EZOP_DECODE_OTF) == 0) {
+			av_free_packet(packet);
+		} else if (video_decode_next(vidx, packet) < 0) {
+			break;
 		}
 	} while (video_keyframe_next(vidx, packet) >= 0);
 	return -1;
