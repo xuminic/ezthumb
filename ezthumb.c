@@ -43,7 +43,6 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image);
 static int video_snapshot_safemode(EZVID *vidx, EZIMG *image);
 static int video_snapshot_scan(EZVID *vidx, EZIMG *image);
 static int video_snapshot_twopass(EZVID *vidx, EZIMG *image);
-static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image);
 
 static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode);
 static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum);
@@ -123,10 +122,6 @@ static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen);
 static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei);
 static int ezopt_profile_free(EZPROF *node);
 static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
-
-static void *dts_lib_free(void *anchor);
-static void *dts_lib_add(void *anchor, int64_t dts);
-static int dts_lib_compress(void *anchor, int64_t *refdts, int num);
 
 #ifdef	CFG_GUI_ON
 extern FILE *g_fopen(const char *filename, const char *mode);
@@ -383,19 +378,14 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 	case EZOP_PROC_TWOPASS:
 		rc = video_snapshot_twopass(vidx, image);
 		break;
-	case EZOP_PROC_HEURIS:
-		rc = video_snapshot_heuristic(vidx, image);
-		break;
 	case EZOP_PROC_KEYRIP:
 		rc = video_snapshot_keyframes(vidx, image);
 		break;
 	default:
 		if (SEEKABLE(vidx->seekable)) {
 			rc = video_snapshot_skim(vidx, image);
-		} else if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
-			rc = video_snapshot_twopass(vidx, image);
 		} else {
-			rc = video_snapshot_heuristic(vidx, image);
+			rc = video_snapshot_scan(vidx, image);
 		}
 		break;
 	}
@@ -452,6 +442,8 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	video_snap_end(vidx, image);
 	return i;	/* return the number of thumbnails */
 }
+
+//FIXME: review video_keyframe_next() to find memory leak
 
 /* for these conditions: backward seeking available, key frame only,
  * snap interval is larger than maximum key frame interval and no rewind
@@ -533,40 +525,6 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 	return scnt;	/* return the number of thumbnails */
 }
 
-static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
-{
-	AVPacket	packet;
-	int64_t		dts, dts_snap;
-	int		scnt = 0;
-
-	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
-		return 0;
-	}
-	video_snap_begin(vidx, image, ENX_SS_SAFE);
-	while (image->taken < image->shots) {
-		if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
-			break;
-		}
-
-		/* use video_decode_next() instead of video_decode_keyframe()
-		 * because sometimes it's good for debugging doggy clips */
-		if (video_decode_next(vidx, &packet) < 0) {
-			break;
-		}
-		if (dts >= dts_snap) {
-			video_snap_update(vidx, image, dts_snap);
-			scnt++;
-
-			dts_snap = video_snap_point(vidx, image, image->taken);
-			if (dts_snap < 0) {
-				break;
-			}
-		}
-	}
-	video_snap_end(vidx, image);
-	return scnt;	/* return the number of thumbnails */
-}
-
 
 /* for these conditions: Though backward seeking is NOT available but it is 
  * required to extract key frame only. snap interval is larger than maximum 
@@ -613,7 +571,8 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			}
 			continue;
 		} else {
-			/* go to next key frame */
+			/* discard the current key frame and move to next */
+			av_free_packet(&packet);
 			continue;
 		}
 		if (dts < 0) {
@@ -636,111 +595,133 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
-	int64_t		dts, *refdts;
+	int64_t		*refdts;
+	int64_t		dts, dts_snap, lastkey;
 	int		i, scnt = 0;
 
-	/* compress the key frame list */
-	if ((refdts = calloc(image->shots * 4, sizeof(int64_t))) == NULL) {
+	/* find the first key frame */
+	if ((lastkey = video_keyframe_next(vidx, &packet)) < 0) {
+		return scnt;
+	}
+	/* allocate a buffer for storing the reference key frames */
+	if ((refdts = calloc(image->shots, sizeof(int64_t))) == NULL) {
 		return EZ_ERR_LOWMEM;
-	}
-	for (i = 0; i < image->shots; i++) {
-		refdts[i*3] = video_snap_point(vidx, image, i);
-	}
-	dts_lib_compress(vidx->keylib, refdts, image->shots);
-
-	/*
-	for (i = 0; i < image->shots; i++) {
-		slogz("(%lld %lld %lld)", 
-				refdts[i*3], refdts[i*3+1], refdts[i*3+2]);
-	}
-	slogz("\n");
-	*/
-	/* review if more than one snapshots were taken inside nearby 
-	 * keyframes. If more than one shots, ezthumb will take p-frames 
-	 * instead even the EZOP_P_FRAME was not set */
-	if (!GETACCUR(vidx->ses_flags)) {
-		for (i = 0; i < image->shots; i++) {
-			if (refdts[i*3] < 0) {
-				continue;
-			}
-			if (refdts[i*3+1] == refdts[i*3+4]) {
-				SETACCUR(vidx->ses_flags);
-				break;
-			}
-		}
 	}
 
 	video_snap_begin(vidx, image, ENX_SS_TWOPASS);
-	dts = 0;
+	dts = lastkey;
 	for (i = image->taken; i < image->shots; i++) {
-		if (refdts[i*3] < 0) {
+		if ((dts_snap = video_snap_point(vidx, image, i)) < 0) {
 			break;
 		}
-		if (dts < refdts[i*3+1]) {
-			dts = video_keyframe_to(vidx, &packet, refdts[i*3+1]);
-			video_decode_next(vidx, &packet);
+		if (dts_snap < dts) {
+			refdts[i] = lastkey;
+			slog(DBGSNP, "video_snapshot_twopass: [KF] "
+					"%lld/%lld/%lld\n",
+					lastkey, dts_snap, dts);
+			continue;
 		}
-		if (GETACCUR(vidx->ses_flags)) {
-			dts = video_load_packet(vidx, &packet);
-			video_decode_to(vidx, &packet, refdts[i*3], NULL);
-		} else if (dts < refdts[i*3+2]) {
-			dts = video_keyframe_to(vidx, &packet, refdts[i*3+2]);
-			video_decode_next(vidx, &packet);
+		lastkey = dts;
+		while (1) {
+			dts = video_keyframe_next(vidx, &packet);
+			if ((dts < 0) || (dts > dts_snap)) {
+				refdts[i] = lastkey;
+				slog(DBGSNP, "video_snapshot_twopass: [KF] "
+						"%lld/%lld/%lld\n",
+						lastkey, dts_snap, dts);
+				break;
+			}
+			lastkey = dts;
 		}
-		if (dts < 0) {
-			break;
-		}
-		video_snap_update(vidx, image, refdts[i*3]);
-		scnt++;
 	}
+
+	/* rewind the video */
+	video_seeking(vidx, 0);
+	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
+		free(refdts);
+		return 0;
+	}
+	dts = video_keyframe_next(vidx, &packet);
+	while (image->taken < image->shots) {
+		if (dts < refdts[image->taken]) {
+			/* discard the current packet */
+			if (vidx->ses_flags & EZOP_DECODE_OTF) {
+				video_decode_next(vidx, &packet);
+			} else {
+				av_free_packet(&packet);
+			}
+			/* hasn't entered the range yet, go read more */
+			if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
+				break;
+			}
+			continue;
+		} else if (dts > dts_snap) {
+			/* overreaded already, just update the shots */
+		} else if (dts > refdts[image->taken]) {
+			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+		} else if ((image->taken < image->shots - 1) && 
+				(refdts[image->taken] == refdts[image->taken + 1])) {
+			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+		} else if (GETACCUR(vidx->ses_flags)) {
+			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
+		} else {
+			dts = video_decode_next(vidx, &packet);
+		}
+
+
+		if (dts == refdts[image->taken]) {
+			slog(DBGSNP, "video_snapshot_twopass: [UP] "
+					"%lld/%lld/%lld\n", 
+					refdts[image->taken], dts_snap, dts);
+			video_snap_update(vidx, image, dts_snap);
+			scnt++;
+
+			dts_snap = video_snap_point(vidx, image, image->taken);
+			if (dts_snap < 0) {
+				break;
+			}
+			continue;
+		}
+	}
+
 	video_snap_end(vidx, image);
 	free(refdts);
 	return scnt;	/* return the number of thumbnails */
 }
 
-
-static int video_snapshot_heuristic(EZVID *vidx, EZIMG *image)
+static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
 	int64_t		dts, dts_snap;
 	int		scnt = 0;
 
-	video_snap_begin(vidx, image, ENX_SS_HEURIS);
-	dts = 0;
+	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
+		return 0;
+	}
+	video_snap_begin(vidx, image, ENX_SS_SAFE);
 	while (image->taken < image->shots) {
-		dts_snap = video_snap_point(vidx, image, image->taken);
-		if (dts_snap < 0) {
+		if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
 			break;
 		}
 
-		/*slogz("Measuring: Snap=%lld Cur=%lld  Dis=%lld Gap=%lld\n",
-				dts_snap, dts, dts_snap - dts, vidx->keygap);*/
-		if (dts_snap - dts > vidx->keygap) {
-			dts = video_keyframe_seekat(vidx, &packet, dts_snap);
-		} else {
-			dts = video_load_packet(vidx, &packet);
-		}
-		if (dts < 0) {
+		/* use video_decode_next() instead of video_decode_keyframe()
+		 * because sometimes it's good for debugging doggy clips */
+		if (video_decode_next(vidx, &packet) < 0) {
 			break;
 		}
-
 		if (dts >= dts_snap) {
-			dts = video_decode_keyframe(vidx, &packet);
-		} else {
-			dts = video_decode_to(vidx, &packet, dts_snap, NULL);
-		}
-		if (dts < 0) {
-			break;
-		}
+			video_snap_update(vidx, image, dts_snap);
+			scnt++;
 
-		video_snap_update(vidx, image, dts_snap);
-		scnt++;
+			dts_snap = video_snap_point(vidx, image, image->taken);
+			if (dts_snap < 0) {
+				break;
+			}
+		}
 	}
 	video_snap_end(vidx, image);
 	return scnt;	/* return the number of thumbnails */
 }
-
-
 
 static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 {
@@ -911,8 +892,6 @@ static int video_free(EZVID *vidx)
 	while (vidx) {
 		video_disconnect(vidx);	
 		video_close(vidx);
-
-		vidx->keylib = dts_lib_free(vidx->keylib);
 
 		vp = vidx;
 		vidx = vidx->next;
@@ -1585,18 +1564,6 @@ static EZTIME video_duration(EZVID *vidx)
 	}
 	vidx->bitrates = (int)(vidx->filesize * 8000 / vidx->duration);
 
-	/* if the program was enforced into the Full Scan mode when retrieving
-	 * the video duration, it would be better to convert its scan mode to
-	 * two pass scan mode, because the first pass had already done by the
-	 * duration retrieving process */
-	/*if (GETDURMOD(vidx->ses_flags) == EZOP_DUR_FSCAN) {
-		switch (EZOP_PROC(vidx->ses_flags)) {
-		case EZOP_PROC_SCAN:
-		case EZOP_PROC_HEURIS:
-			EZOP_PROC_MAKE(vidx->ses_flags, EZOP_PROC_TWOPASS);
-			break;
-		}
-	}*/
 	eznotify(vidx->sysopt, EN_DURATION, 0,
 			smm_time_diff(&vidx->tmark), vidx);
 	slog(DBGVSC, "video_duration: %lld S:%d BR:%d (%d ms)\n", 
@@ -1892,7 +1859,6 @@ static int64_t video_statistics(EZVID *vidx)
 			mestat[i].key++;
 			if (packet.stream_index == vidx->vsidx) {
 				video_keyframe_credit(vidx, packet.dts);
-				vidx->keylib = dts_lib_add(vidx->keylib, packet.dts);
 				eznotify(vidx->sysopt, EN_PACKET_KEY, 
 						0, 0, &packet);
 			}
@@ -3900,82 +3866,6 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
 	}
 	return root;
 }
-
-
-/****************************************************************************
- * Statistical Analysis of DTS stamps in the stream
- ****************************************************************************/
-
-static void *dts_lib_free(void *anchor)
-{
-	struct	DTSLIB	*lp, *now;
-
-	lp = anchor; 
-	while (lp) {
-		//slogz("dts_lib_free: %d\n", lp->num);
-		now = lp;
- 		lp = lp->next;
-		free(now);
-	}
-	return NULL;
-}
-
-static void *dts_lib_add(void *anchor, int64_t dts)
-{
-	struct	DTSLIB	*lp, *block;
-
-	for (lp = anchor; lp; lp = lp->next) {
-		if (lp->num < MAX_DTS_LIB) {
-			lp->dts[lp->num++] = dts;
-			return anchor;
-		}
-	}
-	
-	if ((block = calloc(sizeof(struct DTSLIB), 1)) == NULL) {
-		dts_lib_free(anchor);
-		return NULL;
-	}
-
-	block->dts[block->num++] = dts;
-	if (anchor == NULL) {
-		return block;
-	}
-	for (lp = anchor; lp->next; lp = lp->next);
-	lp->next = block;
-	return anchor;
-}
-
-
-/* input:  refdts[0] = reference DTS 0;    refdts[1] = 0;    refdts[2] = 0
- *         refdts[3] = reference DTS 1;    refdts[4] = 0;    refdts[5] = 0
- *         ...
- * output: refdts[0] = reference DTS 0;    refdts[1] = KEY1; refdts[2] = KEY2
- *         refdts[3] = reference DTS 1;    refdts[4] = KEY3; refdts[5] = KEY4
- *         ...
- */
-static int dts_lib_compress(void *anchor, int64_t *refdts, int num)
-{
-	struct	DTSLIB	*lp;
-	int64_t	prev = 0;
-	int	i, n;
-
-	n = 0;
-	for (lp = anchor; lp; lp = lp->next) {
-		for (i = 0; i < lp->num; i++) {
-			while (lp->dts[i] >= refdts[n*3]) {
-				refdts[n*3+1] = prev;
-				refdts[n*3+2] = lp->dts[i];
-				n++;
-				if (n >= num) {
-					return n;
-				}
-			}
-			prev = lp->dts[i];
-		}
-	}
-	return n;
-}
-
 
 /****************************************************************************
  * Utility Functions

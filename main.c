@@ -107,7 +107,7 @@ static	struct	cliopt	clist[] = {
 	{ CMD_O_UTPUT, "outdir",  
 		2, "the directory for storing output images" },
 	{ CMD_P_ROCESS, "process", 
-		1, "the process method (skim|scan|2pass|heuri|safe|key[@N])"},
+		1, "the process method (skim|scan|2pass|safe|key[@N])"},
 	{ CMD_P_ROFILE, "profile", 
 		2, "specify the profile string" },
 	{ CMD_R_ECURS, "recursive", 
@@ -645,10 +645,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			if (!strcmp(optarg, "2pass")) {
 				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_TWOPASS);
-				break;
-			}
-			if (!strcmp(optarg, "heuri")) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_HEURIS);
 				break;
 			}
 			if (!strcmp(optarg, "safe")) {

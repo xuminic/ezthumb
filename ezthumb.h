@@ -134,7 +134,6 @@
 #define EZOP_PROC_SKIM		1	/* use av_seek_frame() */
 #define EZOP_PROC_SCAN		2	/* single pass i-frame scan */
 #define EZOP_PROC_TWOPASS	3	/* two pass scan support p-frame */
-#define EZOP_PROC_HEURIS	4	/* heuristic scan */
 #define EZOP_PROC_KEYRIP	5	/* rip key frames */
 #define EZOP_PROC_SAFE		6	/* safe mode */
 #define EZOP_PROC_MASK		15
@@ -508,13 +507,10 @@ typedef	struct	_EzVid	{
 	int64_t		keylast;	/* the DTS of recent keyframe */
 	unsigned	keycount;	/* received keyframes since reset */
 	int64_t		keydelta;	/* the delta DTS of snapshots */
-	void		*keylib;	/* the anchor to keyframe list */
 
 	struct	_EzVid	*anchor;	/* always pointing to the anchor */
 	struct	_EzVid	*next;
 } EZVID;
-
-
 
 
 #define uperror(n,c)	{ if (n) *(n) = (c); }
@@ -524,7 +520,6 @@ typedef	struct	_EzVid	{
 #define EZ_MK_WORD(w,h)	(((w) << 16) | ((h) & 0xffff))
 
 
-
 struct	MeStat		{	/* media statistics */
 	unsigned long	received;	/* all received packets */
 	unsigned long	key;		/* key frames */
@@ -532,14 +527,6 @@ struct	MeStat		{	/* media statistics */
 
 	int64_t		dts_base;
 	int64_t		dts_last;
-};
-
-#define	MAX_DTS_LIB	8192
-
-struct	DTSLIB	{
-	struct	DTSLIB	*next;
-	int	num;
-	int64_t	dts[MAX_DTS_LIB];
 };
 
 

@@ -1,3 +1,10 @@
+20130724:
+  + ezthumb.c: remove the heuristic process because it's already integrated
+    into the scan mode as default function.
+  + ezthumb.c: since the scan mode is heuristically, the two-pass mode is 
+    much less important now. Thus turned the two-pass mode to the tradition
+    way to cut down the memory usage.
+
 20130718:
   + video_dts_to_ms(): removed the offset adjustment to formatx->start_time
     because it made confusing and not consistent to other convert functions.

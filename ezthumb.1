@@ -194,25 +194,21 @@ file and start to decode the nearest frame.
 If the video file doesn't support seeking, 
 .B ezthumb
 will automatically switch to
-.I "'heuri'" ,
-the heuristic method, where it will scan the whole video file from begining 
-to find the proper frame to be decoded.
-.I "'heuri'"
-is a single-pass strategy which uses heuristic method to decide the position
-of the the nearest frame. 
+.I "'scan'" 
+mode.
 .I "'scan'"
-is a single-pass scan strategy too. However, it always scans to
-and decode the next nearest key frame. What's more, 
+is a single-pass scan strategy. It will scan the whole video file to
+find and decode the nearest frames. 
 .I "'scan'"
-does
-.B NOT
-support the
+mode generally take longer time than the
+.I "'skim'"
+mode. If enabled the
 .BR "\-\-accurate"
-option. On the other hand,
+option, it takes more time to scan through the P-frame. The
 .I "'2pass'"
-let
-.B ezthumb
-scan the video file twice to decide the finest position for decoding.
+mode is similar to the 
+.I "'scan'"
+mode. It will scan the video file twice to decide the best position to decode.
 .I "'key'"
 is used to rip key frames. It is almost same to
 .BR "'\-g 0x0'"
@@ -225,16 +221,6 @@ and picks up the closest frames to compose the thumbnails.
 
 The default setting can process most of files. However, in dodgy
 situation, user might need to specify, or try, one of these strategies.
-
-Note that
-.I "'scan'" ,
-.I "'2pass'"
-and
-.I "'heuri'" 
-are all scan-based methods. If the video file requires decoding nearby
-key frames, the
-.BR "\-\-decode\-otf"
-options sometimes is quite supportive. 
 
 .TP
 .BR \-P , " \-\-profile \fIprofile_string\fP"
