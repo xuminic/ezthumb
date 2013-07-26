@@ -480,13 +480,27 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			continue;
 		}
 
-		if (disable_seeking == 0) {
-			//video_seeking(vidx, dts_snap);
-			video_seeking(vidx, dts_snap - vidx->keygap);
+		/* 20130726 recently found the ffmpeg could not seek to the 
+		 * key frame prior to the reference position but after. this 
+		 * may be caused by version update because I remember some 
+		 * versions ago it could. anyway it will impact the accurate 
+		 * mode because ezthumb has done everything to avoid seeking 
+		 * backward. the workaround is to seek 2 possible keyframe 
+		 * ahead then decode to the target position. 
+		 * slower but functional */
+		dts = dts_snap;
+		if (GETACCUR(vidx->ses_flags)) {
+			if ((dts -= vidx->keygap * 2) < 0) {
+				dts = 0;
+			}
+		}
+		if (disable_seeking) {
+			dts = video_keyframe_to(vidx, &packet, dts);
+		} else {
+			video_seeking(vidx, dts);
+			dts = video_keyframe_next(vidx, &packet);
 		}
 
-		dts = video_keyframe_next(vidx, &packet);
-		printf("Rule: %d %lld %lld\n", video_dts_ruler(vidx, dts, dts_snap), dts, vidx->keygap);
 		if (dts < 0) {
 			/* do nothing, let it break */
 		} else  if (dts > dts_snap) {
@@ -494,11 +508,15 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			 * so ezthumb just decode the nearest one */
 			VSkLOG("[OR]", dts, dts_snap);
 			dts = video_decode_next(vidx, &packet);
+		} else if (video_dts_ruler(vidx, dts, dts_snap) < 0) {
+			/* probably keyframe accredit system is not ready */
+			VSkLOG("[TR]", dts, dts_snap);
+			dts = video_decode_safe(vidx, &packet, dts_snap);
 		} else if ((dts <= last_key) ||
 				(video_dts_ruler(vidx, dts, dts_snap) > 10)) {
 			/* sought backward or stopped or big error in 
 			 * seeking, ezthumb will change to safe mode */
-			VSkLOG("[CR]", dts, dts_snap);
+			VSkLOG("[CS]", dts, dts_snap);
 			dts = video_decode_safe(vidx, &packet, dts_snap);
 			disable_seeking = 1;	/* no seeking any more */
 		} else if (GETACCUR(vidx->ses_flags)) {
@@ -506,8 +524,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			dts = video_decode_to(vidx, &packet, dts_snap);
 		} else {
 			VSkLOG("[IF]", dts, dts_snap);
-			//dts = video_decode_keyframe(vidx, &packet);
-			dts = video_decode_next(vidx, &packet);
+			dts = video_decode_safe(vidx, &packet, dts_snap);
 		}
 		if (dts < 0) {
 			break;
@@ -1181,9 +1198,6 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 			av_free_packet(packet);
 			continue;
 		}
-
-		/* find a valid key frame so updating the keyframe gap */
-		video_keyframe_credit(vidx, dts);
 		break;
 	}
 	return dts;
@@ -1198,9 +1212,6 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 			av_free_packet(packet);
 			continue;
 		}
-
-		/* find a valid key frame so updating the keyframe gap */
-		video_keyframe_credit(vidx, dts);
 
 		if (dts >= pos) {
 			break;	/* successfully located the keyframe */
@@ -1219,6 +1230,7 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
 	/* note that ezthumb never reset the keygap */
+	//slogz("video_keyframe_credit: %lld\n", dts);
 	if (dts < 0) {
 		/* save (top up) the recent session before reset */
 		vidx->keyalldts += vidx->keylast - vidx->keyfirst;
@@ -1322,11 +1334,16 @@ static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts)
 		span = cdts - ndts;
 	}
 	if (vidx->keygap <= 0) {
-		return (int)span;	/* should be far far away */
+		return -1;	/* accredit system is not ready */
 	}
 	return (int)(span / vidx->keygap);
 }
 
+/* 20130726 Integrated the key frame accrediting into video_load_packet()
+ * because of a surprise finding in carcrash.flv that a key frame can be 
+ * loaded while decoding by video_decode_next(). It's more consistent that
+ * accrediting keyframe in video_load_packet(). However other functions
+ * must look care of resetting accrediting */
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 {
 	int64_t	dts;
@@ -1340,34 +1357,16 @@ static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 			av_free_packet(packet);
 			continue;
 		}
+
+		/* accrediting the key frame */
+		if (packet->flags == AV_PKT_FLAG_KEY) {
+			video_keyframe_credit(vidx, packet->dts);
+		}
 		return dts;
 	}
 	return -1;
 }
 
-/*
-static int64_t video_dts_next_frame(EZVID *vidx)
-{
-	AVPacket	packet;
-	int64_t		dts;
-
-	if ((dts = video_load_packet(vidx, &packet)) >= 0) {
-		av_free_packet(&packet);
-	}
-	return dts;
-}
-
-static int64_t video_dts_key_frame(EZVID *vidx)
-{
-	AVPacket	packet;
-	int64_t		dts;
-
-	if ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
-		av_free_packet(&packet);
-	}
-	return dts;
-}
-*/
 
 /* This function is used to print the media information to the specified
  * area in the canvas */
@@ -1722,6 +1721,7 @@ static int video_seek_challenge(EZVID *vidx)
 		 * is quite annoying */
 		avformat_seek_file(vidx->formatx, vidx->vsidx, next_dts, 
 				next_dts, INT64_MAX, AVSEEK_FLAG_ANY);
+		video_keyframe_credit(vidx, -1);
 
 		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
 			next_dts -= dts_target;	/* reverse the last attempt */
@@ -1772,6 +1772,7 @@ static int video_seek_challenge(EZVID *vidx)
 		}
 		avformat_seek_file(vidx->formatx, vidx->vsidx, next_dts, 
 				next_dts, INT64_MAX, AVSEEK_FLAG_ANY);
+		video_keyframe_credit(vidx, -1);
 
 		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
 			break;
@@ -1795,48 +1796,6 @@ static int video_seek_challenge(EZVID *vidx)
 			smm_time_diff(&vidx->tmark));
 	return ENX_SEEK_FREE;
 }
-
-
-#if 0
-static int video_dseek_forward(EZVID *vidx, int64_t dbegin, int64_t delta)
-{
-	int64_t	cur_dts;
-
-	delta *= 10;	/* 120 timebase, should be long enough */
-
-	printf("cur_dts=%lld\n",  video_dts_next_frame(vidx));
-	/* first, try seeking by file size */
-	printf("video_dseek_forward: byte to %lld\n", vidx->filesize * 9 / 10);
-	//cur_dts = avformat_seek_file(vidx->formatx, vidx->vsidx, INT64_MIN, 
-	//		vidx->filesize * 9 / 10, INT64_MAX, AVSEEK_FLAG_BYTE);
-	cur_dts = avformat_seek_file(vidx->formatx, vidx->vsidx, vidx->filesize * 9 / 10, 
-			vidx->filesize * 9 / 10, vidx->filesize, AVSEEK_FLAG_BYTE);
-	//cur_dts = avio_seek(vidx->formatx->pb, vidx->filesize * 9 / 10, SEEK_SET);
-	avcodec_flush_buffers(vidx->codecx);
-	printf("avio_seek: %lld\n", cur_dts);
-	cur_dts = video_dts_next_frame(vidx);
-	if (cur_dts - dbegin > delta) {
-		slog(EZDBG_BRIEF, "video_dseek_forward: FW by size "
-				"(%lld %lld)\n", dbegin, cur_dts);
-		return ENX_SEEK_FORWARD;
-	}
-	printf("video_dseek_forward: 1 (%lld %lld %lld)\n", 
-			dbegin, cur_dts, delta);
-
-	/* if seeking by bytes failed, using timestamp seeking try again */
-	cur_dts = video_system_to_dts(vidx, vidx->formatx->duration);
-	video_seeking(vidx, cur_dts * 9 / 10);
-	cur_dts = video_dts_next_frame(vidx);
-	if (cur_dts - dbegin > delta) {
-		slog(EZDBG_BRIEF, "video_dseek_forward: FW by time "
-				"(%lld %lld)\n", dbegin, cur_dts);
-		return ENX_SEEK_FORWARD;
-	}
-	slog(EZDBG_BRIEF, "video_dseek_forward: NO %lld %lld\n",
-				dbegin, cur_dts);
-	return ENX_SEEK_NONE;
-}
-#endif
 
 static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 {
@@ -2157,15 +2116,9 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
-	int64_t	dts = -1;
+	int64_t	dts;
 
 	do {
-		/* skip crediting the first packet because caller
-		 * should have already credited the packet */
-		if ((packet->flags == AV_PKT_FLAG_KEY) && (dts >= 0)) {
-			video_keyframe_credit(vidx, packet->dts);
-		}
-
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
@@ -2184,9 +2137,6 @@ static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	if (video_load_packet(vidx, packet) < 0) {
 		return -1;
 	}
-	if (packet->flags == AV_PKT_FLAG_KEY) {
-		video_keyframe_credit(vidx, packet->dts);
-	}
 	return video_decode_to(vidx, packet, dtsto);
 }
 
@@ -2199,7 +2149,8 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		/* if the distance of current key frame to the snap point is 
 		 * less than 2 average-key-frame-distance, ezthumb will start
 		 * to decode every frames till the snap point */
-		if (video_dts_ruler(vidx, packet->dts, dtsto) < 2) {
+		if ((video_dts_ruler(vidx, packet->dts, dtsto) < 2) &&
+					GETACCUR(vidx->ses_flags)) {
 			return video_decode_to(vidx, packet, dtsto);
 		}
 

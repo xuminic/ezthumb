@@ -129,6 +129,18 @@ test_01_14()
   run "-m png -c ::ff0000 --transparent" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_15()
+{
+  local COMM="Skim mode test while disabled the duration challenge"
+  run "-d head -p skim" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_16()
+{
+  local COMM="Skim mode test with accuration option"
+  run "-p skim --accurate" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 #############################################################################
