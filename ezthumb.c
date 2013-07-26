@@ -80,6 +80,7 @@ static int video_seeking(EZVID *vidx, int64_t dts);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
 static char *video_media_subtitle(AVStream *stream, char *buffer);
+static char *video_stream_language(AVStream *stream);
 static int64_t video_packet_timestamp(AVPacket *packet);
 static int video_timing(EZVID *vidx, int type);
 
@@ -508,7 +509,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			 * so ezthumb just decode the nearest one */
 			VSkLOG("[OR]", dts, dts_snap);
 			dts = video_decode_next(vidx, &packet);
-		} else if (video_dts_ruler(vidx, dts, dts_snap) < 0) {
+		} else if (video_dts_ruler(vidx, dts, dts_snap) == INT_MAX) {
 			/* probably keyframe accredit system is not ready */
 			VSkLOG("[TR]", dts, dts_snap);
 			dts = video_decode_safe(vidx, &packet, dts_snap);
@@ -1334,7 +1335,7 @@ static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts)
 		span = cdts - ndts;
 	}
 	if (vidx->keygap <= 0) {
-		return -1;	/* accredit system is not ready */
+		return INT_MAX;	/* accredit system is not ready */
 	}
 	return (int)(span / vidx->keygap);
 }
@@ -2280,7 +2281,8 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 		strcat(buffer, xcodec->long_name);
 	}
 
-	sprintf(tmp, ": %d-CH  %s %dHz ", stream->codec->channels, 
+	sprintf(tmp, ": %s %d-CH  %s %dHz ", video_stream_language(stream),
+			stream->codec->channels, 
 			id_lookup_tail(id_sample_format, 
 					stream->codec->sample_fmt),
 			stream->codec->sample_rate);
@@ -2294,7 +2296,25 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 
 static char *video_media_subtitle(AVStream *stream, char *buffer)
 {
+	strcat(buffer, video_stream_language(stream));
 	return buffer;
+}
+
+static char *video_stream_language(AVStream *stream)
+{
+#if FF_API_OLD_METADATA2
+	AVDictionaryEntry	*lang;
+
+	lang = av_dict_get(stream->metadata, "language", NULL, 0);
+	return lang->value;
+#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+	AVMetadataTag	*lang;
+	
+	lang = av_metadata_get(stream->metadata, "language", NULL, 0);
+	return lang->value;
+#else
+	return stream->language;
+#endif
 }
 
 static int64_t video_packet_timestamp(AVPacket *packet)
