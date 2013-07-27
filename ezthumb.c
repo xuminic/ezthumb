@@ -2150,7 +2150,7 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		/* if the distance of current key frame to the snap point is 
 		 * less than 2 average-key-frame-distance, ezthumb will start
 		 * to decode every frames till the snap point */
-		if ((video_dts_ruler(vidx, packet->dts, dtsto) < 2) &&
+		if ((video_dts_ruler(vidx, packet->dts, dtsto) < 1) &&
 					GETACCUR(vidx->ses_flags)) {
 			return video_decode_to(vidx, packet, dtsto);
 		}
@@ -2302,18 +2302,33 @@ static char *video_media_subtitle(AVStream *stream, char *buffer)
 
 static char *video_stream_language(AVStream *stream)
 {
-#if FF_API_OLD_METADATA2
-	AVDictionaryEntry	*lang;
+	static	char	*nolan = "";
 
-	lang = av_dict_get(stream->metadata, "language", NULL, 0);
-	return lang->value;
+#if FF_API_OLD_METADATA2
+	AVDictionaryEntry	*lang = NULL;
+
+	if (stream->metadata) {
+		lang = av_dict_get(stream->metadata, "language", NULL, 0);
+	}
+	if (lang) {
+		return lang->value;
+	}
+	return nolan;
 #elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
-	AVMetadataTag	*lang;
+	AVMetadataTag	*lang = NULL;
 	
-	lang = av_metadata_get(stream->metadata, "language", NULL, 0);
-	return lang->value;
+	if (stream->metadata) {
+		lang = av_metadata_get(stream->metadata, "language", NULL, 0);
+	}
+	if (lang) {
+		return lang->value;
+	}
+	return nolan;
 #else
-	return stream->language;
+	if (stream->language) {
+		return stream->language;
+	}
+	return nolan;
 #endif
 }
 

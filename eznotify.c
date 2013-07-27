@@ -503,6 +503,37 @@ int dump_stream(AVStream *stream)
 	return 0;
 }
 
+/* see /usr/include/libavformat/avformat.h */
+int dump_metadata(AVDictionary *dict)
+{
+	char	*mtab[] = { "album", "album_artist", "artist", "comment",
+		"composer", "copyright", "creation_time", "date", "disc",
+		"encoder", "encoded_by", "filename", "genre", "language",
+		"performer", "publisher", "service_name", "service_provider",
+		"title", "track", "variant_bitrate", NULL };
+	int	i;
+#if FF_API_OLD_METADATA2
+	AVDictionaryEntry	*entry;
+#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+	AVMetadataTag		*entry;
+#endif
+
+	for (i = 0; mtab[i]; i++) {
+#if FF_API_OLD_METADATA2
+		entry = av_dict_get(dict, mtab[i], NULL, 0);
+#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+		entry = av_metadata_get(dict, mtab[i], NULL, 0);
+#else
+		break;
+#endif
+		if (entry) {
+			slogz("%s: %s\n", mtab[i], entry->value);
+		}			
+	}
+	return 0;
+}
+
+
 int dump_duration(EZVID *vidx, int use_ms)
 {
 	char	buf[128], tmp[32];
