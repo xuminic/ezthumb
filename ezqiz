@@ -141,6 +141,30 @@ test_01_16()
   run "-p skim --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_17()
+{
+  local COMM="Safe mode test while disabled the duration challenge"
+  run "-d head -p safe" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_18()
+{
+  local COMM="Safe mode test with accuration option"
+  run "-p safe --accurate" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_19()
+{
+  local COMM="Scan mode test while disabled the duration challenge"
+  run "-d head -p scan" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_20()
+{
+  local COMM="Scan mode test with accuration option"
+  run "-p scan --accurate" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 #############################################################################
