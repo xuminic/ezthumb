@@ -504,7 +504,7 @@ int dump_stream(AVStream *stream)
 }
 
 /* see /usr/include/libavformat/avformat.h */
-int dump_metadata(AVDictionary *dict)
+int dump_metadata(void *dict)
 {
 	char	*mtab[] = { "album", "album_artist", "artist", "comment",
 		"composer", "copyright", "creation_time", "date", "disc",

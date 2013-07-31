@@ -32,10 +32,10 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
-//#define DBGVSC	EZDBG_VERBS
-#define DBGVSC	EZDBG_NONE
-//#define DBGSNP	EZDBG_VERBS
-#define DBGSNP	EZDBG_NONE
+#define DBGVSC	EZDBG_VERBS
+//#define DBGVSC	EZDBG_NONE
+#define DBGSNP	EZDBG_VERBS
+//#define DBGSNP	EZDBG_NONE
 
 static int video_snapping(EZVID *vidx, EZIMG *image);
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
@@ -364,11 +364,8 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 
 	switch (EZOP_PROC(vidx->ses_flags)) {
 	case EZOP_PROC_SKIM:
-		if (SEEKABLE(vidx->seekable)) {
-			rc = video_snapshot_skim(vidx, image);
-			break;
-		}
-		/* unseekable clips; fall into scan mode */
+		rc = video_snapshot_skim(vidx, image);
+		break;
 	case EZOP_PROC_SCAN:
 		rc = video_snapshot_scan(vidx, image);
 		break;
@@ -457,7 +454,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 	int		scnt = 0, disable_seeking = 0;
 
 	video_snap_begin(vidx, image, ENX_SS_SKIM);
-	/* read the first key frame as a reference start point */
+	/* setup the first key frame as a reference start point */
 	last_key = dts = vidx->dts_offset;
 	while (image->taken < image->shots) {
 		dts_snap = video_snap_point(vidx, image, image->taken);
@@ -471,14 +468,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			 * the snap point directly */
 			VSkLOG("[SD]", dts, dts_snap);
 			dts = video_decode_load(vidx, &packet, dts_snap);
-			if (dts < 0) {
-				break;
-			}
-			last_key = dts;
-		
-			video_snap_update(vidx, image, dts_snap);
-			scnt++;
-			continue;
+			goto vs_skim_update;
 		}
 
 		/* 20130726 recently found the ffmpeg could not seek to the 
@@ -527,6 +517,8 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			VSkLOG("[IF]", dts, dts_snap);
 			dts = video_decode_safe(vidx, &packet, dts_snap);
 		}
+
+vs_skim_update:
 		if (dts < 0) {
 			break;
 		}
@@ -552,15 +544,34 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 	int64_t		dts, dts_snap;
 	int		scnt = 0;
 
-	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
-		return 0;
-	}
 	video_snap_begin(vidx, image, ENX_SS_SCAN);
+	dts = vidx->dts_offset; 	/* setup the reference start point */
 	while (image->taken < image->shots) {
-		if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
 			break;
 		}
-		if (dts >= dts_snap) {
+
+		if (video_dts_ruler(vidx, dts, dts_snap) < 2) {
+			/* the distance between current position to the snap 
+			 * point is quite small so ezthumb will decode to the
+			 * snap point directly */
+			VSkLOG("[SD]", dts, dts_snap);
+			dts = video_decode_load(vidx, &packet, dts_snap);
+			goto vs_scan_update;
+		}
+
+		dts = dts_snap;
+		if (GETACCUR(vidx->ses_flags)) {
+			if ((dts -= vidx->keygap) < 0) {
+				dts = 0;
+			}
+		}
+		dts = video_keyframe_to(vidx, &packet, dts);
+
+		if (dts < 0) {
+			/* do nothing, let it break */
+		} else if (dts >= dts_snap) {
 			/* it's already overread, decode next at once */
 			/* Argus_20120222-114427384.ts case:
 			 * the HD DVB rip file has some dodge i-frame, 
@@ -571,25 +582,18 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			VSSLOG("[OR]", dts, dts_snap);
 			// dts = video_decode_keyframe(vidx, &packet);
 			dts = video_decode_next(vidx, &packet);
-		} else if (GETACCUR(vidx->ses_flags) &&
-				video_dts_ruler(vidx, dts, dts_snap) < 1) {
+		} else if (GETACCUR(vidx->ses_flags)) {
 			/* if accurate mode is set and the current DTS
 			 * position is quite close to the snap point, 
 			 * ezthumb will commence decoding to the target */
 			VSSLOG("[AR]", dts, dts_snap);
 			dts = video_decode_to(vidx, &packet, dts_snap);
-		} else if (vidx->ses_flags & EZOP_DECODE_OTF) {
-			/* if the decode-on-the-fly flag is set, ezthumb will
-			 * decode every keyframe and simply discard them */
-			if (video_decode_next(vidx, &packet) < 0) {
-				break;
-			}
-			continue;
 		} else {
-			/* discard the current key frame and move to next */
-			av_free_packet(&packet);
-			continue;
+			VSSLOG("[IF]", dts, dts_snap);
+			dts = video_decode_next(vidx, &packet);
 		}
+
+vs_scan_update:
 		if (dts < 0) {
 			break;
 		}
