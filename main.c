@@ -916,7 +916,7 @@ static int para_get_time_point(char *s)
 		return val;
 	}
 
-	if ((tmp = strcpy_alloc(s)) == NULL) {
+	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
@@ -958,7 +958,7 @@ static int para_get_position(char *s)
 	char	*tmp, *argvs[4];
 	int	argcs;
 
-	if ((tmp = strcpy_alloc(s)) == NULL) {
+	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
@@ -1017,7 +1017,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	unsigned long	rc;
 	char	*rp, *tmp, *argvs[3];
 
-	if ((tmp = strcpy_alloc(s)) == NULL) {
+	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 	fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
@@ -1063,7 +1063,7 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 {
 	char	*rp, *tmp, *argvs[3];
 
-	if ((tmp = strcpy_alloc(s)) == NULL) {
+	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 	fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");

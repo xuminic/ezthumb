@@ -1148,14 +1148,18 @@ static int video_find_main_stream(EZVID *vidx)
 			eznotify(vidx->sysopt, EN_TYPE_VIDEO, 
 					i, 0, stream->codec);
 			vidx->ezstream++;
+			dump_metadata(stream->metadata);	//FIXME: REMOVE THEM TO -I
 			break;
 		case AVMEDIA_TYPE_AUDIO:
 			eznotify(vidx->sysopt, EN_TYPE_AUDIO, 
 					i, 0, stream->codec);
 			vidx->ezstream++;
+			dump_metadata(stream->metadata);
 			break;
 		case AVMEDIA_TYPE_SUBTITLE:
 			vidx->ezstream++;
+			dump_metadata(stream->metadata);
+			break;
 		default:
 			eznotify(vidx->sysopt, EN_TYPE_UNKNOWN, 
 					i, 0, stream->codec);
@@ -3439,7 +3443,7 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	int	i, len;
 
 	/* duplicate the input profile string */
-	if ((tmp = strcpy_alloc(s)) == NULL) {
+	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
 		return -1;
 	}
 	
@@ -3999,7 +4003,15 @@ int meta_fontsize(int fsize, int refsize)
 	return fsize;
 }
 
+
 // FIXME: UTF-8 and widechar?
+// Haven't decide how to improve these two functions
+#ifdef  CFG_WIN32_API
+#define DIRSEP  '\\'
+#else
+#define DIRSEP  '/'
+#endif
+
 char *meta_basename(char *fname, char *buffer)
 {
 	static	char	tmp[1024];
@@ -4009,7 +4021,7 @@ char *meta_basename(char *fname, char *buffer)
 		buffer = tmp;
 	}
 
-	if ((p = strrchr(fname, '/')) == NULL) {
+	if ((p = strrchr(fname, DIRSEP)) == NULL) {
 		strcpy(buffer, fname);
 	} else {
 		strcpy(buffer, p + 1);
@@ -4017,11 +4029,10 @@ char *meta_basename(char *fname, char *buffer)
 	return buffer;
 }
 
-// FIXME: UTF-8 and widechar?
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
 {
 	static	char	tmp[1024];
-	char	*p;
+	char	*p, sep[4];
 
 	if (buf == NULL) {
 		buf = tmp;
@@ -4031,10 +4042,12 @@ char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
 		strcpy(buf, fname);
 	} else {
 		strcpy(buf, path);
-		if (buf[strlen(buf)-1] != '/') {
-			strcat(buf, "/");
+		if (buf[strlen(buf)-1] != DIRSEP) {
+			sep[0] = DIRSEP;
+			sep[1] = 0;
+			strcat(buf, sep);
 		}
-		if ((p = strrchr(fname, '/')) == NULL) {
+		if ((p = strrchr(fname, DIRSEP)) == NULL) {
 			strcat(buf, fname);
 		} else {
 			strcat(buf, p+1);
