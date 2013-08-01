@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 {
 	int	i, todo;
 
-	smm_init(0);				/* initialize the libsmm */
+	smm_init(0, argv[0]);				/* initialize the libsmm */
 	slog_def_open(EZDBG_NONE);
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	env_init(&sysopt);
@@ -339,6 +339,7 @@ int main(int argc, char **argv)
 		break;
 	}
 	main_close(&sysopt);
+	slog_def_close();
 	return todo;
 }
 
@@ -583,11 +584,19 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case CMD_F_ONT:
-			opt->mi_font = opt->ins_font = optarg;
+			if (opt->mi_font) {
+				free(opt->mi_font);
+			}
+			opt->mi_font = smm_fontpath(optarg, NULL);
+			if (opt->mi_font == NULL) {
+				break;
+			}
+			opt->ins_font = opt->mi_font;
 			/* enable fontconfig patterns like "times:bold:italic"
 			 * instead of the full path of the font like
 			 * "/usr/local/share/ttf/Times.ttf" */
-			if (strchr(optarg, ':')) {
+			if (((p = strchr(opt->mi_font, ':')) != NULL) 
+					&& isalnum(p[1])) {
 				gdFTUseFontConfig(1);
 			}
 			break;
@@ -773,6 +782,7 @@ break_parse:
 		}
 	}
 	if (dummy) {
+		main_close(dummy);
 		free(dummy);
 	}
 	free(rtbuf);
@@ -785,6 +795,7 @@ static int signal_handler(int sig)
 	slog(SLFUNC, "Signal %d\n", sig);
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
+	slog_def_close();
 	return sig;
 }
 
@@ -804,7 +815,10 @@ static int main_close(EZOPT *opt)
 		free(opt->refuse);
 		opt->refuse = NULL;
 	}
-	slog_def_close();
+	if (opt->mi_font) {
+		free(opt->mi_font);
+		opt->mi_font = NULL;
+	}
 	return 0;
 }
 
@@ -828,7 +842,7 @@ static int msg_info(void *option, char *path, int type, void *info)
 		slogz("Leaving %s\n", path);
 		break;
 	}
-	return 0;
+	return SMM_NTF_PATH_NONE;
 }
 
 static int msg_shot(void *option, char *path, int type, void *info)
@@ -852,7 +866,7 @@ static int msg_shot(void *option, char *path, int type, void *info)
 		slogz("Leaving %s\n", path);
 		break;
 	}
-	return 0;
+	return SMM_NTF_PATH_NONE;
 }
 
 static int env_init(EZOPT *ezopt)

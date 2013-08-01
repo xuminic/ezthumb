@@ -200,7 +200,7 @@
 #define EZ_FONT_GIANT		12
 
 #define EZ_TEXT_INSET_GAP	4
-#define EZ_TEXT_MINFO_GAP	0
+#define EZ_TEXT_MINFO_GAP	2
 #define EZ_TEXT_SHADOW_OFF	2
 #define EZ_SHOT_SHADOW_OFF	3
 
@@ -425,6 +425,9 @@ typedef	struct	{
 	int	gap_height;	/* gap between shots in row */
 	int	rim_width;	/* blank area in left and right rim */
 	int	rim_height;	/* blank area in top and bottom rim */
+
+	/* font height of media information (gap included) */
+	int	mift_height;
 
 	/* colors */
 	int	color_canvas;	/* background color of the canvas */

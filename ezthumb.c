@@ -2442,6 +2442,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 {
 	EZIMG	*image;
 	EZOPT	*ezopt;
+	char	*ftmp;
 	int	size, shots;
 	int	pro_col, pro_row, pro_width, pro_height, pro_facto;
 	int	pro_canvas;
@@ -2502,7 +2503,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 	}
 	image->dst_pixfmt = PIX_FMT_RGB24;
 
-	/* calculte the canvas, the screenshots, timestep and the gaps */
+	/* calculate the canvas, the screenshots, timestep and the gaps */
 	if (pro_col < 1) {	/* user wants separated screen shots */
 		image->grid_col  = pro_col;
 		image->grid_row  = pro_row;
@@ -2613,22 +2614,31 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 
 	/* font and size define */
 	//gdFTUseFontConfig(1);	/* enable fontconfig patterns */
+	/* 20130801 I've got the idea that the font height should be
+	 * standardalized by file name and maximum english glyph array */
+	if ((ftmp = strcpy_alloc(vidx->filename, 16)) == NULL) {
+		image_free(image);
+		uperror(errcode, EZ_ERR_LOWMEM);
+		return NULL;
+	}
+	strcat(ftmp, "bqBQ");
+	size = image_gdcanvas_strlen(image, image->sysopt->mi_size, ftmp);
+	/* we only need the font height plus the gap size */
+	image->mift_height = EZ_LO_WORD(size) + EZ_TEXT_MINFO_GAP;
+	free(ftmp);
 
 	/* enlarge the canvas height to include the media information */
 	if ((ezopt->flags & EZOP_INFO) == 0) {
 		image->canvas_minfo = 0;
 	} else if (image->canvas_height > 0) {
-		size = image_gdcanvas_strlen(image, 
-				image->sysopt->mi_size, "bqBQ");
-		/* we only need the font height plus the gap size */
-		size = EZ_LO_WORD(size) + EZ_TEXT_MINFO_GAP;
 		/* One rimedge plus media infos */
 		/* 20130719 Remove the unknown streams in display */
-		image->canvas_minfo = size * (vidx->ezstream + 2)
-						+ EZ_TEXT_INSET_GAP;
+		image->canvas_minfo = image->mift_height * 
+				(vidx->ezstream + 2) + EZ_TEXT_INSET_GAP;
 		image->canvas_height += image->canvas_minfo;
 		/* Plus the status line: font height + INSET_GAP */
-		image->canvas_height += size + EZ_TEXT_INSET_GAP;
+		image->canvas_height += image->mift_height + 
+				EZ_TEXT_INSET_GAP;
 	}
 	image->canvas_height = (image->canvas_height + 1) & ~1;
 
@@ -3005,7 +3015,7 @@ static int image_gdcanvas_update(EZIMG *image, int idx)
  * It returns the string's length in pixel. */
 static int image_gdcanvas_print(EZIMG *image, int row, int off, char *s)
 {
-	int	x, y, ts_width, ts_height;
+	int	x, y, ts_width;
 	
 	/* 20130719 copy the display to console and avoid NULL pointer */
 	slosz(s);
@@ -3016,18 +3026,17 @@ static int image_gdcanvas_print(EZIMG *image, int row, int off, char *s)
 
 	/* calculate the rectangle size of the string. The height of
 	 * the string is fixed to the maximum size */
-	x = image_gdcanvas_strlen(image, image->sysopt->mi_size, "bqBQ");
-	ts_height = EZ_LO_WORD(x);
 	x = image_gdcanvas_strlen(image, image->sysopt->mi_size, s);
 	ts_width  = EZ_HI_WORD(x);
 
 	/* we only concern the left, right and center alignment */
 	if (row < 0) {
 		x = image->sysopt->st_position;
-		y = image->canvas_height - ts_height - image->rim_height;
+		y = image->canvas_height - image->mift_height - 
+				image->rim_height;
 	} else {
 		x = image->sysopt->mi_position;
-		y = image->rim_height + (ts_height + EZ_TEXT_MINFO_GAP) * row;
+		y = image->rim_height + image->mift_height * row;
 	}
 	switch (x & EZ_POS_MASK) {
 	case EZ_POS_LEFTTOP:
