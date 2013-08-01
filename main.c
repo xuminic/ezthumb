@@ -206,6 +206,7 @@ static int para_get_time_point(char *s);
 static int para_get_position(char *s);
 static int para_make_postition(char *s);
 static int para_get_color(EZOPT *opt, char *s);
+static char *para_get_fontdir(char *s);
 static int para_get_fontsize(EZOPT *opt, char *s);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
@@ -587,18 +588,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			if (opt->mi_font) {
 				free(opt->mi_font);
 			}
-			opt->mi_font = smm_fontpath(optarg, NULL);
-			if (opt->mi_font == NULL) {
-				break;
-			}
-			opt->ins_font = opt->mi_font;
-			/* enable fontconfig patterns like "times:bold:italic"
-			 * instead of the full path of the font like
-			 * "/usr/local/share/ttf/Times.ttf" */
-			if (((p = strchr(opt->mi_font, ':')) != NULL) 
-					&& isalnum(p[1])) {
-				gdFTUseFontConfig(1);
-			}
+			opt->mi_font = opt->ins_font = 
+					para_get_fontdir(optarg);
 			break;
 		case CMD_F_ONTSZ:	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
@@ -1071,6 +1062,27 @@ static int para_get_color(EZOPT *opt, char *s)
 	}
 	free(tmp);
 	return EZ_ERR_NONE;
+}
+
+static char *para_get_fontdir(char *s)
+{
+	char	*p;
+
+	/* review whether the fontconfig pattern like "times:bold:italic"
+	 * was specified. The fontconfig pattern could be used directly.
+	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
+	if (csoup_cmp_file_extname(s, "ttf") && 
+			csoup_cmp_file_extname(s, "ttc")) {
+		gdFTUseFontConfig(1);
+		return strcpy_alloc(s, 0);
+	}
+	/* the fontconfig pattern like "times:bold:italic" shouldn't be messed
+	 * with network path like "smb://sdfaadf/abc */
+	if (((p = strchr(s, ':')) != NULL) && isalnum(p[1])) {
+		gdFTUseFontConfig(1);
+		return strcpy_alloc(s, 0);
+	}
+	return smm_fontpath(s, NULL);
 }
 
 static int para_get_fontsize(EZOPT *opt, char *s)

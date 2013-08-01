@@ -2704,7 +2704,12 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 
 	uperror(errcode, EZ_ERR_NONE);
 
-	eznotify(vidx->sysopt, EN_IMAGE_CREATED, 0, 0, image);
+	/* FIXME: this is really a bad idea that hacking the function by the 
+	 * availability of errcode. Otherwise the debug info will be printed
+	 * twice, one from the video_duration() */
+	if (errcode) {
+		eznotify(vidx->sysopt, EN_IMAGE_CREATED, 0, 0, image);
+	}
 	return image;	
 }
 

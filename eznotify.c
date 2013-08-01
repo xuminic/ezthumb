@@ -117,7 +117,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 		}
 		break;
 	case EN_IMAGE_CREATED:
-		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
 			dump_ezthumb(ezopt, block);
 		}
 		break;
@@ -530,6 +530,7 @@ int dump_metadata(void *dict)
 			slogz("%s: %s\n", mtab[i], entry->value);
 		}			
 	}
+
 	return 0;
 }
 
