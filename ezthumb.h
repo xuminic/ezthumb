@@ -565,19 +565,16 @@ int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
 int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
 int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
 
-EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
-int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
-int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
-int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
-char *meta_bitrate(int bitrate, char *buffer);
 char *meta_filesize(int64_t size, char *buffer);
-int meta_fontsize(int fsize, int refsize);
+char *meta_timestamp(EZTIME ms, int enms, char *buffer);
+int meta_image_format(char *input, char *fmt, int flen);
+
+
+
 char *meta_basename(char *fname, char *buffer);
 char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
-char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
-int meta_image_format(char *input, char *fmt, int flen);
 
 EZFLT *ezflt_create(char *s);
 int ezflt_match(EZFLT *flt, char *fname);
@@ -589,7 +586,6 @@ int dump_format_context(AVFormatContext *format);
 int dump_video_context(AVCodecContext *codec);
 int dump_audio_context(AVCodecContext *codec);
 int dump_other_context(AVCodecContext *codec);
-int dump_codec_attr(AVFormatContext *format, int i);
 int dump_codec_video(AVCodecContext *codec);
 int dump_codec_audio(AVCodecContext *codec);
 int dump_packet(AVPacket *p);
@@ -598,6 +594,7 @@ int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
 int dump_stream(AVStream *stream);
 int dump_duration(EZVID *vidx, int use_ms);
 int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
+int dump_metadata(void *dict);
 
 
 #endif	/* _EZTHUMB_H_ */

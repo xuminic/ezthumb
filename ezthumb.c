@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <sys/time.h>
 
 #include "ezthumb.h"
@@ -55,7 +56,6 @@ static int video_find_main_stream(EZVID *vidx);
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet);
 static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
-static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t);
 static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
@@ -72,7 +72,6 @@ static int video_snap_end(EZVID *vidx, EZIMG *image);
 static EZFRM *video_frame_next(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
-static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto);
@@ -83,7 +82,6 @@ static char *video_media_subtitle(AVStream *stream, char *buffer);
 static char *video_stream_language(AVStream *stream);
 static int64_t video_packet_timestamp(AVPacket *packet);
 static int video_timing(EZVID *vidx, int type);
-
 
 static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode);
 static int image_free(EZIMG *image);
@@ -113,15 +111,18 @@ static int image_cal_shots(EZTIME duration, EZTIME tmstep, int mode);
 static EZTIME image_cal_timestep(EZTIME duration, int shots, int mode);
 static int image_cal_gif_animix(EZOPT *ezopt);
 static gdFont *image_fontset(int fsize);
+static int image_fontsize(int fsize, int refsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
-static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx);
+static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
+static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
+static int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
+static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
-static int ezopt_profile_append(EZOPT *ezopt, char *ps);
-static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen);
-static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei);
-static int ezopt_profile_free(EZPROF *node);
-static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
+static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *);
+static int ezdump_video_info(EZVID *vidx);
+static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx);
+
 
 #ifdef	CFG_GUI_ON
 extern FILE *g_fopen(const char *filename, const char *mode);
@@ -1152,17 +1153,14 @@ static int video_find_main_stream(EZVID *vidx)
 			eznotify(vidx->sysopt, EN_TYPE_VIDEO, 
 					i, 0, stream->codec);
 			vidx->ezstream++;
-			dump_metadata(stream->metadata);	//FIXME: REMOVE THEM TO -I
 			break;
 		case AVMEDIA_TYPE_AUDIO:
 			eznotify(vidx->sysopt, EN_TYPE_AUDIO, 
 					i, 0, stream->codec);
 			vidx->ezstream++;
-			dump_metadata(stream->metadata);
 			break;
 		case AVMEDIA_TYPE_SUBTITLE:
 			vidx->ezstream++;
-			dump_metadata(stream->metadata);
 			break;
 		default:
 			eznotify(vidx->sysopt, EN_TYPE_UNKNOWN, 
@@ -1270,69 +1268,6 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 	return vidx->keycount;
 }
 
-static int64_t video_keyframe_seekat(EZVID *vidx, AVPacket *packet, int64_t dts_snap)
-{
-	int64_t		dts, dts_last, dts_diff;
-	int		keyflag;
-
-	dts_last = 0;
-	while ((dts = video_keyframe_next(vidx, packet)) >= 0) {
-		/* if the distance between the snap point and this key frame
-		 * is longer than the maximum gap of key frames, another key 
-		 * frame is expected. */
-		if ((dts_diff = dts_snap - dts) > vidx->keygap) {
-			if (vidx->ses_flags & EZOP_DECODE_OTF) {
-				video_decode_next(vidx, packet);
-			} else {
-				av_free_packet(packet);
-			}
-			dts_last = dts;
-			continue;
-		}
-
-		/* setup the key frame decoding flag */
-		if (GETACCUR(vidx->ses_flags)) {
-			keyflag = 0;
-		} else if (vidx->keydelta < vidx->keygap) {
-			keyflag = 0;
-		} else {
-			keyflag = 1;
-		}
-
-		/* if the distance is negative, ezthumb must have overread to 
-		 * the next key frame, which is caused by the incomplete 
-		 * maximum gap of key frames. In that case, ezthumb must 
-		 * increase the gap size and rewind to the previous key frame 
-		 * and run again */
-		if ((dts_diff < 0) && (keyflag == 0)) {
-			struct	ezntf	myntf;
-			myntf.varg1 = vidx;
-			myntf.iarg1 = dts_diff;
-			myntf.iarg2 = dts_last;
-			eznotify(vidx->sysopt, EN_BUMP_BACK, 0, 0, &myntf);
-			video_seeking(vidx, dts_last);
-			av_free_packet(packet);
-			continue;
-		}
-
-		/* if we only want to snapshot at key frames, we leap to the
-		 * next one and take sanpshot there */
-		if ((dts_diff > 0) && (keyflag == 1)) {
-			if (vidx->ses_flags & EZOP_DECODE_OTF) {
-				video_decode_next(vidx, packet);
-			} else {
-				av_free_packet(packet);
-			}
-			dts_last = dts;
-			continue;
-		}
-
-		/* so the proper key frame has been read */
-		return dts;
-	}
-	return -1;
-}
-
 static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts)
 {
 	int64_t	span;
@@ -1428,8 +1363,8 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	/* formatx->bit_rate sometimes missed as audio bitrate by ffmpeg.
 	 * vidx->bitrates is a reference bitrate
 	 * so we calculate an overall bit rate here */
-	i = (int) (vidx->filesize * 1000 / vidx->duration);
-	strcat(buffer, meta_bitrate(i, tmp));
+	sprintf(tmp, "%.3f kbps", (float)vidx->bitrates / 1000.0);
+	strcat(buffer, tmp);
 	image_gdcanvas_print(image, line++, 0, buffer);
 
 	/* Line 2+: the stream information */
@@ -1491,7 +1426,6 @@ static EZTIME video_duration(EZVID *vidx)
 		 * video is good, there's no need to do the time consuming
 		 * video_seek_challenge */
 		vidx->seekable = ENX_SEEK_FREE;
-		vidx->bitrates = (int)(vidx->filesize * 8000 /vidx->duration);
 		break;
 
 	case EZOP_DUR_QSCAN:
@@ -2086,43 +2020,6 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	return -1;
 }
 
-static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
-{
-	int64_t	dts = 0;
-	int	i = 0;
-
-	do {
-		if ((dts = video_decode_next(vidx, packet)) < 0) {
-			return -1;	/* failed to decode */
-		}
-
-		/* A workaroud for B-frame error when investigating the DS9 
-		 * The FFMPEG reports:
-		 *   [mpeg4 @ 0x91a6a60]Invalid and inefficient vfw-avi packed
-		 *   B frames detected
-		 * The FFMPEG can not decode this i-frame, perhaps in lack of
-		 * previous key frame information. The workaround is continuing
-		 * decoding until a proper key frame met */
-		/* FF_I_TYPE has been deprecated since 4 Jan 2012. */
-#ifndef	FF_I_TYPE
-#define FF_I_TYPE	AV_PICTURE_TYPE_I
-#endif
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
-			break;	/* successfully decoded a key frame */
-		}
-
-		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, 
-				vidx->fgroup[vidx->fnow].frame);
-
-		/* In case of decoding indefinitly, some files do not have
-		 * a proper i-frame at all, it is limited to 3-try at most */
-		if (++i == 3) {
-			break;
-		}
-	} while (video_load_packet(vidx, packet) >= 0);
-	return dts;
-}
-
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
@@ -2272,7 +2169,9 @@ static char *video_media_video(AVStream *stream, char *buffer)
 	strcat(buffer, tmp);
 
 	if (stream->codec->bit_rate) {
-		strcat(buffer, meta_bitrate(stream->codec->bit_rate, tmp));
+		sprintf(tmp, "%.3f kbps", 
+				(float)stream->codec->bit_rate / 1000.0);
+		strcat(buffer, tmp);
 	}
 	return buffer;
 }
@@ -2297,7 +2196,9 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 	strcat(buffer, tmp);
 
 	if (stream->codec->bit_rate) {
-		strcat(buffer, meta_bitrate(stream->codec->bit_rate, tmp));
+		sprintf(tmp, "%.3f kbps", 
+				(float)stream->codec->bit_rate / 1000.0);
+		strcat(buffer, tmp);
 	}
 	return buffer;
 }
@@ -2920,7 +2821,7 @@ static int image_gdframe_strlen(EZIMG *image, int fsize, char *s)
 	gdFont	*font;
 	int	brect[8];
 
-	fsize = meta_fontsize(fsize, image->dst_width);
+	fsize = image_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
 		font = image_fontset(fsize);
 	} else if (gdImageStringFT(NULL, brect,	0, image->sysopt->ins_font, 
@@ -2937,7 +2838,7 @@ static int image_gdframe_puts(EZIMG *image, int fsize, int x, int y, int c, char
 	int	brect[8];
 
 	//slogz("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", x, y, fsize, s, c);
-	fsize = meta_fontsize(fsize, image->dst_width);
+	fsize = image_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
 		gdImageString(image->gdframe, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);
@@ -3080,7 +2981,7 @@ static int image_gdcanvas_strlen(EZIMG *image, int fsize, char *s)
 
 	ref = image->grid_col ? image->canvas_width / image->grid_col :
 		image->canvas_width;
-	fsize = meta_fontsize(fsize, ref);
+	fsize = image_fontsize(fsize, ref);
 	if (image->sysopt->mi_font == NULL) {
 		font = image_fontset(fsize);
 	} else if (gdImageStringFT(NULL, brect,	0, image->sysopt->mi_font, 
@@ -3098,7 +2999,7 @@ static int image_gdcanvas_puts(EZIMG *image, int fsize, int x, int y, int c, cha
 
 	ref = image->grid_col ? image->canvas_width / image->grid_col :
 		image->canvas_width;
-	fsize = meta_fontsize(fsize, ref);
+	fsize = image_fontsize(fsize, ref);
 	if (image->sysopt->mi_font == NULL) {
 		gdImageString(image->gdcanvas, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);
@@ -3368,642 +3269,7 @@ static gdFont *image_fontset(int fsize)
 	return gdFontGetGiant();
 }
 
-static int image_copy(gdImage *dst, gdImage *src, int x, int y, 
-		int wid, int hei)
-{
-	wid = (wid < 1) ? gdImageSX(src) : wid;
-	hei = (hei < 1) ? gdImageSY(src) : hei;
-	if ((gdImageSX(src) == wid) && (gdImageSY(src) == hei)) {
-		gdImageCopy(dst, src, x, y, 0, 0, wid, hei);
-	} else {
-		gdImageCopyResampled(dst, src, x, y, 0, 0, wid, hei, 
-				gdImageSX(src), gdImageSY(src));
-	}
-	return 0;
-}
-
-static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
-{
-	char	tmp[128], *inbuf = NULL;
-	int	i, rc = 0;
-
-	/* special case for testing purpose
-	 * If the output path has the same suffix to the specified suffix,
-	 * it will NOT be treated as a path but the output file.
-	 * For example, if the 'img_format' was defined as "jpg", and the
-	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
-	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
-	 * still a path */
-	if (!csoup_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
-		if (buf) {
-			strcpy(buf, ezopt->pathout);
-		}
-		return EZ_THUMB_VACANT;	/* debug mode always vacant */
-	}
-
-	if (buf == NULL) {
-		buf = inbuf = malloc(strlen(fname) + 128 + 32);
-		if (buf == NULL) {
-			return rc;
-		}
-	}
-
-	if (idx < 0) {
-		sprintf(tmp, "%s.", ezopt->suffix);
-	} else {
-		sprintf(tmp, "%03d.", idx);
-	}
-	strcat(tmp, ezopt->img_format);
-	meta_name_suffix(ezopt->pathout, fname, buf, tmp);
-
-	for (i = 1; i < 256; i++) {
-		if (smm_fstat(buf) != SMM_ERR_NONE) {
-			if (i == 1) {
-				rc = EZ_THUMB_VACANT;	/* file not existed */
-			} else {
-				rc = EZ_THUMB_COPIABLE;	/* copying file  */
-			}
-			break;	/* file not existed */
-		} else if (ezopt->flags & EZOP_THUMB_OVERRIDE) {
-			rc = EZ_THUMB_OVERRIDE;	/* override it */
-			break;
-		} else if ((ezopt->flags & EZOP_THUMB_COPY) == 0) {
-			rc = EZ_THUMB_SKIP;	/* skip the existed files */
-			break;
-		}
-		
-		if (idx < 0) {
-			sprintf(tmp, "%s.%d.", ezopt->suffix, i);
-		} else {
-			sprintf(tmp, "%03d.%d.", idx, i);
-		}
-		strcat(tmp, ezopt->img_format);
-		meta_name_suffix(ezopt->pathout, fname, buf, tmp);
-	}
-	if (i == 256) {
-		rc = EZ_THUMB_OVERCOPY;	/* override the last one */
-	}
-	if (inbuf) {
-		free(inbuf);
-	}
-	//slogz("ezopt_thumb_name: %d\n", rc);
-	return rc;
-}
-
-
-/****************************************************************************
- * Profile Functions
- ****************************************************************************/
-
-int ezopt_profile_setup(EZOPT *opt, char *s)
-{
-	char	*tmp, *plist[64];	/* hope that's big enough */
-	int	i, len;
-
-	/* duplicate the input profile string */
-	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
-		return -1;
-	}
-	
-	/* Reset the profile control block pool */
-	memset(opt->pro_pool, 0, sizeof(EZPROF) * EZ_PROF_MAX_ENTRY);
-	opt->pro_grid = opt->pro_size = NULL;
-
-	len = ziptoken(tmp, plist, sizeof(plist)/sizeof(char*), ":");
-	for (i = 0; i < len; i++) {
-		ezopt_profile_append(opt, plist[i]);
-	}
-	
-	free(tmp);
-	return 0;
-}
-
-/* for debug purpose only */
-int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size)
-{
-	EZPROF	*node;
-	char	tmp[64];
-
-	slogz("%s", pmt_grid);		/* "Grid: " */
-	for (node = opt->pro_grid; node != NULL; node = node->next) {
-		slogz("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
-	}
-	slogz("\n");
-
-	slogz("%s", pmt_size);		/* "Size: " */
-	for (node = opt->pro_size; node != NULL; node = node->next) {
-		slogz("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
-	}
-	slogz("\n");
-	return 0;
-}
-
-char *ezopt_profile_export_alloc(EZOPT *ezopt)
-{
-	EZPROF	*p;
-	char	*buf, tmp[64];
-	int	n = 0;
-
-	for (p = ezopt->pro_grid; p; p = p->next, n++);
-	for (p = ezopt->pro_size; p; p = p->next, n++);
-	if ((buf = calloc(n, 64)) == NULL) {
-		return NULL;
-	}
-	buf[0] = 0;
-
-	for (p = ezopt->pro_grid; p; p = p->next) {
-		ezopt_profile_sprint(p, tmp, sizeof(tmp));
-		if (buf[0] == 0) {
-			strcpy(buf, tmp);
-		} else {
-			strcat(buf, ":");
-			strcat(buf, tmp);
-		}
-	}
-	for (p = ezopt->pro_size; p; p = p->next) {
-		ezopt_profile_sprint(p, tmp, sizeof(tmp));
-		if (buf[0] == 0) {
-			strcpy(buf, tmp);
-		} else {
-			strcat(buf, ":");
-			strcat(buf, tmp);
-		}
-	}
-	//slogz("ezopt_profile_export: %s\n", buf);
-	return buf;
-}
-
-int ezopt_profile_disable(EZOPT *ezopt, int prof)
-{
-	if (prof == EZ_PROF_LENGTH) {
-		ezopt->pro_grid = NULL;
-	} else if (prof == EZ_PROF_WIDTH) {
-		ezopt->pro_size = NULL;
-	} else if (prof == EZ_PROF_ALL) {
-		ezopt->pro_grid = NULL;
-		ezopt->pro_size = NULL;
-	}
-	return 0;
-}
-
-int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row)
-{
-	EZPROF	*node;
-	int	snap;
-
-	if (ezopt->pro_grid == NULL) {
-		return -1;	/* profile disabled */
-	}
-
-	for (node = ezopt->pro_grid; node->next; node = node->next) {
-		if (vidsec <= node->weight) {
-			break;
-		}
-	}
-
-	switch (node->flag) {
-	case 's':
-	case 'S':
-	case 'm':
-	case 'M':
-		if (col) {
-			*col = node->x;
-		}
-		if (row) {
-			*row = node->y;
-		}
-		//slogz("ezopt_profile_sampling: %d x %d\n", node->x, node->y);
-		return 0;	/* returned the matrix */
-
-	case 'l':
-	case 'L':
-		snap = (int)(log(vidsec / 60 + node->x) / log(node->lbase)) 
-			- node->y;
-		//slogz("ezopt_profile_sampling: %d+\n", snap);
-		return snap;	/* need more info to decide the matrix */
-	}
-	return -2;	/* no effective profile found */
-}
-
-int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row)
-{
-	EZPROF	*node;
-
-	if (ezopt->pro_size == NULL) {
-		return bs;	/* profile disabled so ignore it */
-	}
-
-	for (node = ezopt->pro_size; node->next; node = node->next) {
-		if (vw <= node->weight) {
-			break;
-		}
-	}
-
-	switch (node->flag) {
-	case 'f':
-	case 'F':
-	case 'r':
-	case 'R':
-		if (col) {
-			*col = node->x;
-		}
-		bs = (bs + node->x - 1) / node->x * node->x;
-		if (row) {
-			*row = bs / node->x;
-		}
-		break;
-	}
-	//slogz("ezopt_profile_sampled: %d\n", bs);
-	return bs;
-}
-
-
-int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
-{
-	EZPROF	*node;
-	float	ratio;
-	int	neari;
-
-	if (ezopt->pro_size == NULL) {
-		return 0;	/* profile disabled so ignore it */
-	}
-
-	for (node = ezopt->pro_size; node->next; node = node->next) {
-		if (vw <= node->weight) {
-			break;
-		}
-	}
-
-	switch (node->flag) {
-	case 'w':
-	case 'W':
-		if (ra) {
-			*ra = node->x;
-		}
-		break;
-	
-	case 't':
-	case 'T':
-		if (wid) {
-			*wid = node->x;
-		}
-		if (hei) {
-			*hei = node->y;
-		}
-		break;
-
-	case 'f':
-	case 'F':
-		return node->y;	/* return the canvas size if required */
-
-	case 'r':
-	case 'R':
-		/* find the zoom ratio */
-		if (vw > node->y) {
-			ratio = (float) vw / node->y;	/* zoom out */
-		} else {
-			ratio = (float) node->y / vw;	/* zoom in */
-		}
-		/* quantized the zoom ratio to base-2 exponential 1,2,4,8.. */
-		neari = 1 << (int)(log(ratio) / log(2) + 0.5);
-		//slogz("ez.._zooming: ratio=%f quant=%d\n", ratio, neari);
-		/* checking the error between the reference width and the 
-		 * zoomed width. The error should be less than 20% */
-		ratio = abs(neari * node->y - vw) / (float) node->y;
-		if (ratio > 0.2) {
-			neari = node->y;	/* error over 20% */
-		} else if (vw > node->y) {
-			neari = vw / neari;
-		} else {
-			neari = vw * neari;
-		}
-		if (wid) {
-			*wid = neari / 2 * 2;	/* final quantizing width */
-		}
-		break;
-	}
-	return 0;
-}
-
-
-/* available profile field example:
- * 12M4x6, 720s4x6, 720S4
- * 160w200%, 320w100%, 320w160x120, 320w160 */
-static int ezopt_profile_append(EZOPT *ezopt, char *ps)
-{
-	EZPROF	*node;
-	char	pbuf[256], *argv[8];
-	int	val;
-
-	strlcopy(pbuf, ps, sizeof(pbuf));
-
-	val = (int) strtol(pbuf, &ps, 10);
-	if (*ps == 0) {	/* pointed to the EOL; no flag error */
-		return -1;
-	}
-
-	fixtoken(ps + 1, argv, sizeof(argv)/sizeof(char*), "xX");
-	node = ezopt_profile_new(ezopt, *ps, val);
-
-	switch (node->flag) {
-	case 'm':
-	case 'M':
-		node->weight *= 60;	/* turn to seconds */
-		node->x = (int) strtol(argv[0], NULL, 10);
-		node->y = argv[1] ? (int) strtol(argv[1], NULL, 10) : 0;
-		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
-		break;
-
-	case 's':
-	case 'S':
-		node->x = (int) strtol(argv[0], NULL, 10);
-		node->y = argv[1] ? (int) strtol(argv[1], NULL, 10) : 0;
-		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
-		break;
-
-	case 'l':
-	case 'L':
-		if ((argv[1] == NULL) || (argv[2] == NULL)) {
-			ezopt_profile_free(node);
-			return -2;
-		}
-		node->weight *= 60;	/* turn to seconds */
-		node->x = (int) strtol(argv[0], NULL, 10);
-		node->y = (int) strtol(argv[1], NULL, 10);
-		node->lbase = (float) strtof(argv[2], NULL);
-		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
-		break;
-
-	case 'w':
-	case 'W':
-		node->x = (int) strtol(argv[0], NULL, 10);
-		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
-		break;
-
-	case 't':
-	case 'T':
-		node->x = (int) strtol(argv[0], NULL, 10);
-		node->y = argv[1] ? (int) strtol(argv[1], NULL, 10) : 0;
-		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
-		break;
-	
-	case 'f':
-	case 'F':
-	case 'r':
-	case 'R':
-		node->x = (int) strtol(argv[0], NULL, 10);
-		if (argv[1] == NULL) {
-			ezopt_profile_free(node);
-			return -2;
-		}
-		node->y = (int) strtol(argv[1], NULL, 10);
-		if (node->y <= 0) {
-			ezopt_profile_free(node);
-			return -2;
-		}
-		ezopt->pro_size = ezopt_profile_insert(ezopt->pro_size, node);
-		break;
-
-	default:
-		ezopt_profile_free(node);
-		return -2;
-	}
-	return 0;
-}
-
-static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen)
-{
-	char	tmp[64];
-
-	if (blen < 32) {	/* FIXME: very rough estimation */
-		return NULL;
-	}
-
-	switch (node->flag) {
-	case 'm':
-	case 'M':
-		sprintf(buf, "%dM%d", node->weight / 60, node->x);
-		if (node->y > 0) {
-			sprintf(tmp, "x%d", node->y);
-			strcat(buf, tmp);
-		}
-		break;
-
-	case 's':
-	case 'S':
-		sprintf(buf, "%dS%d", node->weight, node->x);
-		if (node->y > 0) {
-			sprintf(tmp, "x%d", node->y);
-			strcat(buf, tmp);
-		}
-		break;
-
-	case 'l':
-	case 'L':
-		sprintf(buf, "%dL%dx%dx%f", node->weight / 60, 
-				node->x, node->y, node->lbase);
-		break;
-
-	case 'w':
-	case 'W':
-		sprintf(buf, "%dW%d%%", node->weight, node->x);
-		break;
-
-	case 't':
-	case 'T':
-		sprintf(buf, "%dT%d", node->weight, node->x);
-		if (node->y > 0) {
-			sprintf(tmp, "x%d", node->y);
-			strcat(buf, tmp);
-		}
-		break;
-
-	case 'f':
-	case 'F':
-		sprintf(buf, "%dF%dx%d", node->weight, node->x, node->y);
-		break;
-
-	case 'r':
-	case 'R':
-		sprintf(buf, "%dR%dx%d", node->weight, node->x, node->y);
-		break;
-
-	default:
-		return NULL;
-	}
-	return buf;
-}
-
-static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei)
-{
-	int	i;
-
-	for (i = 0; i < EZ_PROF_MAX_ENTRY; i++) {
-		if (opt->pro_pool[i].flag == 0) {
-			break;
-		}
-	}
-	if (i == EZ_PROF_MAX_ENTRY) {
-		return NULL;
-	}
-
-	memset(&opt->pro_pool[i], 0, sizeof(EZPROF));
-	opt->pro_pool[i].next = NULL;
-	opt->pro_pool[i].flag = flag;
-	opt->pro_pool[i].weight = wei;
-
-	return &opt->pro_pool[i];
-}
-
-/* note that it's NOT a proper free since the 'next' point was not processed
- * at all. It only serves as a quick release */
-static int ezopt_profile_free(EZPROF *node)
-{
-	memset(node, 0, sizeof(EZPROF));
-	return 0;
-}
-
-static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
-{
-	EZPROF	*prev, *now;
-
-	if (leaf == NULL) {
-		return root;	/* do nothing */
-	}
-
-	//slogz("ezopt_profile_insert: %d\n", leaf->weight);
-	if (root == NULL) {
-		return leaf;
-	}
-	if (root->weight > leaf->weight) {
-		leaf->next = root;
-		return leaf;
-	}
-	prev = root;
-	for (now = root->next; now != NULL; prev = now, now = now->next) {
-		if (now->weight > leaf->weight) {
-			break;			
-		}
-	}
-	if (now == NULL) {
-		prev->next = leaf;
-	} else {
-		leaf->next = prev->next;
-		prev->next = leaf;
-	}
-	return root;
-}
-
-/****************************************************************************
- * Utility Functions
- ****************************************************************************/
-
-/* this function is used to convert the PTS from the video stream
- * based time to the millisecond based time. The formula is:
- *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
- * then
- *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
-EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return (EZTIME) av_rescale(dts * 1000, 
-			s->time_base.num, s->time_base.den);
-}
-
-/* this function is used to convert the timestamp from the millisecond 
- * based time to the video stream based PTS time. The formula is:
- *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
- * then
- *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
-int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale((int64_t) ms, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) 1000);
-}
-
-/* this function is used to convert the PTS from the video stream
- * based time to the default system time base (microseconds). The formula is:
- *   SYS = (PTS * s->time_base.num / s->time_base.den) * AV_TIME_BASE
- * then
- *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
-int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(dts * (int64_t) AV_TIME_BASE,
-			s->time_base.num, s->time_base.den);
-}
-
-/* this function is used to convert the timestamp from the default 
- * system time base (microsecond) to the millisecond based time. The formula:
- *   PTS = (SYS / AV_TIME_BASE) * s->time_base.den / s->time_base.num 
- * then
- *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
-int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(sysdts, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
-}
-
-char *meta_bitrate(int bitrate, char *buffer)
-{
-	static	char	tmp[32];
-
-	if (buffer == NULL) {
-		buffer = tmp;
-	}
-	sprintf(buffer, "%.3f kbps", (float)bitrate / 1000.0);
-	return buffer;
-}
-
-char *meta_filesize(int64_t size, char *buffer)
-{
-	static	char	tmp[32];
-
-	if (buffer == NULL) {
-		buffer = tmp;
-	}
-	if (size < (1ULL << 20)) {
-		sprintf(buffer, "%lu KB", (unsigned long)(size >> 10));
-	} else if (size < (1ULL << 30)) {
-		sprintf(buffer, "%lu.%lu MB", (unsigned long)(size >> 20), 
-				(unsigned long)(((size % (1 << 20)) >> 10) / 100));
-	} else {
-		sprintf(buffer, "%lu.%03lu GB", (unsigned long)(size >> 30), 
-				(unsigned long)(((size % (1 << 30)) >> 20) / 100));
-	}
-	return buffer;
-}
-
-char *meta_timestamp(EZTIME ms, int enms, char *buffer)
-{
-	static	char	tmp[32];
-	int	hour, min, sec, msec;
-
-	if (buffer == NULL) {
-		buffer = tmp;
-	}
-
-	hour = ms / 3600000;
-	ms   = ms % 3600000;
-	min  = ms / 60000;
-	ms   = ms % 60000;
-	sec  = ms / 1000;
-	msec = ms % 1000;
-	if (enms) {
-		sprintf(buffer, "%d:%02d:%02d,%03d", hour, min, sec, msec);
-	} else {
-		sprintf(buffer, "%d:%02d:%02d", hour, min, sec);
-	}
-	return buffer;
-}
-
-int meta_fontsize(int fsize, int refsize)
+static int image_fontsize(int fsize, int refsize)
 {
 	if (fsize == EZ_FONT_AUTO) {
 		if (refsize < 160) {
@@ -4021,149 +3287,708 @@ int meta_fontsize(int fsize, int refsize)
 	return fsize;
 }
 
+static int image_copy(gdImage *dst, gdImage *src, int x, int y, 
+		int wid, int hei)
+{
+	wid = (wid < 1) ? gdImageSX(src) : wid;
+	hei = (hei < 1) ? gdImageSY(src) : hei;
+	if ((gdImageSX(src) == wid) && (gdImageSY(src) == hei)) {
+		gdImageCopy(dst, src, x, y, 0, 0, wid, hei);
+	} else {
+		gdImageCopyResampled(dst, src, x, y, 0, 0, wid, hei, 
+				gdImageSX(src), gdImageSY(src));
+	}
+	return 0;
+}
 
-// FIXME: UTF-8 and widechar?
-// Haven't decide how to improve these two functions
-#ifdef  CFG_WIN32_API
-#define DIRSEP  '\\'
+/* this function is used to convert the PTS from the video stream
+ * based time to the millisecond based time. The formula is:
+ *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
+ * then
+ *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
+static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return (EZTIME) av_rescale(dts * 1000, 
+			s->time_base.num, s->time_base.den);
+}
+
+/* this function is used to convert the timestamp from the millisecond 
+ * based time to the video stream based PTS time. The formula is:
+ *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
+ * then
+ *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
+static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale((int64_t) ms, s->time_base.den, 
+			(int64_t) s->time_base.num * (int64_t) 1000);
+}
+
+/* this function is used to convert the PTS from the video stream
+ * based time to the default system time base (microseconds). The formula is:
+ *   SYS = (PTS * s->time_base.num / s->time_base.den) * AV_TIME_BASE
+ * then
+ *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
+static int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale(dts * (int64_t) AV_TIME_BASE,
+			s->time_base.num, s->time_base.den);
+}
+
+/* this function is used to convert the timestamp from the default 
+ * system time base (microsecond) to the millisecond based time. The formula:
+ *   PTS = (SYS / AV_TIME_BASE) * s->time_base.den / s->time_base.num 
+ * then
+ *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
+static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale(sysdts, s->time_base.den, 
+			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
+}
+
+
+int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block)
+{
+	int	rc;
+
+	if ((ezopt == NULL) || (ezopt->notify == NULL)) {
+		return ezdefault(ezopt, event, param, opt, block);
+	}
+
+	rc = ezopt->notify(ezopt, event, param, opt, block);
+	if (rc == EN_EVENT_PASSTHROUGH) {
+		return ezdefault(ezopt, event, param, opt, block);
+	}
+	return rc;
+}
+
+static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
+{
+	struct	ezntf	*myntf;
+	EZVID	*vidx;
+	EZIMG	*image;
+	char	buf[256];
+	char	*seekm[] = { "SU", "SN", "SF", "SB" };	/* seekable codes */
+	char	*dmod[] = { "AU", "QS", "FS", "HD" };	/* duration mode */
+	int	i, n;
+
+	switch (event) {
+	case EZ_ERR_LOWMEM:
+		slog(EZDBG_WARNING, "%s: low memory [%ld]\n", 
+				(char*) block, param);
+		break;
+	case EZ_ERR_FORMAT:
+		slog(EZDBG_WARNING, "%s: unknown format.\n", (char*) block);
+		break;
+	case EZ_ERR_STREAM:
+		slog(EZDBG_WARNING, "%s: no stream info found.\n", 
+				(char*) block);
+		break;
+	case EZ_ERR_VIDEOSTREAM:
+		slog(EZDBG_WARNING, "%s: no video stream found.\n", 
+				(char*) block);
+		break;
+	case EZ_ERR_CODEC_FAIL:
+		slog(EZDBG_WARNING, "Could not open codec! %ld\n", param);
+		break;
+	case EZ_ERR_FILE:
+		slog(EZDBG_WARNING, "%s: file not found.\n", (char*) block);
+		break;
+
+	case EN_FILE_OPEN:
+		vidx = block;
+		if (ezopt->flags & EZOP_CLI_INSIDE) {
+			/* This is the ffmpeg function so it must run before
+			 * disabling the av_log */
+			i = av_log_get_level();
+			av_log_set_level(AV_LOG_INFO);
+#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+			av_dump_format(vidx->formatx, 0, vidx->filename, 0);
 #else
-#define DIRSEP  '/'
+			dump_format(vidx->formatx, 0, vidx->filename, 0);
+#endif
+			av_log_set_level(i);
+		}
+		slog(EZDBG_INFO, "%s: open successed (%ld ms)\n",
+				vidx->filename, opt);
+		break;
+	case EN_MEDIA_OPEN:
+		vidx = block;
+		if (EZOP_DEBUG(vidx->ses_flags) >= EZDBG_INFO) {
+			dump_format_context(vidx->formatx);
+			dump_metadata(vidx->formatx->metadata);
+		}
+		if (vidx->ses_flags & EZOP_CLI_INSIDE) {	// FIXME
+			dump_duration(vidx, (int) opt);
+		}
+		if (vidx->ses_flags & EZOP_CLI_INFO) {
+			ezdump_video_info(vidx);
+		}
+		break;
+	case EN_IMAGE_CREATED:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
+			dump_ezthumb(ezopt, block);
+		}
+		break;
+	/**/
+	case EN_PROC_BEGIN:
+		switch (param) {
+		case ENX_SS_SCAN:
+			slog(EZDBG_SHOW, "Building (Scan)      ");
+			break;
+		case ENX_SS_SAFE:
+			slog(EZDBG_SHOW, "Building (Safe)      ");
+			break;
+		case ENX_SS_TWOPASS:
+			slog(EZDBG_SHOW, "Building (2Pass)     ");
+			break;
+		case ENX_SS_HEURIS:
+			slog(EZDBG_SHOW, "Building (Heur)      ");
+			break;
+		case ENX_SS_IFRAMES:
+			slog(EZDBG_SHOW, "Building (iFrame)      ");
+			break;
+		case ENX_SS_SKIM:
+		default:
+			slog(EZDBG_SHOW, "Building (Fast)      ");
+			break;
+		}
+		break;
+	case EN_PROC_CURRENT:
+		//slog(EZDBG_SHOW, ".");
+		break;
+	case EN_PROC_END:
+		slog(EZDBG_SHOW, " %ldx%ld done\n", param, opt);
+		break;
+	case EN_PROC_SAVED:
+		myntf = block;
+		vidx  = myntf->varg1;
+		image = myntf->varg2;
+		slog(EZDBG_SHOW, "OUTPUT: %s\n", image->filename);
+
+		n = sprintf(buf, "MAGIC: %s %s ", 
+				seekm[vidx->seekable%4],
+				dmod[GETDURMOD(vidx->ses_flags)>>12]);
+		for (i = 0; i < vidx->pidx; i++) {
+			n += sprintf(buf + n, "%c%d ", 
+					vidx->pts[i*2], vidx->pts[i*2+1]);
+		}
+		strcat(buf, "\n");
+		slos(EZDBG_SHOW, buf);
+		break;
+	case EN_STREAM_BROKEN:
+		break;
+	case EN_PACKET_RECV:
+		//dump_packet(block);
+		break;
+	case EN_PACKET_KEY:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_PACKET) {
+			dump_packet(block);
+		}
+		break;
+	case EN_FRAME_COMPLETE:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_VERBS) {
+			dump_frame(block, opt);
+		}
+		break;
+	case EN_FRAME_PARTIAL:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_VERBS) {
+			dump_frame(block, opt);
+		}
+		break;
+	case EN_FRAME_EFFECT:
+		myntf = block;
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
+			dump_frame_packet(myntf->varg1, param, myntf->varg2);
+		}
+		break;
+	case EN_SCAN_PACKET:
+		//slogz("Key Frame %d: %lld\n", param, *((long long *)block));
+		break;
+	case EN_SCAN_IFRAME:
+		vidx = block;
+		if (EZOP_DEBUG(vidx->ses_flags) >= EZDBG_BRIEF) {
+			slogz("I-Frame Scanned (%ld ms):\n", opt);
+			for (i = 0; i < param; i++) {
+				slogz("%9lld", ((long long *)block)[i]);
+				if ((i % 8) == 7) {
+					slosz("\n");
+				}
+			}
+			if ((i % 8) != 0) {
+				slosz("\n");
+			}
+		}
+		break;
+	case EN_STREAM_FORMAT:
+		vidx = block;
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			dump_stream(vidx->formatx->streams[param]);
+		}
+		break;
+	case EN_TYPE_VIDEO:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
+			dump_video_context(block);
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
+			dump_codec_video(block);
+		}
+		break;
+	case EN_TYPE_AUDIO:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
+			dump_audio_context(block);
+		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
+			dump_codec_audio(block);
+		}
+		break;
+	case EN_TYPE_UNKNOWN:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
+			dump_other_context(block);
+		}
+		break;
+	case EN_DURATION:
+		vidx = block;
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_WARNING) {
+			dump_duration(vidx, (int)opt);
+		}
+		break;
+	case EN_BUMP_BACK:
+		myntf = block;
+		vidx = myntf->varg1;
+		slogz("Bump back to %lld: %lld (%lld < %lld)\n",
+				(long long) myntf->iarg2, 
+				(long long) myntf->iarg1,
+				(long long) vidx->keydelta, 
+				(long long) vidx->keygap);
+		break;
+	case EN_MEDIA_STATIS:
+		myntf = block;
+		if (ezopt->flags & EZOP_CLI_INSIDE) {
+			ezdump_media_statistics(myntf->varg1, 
+					(int) param, myntf->varg2);
+		}
+		break;
+	case EN_IFRAME_CREDIT:
+		switch (param) {
+		case ENX_IFRAME_RESET:
+			slog(EZDBG_IFRAME,
+				"Key Frame accrediting system reset.\n");
+			break;
+		case ENX_IFRAME_SET:
+			/*slogz("Key Frame start from: %lld\n", 
+					(long long) vidx->keylast);*/
+			break;
+		case ENX_IFRAME_UPDATE:
+			/*slogz("Key Frame Gap Update: %lld\n", 
+					(long long) vidx->keygap);*/
+			break;
+		}
+		break;
+	case EN_FRAME_EXCEPTION:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			slogz("Discard Dodge I");
+			dump_frame(block, 1);
+		}
+		break;
+	case EN_SKIP_EXIST:
+		slog(EZDBG_WARNING, "Thumbnail Existed: %s\n", (char*) block);
+		break;
+	}
+	return event;
+}
+
+static int ezdump_video_info(EZVID *vidx)
+{
+	AVCodecContext	*codecx;
+	char	tmp[16];
+	int	i, sec;
+
+	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+		codecx = vidx->formatx->streams[i]->codec;
+		if (codecx->codec_type == AVMEDIA_TYPE_VIDEO) {
+			/* Fixed: the video information should use the actual
+			 * duration of the clip */
+			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
+			sec = vidx->duration / 1000;
+			sprintf(tmp, "%dx%d", codecx->width, codecx->height);
+			slogz("%2d:%02d:%02d %10s [%d]: %s\n",
+					sec / 3600,
+					(sec % 3600) / 60, 
+					(sec % 3600) % 60,
+					tmp, i, vidx->filename);
+		}
+	}
+	return 0;
+}
+
+static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
+{
+	int64_t	dts;
+	int	i, sec;
+
+	slogz("Media: %s\n", vidx->filename);
+	for (i = 0; i < n; i++) {
+		slogz("[%d] ", i);
+		if (i >= vidx->formatx->nb_streams) {
+			slogz("ERROR  %8lu\n", mestat[i].received);
+			continue;
+		}
+		
+		switch(vidx->formatx->streams[i]->codec->codec_type) {
+		case AVMEDIA_TYPE_VIDEO:
+			slogz("VIDEO  ");
+			break;
+		case AVMEDIA_TYPE_AUDIO:
+			slogz("AUDIO  ");
+			break;
+		case AVMEDIA_TYPE_SUBTITLE:
+			slogz("SUBTITL");
+			break;
+		default:
+			slogz("UNKNOWN");
+			break;
+		}
+		dts = mestat[i].dts_base + mestat[i].dts_last;
+		dts -= vidx->dts_offset;
+		sec = (int) (video_dts_to_ms(vidx, dts) / 1000);
+		slogz(":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
+				mestat[i].received, mestat[i].key, 
+				mestat[i].rewound, sec);
+	}
+	slogz("Maximum Gap of key frames: %lld\n", 
+			(long long) vidx->keygap);
+	slogz("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0);
+	return 0;
+}
+
+int dump_format_context(AVFormatContext *format)
+{
+#if	LIBAVFORMAT_VERSION_INT < (53<<16)
+	slogz("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+			format->iformat->long_name,
+			format->iformat->name,
+			(long long) format->file_size,
+			format->bit_rate);
+#else
+	slogz("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+			format->iformat->long_name,
+			format->iformat->name,
+			(long long) avio_size(format->pb),
+			format->bit_rate);
+#endif
+	slogz("  Streams: %d, Start time: %lld, Duration: %lld\n",
+			format->nb_streams,
+			(long long) format->start_time,
+			(long long) format->duration);
+	return 0;
+}
+
+int dump_video_context(AVCodecContext *codec)
+{
+	slogz("    Stream Video: %s %s, Time Base: %d/%d, Sample_AR: %d/%d\n",
+			id_lookup(id_codec, codec->codec_id),
+			id_lookup(id_pix_fmt, codec->pix_fmt),
+			codec->time_base.num, codec->time_base.den,
+			codec->sample_aspect_ratio.num,
+			codec->sample_aspect_ratio.den);
+	return 0;
+}
+
+int dump_audio_context(AVCodecContext *codec)
+{
+	slogz("    Stream Audio: %s, Time Base: %d/%d, CH=%d SR=%d %s BR=%d\n",
+			id_lookup(id_codec, codec->codec_id),
+			codec->time_base.num, codec->time_base.den,
+			codec->channels, codec->sample_rate,
+			id_lookup_tail(id_sample_format, codec->sample_fmt),
+			codec->bit_rate);
+	return 0;
+}
+
+int dump_other_context(AVCodecContext *codec)
+{
+	slogz("    Stream %s:\n",
+			id_lookup_tail(id_codec_type, codec->codec_type));
+	return 0;
+}
+
+int dump_codec_attr(AVFormatContext *format, int i)
+{
+	AVCodec	*codec;
+
+	codec = avcodec_find_decoder(format->streams[i]->codec->codec_id);
+	slogz("Stream #%d: %s Codec ID: %s '%s' %s\n", i, 
+			id_lookup(id_codec_type, 
+				format->streams[i]->codec->codec_type),
+			id_lookup(id_codec, 
+				format->streams[i]->codec->codec_id),
+			codec ? codec->name : "Unknown",
+			codec ? codec->long_name : "Unknown");
+	return 0;
+}
+
+int dump_codec_video(AVCodecContext *codec)
+{
+	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
+			id_lookup(id_codec_type, codec->codec_type), 
+			id_lookup(id_codec, codec->codec_id));
+	slogz("  Bit Rates   : %d, Time Base: %d/%d\n", 
+			codec->bit_rate,
+			codec->time_base.num, codec->time_base.den);
+	slogz("  Frame Number: %d, Width: %d, Height: %d, "
+				"Sample_AR: %d/%d%s\n",
+			codec->frame_number, codec->width, codec->height, 
+			codec->sample_aspect_ratio.num, 
+			codec->sample_aspect_ratio.den,
+			(0 == codec->sample_aspect_ratio.num) ? "(-)" : "(+)");
+	slogz("  Pixel Format: %s (pixfmt.h), Has B-Frame: %d\n", 
+			id_lookup(id_pix_fmt, codec->pix_fmt), 
+			codec->has_b_frames);
+	return 0;
+}
+
+int dump_codec_audio(AVCodecContext *codec)
+{
+	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
+			id_lookup(id_codec_type, codec->codec_type), 
+			id_lookup(id_codec, codec->codec_id));
+	slogz("  Bit Rates   : %d, Time Base: %d/%d\n", 
+			codec->bit_rate,
+			codec->time_base.num, codec->time_base.den);
+	slogz("  Channel     : %d, Sample Rate: %d, Sample Format: %d\n",
+			codec->channels, 
+			codec->sample_rate, codec->sample_fmt);
+	return 0;
+}
+
+int dump_packet(AVPacket *p)
+{
+	/* PTS:Presentation timestamp.  DTS:Decompression timestamp */
+	slogz("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
+			", Dur:%d, Siz:%d, Flag:%d, SI:%d\n",
+			p->pos, p->pts,	p->dts, p->duration, p->size,
+			p->flags, p->stream_index);
+	return 0;
+}
+
+int dump_frame(AVFrame *frame, int got_pic)
+{
+	slogz("Frame %s, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
+			got_pic == 0 ? "Partial" : "Complet", 
+			frame->key_frame, 
+			frame->coded_picture_number, 
+			frame->display_picture_number,
+			frame->reference, frame->interlaced_frame,
+			id_lookup(id_pict_type, frame->pict_type));
+	return 0;
+}
+
+int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
+{
+	int64_t	dts;
+	char	timestamp[64];
+
+	dts = ezfrm->rf_dts - vidx->dts_offset;
+	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
+	slogz("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
+			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
+			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
+			id_lookup(id_pict_type, ezfrm->frame->pict_type));
+	return 0;
+}
+
+int dump_stream(AVStream *stream)
+{
+	AVCodec	*codec;
+
+	codec = avcodec_find_decoder(stream->codec->codec_id);
+	slogz("Stream #%d: %s Codec ID: %s '%s' %s\n", 
+			stream->id,
+			id_lookup(id_codec_type, stream->codec->codec_type),
+			id_lookup(id_codec, stream->codec->codec_id),
+			codec ? codec->name : "Unknown",
+			codec ? codec->long_name : "Unknown");
+	slogz("  Time Base   : %d/%d, FRate:%d/%d, Start Time:%"
+			PRId64 ", Duration:%" PRId64 ", Lang:%s, AR:%d/%d\n",
+			stream->time_base.num, stream->time_base.den,
+			stream->r_frame_rate.num, stream->r_frame_rate.den,
+			stream->start_time, stream->duration, 
+			video_stream_language(stream),
+			stream->sample_aspect_ratio.num, 
+			stream->sample_aspect_ratio.den);
+	dump_metadata(stream->metadata);
+	return 0;
+}
+
+/* see /usr/include/libavformat/avformat.h */
+int dump_metadata(void *dict)
+{
+	struct	Metadata	{
+		int	count;
+#if FF_API_OLD_METADATA2
+		AVDictionaryEntry	*elems;
+#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+		AVMetadataTag		*elems;
+#else
+#error Too old version of FFMPEG
+#endif
+	} *entry = dict;
+	int	i;
+
+	if (entry == NULL) {
+		return 0;
+	}
+	for (i = 0; i < entry->count; i++) {
+		slogz("  %-12s: %s\n", 
+				entry->elems[i].key, entry->elems[i].value);
+	}
+	return i;
+}
+
+#if 0
+int dump_metadata(void *dict)
+{
+	char	*mtab[] = { "album", "album_artist", "artist", "comment",
+		"composer", "copyright", "creation_time", "date", "disc",
+		"encoder", "encoded_by", "filename", "genre", "language",
+		"performer", "publisher", "service_name", "service_provider",
+		"title", "track", "variant_bitrate", NULL };
+	int	i;
+#if FF_API_OLD_METADATA2
+	AVDictionaryEntry	*entry;
+#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+	AVMetadataTag		*entry;
 #endif
 
-char *meta_basename(char *fname, char *buffer)
+	for (i = 0; mtab[i]; i++) {
+#if FF_API_OLD_METADATA2
+		entry = av_dict_get(dict, mtab[i], NULL, 0);
+#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+		entry = av_metadata_get(dict, mtab[i], NULL, 0);
+#else
+		break;
+#endif
+		if (entry) {
+			slogz("   %s: %s\n", mtab[i], entry->value);
+		}			
+	}
+
+	return 0;
+}
+#endif
+
+int dump_duration(EZVID *vidx, int use_ms)
 {
-	static	char	tmp[1024];
-	char	*p;
+	char	buf[128], tmp[32];
 
-	if (buffer == NULL) {
-		buffer = tmp;
+	switch (vidx->seekable) {
+	case ENX_SEEK_NONE:
+		strcpy(tmp, "Unseekable");
+		break;
+	case ENX_SEEK_FORWARD:
+		strcpy(tmp, "Forward Only");
+		break;
+	case ENX_SEEK_FREE:
+		strcpy(tmp, "Free Seeking");
+		break;
+	default:
+		strcpy(tmp, "Unknown");
+		break;
 	}
-
-	if ((p = strrchr(fname, DIRSEP)) == NULL) {
-		strcpy(buffer, fname);
-	} else {
-		strcpy(buffer, p + 1);
+	switch (GETDURMOD(vidx->ses_flags)) {
+	case EZOP_DUR_HEAD:
+		strcpy(buf, "reading media header");
+		break;
+	case EZOP_DUR_QSCAN:
+		strcpy(buf, "Fast Scanning");
+		break;
+	case EZOP_DUR_FSCAN:
+		strcpy(buf, "Full Scanning");
+		break;
+	case EZOP_DUR_AUTO:
+		strcpy(buf, "Auto Scanning");
+		break;
+	default:
+		strcpy(buf, "Mistake");
+		break;
 	}
-	return buffer;
+	slogz("Duration found by %s: %lld (%d ms); Seeking capability: %s\n",
+			buf, vidx->duration, use_ms, tmp);
+	return 0;
 }
 
-char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
+int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
 {
-	static	char	tmp[1024];
-	char	*p, sep[4];
+	slogz("\n>>>>>>>>>>>>>>>>>>\n");
+	slogz("Single shot size:  %dx%dx%d-%d\n", 
+			image->dst_width, image->dst_height, 
+			image->dst_pixfmt, ezopt->edge_width);
+	slogz("Grid size:         %dx%d+%d\n", 
+			image->grid_col, image->grid_row, 
+			ezopt->shadow_width);
+	slogz("Canvas size:       %dx%d-%d\n", 
+			image->canvas_width, image->canvas_height, 
+			image->canvas_minfo);
+	slogz("Time setting:      %lld-%lld %lld (ms)\n", 
+			(long long) image->time_from, 
+			(long long) image->time_during, 
+			(long long) image->time_step);
+	slogz("Margin of canvas:  %dx%d\n", 
+			image->rim_width, image->rim_height);
+	slogz("Gap of shots:      %dx%d\n", 
+			image->gap_width, image->gap_height);
+	slogz("Color of Canvas:   BG#%08X SH#%08X MI#%08X\n",
+			(unsigned) image->color_canvas,
+			(unsigned) image->color_shadow,
+			(unsigned) image->color_minfo);
+	slogz("Color of Shots:    ED#%08X IN#%08X SH#%08X\n",
+			(unsigned) image->color_edge,
+			(unsigned) image->color_inset,
+			(unsigned) image->color_inshadow);
+	slogz("Font size:         MI=%d IN=%d (SH: %d %d)\n", 
+			ezopt->mi_size, ezopt->ins_size,
+			ezopt->mi_shadow, ezopt->ins_shadow);
+	slogz("Font position:     MI=%d IN=%d\n",
+			ezopt->mi_position, ezopt->ins_position);
+	if (ezopt->mi_font) {
+		slogz("Font MediaInfo:    %s\n", ezopt->mi_font);
+	}
+	if (ezopt->ins_font) {
+		slogz("Font Inset Shots:  %s\n", ezopt->ins_font);
+	}
+	slogz("Output file name:  %s.%s (%d)\n", 
+			ezopt->suffix, ezopt->img_format, ezopt->img_quality);
+	slogz("Flags:             %s %s %s %s %s %s %s %s %s 0x%x D%d P%d\n", 
+			ezopt->flags & EZOP_INFO ? "MI" : "",
+			ezopt->flags & EZOP_TIMEST ? "TS" : "",
+			ezopt->flags & EZOP_FFRAME ? "FF" : "",
+			ezopt->flags & EZOP_LFRAME ? "LF" : "",
+			ezopt->flags & EZOP_P_FRAME ? "PF" : "",
+			ezopt->flags & EZOP_CLI_INSIDE ? "CI" : "",
+			ezopt->flags & EZOP_CLI_INFO ? "CO" : "",
+			ezopt->flags & EZOP_TRANSPARENT ? "TP" : "",
+			ezopt->flags & EZOP_DECODE_OTF ? "OT" : "",
+			GETDURMOD(ezopt->flags),
+			EZOP_DEBUG(ezopt->flags), EZOP_PROC(ezopt->flags));
+	slogz("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
+			gdFontGetTiny()->w, gdFontGetTiny()->h,
+			gdFontGetSmall()->w, gdFontGetSmall()->h,
+			gdFontGetMediumBold()->w, gdFontGetMediumBold()->h,
+			gdFontGetLarge()->w, gdFontGetLarge()->h,
+			gdFontGetGiant()->w, gdFontGetGiant()->h);
+	slogz("Background Image:  %s (0x%x)\n", 
+			ezopt->background, ezopt->bg_position);
 
-	if (buf == NULL) {
-		buf = tmp;
-	}
-
-	if (!path || !*path) {
-		strcpy(buf, fname);
-	} else {
-		strcpy(buf, path);
-		if (buf[strlen(buf)-1] != DIRSEP) {
-			sep[0] = DIRSEP;
-			sep[1] = 0;
-			strcat(buf, sep);
-		}
-		if ((p = strrchr(fname, DIRSEP)) == NULL) {
-			strcat(buf, fname);
-		} else {
-			strcat(buf, p+1);
-		}
-	}
-	if ((p = strrchr(buf, '.')) != NULL) {
-		*p = 0;
-	}
-	strcat(buf, sfx);
-	return buf;
-}
-
-int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2)
-{
-	int64_t	c1, c2;
-
-	if (v1 < 0) {
-		return v2;
-	}
-	if (v2 < 0) {
-		return v1;
-	}
-	if (ref < 0) {
-		return v1 > v2 ? v1 : v2;
-	}
-	
-	c1 = (ref > v1) ? ref - v1 : v1 - ref;
-	c2 = (ref > v2) ? ref - v2 : v2 - ref;
-	if (c1 < c2) {
-		return v1;
-	}
-	return v2;
-}
-
-/* input: jpg@85, gif@1000, png */
-int meta_image_format(char *input, char *fmt, int flen)
-{
-	char	*p, arg[128];
-	int	quality = 0;
-
-	strlcopy(arg, input, sizeof(arg));
-	if ((p = strchr(arg, '@')) != NULL) {
-		*p++ = 0;
-		quality = strtol(p, NULL, 0);
-	}
-	strlcopy(fmt, arg, flen);
-
-	/* foolproof of the quality parameter */
-	if (!strcmp(fmt, "jpg") || !strcmp(fmt, "jpeg")) {
-		if ((quality < 5) || (quality > 100)) {
-			quality = 85;	/* as default */
-		}
-	} else if (!strcmp(fmt, "png")) {
-		quality = 0;
-	} else if (!strcmp(fmt, "gif")) {
-		if (quality && (quality < 15)) {
-			quality = 1000;	/* 1 second as default */
-		}
-	} else {
-		strcpy(fmt, "jpg");	/* as default */
-		quality = 85;
-	}
-	return quality;
+	ezopt_profile_dump(ezopt,"Profile of Grid:   ", "Profile of Shots:  ");
+	slogz("<<<<<<<<<<<<<<<<<<\n");
+	return 0;
 }
 
 
-EZFLT *ezflt_create(char *s)
-{
-	EZFLT	*flt;
-	int	len, fno;
-	char	*tmp;
-
-	len = strlen(s);
-	fno = len / 2;
-	len += fno * sizeof(char*) + sizeof(EZFLT) + 16;
-	if ((flt = malloc(len)) == NULL) {
-		return NULL;
-	}
-
-	memset(flt, 0, len);
-	tmp = (char*) &flt->filter[fno];
-	strcpy(tmp, s);
-	len = ziptoken(tmp, flt->filter, fno, ",;:");
-	flt->filter[len] = NULL;
-	return flt;
-}
-
-int ezflt_match(EZFLT *flt, char *fname)
-{
-	if (flt == NULL) {
-		return 1;	/* no filter means total matched */
-	}
-	if (!flt->filter || !*flt->filter) {
-		return 1;
-	}
-	if (!csoup_cmp_file_extlist(fname, flt->filter)) {
-		return 1;
-	}
-	return 0;	/* not matched */
-}
 
