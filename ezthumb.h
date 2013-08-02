@@ -274,15 +274,6 @@ typedef	struct	{
 	float	lbase;	/* the base of logarithm */
 } EZPROF;
 
-/* File name filter setting
- * Input string could be "avi,wmv,mkv" or "+avi:wmv:-mkv"
- * Stored format will be "*.avi", "*.wmv", "*.mkv"
- */
-typedef struct	{
-	char	*filter[1];
-} EZFLT;
-
-
 
 /* This structure is used to store the user defined parameters.
  * These parameters are globally avaiable so they affect all video clips. 
@@ -373,8 +364,8 @@ typedef	struct	{
 	void	*gui;
 
 	/* file name filter */
-	EZFLT	*accept;
-	EZFLT	*refuse;
+	void	*accept;
+	void	*refuse;
 	int	r_flags;	/* recursive flags for smm_pathtrek() */
 
 	/* predefined profile structure */
@@ -556,7 +547,9 @@ int ezthumb(char *filename, EZOPT *ezopt);
 int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout);
 int ezthumb_break(EZOPT *ezopt);
+int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block);
 
+/* ezutil.c */
 int ezopt_profile_setup(EZOPT *opt, char *s);
 int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size);
 char *ezopt_profile_export_alloc(EZOPT *ezopt);
@@ -564,37 +557,9 @@ int ezopt_profile_disable(EZOPT *ezopt, int prof);
 int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
 int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
 int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
-
-
 char *meta_filesize(int64_t size, char *buffer);
 char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int meta_image_format(char *input, char *fmt, int flen);
-
-
-
-char *meta_basename(char *fname, char *buffer);
-char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx); 
-int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2);
-
-EZFLT *ezflt_create(char *s);
-int ezflt_match(EZFLT *flt, char *fname);
-
-
-/* eznotify.c */
-int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block);
-int dump_format_context(AVFormatContext *format);
-int dump_video_context(AVCodecContext *codec);
-int dump_audio_context(AVCodecContext *codec);
-int dump_other_context(AVCodecContext *codec);
-int dump_codec_video(AVCodecContext *codec);
-int dump_codec_audio(AVCodecContext *codec);
-int dump_packet(AVPacket *p);
-int dump_frame(AVFrame *frame, int got_pic);
-int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
-int dump_stream(AVStream *stream);
-int dump_duration(EZVID *vidx, int use_ms);
-int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
-int dump_metadata(void *dict);
 
 
 #endif	/* _EZTHUMB_H_ */

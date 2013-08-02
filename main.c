@@ -548,9 +548,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			/* file name filter, for example: "avi,wmv,mkv"
  			 * The NULL filter means allow all. */
 			if (opt->accept) {
-				free(opt->accept);
+				csoup_eff_close(opt->accept);
 			}
-			opt->accept = ezflt_create(optarg);
+			opt->accept = csoup_eff_open(optarg);
 			break;
 
 		case CMD_B_IND:
@@ -799,7 +799,7 @@ static int main_close(EZOPT *opt)
 	}
 #endif
 	if (opt->accept) {
-		free(opt->accept);
+		csoup_eff_close(opt->accept);
 		opt->accept = NULL;
 	}
 	if (opt->refuse) {
@@ -822,7 +822,7 @@ static int msg_info(void *option, char *path, int type, void *info)
 		slogz("Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		if (ezflt_match(ezopt->accept, path)) {
+		if (csoup_eff_match(ezopt->accept, path)) {
 			ezinfo(path, option, NULL);
 		}
 		break;
@@ -845,7 +845,7 @@ static int msg_shot(void *option, char *path, int type, void *info)
 		slogz("Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		if (ezflt_match(ezopt->accept, path)) {
+		if (csoup_eff_match(ezopt->accept, path)) {
 			//slogz("+++ %s\n", path);
 			ezthumb(path, option);
 		}
@@ -862,7 +862,7 @@ static int msg_shot(void *option, char *path, int type, void *info)
 
 static int env_init(EZOPT *ezopt)
 {
-	EZFLT	*arg;
+	char	**arg;
 	//char	*env = "-g 3x5 -s 300x100 -w 1024 -m gif -p 2pass";
 	char	*env;
 	int	num, len;
@@ -877,17 +877,17 @@ static int env_init(EZOPT *ezopt)
 		return -1;
 	}
 
-	strcpy((char*) &arg->filter[num], "ezthumb ");
-	strcat((char*) &arg->filter[num], env);
-	env = (char*) &arg->filter[num];
+	strcpy((char*) &arg[num], "ezthumb ");
+	strcat((char*) &arg[num], env);
+	env = (char*) &arg[num];
 
-	len = mkargv(env, arg->filter, num);
+	len = mkargv(env, arg, num);
 
-	/*for (num = 0; num <= len; num++) {
-		slogz("%d: %s\n", num, arg->filter[num]);
-	}*/
+	//for (num = 0; num <= len; num++) {
+	//	slogz("%d: %s\n", num, arg[num]);
+	//}
 
-	command_line_parser(len, arg->filter, ezopt);
+	command_line_parser(len, arg, ezopt);
 	free(arg);
 	return 0;
 }

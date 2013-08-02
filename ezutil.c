@@ -1,5 +1,5 @@
 
-/*  eznotify.c - the notification handling functions
+/*  ezutil.c
 
     Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
 
@@ -18,74 +18,20 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
-{
-	char	tmp[128], *inbuf = NULL;
-	int	i, rc = 0;
+#include "libcsoup.h"
+#include "ezthumb.h"
 
-	/* special case for testing purpose
-	 * If the output path has the same suffix to the specified suffix,
-	 * it will NOT be treated as a path but the output file.
-	 * For example, if the 'img_format' was defined as "jpg", and the
-	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
-	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
-	 * still a path */
-	if (!csoup_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
-		if (buf) {
-			strcpy(buf, ezopt->pathout);
-		}
-		return EZ_THUMB_VACANT;	/* debug mode always vacant */
-	}
 
-	if (buf == NULL) {
-		buf = inbuf = malloc(strlen(fname) + 128 + 32);
-		if (buf == NULL) {
-			return rc;
-		}
-	}
 
-	if (idx < 0) {
-		sprintf(tmp, "%s.", ezopt->suffix);
-	} else {
-		sprintf(tmp, "%03d.", idx);
-	}
-	strcat(tmp, ezopt->img_format);
-	meta_name_suffix(ezopt->pathout, fname, buf, tmp);
-
-	for (i = 1; i < 256; i++) {
-		if (smm_fstat(buf) != SMM_ERR_NONE) {
-			if (i == 1) {
-				rc = EZ_THUMB_VACANT;	/* file not existed */
-			} else {
-				rc = EZ_THUMB_COPIABLE;	/* copying file  */
-			}
-			break;	/* file not existed */
-		} else if (ezopt->flags & EZOP_THUMB_OVERRIDE) {
-			rc = EZ_THUMB_OVERRIDE;	/* override it */
-			break;
-		} else if ((ezopt->flags & EZOP_THUMB_COPY) == 0) {
-			rc = EZ_THUMB_SKIP;	/* skip the existed files */
-			break;
-		}
-		
-		if (idx < 0) {
-			sprintf(tmp, "%s.%d.", ezopt->suffix, i);
-		} else {
-			sprintf(tmp, "%03d.%d.", idx, i);
-		}
-		strcat(tmp, ezopt->img_format);
-		meta_name_suffix(ezopt->pathout, fname, buf, tmp);
-	}
-	if (i == 256) {
-		rc = EZ_THUMB_OVERCOPY;	/* override the last one */
-	}
-	if (inbuf) {
-		free(inbuf);
-	}
-	//slogz("ezopt_thumb_name: %d\n", rc);
-	return rc;
-}
+static int ezopt_profile_append(EZOPT *ezopt, char *ps);
+static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen);
+static EZPROF *ezopt_profile_new(EZOPT *opt, int flag, int wei);
+static int ezopt_profile_free(EZPROF *node);
+static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf);
 
 
 /****************************************************************************
@@ -578,85 +524,6 @@ char *meta_timestamp(EZTIME ms, int enms, char *buffer)
 	return buffer;
 }
 
-
-// FIXME: UTF-8 and widechar?
-// Haven't decide how to improve these two functions
-#ifdef  CFG_WIN32_API
-#define DIRSEP  '\\'
-#else
-#define DIRSEP  '/'
-#endif
-
-char *meta_basename(char *fname, char *buffer)
-{
-	static	char	tmp[1024];
-	char	*p;
-
-	if (buffer == NULL) {
-		buffer = tmp;
-	}
-
-	if ((p = strrchr(fname, DIRSEP)) == NULL) {
-		strcpy(buffer, fname);
-	} else {
-		strcpy(buffer, p + 1);
-	}
-	return buffer;
-}
-
-char *meta_name_suffix(char *path, char *fname, char *buf, char *sfx)
-{
-	static	char	tmp[1024];
-	char	*p, sep[4];
-
-	if (buf == NULL) {
-		buf = tmp;
-	}
-
-	if (!path || !*path) {
-		strcpy(buf, fname);
-	} else {
-		strcpy(buf, path);
-		if (buf[strlen(buf)-1] != DIRSEP) {
-			sep[0] = DIRSEP;
-			sep[1] = 0;
-			strcat(buf, sep);
-		}
-		if ((p = strrchr(fname, DIRSEP)) == NULL) {
-			strcat(buf, fname);
-		} else {
-			strcat(buf, p+1);
-		}
-	}
-	if ((p = strrchr(buf, '.')) != NULL) {
-		*p = 0;
-	}
-	strcat(buf, sfx);
-	return buf;
-}
-
-int64_t meta_bestfit(int64_t ref, int64_t v1, int64_t v2)
-{
-	int64_t	c1, c2;
-
-	if (v1 < 0) {
-		return v2;
-	}
-	if (v2 < 0) {
-		return v1;
-	}
-	if (ref < 0) {
-		return v1 > v2 ? v1 : v2;
-	}
-	
-	c1 = (ref > v1) ? ref - v1 : v1 - ref;
-	c2 = (ref > v2) ? ref - v2 : v2 - ref;
-	if (c1 < c2) {
-		return v1;
-	}
-	return v2;
-}
-
 /* input: jpg@85, gif@1000, png */
 int meta_image_format(char *input, char *fmt, int flen)
 {
@@ -688,39 +555,4 @@ int meta_image_format(char *input, char *fmt, int flen)
 	return quality;
 }
 
-
-EZFLT *ezflt_create(char *s)
-{
-	EZFLT	*flt;
-	int	len, fno;
-	char	*tmp;
-
-	len = strlen(s);
-	fno = len / 2;
-	len += fno * sizeof(char*) + sizeof(EZFLT) + 16;
-	if ((flt = malloc(len)) == NULL) {
-		return NULL;
-	}
-
-	memset(flt, 0, len);
-	tmp = (char*) &flt->filter[fno];
-	strcpy(tmp, s);
-	len = ziptoken(tmp, flt->filter, fno, ",;:");
-	flt->filter[len] = NULL;
-	return flt;
-}
-
-int ezflt_match(EZFLT *flt, char *fname)
-{
-	if (flt == NULL) {
-		return 1;	/* no filter means total matched */
-	}
-	if (!flt->filter || !*flt->filter) {
-		return 1;
-	}
-	if (!csoup_cmp_file_extlist(fname, flt->filter)) {
-		return 1;
-	}
-	return 0;	/* not matched */
-}
 

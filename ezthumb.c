@@ -71,6 +71,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
 static EZFRM *video_frame_next(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
+static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto);
@@ -82,6 +83,10 @@ static char *video_media_subtitle(AVStream *stream, char *buffer);
 static char *video_stream_language(AVStream *stream);
 static int64_t video_packet_timestamp(AVPacket *packet);
 static int video_timing(EZVID *vidx, int type);
+static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
+static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
+//static int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
+static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
 
 static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode);
 static int image_free(EZIMG *image);
@@ -114,14 +119,25 @@ static gdFont *image_fontset(int fsize);
 static int image_fontsize(int fsize, int refsize);
 static int image_copy(gdImage *dst, gdImage *src, int x, int, int, int);
 
-static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts);
-static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms);
-static int64_t video_dts_to_system(EZVID *vidx, int64_t dts);
-static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts);
+static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx);
+static char *ezopt_name_build(char *path, char *fname, char *buf, char *sfx);
 
 static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *);
-static int ezdump_video_info(EZVID *vidx);
-static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx);
+static int dump_media_brief(EZVID *vidx);
+static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx);
+static int dump_format_context(AVFormatContext *format);
+static int dump_video_context(AVCodecContext *codec);
+static int dump_audio_context(AVCodecContext *codec);
+static int dump_other_context(AVCodecContext *codec);
+static int dump_codec_video(AVCodecContext *codec);
+static int dump_codec_audio(AVCodecContext *codec);
+static int dump_packet(AVPacket *p);
+static int dump_frame(AVFrame *frame, int got_pic);
+static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
+static int dump_stream(AVStream *stream);
+static int dump_metadata(void *dict);
+static int dump_duration(EZVID *vidx, int use_ms);
+static int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
 
 
 #ifdef	CFG_GUI_ON
@@ -177,7 +193,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	ezopt->bg_position = EZ_POS_MIDCENTER;
 	ezopt->vs_user = -1;	/* default: first found video stream */
 	ezopt->r_flags = SMM_PATH_DIR_FIFO;
-	ezopt->accept = ezflt_create(EZ_DEF_FILTER);
+	ezopt->accept = csoup_eff_open(EZ_DEF_FILTER);
 
 	if (profile) {
 		ezopt_profile_setup(ezopt, profile);
@@ -1336,10 +1352,10 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 
 	strcpy(buffer, "NAME: ");
 	if (vidx->dur_all) {	/* binding mode */
-		meta_basename(vidx->anchor->filename, buffer + 6);
+		csoup_path_basename(vidx->anchor->filename, buffer + 6, i-6);
 		strcat(buffer, " ...");
 	} else {
-		meta_basename(vidx->filename, buffer + 6);
+		csoup_path_basename(vidx->filename, buffer + 6, i - 6);
 	}
 	image_gdcanvas_print(image, line++, 0, buffer);
 
@@ -1966,7 +1982,7 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 	int64_t	dts;
 	int	i;
 
-	if ((dts = meta_bestfit(refdts, vidx->fgroup[0].rf_dts,
+	if ((dts = video_best_dts(refdts, vidx->fgroup[0].rf_dts,
 			vidx->fgroup[1].rf_dts)) < 0) {
 		return NULL;	/* no proper frame */
 	} 
@@ -1980,6 +1996,29 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 			i == vidx->fnow ? "Current" : "Previous", dts,
 			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts);*/
 	return &vidx->fgroup[i];
+}
+
+
+static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2)
+{
+	int64_t	c1, c2;
+
+	if (v1 < 0) {
+		return v2;
+	}
+	if (v2 < 0) {
+		return v1;
+	}
+	if (ref < 0) {
+		return v1 > v2 ? v1 : v2;
+	}
+	
+	c1 = (ref > v1) ? ref - v1 : v1 - ref;
+	c2 = (ref > v2) ? ref - v2 : v2 - ref;
+	if (c1 < c2) {
+		return v1;
+	}
+	return v2;
 }
 
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
@@ -2279,6 +2318,58 @@ static int video_timing(EZVID *vidx, int type)
 		vidx->pidx++;
 	}
 	return acc;
+}
+
+/* this function is used to convert the PTS from the video stream
+ * based time to the millisecond based time. The formula is:
+ *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
+ * then
+ *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
+static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return (EZTIME) av_rescale(dts * 1000, 
+			s->time_base.num, s->time_base.den);
+}
+
+/* this function is used to convert the timestamp from the millisecond 
+ * based time to the video stream based PTS time. The formula is:
+ *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
+ * then
+ *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
+static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale((int64_t) ms, s->time_base.den, 
+			(int64_t) s->time_base.num * (int64_t) 1000);
+}
+
+/* this function is used to convert the PTS from the video stream
+ * based time to the default system time base (microseconds). The formula is:
+ *   SYS = (PTS * s->time_base.num / s->time_base.den) * AV_TIME_BASE
+ * then
+ *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
+/*static int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale(dts * (int64_t) AV_TIME_BASE,
+			s->time_base.num, s->time_base.den);
+}*/
+
+/* this function is used to convert the timestamp from the default 
+ * system time base (microsecond) to the millisecond based time. The formula:
+ *   PTS = (SYS / AV_TIME_BASE) * s->time_base.den / s->time_base.num 
+ * then
+ *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
+static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
+{
+	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+
+	return av_rescale(sysdts, s->time_base.den, 
+			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
 }
 
 
@@ -3301,59 +3392,104 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
 	return 0;
 }
 
-/* this function is used to convert the PTS from the video stream
- * based time to the millisecond based time. The formula is:
- *   MS = (PTS * s->time_base.num / s->time_base.den) * 1000
- * then
- *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
-static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
 
-	return (EZTIME) av_rescale(dts * 1000, 
-			s->time_base.num, s->time_base.den);
+/****************************************************************************
+ * Filename process
+ ****************************************************************************/
+static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
+{
+	char	tmp[128], *inbuf = NULL;
+	int	i, rc = 0;
+
+	/* special case for testing purpose
+	 * If the output path has the same suffix to the specified suffix,
+	 * it will NOT be treated as a path but the output file.
+	 * For example, if the 'img_format' was defined as "jpg", and the
+	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
+	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
+	 * still a path */
+	if (!csoup_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
+		if (buf) {
+			strcpy(buf, ezopt->pathout);
+		}
+		return EZ_THUMB_VACANT;	/* debug mode always vacant */
+	}
+
+	if (buf == NULL) {
+		buf = inbuf = malloc(strlen(fname) + 128 + 32);
+		if (buf == NULL) {
+			return rc;
+		}
+	}
+
+	if (idx < 0) {
+		sprintf(tmp, "%s.", ezopt->suffix);
+	} else {
+		sprintf(tmp, "%03d.", idx);
+	}
+	strcat(tmp, ezopt->img_format);
+	ezopt_name_build(ezopt->pathout, fname, buf, tmp);
+
+	for (i = 1; i < 256; i++) {
+		if (smm_fstat(buf) != SMM_ERR_NONE) {
+			if (i == 1) {
+				rc = EZ_THUMB_VACANT;	/* file not existed */
+			} else {
+				rc = EZ_THUMB_COPIABLE;	/* copying file  */
+			}
+			break;	/* file not existed */
+		} else if (ezopt->flags & EZOP_THUMB_OVERRIDE) {
+			rc = EZ_THUMB_OVERRIDE;	/* override it */
+			break;
+		} else if ((ezopt->flags & EZOP_THUMB_COPY) == 0) {
+			rc = EZ_THUMB_SKIP;	/* skip the existed files */
+			break;
+		}
+		
+		if (idx < 0) {
+			sprintf(tmp, "%s.%d.", ezopt->suffix, i);
+		} else {
+			sprintf(tmp, "%03d.%d.", idx, i);
+		}
+		strcat(tmp, ezopt->img_format);
+		ezopt_name_build(ezopt->pathout, fname, buf, tmp);
+	}
+	if (i == 256) {
+		rc = EZ_THUMB_OVERCOPY;	/* override the last one */
+	}
+	if (inbuf) {
+		free(inbuf);
+	}
+	//slogz("ezopt_thumb_name: %d\n", rc);
+	return rc;
 }
 
-/* this function is used to convert the timestamp from the millisecond 
- * based time to the video stream based PTS time. The formula is:
- *   PTS = (ms / 1000) * s->time_base.den / s->time_base.num
- * then
- *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
-static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
+static char *ezopt_name_build(char *path, char *fname, char *buf, char *sfx)
 {
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
+	char	*p, sep[4];
 
-	return av_rescale((int64_t) ms, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) 1000);
-}
-
-/* this function is used to convert the PTS from the video stream
- * based time to the default system time base (microseconds). The formula is:
- *   SYS = (PTS * s->time_base.num / s->time_base.den) * AV_TIME_BASE
- * then
- *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
-static int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(dts * (int64_t) AV_TIME_BASE,
-			s->time_base.num, s->time_base.den);
-}
-
-/* this function is used to convert the timestamp from the default 
- * system time base (microsecond) to the millisecond based time. The formula:
- *   PTS = (SYS / AV_TIME_BASE) * s->time_base.den / s->time_base.num 
- * then
- *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
-static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
-{
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(sysdts, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
+	if (!path || !*path) {
+		strcpy(buf, fname);
+	} else {
+		strcpy(buf, path);
+		if (buf[strlen(buf)-1] != SMM_DELIM) {
+			sep[0] = SMM_DELIM;
+			sep[1] = 0;
+			strcat(buf, sep);
+		}
+		strcat(buf, csoup_path_basename(fname, NULL, 0));
+	}
+	if ((p = strrchr(buf, '.')) != NULL) {
+		*p = 0;
+	}
+	strcat(buf, sfx);
+	return buf;
 }
 
 
+/****************************************************************************
+ * Message/Notification functions
+ ****************************************************************************/
 int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block)
 {
 	int	rc;
@@ -3429,7 +3565,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 			dump_duration(vidx, (int) opt);
 		}
 		if (vidx->ses_flags & EZOP_CLI_INFO) {
-			ezdump_video_info(vidx);
+			dump_media_brief(vidx);
 		}
 		break;
 	case EN_IMAGE_CREATED:
@@ -3570,7 +3706,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	case EN_MEDIA_STATIS:
 		myntf = block;
 		if (ezopt->flags & EZOP_CLI_INSIDE) {
-			ezdump_media_statistics(myntf->varg1, 
+			dump_media_statistic(myntf->varg1, 
 					(int) param, myntf->varg2);
 		}
 		break;
@@ -3603,7 +3739,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	return event;
 }
 
-static int ezdump_video_info(EZVID *vidx)
+static int dump_media_brief(EZVID *vidx)
 {
 	AVCodecContext	*codecx;
 	char	tmp[16];
@@ -3627,7 +3763,7 @@ static int ezdump_video_info(EZVID *vidx)
 	return 0;
 }
 
-static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
+static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx)
 {
 	int64_t	dts;
 	int	i, sec;
@@ -3667,7 +3803,7 @@ static int ezdump_media_statistics(struct MeStat *mestat, int n, EZVID *vidx)
 	return 0;
 }
 
-int dump_format_context(AVFormatContext *format)
+static int dump_format_context(AVFormatContext *format)
 {
 #if	LIBAVFORMAT_VERSION_INT < (53<<16)
 	slogz("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
@@ -3689,7 +3825,7 @@ int dump_format_context(AVFormatContext *format)
 	return 0;
 }
 
-int dump_video_context(AVCodecContext *codec)
+static int dump_video_context(AVCodecContext *codec)
 {
 	slogz("    Stream Video: %s %s, Time Base: %d/%d, Sample_AR: %d/%d\n",
 			id_lookup(id_codec, codec->codec_id),
@@ -3700,7 +3836,7 @@ int dump_video_context(AVCodecContext *codec)
 	return 0;
 }
 
-int dump_audio_context(AVCodecContext *codec)
+static int dump_audio_context(AVCodecContext *codec)
 {
 	slogz("    Stream Audio: %s, Time Base: %d/%d, CH=%d SR=%d %s BR=%d\n",
 			id_lookup(id_codec, codec->codec_id),
@@ -3711,29 +3847,14 @@ int dump_audio_context(AVCodecContext *codec)
 	return 0;
 }
 
-int dump_other_context(AVCodecContext *codec)
+static int dump_other_context(AVCodecContext *codec)
 {
 	slogz("    Stream %s:\n",
 			id_lookup_tail(id_codec_type, codec->codec_type));
 	return 0;
 }
 
-int dump_codec_attr(AVFormatContext *format, int i)
-{
-	AVCodec	*codec;
-
-	codec = avcodec_find_decoder(format->streams[i]->codec->codec_id);
-	slogz("Stream #%d: %s Codec ID: %s '%s' %s\n", i, 
-			id_lookup(id_codec_type, 
-				format->streams[i]->codec->codec_type),
-			id_lookup(id_codec, 
-				format->streams[i]->codec->codec_id),
-			codec ? codec->name : "Unknown",
-			codec ? codec->long_name : "Unknown");
-	return 0;
-}
-
-int dump_codec_video(AVCodecContext *codec)
+static int dump_codec_video(AVCodecContext *codec)
 {
 	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
 			id_lookup(id_codec_type, codec->codec_type), 
@@ -3753,7 +3874,7 @@ int dump_codec_video(AVCodecContext *codec)
 	return 0;
 }
 
-int dump_codec_audio(AVCodecContext *codec)
+static int dump_codec_audio(AVCodecContext *codec)
 {
 	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
 			id_lookup(id_codec_type, codec->codec_type), 
@@ -3767,7 +3888,7 @@ int dump_codec_audio(AVCodecContext *codec)
 	return 0;
 }
 
-int dump_packet(AVPacket *p)
+static int dump_packet(AVPacket *p)
 {
 	/* PTS:Presentation timestamp.  DTS:Decompression timestamp */
 	slogz("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
@@ -3777,7 +3898,7 @@ int dump_packet(AVPacket *p)
 	return 0;
 }
 
-int dump_frame(AVFrame *frame, int got_pic)
+static int dump_frame(AVFrame *frame, int got_pic)
 {
 	slogz("Frame %s, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
 			got_pic == 0 ? "Partial" : "Complet", 
@@ -3789,7 +3910,7 @@ int dump_frame(AVFrame *frame, int got_pic)
 	return 0;
 }
 
-int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
+static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 {
 	int64_t	dts;
 	char	timestamp[64];
@@ -3803,7 +3924,7 @@ int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 	return 0;
 }
 
-int dump_stream(AVStream *stream)
+static int dump_stream(AVStream *stream)
 {
 	AVCodec	*codec;
 
@@ -3827,7 +3948,7 @@ int dump_stream(AVStream *stream)
 }
 
 /* see /usr/include/libavformat/avformat.h */
-int dump_metadata(void *dict)
+static int dump_metadata(void *dict)
 {
 	struct	Metadata	{
 		int	count;
@@ -3883,7 +4004,7 @@ int dump_metadata(void *dict)
 }
 #endif
 
-int dump_duration(EZVID *vidx, int use_ms)
+static int dump_duration(EZVID *vidx, int use_ms)
 {
 	char	buf[128], tmp[32];
 
@@ -3923,7 +4044,7 @@ int dump_duration(EZVID *vidx, int use_ms)
 	return 0;
 }
 
-int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
+static int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
 {
 	slogz("\n>>>>>>>>>>>>>>>>>>\n");
 	slogz("Single shot size:  %dx%dx%d-%d\n", 

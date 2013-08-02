@@ -127,7 +127,7 @@ endif
 
 OBJS	= $(OBJDIR)/main.o	\
 	  $(OBJDIR)/ezthumb.o	\
-	  $(OBJDIR)/eznotify.o	\
+	  $(OBJDIR)/ezutil.o	\
 	  $(OBJDIR)/id_lookup.o
 
 ifeq	($(SYSGUI),CFG_GUI_ON)
