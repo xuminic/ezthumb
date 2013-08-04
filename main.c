@@ -863,13 +863,16 @@ static int msg_shot(void *option, char *path, int type, void *info)
 static int env_init(EZOPT *ezopt)
 {
 	char	**arg;
-	//char	*env = "-g 3x5 -s 300x100 -w 1024 -m gif -p 2pass";
-	char	*env;
 	int	num, len;
 
+#ifdef	SANTEST_ENV_INIT
+	char	*env = "-g 3x5 -s 300x100 -w 1024 -m gif -p 2pass";
+#else
+	char	*env;
 	if ((env = getenv("EZTHUMB")) == NULL) {
 		return 0;
-	}
+	}	
+#endif
 
 	len = strlen(env) + 1;
 	num = len / 3;
@@ -883,11 +886,13 @@ static int env_init(EZOPT *ezopt)
 
 	len = mkargv(env, arg, num);
 
-	//for (num = 0; num <= len; num++) {
-	//	slogz("%d: %s\n", num, arg[num]);
-	//}
-
+#ifdef	SANTEST_ENV_INIT
+	for (num = 0; num <= len; num++) {
+		slogz("%d: %s\n", num, arg[num]);
+	}
+#else
 	command_line_parser(len, arg, ezopt);
+#endif
 	free(arg);
 	return 0;
 }

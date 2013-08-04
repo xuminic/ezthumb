@@ -165,18 +165,6 @@ test_01_20()
   run "-p scan --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_21()
-{
-  local COMM="Two pass mode test while disabled the duration challenge"
-  run "-d head -p 2pass" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_01_22()
-{
-  local COMM="Two pass mode test with accuration option"
-  run "-p 2pass --accurate" "$1" "$2" "$COMM" ${@:3}
-}
-
 
 
 #############################################################################
@@ -313,36 +301,6 @@ test_03_15()
   local COMM="Make sure the 'tt' place does NOT work for media information and timestamp"
   run "--opt-info tt" "$1" "$2" "$COMM" ${@:3}
   run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_03_16()
-{
-  local COMM="Test font by its searching directory: LiberationSans-Regular.ttf"
-  run "-f LiberationSans-Regular.ttf" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_03_17()
-{
-  local COMM="Test font by its face name: Utopia:Regular"
-  run "-f Utopia:Regular" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_03_18()
-{
-  local COMM="Test Korean font: UnDotum.ttf"
-  run "-f UnDotum.ttf" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_03_19()
-{
-  local COMM="Test Japanese font: VL Gothic:regular"
-  run "-f VL\ Gothic:regular" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_03_20()
-{
-  local COMM="Test Chinese font: WenQuanYi Zen Hei Mono:Regular"
-  run "-f WenQuanYi\ Zen\ Hei\ Mono:Regular" "$1" "$2" "$COMM" ${@:3}
 }
 
 

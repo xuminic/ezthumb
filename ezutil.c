@@ -1,7 +1,7 @@
 
 /*  ezutil.c
 
-    Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
+    Copyright (C) 2013  "Andy Xuming" <xuming@users.sourceforge.net>
 
     This file is part of EZTHUMB, a utility to generate thumbnails
 
