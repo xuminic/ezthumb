@@ -1,7 +1,9 @@
 #!/bin/bash
 
 VIEWER=eog
-FONT="./DejaVuSans.ttf"
+BGNDSM=./background/background.jpg
+BGNDBG=./background/bigground.png
+
 
 # $1: command line options
 # $2: case number like 01.03
@@ -208,6 +210,12 @@ test_02_06()
   run "-i -d scan -v5" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_02_07()
+{
+  local COMM="List all video files in the specified directory and subdirectories"
+  run "-i -R" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 #############################################################################
 # Group 03: Canvas attribution
@@ -244,18 +252,21 @@ test_03_05()
 
 test_03_06()
 {
+  local FONT=./fonts/DejaVuSansMono-Oblique.ttf
   local COMM="Test the external TTF font: $FONT"
   run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_03_07()
 {
+  local FONT=./fonts/DejaVuSansMono-Oblique.ttf
   local COMM="Test the external TTF font with a different size: $FONT"
   run "-f $FONT -F 16:8" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_03_08()
 {
+  local FONT=./fonts/DejaVuSansMono-Oblique.ttf
   local COMM="Test the external TTF font with timestamp size and colour: $FONT"
   run "-f $FONT -F :16 -c :ff0000:" "$1" "$2" "$COMM" ${@:3}
 }
@@ -303,6 +314,119 @@ test_03_15()
   run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_03_16()
+{
+  local FONT=LiberationSans-Italic.ttf
+  local COMM="Test the external TTF font by searching the system fonts: $FONT"
+  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_17()
+{
+  local FONT="DejaVu\ Serif:style=Book"
+  local COMM="Test the external TTF font by face name from fc-list: $FONT"
+  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_18()
+{
+  local FONT=./fonts/sazanami-gothic.ttf
+  local COMM="Test the Japanese in the file name by external fonts: $FONT"
+  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_19()
+{
+  local FONT=./fonts/UnDotum.ttf
+  local COMM="Test the Korean in the file name by external fonts: $FONT"
+  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_20()
+{
+  local FONT=./fonts/wqy-microhei.ttc
+  local COMM="Test the Chinese in the file name by external fonts: $FONT"
+  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_21()
+{
+  local COMM="Place a small background picture in the canvas centre: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_22()
+{
+# (position code: lt,lc,lb,mt,mc,mb,rt,rc,rb)
+  local COMM="Place a small background picture in the left-top of canvas: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg lt" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_23()
+{
+  local COMM="Tile a small background picture all over the canvas: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg tt" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_24()
+{
+  local COMM="Stretch a small background picture to the whole canvas: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg st" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_25()
+{
+  local COMM="Compress a big background picture to the whole canvas: $BGNDBG"
+  run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg st" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_26()
+{
+  local COMM="Enlarge a small background picture to the width of the canvas while keeping proportion: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg ex" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_27()
+{
+  local COMM="Shrink a big background picture to the width of the canvas while keeping proportion: $BGNDBG"
+  run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg ex" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_28()
+{
+  local COMM="Enlarge a small background picture to the height of the canvas while keeping proportion: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg ey" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_29()
+{
+  local COMM="Shrink a big background picture to the height of the canvas while keeping proportion: $BGNDBG"
+  run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg ey" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_30()
+{
+  local COMM="Shrink a big background picture to the height of the canvas while keeping proportion and move to centre: $BGNDBG"
+  run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg ey:mc" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_31()
+{
+  local COMM="Stretch a small background picture to the width of the canvas: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg sx" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_32()
+{
+  local COMM="Stretch a small background picture to the height of the canvas: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg sy" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_03_33()
+{
+  local COMM="Stretch a small background picture to the height of the canvas and move to centre: $BGNDSM"
+  run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg sy:mc" "$1" "$2" "$COMM" ${@:3}
+}
 
 
 #############################################################################

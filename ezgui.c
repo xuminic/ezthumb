@@ -328,7 +328,7 @@ static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter)
 
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 {
-	EZGUI	*gui = ((EZVID*) v)->sysopt->gui;
+	EZGUI	*gui = ((EZOPT*) v)->gui;
 	int	val;
 
 	switch (eid) {
@@ -850,9 +850,11 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 		gtk_file_filter_add_pattern(filter, vidtab[i]);
 	}*/
 	if (gui->sysopt->accept) {
-		for (i = 0; gui->sysopt->accept->filter[i]; i++) {
+		CSEFF   *flt = gui->sysopt->accept;	//FIXME
+		for (i = 0; flt->filter[i]; i++) {
 			strcpy(vidtab, "*.");
-			strcat(vidtab, gui->sysopt->accept->filter[i]);
+			strncat(vidtab, flt->filter[i], sizeof(vidtab)-2);
+			gtk_file_filter_add_pattern(filter, vidtab);
 		}
 	}
 
