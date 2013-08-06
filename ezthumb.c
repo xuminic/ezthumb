@@ -126,15 +126,14 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *);
 static int dump_media_brief(EZVID *vidx);
 static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx);
 static int dump_format_context(AVFormatContext *format);
+static int dump_stream_common(AVStream *stream, int sidx);
 static int dump_video_context(AVCodecContext *codec);
 static int dump_audio_context(AVCodecContext *codec);
+static int dump_subtitle_context(AVCodecContext *codec);
 static int dump_other_context(AVCodecContext *codec);
-static int dump_codec_video(AVCodecContext *codec);
-static int dump_codec_audio(AVCodecContext *codec);
 static int dump_packet(AVPacket *p);
 static int dump_frame(AVFrame *frame, int got_pic);
 static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
-static int dump_stream(AVStream *stream);
 static int dump_metadata(void *dict);
 static int dump_duration(EZVID *vidx, int use_ms);
 static int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
@@ -775,6 +774,12 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	EZVID	*vidx;
 	int	rc;
 
+	/* check if the nominated file existed
+	 * no need to print anything if file doesn't exist or is a folder */
+	if (smm_fstat(filename) != SMM_FSTAT_REGULAR) {
+		return NULL;
+	}
+
 	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
@@ -783,17 +788,10 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	vidx->sysopt   = ezopt;
 	vidx->filename = filename;
 	vidx->seekable = ENX_SEEK_UNKNOWN;
+	vidx->filesize = smm_filesize(filename);
 
 	smm_time_get_epoch(&vidx->tmark);	/* get current time stamp */
 	video_timing(vidx, EZ_PTS_RESET);	/* clear progress timestamp*/
-
-	/* check if the nominated file existed */
-	if ((vidx->filesize = smm_filesize(filename)) <= 0) {
-		eznotify(NULL, EZ_ERR_FILE, 0, 0, filename);
-		uperror(errcode, EZ_ERR_FILE);
-		free(vidx);
-		return NULL;
-	}
 
 	/* On second thought, the FFMPEG log is better to be enabled while 
 	 * loading codecs so we would've known if the video files buggy */
@@ -1161,26 +1159,23 @@ static int video_find_main_stream(EZVID *vidx)
 	 * only recognize video, audio and subtitle stream */
 	vidx->ezstream = 0;
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
-		eznotify(vidx->sysopt, EN_STREAM_FORMAT, i, 0, vidx);
 		stream = vidx->formatx->streams[i];
 		stream->discard = AVDISCARD_ALL;
 		switch (stream->codec->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:
-			eznotify(vidx->sysopt, EN_TYPE_VIDEO, 
-					i, 0, stream->codec);
+			eznotify(vidx->sysopt, EN_TYPE_VIDEO, i, 0, stream);
 			vidx->ezstream++;
 			break;
 		case AVMEDIA_TYPE_AUDIO:
-			eznotify(vidx->sysopt, EN_TYPE_AUDIO, 
-					i, 0, stream->codec);
+			eznotify(vidx->sysopt, EN_TYPE_AUDIO, i, 0, stream);
 			vidx->ezstream++;
 			break;
 		case AVMEDIA_TYPE_SUBTITLE:
+			eznotify(vidx->sysopt, EN_TYPE_SUBTTL, i, 0, stream);
 			vidx->ezstream++;
 			break;
 		default:
-			eznotify(vidx->sysopt, EN_TYPE_UNKNOWN, 
-					i, 0, stream->codec);
+			eznotify(vidx->sysopt, EN_TYPE_UNKNOWN, i, 0, stream);
 			break;
 		}
 	}
@@ -2250,7 +2245,7 @@ static char *video_media_subtitle(AVStream *stream, char *buffer)
 
 static char *video_stream_language(AVStream *stream)
 {
-	static	char	*nolan = "";
+	static	char	*nolan = "(none)";
 
 #if FF_API_OLD_METADATA2
 	AVDictionaryEntry	*lang = NULL;
@@ -3508,6 +3503,7 @@ int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block)
 static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 {
 	struct	ezntf	*myntf;
+	AVStream	*stream;
 	EZVID	*vidx;
 	EZIMG	*image;
 	char	buf[256];
@@ -3663,29 +3659,36 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 			}
 		}
 		break;
-	case EN_STREAM_FORMAT:
-		vidx = block;
-		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
-			dump_stream(vidx->formatx->streams[param]);
-		}
-		break;
 	case EN_TYPE_VIDEO:
-		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
-			dump_video_context(block);
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
-			dump_codec_video(block);
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			stream = block;
+			dump_stream_common(stream, param);
+			dump_video_context(stream->codec);
+			dump_metadata(stream->metadata);
 		}
 		break;
 	case EN_TYPE_AUDIO:
-		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_IFRAME) {
-			dump_audio_context(block);
-		} else if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
-			dump_codec_audio(block);
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			stream = block;
+			dump_stream_common(stream, param);
+			dump_audio_context(stream->codec);
+			dump_metadata(stream->metadata);
+		}
+		break;
+	case EN_TYPE_SUBTTL:
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			stream = block;
+			dump_stream_common(stream, param);
+			dump_subtitle_context(stream->codec);
+			dump_metadata(stream->metadata);
 		}
 		break;
 	case EN_TYPE_UNKNOWN:
-		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_BRIEF) {
-			dump_other_context(block);
+		if (EZOP_DEBUG(ezopt->flags) >= EZDBG_INFO) {
+			stream = block;
+			dump_stream_common(stream, param);
+			dump_other_context(stream->codec);
+			dump_metadata(stream->metadata);
 		}
 		break;
 	case EN_DURATION:
@@ -3713,7 +3716,7 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	case EN_IFRAME_CREDIT:
 		switch (param) {
 		case ENX_IFRAME_RESET:
-			slog(EZDBG_IFRAME,
+			slog(EZDBG_VERBS,
 				"Key Frame accrediting system reset.\n");
 			break;
 		case ENX_IFRAME_SET:
@@ -3825,20 +3828,46 @@ static int dump_format_context(AVFormatContext *format)
 	return 0;
 }
 
+static int dump_stream_common(AVStream *stream, int sidx)
+{
+	AVCodec	*xcodec;
+
+	xcodec = avcodec_find_decoder(stream->codec->codec_id);
+	slogz("Stream #%d:%d: %s; Codec ID: %s; '%s' %s\n", 
+			sidx, stream->id,
+			id_lookup(id_codec_type, stream->codec->codec_type),
+			id_lookup(id_codec, stream->codec->codec_id),
+			xcodec ? xcodec->name : "Unknown",
+			xcodec ? xcodec->long_name : "Unknown");
+	slogz("  Start Time  : %" PRId64 "; Duration: %" PRId64 
+			"; Frame Rate: %d/%d; Stream_AR: %d/%d; Lang: %s\n",
+			(stream->start_time < 0) ? -1 : stream->start_time, 
+			(stream->duration < 0) ? -1 : stream->duration,
+			stream->r_frame_rate.num, stream->r_frame_rate.den,
+			stream->sample_aspect_ratio.num, 
+			stream->sample_aspect_ratio.den,
+			video_stream_language(stream));
+	return 0;
+}
+
 static int dump_video_context(AVCodecContext *codec)
 {
-	slogz("    Stream Video: %s %s, Time Base: %d/%d, Sample_AR: %d/%d\n",
-			id_lookup(id_codec, codec->codec_id),
+	slogz("  Video Codec : %s; %dx%d+%d; Time Base: %d/%d; BR=%d BF=%d; AR: %d/%d%s\n",
 			id_lookup(id_pix_fmt, codec->pix_fmt),
+			codec->width, codec->height, 
+			codec->frame_number, 
 			codec->time_base.num, codec->time_base.den,
+			codec->bit_rate, 
+			codec->has_b_frames,
 			codec->sample_aspect_ratio.num,
-			codec->sample_aspect_ratio.den);
+			codec->sample_aspect_ratio.den,
+			(0 == codec->sample_aspect_ratio.num) ? "(-)" : "(+)");
 	return 0;
 }
 
 static int dump_audio_context(AVCodecContext *codec)
 {
-	slogz("    Stream Audio: %s, Time Base: %d/%d, CH=%d SR=%d %s BR=%d\n",
+	slogz("  Audio Codec : %s; Time Base: %d/%d; CH=%d SR=%d %s BR=%d\n",
 			id_lookup(id_codec, codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->channels, codec->sample_rate,
@@ -3847,44 +3876,17 @@ static int dump_audio_context(AVCodecContext *codec)
 	return 0;
 }
 
+static int dump_subtitle_context(AVCodecContext *codec)
+{
+	slogz("  Subtitles   : %s; Time Base: %d/%d; BR=%d\n",
+			id_lookup(id_codec, codec->codec_id),
+			codec->time_base.num, codec->time_base.den,
+			codec->bit_rate);
+	return 0;
+}
+
 static int dump_other_context(AVCodecContext *codec)
 {
-	slogz("    Stream %s:\n",
-			id_lookup_tail(id_codec_type, codec->codec_type));
-	return 0;
-}
-
-static int dump_codec_video(AVCodecContext *codec)
-{
-	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
-			id_lookup(id_codec_type, codec->codec_type), 
-			id_lookup(id_codec, codec->codec_id));
-	slogz("  Bit Rates   : %d, Time Base: %d/%d\n", 
-			codec->bit_rate,
-			codec->time_base.num, codec->time_base.den);
-	slogz("  Frame Number: %d, Width: %d, Height: %d, "
-				"Sample_AR: %d/%d%s\n",
-			codec->frame_number, codec->width, codec->height, 
-			codec->sample_aspect_ratio.num, 
-			codec->sample_aspect_ratio.den,
-			(0 == codec->sample_aspect_ratio.num) ? "(-)" : "(+)");
-	slogz("  Pixel Format: %s (pixfmt.h), Has B-Frame: %d\n", 
-			id_lookup(id_pix_fmt, codec->pix_fmt), 
-			codec->has_b_frames);
-	return 0;
-}
-
-static int dump_codec_audio(AVCodecContext *codec)
-{
-	slogz("  Codec Type  : %s, Codec ID: %s (avcodec.h)\n",
-			id_lookup(id_codec_type, codec->codec_type), 
-			id_lookup(id_codec, codec->codec_id));
-	slogz("  Bit Rates   : %d, Time Base: %d/%d\n", 
-			codec->bit_rate,
-			codec->time_base.num, codec->time_base.den);
-	slogz("  Channel     : %d, Sample Rate: %d, Sample Format: %d\n",
-			codec->channels, 
-			codec->sample_rate, codec->sample_fmt);
 	return 0;
 }
 
@@ -3924,28 +3926,6 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 	return 0;
 }
 
-static int dump_stream(AVStream *stream)
-{
-	AVCodec	*codec;
-
-	codec = avcodec_find_decoder(stream->codec->codec_id);
-	slogz("Stream #%d: %s Codec ID: %s '%s' %s\n", 
-			stream->id,
-			id_lookup(id_codec_type, stream->codec->codec_type),
-			id_lookup(id_codec, stream->codec->codec_id),
-			codec ? codec->name : "Unknown",
-			codec ? codec->long_name : "Unknown");
-	slogz("  Time Base   : %d/%d, FRate:%d/%d, Start Time:%"
-			PRId64 ", Duration:%" PRId64 ", Lang:%s, AR:%d/%d\n",
-			stream->time_base.num, stream->time_base.den,
-			stream->r_frame_rate.num, stream->r_frame_rate.den,
-			stream->start_time, stream->duration, 
-			video_stream_language(stream),
-			stream->sample_aspect_ratio.num, 
-			stream->sample_aspect_ratio.den);
-	dump_metadata(stream->metadata);
-	return 0;
-}
 
 /* see /usr/include/libavformat/avformat.h */
 static int dump_metadata(void *dict)

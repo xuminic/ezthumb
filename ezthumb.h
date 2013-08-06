@@ -49,7 +49,7 @@
 #define EN_PROC_BEGIN		1003	/* start to process the video */
 #define EN_PROC_CURRENT		1004	/* current process */
 #define EN_PROC_END		1005	/* end of the process */
-#define EN_PROC_SAVED		1018
+#define EN_PROC_SAVED		1100
 #define EN_PACKET_RECV		1006	/* received an effective packet */
 #define EN_FRAME_COMPLETE	1007	/* decoded a complete frame */
 #define EN_FRAME_PARTIAL	1008	/* frame partially decoded */
@@ -58,10 +58,11 @@
 #define EN_SCAN_IFRAME		1011
 #define EN_TYPE_VIDEO		1012
 #define EN_TYPE_AUDIO		1013
-#define EN_TYPE_UNKNOWN		1014
-#define EN_DURATION		1015
-#define EN_PACKET_KEY		1016
-#define EN_BUMP_BACK		1017
+#define EN_TYPE_SUBTTL		1014
+#define EN_TYPE_UNKNOWN		1015
+#define EN_DURATION		1016
+#define EN_PACKET_KEY		1017
+#define EN_BUMP_BACK		1018
 #define EN_DTS_LIST		1019
 #define EN_STREAM_FORMAT	1021
 #define EN_STREAM_INFO		1022

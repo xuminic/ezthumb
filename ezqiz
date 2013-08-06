@@ -206,7 +206,6 @@ test_02_05()
 test_02_06()
 {
   local COMM="Dump all key frames"
-  run "-i" "$1" "$2" "$COMM" ${@:3}
   run "-i -d scan -v5" "$1" "$2" "$COMM" ${@:3}
 }
 
