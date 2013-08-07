@@ -253,10 +253,6 @@ int main(int argc, char **argv)
 		slos(EZDBG_WARNING, "Invalid parameters.\n");
 		todo = EZ_ERR_PARAM;
 		break;
-	case CMD_UNSET:
-		slos(EZDBG_WARNING, "No action applied\n");
-		todo = EZ_ERR_EOP;
-		break;
 	case CMD_HELP:		/* help */
 		cli_print(clist);
 		todo = EZ_ERR_EOP;
@@ -358,7 +354,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	int	c, todo, prof_grid, prof_size;
 
 	if ((rtbuf = cli_alloc_getopt(clist)) == NULL) {
-		return CMD_UNSET;
+		return CMD_ERROR;
 	}
 	slog(SLFUNC, "%s\n", rtbuf->optarg);
 
@@ -366,7 +362,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		opt = dummy = malloc(sizeof(EZOPT));
 		if (opt == NULL) {
 			free(rtbuf);
-			return CMD_UNSET;
+			return CMD_ERROR;
 		}
 	}
 
@@ -766,11 +762,9 @@ break_parse:
 	 * was specified, which would regards the empty filename as current
 	 * path, ezthumb would work as a command line tool. Otherwise it
 	 * will start the GUI interface */
-	if (todo == CMD_UNSET) {
+	if ((todo == CMD_UNSET) && (optind >= argc) &&
+			((opt->flags & EZOP_RECURSIVE) == 0)) {
 		todo = CMD_G_UI;
-		if ((optind < argc) || (opt->flags & EZOP_RECURSIVE)) {
-			todo = CMD_R_ECURS;
-		}
 	}
 	if (dummy) {
 		main_close(dummy);

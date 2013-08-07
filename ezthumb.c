@@ -286,6 +286,14 @@ int ezthumb_bind(char **fname, int fnum, EZOPT *ezopt)
 	if ((vanchor = video_alloc_queue(ezopt, fname, fnum)) == NULL) {
 		return EZ_ERR_FILE;
 	}
+
+	if (ezopt_thumb_name(ezopt, NULL, vanchor->filename, -1) == 
+			EZ_THUMB_SKIP) {
+		eznotify(NULL, EN_SKIP_EXIST, 0, 0, vanchor->filename);
+		video_free(vanchor);
+		return EZ_ERR_EOP;
+	}
+
 	if ((image = image_allocate(vanchor, vanchor->dur_all, &rc)) == NULL) {
 		video_free(vanchor);
 		return rc;
@@ -789,6 +797,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	vidx->filename = filename;
 	vidx->seekable = ENX_SEEK_UNKNOWN;
 	vidx->filesize = smm_filesize(filename);
+	vidx->vsidx    = -1;	/* must be initialized before video_open() */
 
 	smm_time_get_epoch(&vidx->tmark);	/* get current time stamp */
 	video_timing(vidx, EZ_PTS_RESET);	/* clear progress timestamp*/
@@ -842,8 +851,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	 * unwanted files. For example, in guidev branch, the ezthumb.o
 	 * was treated as a 3 seconds long MP3 file. Thus I set another
 	 * filter to check the media's resolution. */
-	if (!vidx->formatx->streams[vidx->vsidx]->codec->width ||
-			!vidx->formatx->streams[vidx->vsidx]->codec->height) {
+	if (!vidx->vstream->codec->width || !vidx->vstream->codec->height) {
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
@@ -913,8 +921,10 @@ static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 		vidx->anchor = vanchor;
 	}
 	for (vp = vanchor; vp; vp = vp->next) {
-		vp->dur_all = dur_all;
+		vp->dur_all = dur_all;		//FIXME: vp->dur_all is used to being binding mode flag
+	}
 
+#if 0
 		/* adjust the FirstFrame and LastFrame decoding flag */
 		if (vp == vanchor) {	/* the first clip */
 			if (vp->next != NULL) {
@@ -927,6 +937,7 @@ static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 			}
 		}
 	}
+#endif
 	return vanchor;
 }
 
@@ -997,7 +1008,7 @@ static int video_open(EZVID *vidx)
 	}
 
 	/* find the video stream and open the codec driver */
-	if (video_find_main_stream(vidx) < 0) {
+	if ((vidx->vsidx < 0) && (video_find_main_stream(vidx) < 0)) {
 		eznotify(NULL, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
 		video_close(vidx);
 		return EZ_ERR_VIDEOSTREAM;
@@ -1811,13 +1822,18 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 	int64_t	seekat;
 
 	vpos = image->time_from;
-	if (!GETFFRAME(vidx->ses_flags)) {
+
+	/* 20130807 use global configure structure instead of local one
+	 * to remove the annoying setting in binding mode */
+	if ((vidx->sysopt->flags & EZOP_FFRAME) == 0) {
 		index++;
 	}
 	vpos += image->time_step * index;
+	printf("video_snap_point: %d %lld %d\n", index, vpos, image->shots);
 	
 	if (vidx->dur_all) {		/* binding mode */
 		vpos -= vidx->dur_off;
+		printf("video_snap_point 2: %lld %lld\n", vpos, vidx->duration);
 		if ((vpos < 0) || (vpos > vidx->duration)) {
 			return -1;	/* outside this clip */
 		}
@@ -2062,9 +2078,6 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
-
-		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, 
-				vidx->fgroup[vidx->fnow].frame);
 		if (dts >= dtsto) {
 			return dts;
 		}
@@ -2322,10 +2335,8 @@ static int video_timing(EZVID *vidx, int type)
  *   MS =  PTS * 1000 * s->time_base.num / s->time_base.den */
 static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
 {
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return (EZTIME) av_rescale(dts * 1000, 
-			s->time_base.num, s->time_base.den);
+	return (EZTIME) av_rescale(dts * 1000, vidx->vstream->time_base.num,
+			vidx->vstream->time_base.den);
 }
 
 /* this function is used to convert the timestamp from the millisecond 
@@ -2335,10 +2346,8 @@ static EZTIME video_dts_to_ms(EZVID *vidx, int64_t dts)
  *   PTS = ms * s->time_base.den / (s->time_base.num * 1000) */
 static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
 {
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale((int64_t) ms, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) 1000);
+	return av_rescale((int64_t) ms, vidx->vstream->time_base.den, 
+		(int64_t) vidx->vstream->time_base.num * (int64_t) 1000);
 }
 
 /* this function is used to convert the PTS from the video stream
@@ -2348,10 +2357,8 @@ static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
  *   SYS = PTS * AV_TIME_BASE * s->time_base.num / s->time_base.den  */
 /*static int64_t video_dts_to_system(EZVID *vidx, int64_t dts)
 {
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
 	return av_rescale(dts * (int64_t) AV_TIME_BASE,
-			s->time_base.num, s->time_base.den);
+			vidx->vstream->time_base.num, vidx->vstream->time_base.den);
 }*/
 
 /* this function is used to convert the timestamp from the default 
@@ -2361,10 +2368,9 @@ static int64_t video_ms_to_dts(EZVID *vidx, EZTIME ms)
  *   PTS = SYS * s->time_base.den / (s->time_base.num * AV_TIME_BASE) */
 static int64_t video_system_to_dts(EZVID *vidx, int64_t sysdts)
 {
-	AVStream	*s = vidx->formatx->streams[vidx->vsidx];
-
-	return av_rescale(sysdts, s->time_base.den, 
-			(int64_t) s->time_base.num * (int64_t) AV_TIME_BASE);
+	return av_rescale(sysdts, vidx->vstream->time_base.den, 
+			(int64_t) vidx->vstream->time_base.num * 
+			(int64_t) AV_TIME_BASE);
 }
 
 

@@ -162,10 +162,6 @@
 #define EZOP_DEBUG_SET(f,x)	((f) |= (((x) & SLOG_LVL_MASK) << EZDBG_FIELD))
 #define EZOP_DEBUG_MAKE(f,x)	(EZOP_DEBUG_CLEAR(f),EZOP_DEBUG_SET(f,x))
 
-#define SETFFRAME(m)	((m) | EZOP_FFRAME)
-#define CLRFFRAME(m)	((m) & ~EZOP_FFRAME)
-#define GETFFRAME(m)	((m) & EZOP_FFRAME)
-
 #define SETDURMOD(m,d)	((m) &= ~EZOP_DUR_MASK, (m) |= (d))
 #define GETDURMOD(m)	((m) & EZOP_DUR_MASK)
 
