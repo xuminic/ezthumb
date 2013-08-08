@@ -368,6 +368,7 @@ typedef	struct	{
 
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
+	EZPROF	*pro_gext;	/* grid extension, linked to pro_size */
 	EZPROF	*pro_size;	/* profile of the size of each snapshots */
 	EZPROF	pro_pool[EZ_PROF_MAX_ENTRY];
 } EZOPT;

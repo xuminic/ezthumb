@@ -56,6 +56,8 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	for (i = 0; i < len; i++) {
 		ezopt_profile_append(opt, plist[i]);
 	}
+	/* 20130809 make a copy of pro_size as an extension of grip profile */
+	opt->pro_gext = opt->pro_size;
 	
 	free(tmp);
 	return 0;
@@ -172,11 +174,13 @@ int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row)
 {
 	EZPROF	*node;
 
-	if (ezopt->pro_size == NULL) {
+	/* 20130809 Using pro_gext instead of pro_size because it won't 
+	 * be reset by -s and -w option */
+	if (ezopt->pro_gext == NULL) {
 		return bs;	/* profile disabled so ignore it */
 	}
 
-	for (node = ezopt->pro_size; node->next; node = node->next) {
+	for (node = ezopt->pro_gext; node->next; node = node->next) {
 		if (vw <= node->weight) {
 			break;
 		}
