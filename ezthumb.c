@@ -483,7 +483,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 	while (image->taken < image->shots) {
 		dts_snap = video_snap_point(vidx, image, image->taken);
 		if (dts_snap < 0) {
-			break;
+			break;	/* out of current video range */
 		}
 
 		if (video_dts_ruler(vidx, dts, dts_snap) < 2) {
@@ -543,13 +543,17 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 		}
 
 vs_skim_update:
+		/* 20130808 ezthumb should not break from here if decoding 
+		 * video failed. Otherwise it'll cause problem to the binding
+		 * mode. Binding mode will take previous clip's index to the
+		 * next clip. The workaround is updating the index counter */
 		if (dts < 0) {
-			break;
+			image->taken++;
+		} else {
+			last_key = dts;
+			video_snap_update(vidx, image, dts_snap);
+			scnt++;
 		}
-		last_key = dts;
-		
-		video_snap_update(vidx, image, dts_snap);
-		scnt++;
 	}
 	video_snap_end(vidx, image);
 	return scnt;	/* return the number of thumbnails */
@@ -618,15 +622,15 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 		}
 
 vs_scan_update:
+		/* 20130808 ezthumb should not break from here if decoding 
+		 * video failed. Otherwise it'll cause problem to the binding
+		 * mode. Binding mode will take previous clip's index to the
+		 * next clip. The workaround is updating the index counter */
 		if (dts < 0) {
-			break;
-		}
-		video_snap_update(vidx, image, dts_snap);
-		scnt++;
-		
-		dts_snap = video_snap_point(vidx, image, image->taken);
-		if (dts_snap < 0) {
-			break;
+			image->taken++;
+		} else {
+			video_snap_update(vidx, image, dts_snap);
+			scnt++;
 		}
 	}
 	video_snap_end(vidx, image);
@@ -691,12 +695,13 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 
 	/* rewind the video and begin the second round scan */
 	video_seeking(vidx, 0);
-	if ((dts_snap = video_snap_point(vidx, image, image->taken)) < 0) {
-		free(refdts);
-		return 0;
-	}
 	dts = -1;
 	while (image->taken < image->shots) {
+		dts_snap = video_snap_point(vidx, image, image->taken);
+		if (dts_snap < 0) {
+			break;
+		}
+
 		while (dts < refdts[image->taken]) {
 			/* hasn't entered the range yet, go read more */
 			if ((dts = video_keyframe_next(vidx, &packet)) < 0) {
@@ -725,16 +730,15 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			VSTLOG("[IF]", refdts[image->taken], dts_snap, dts);
 		}
 
+		/* 20130808 ezthumb should not break from here if decoding 
+		 * video failed. Otherwise it'll cause problem to the binding
+		 * mode. Binding mode will take previous clip's index to the
+		 * next clip. The workaround is updating the index counter */
 		if (dts < 0) {
-			break;
-		}
-
-		video_snap_update(vidx, image, dts_snap);
-		scnt++;
-
-		dts_snap = video_snap_point(vidx, image, image->taken);
-		if (dts_snap < 0) {
-			break;
+			image->taken++;
+		} else {
+			video_snap_update(vidx, image, dts_snap);
+			scnt++;
 		}
 	}
 
@@ -1829,12 +1833,22 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 		index++;
 	}
 	vpos += image->time_step * index;
-	printf("video_snap_point: %d %lld %d\n", index, vpos, image->shots);
 	
 	if (vidx->dur_all) {		/* binding mode */
 		vpos -= vidx->dur_off;
-		printf("video_snap_point 2: %lld %lld\n", vpos, vidx->duration);
-		if ((vpos < 0) || (vpos > vidx->duration)) {
+		/* 20130808 FIXME: if vpos < 0, it must be caused by the lag 
+		 * of the index; the previous index failed to mae thumbnail
+		 * in the previous clip so it was carried up to the current 
+		 * clip. the workaround is to top up the time step to make
+		 * it positive, which would produce samesome screenshots */
+		while (vpos < 0) {
+			vpos += image->time_step;
+		}
+		/*
+		printf("video_snap_point: ID=%d POS=%lld DUR=%lld OFF=%lld\n",
+				index, vpos, vidx->duration, vidx->dur_off);
+		*/
+		if (vpos > vidx->duration) {
 			return -1;	/* outside this clip */
 		}
 	}
@@ -2035,6 +2049,7 @@ static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2)
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 {
 	EZFRM	*ezfrm;
+	int64_t	tmp;
 	int	ffin = 1;
 
 	ezfrm = video_frame_next(vidx);
@@ -2065,9 +2080,12 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		return ezfrm->rf_dts;	/* succeeded */
 
 	} while (video_load_packet(vidx, packet) >= 0);
-	/* this function should never fail unless end of stream. */
+	/* 20130808 this function should never fail unless the last frame was 
+	 * broken in the end of stream. In that case it'll return the recent 
+	 * DTS but mark it as failure in the frame buffer */
+	tmp = ezfrm->rf_dts;
 	ezfrm->rf_dts = -1;
-	return -1;
+	return tmp; 	/* this function never failed */
 }
 
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
@@ -2082,7 +2100,8 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 			return dts;
 		}
 	} while (video_load_packet(vidx, packet) >= 0);
-	return -1;
+	/* 20130808 Return the closest frame */
+	return dts;
 }
 
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto)
@@ -2095,6 +2114,8 @@ static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 
 static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
+	int64_t	dts = -1;
+
 	do {
 		if (packet->dts >= dtsto) {	/* overread */
 			return video_decode_next(vidx, packet);
@@ -2110,11 +2131,11 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		/* working on OTF mode as default */
 		if ((vidx->ses_flags & EZOP_DECODE_OTF) == 0) {
 			av_free_packet(packet);
-		} else if (video_decode_next(vidx, packet) < 0) {
+		} else if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
 	} while (video_keyframe_next(vidx, packet) >= 0);
-	return -1;
+	return dts;
 }
 
 

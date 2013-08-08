@@ -1,3 +1,10 @@
+20130808:
+  + ezthumb.c: never fail the video_decode_xxx() functions.
+    [BUG]: Otherwise in binding mode, alizee.rm la_lsla_bonita.wmv  
+    SeeYa.mkv  shakira1.mp4 shakira2.mp4, ezthumb -b --opt-ffr on *,
+    the last frame run out of la_lsla_bonita.wmv cause the index
+    disordered in between clips
+
 20130724:
   + ezthumb.c: remove the heuristic process because it's already integrated
     into the scan mode as default function.
