@@ -167,6 +167,18 @@ test_01_20()
   run "-p scan --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_21()
+{
+  local COMM="Override existed thumbnail: if thumbnail existed, override them"
+  run "--override on" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_22()
+{
+  local COMM="Update thumbnails: if thumbnail existed, skip them"
+  run "--override off" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 #############################################################################
