@@ -50,6 +50,7 @@
 #define EN_PROC_CURRENT		1004	/* current process */
 #define EN_PROC_END		1005	/* end of the process */
 #define EN_PROC_SAVED		1100
+#define EN_PROC_BINDING		1101
 #define EN_PACKET_RECV		1006	/* received an effective packet */
 #define EN_FRAME_COMPLETE	1007	/* decoded a complete frame */
 #define EN_FRAME_PARTIAL	1008	/* frame partially decoded */
@@ -470,6 +471,9 @@ typedef	struct	_EzVid	{
 	/*** video_alloc_queue() */
 	EZTIME		dur_all;	/* total duration of all clips */
 	EZTIME		dur_off;	/* total duration before this clip */
+	int64_t		bind_size;	/* total size of all clips */
+	int		bound;		/* total bound clips */
+	int		bind_idx;	/* the index number in the queue */
 
 	/*** override fields of EZOPT */
 	int		ses_dura;	/* session duration mode */

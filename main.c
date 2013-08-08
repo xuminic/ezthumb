@@ -127,7 +127,7 @@ static	struct	cliopt	clist[] = {
 	{ CMD_BKGROUND, "background", 
 		2, "the background picture" },
 	{ CMD_OTF, "decode-otf", 
-		0, "decoding on the fly mode for scan process" },
+		2, "*decoding on the fly mode for scan process" },
 	{ CMD_DEPTH, "depth",   
 		1, "most levels of directories recursively (FF:0)" },
 	{ CMD_EDGE, "edge",
@@ -158,7 +158,7 @@ static	struct	cliopt	clist[] = {
 	{ CMD_TRANSPRT, "transparent", 
 		0, "generate the transparent background" },
 	{ CMD_VID_IDX, "vindex",
-		1, "the index of the video stream" },
+		1, "*the index of the video stream" },
 	{ CMD_HELP, "help",
 		0, "*Display the help message" },
 	{ CMD_VERSION, "version", 
@@ -298,6 +298,11 @@ int main(int argc, char **argv)
 		}
 		break;
 	case CMD_B_IND:
+		if (argc - optind < 1) {
+			cli_print(clist);
+			todo = EZ_ERR_EOP;
+			break;
+		}
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysopt.flags) <= EZDBG_BRIEF) {
 			sysopt.notify = event_cb;
@@ -465,7 +470,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case CMD_OTF:	/* decode-on-the-fly */
-			opt->flags |= EZOP_DECODE_OTF;
+			if (!strcmp(optarg, "on")) {
+				opt->flags |= EZOP_DECODE_OTF;
+			} else if (!strcmp(optarg, "off")) {
+				opt->flags &= ~EZOP_DECODE_OTF;
+			} else {
+				todo = CMD_ERROR;	/* command line error */
+				goto break_parse;	/* break the analysis */
+			}
 			break;
 		case CMD_TIME_FROM:	/* time-from */
 			if (isdigit(*optarg)) {
@@ -1124,6 +1136,10 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	case EN_PROC_BEGIN:
 		dotted = 0;
 		return EN_EVENT_PASSTHROUGH;
+	
+	case EN_PROC_BINDING:
+		slog(EZDBG_SHOW, "\b\b\b\b\b+     ");
+		break;
 
 	case EN_PROC_CURRENT:
 		if (param == 0) {	/* for key frame saving only */

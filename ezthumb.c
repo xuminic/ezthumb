@@ -901,11 +901,13 @@ static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 {
 	EZVID	*vanchor, *vidx, *vp;
 	EZTIME	dur_all, dur_off;
-	int	i, rc;
+	int64_t	bsize;
+	int	i, rc, bnum;
 
 	vanchor = NULL;
 	dur_all = dur_off = 0;
-	for (i = 0; i < fnum; i++) {
+	bsize = 0;
+	for (i = bnum = 0; i < fnum; i++) {
 		if ((vidx = video_allocate(ezopt, fname[i], &rc)) == NULL) {
 			continue;
 		}
@@ -913,6 +915,9 @@ static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 		vidx->dur_off = dur_off;
 		dur_off += vidx->duration;
 		dur_all += vidx->duration;
+		
+		vidx->bind_idx = bnum++;
+		bsize += vidx->filesize;
 
 		if (vanchor == NULL) {
 			vanchor = vidx;
@@ -924,8 +929,11 @@ static EZVID *video_alloc_queue(EZOPT *ezopt, char **fname, int fnum)
 		}
 		vidx->anchor = vanchor;
 	}
+	/* update the binding information through out the queue */
 	for (vp = vanchor; vp; vp = vp->next) {
 		vp->dur_all = dur_all;		//FIXME: vp->dur_all is used to being binding mode flag
+		vp->bind_size = bsize;
+		vp->bound = bnum;
 	}
 
 #if 0
@@ -1363,7 +1371,8 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	strcpy(buffer, "NAME: ");
 	if (vidx->dur_all) {	/* binding mode */
 		csoup_path_basename(vidx->anchor->filename, buffer + 6, i-6);
-		strcat(buffer, " ...");
+		sprintf(tmp, "  + %d more", vidx->bound - 1);
+		strcat(buffer, tmp);
 	} else {
 		csoup_path_basename(vidx->filename, buffer + 6, i - 6);
 	}
@@ -1379,7 +1388,11 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	}
 
 	strcat(buffer, " (");
-	strcat(buffer, meta_filesize(vidx->filesize, tmp));
+	if (vidx->dur_all) {	/* binding mode */
+		strcat(buffer, meta_filesize(vidx->bind_size, tmp));
+	} else {
+		strcat(buffer, meta_filesize(vidx->filesize, tmp));
+	}
 	strcat(buffer, ")  ");
 
 	/*i = vidx->formatx->bit_rate;
@@ -1861,6 +1874,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 {
 	/* check if this is called by the first clip */
 	if (vidx->dur_all && vidx->dur_off) {
+		eznotify(vidx->sysopt, EN_PROC_BINDING, method, 0, vidx);
 		return 0;
 	}
 
@@ -3620,8 +3634,11 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 			break;
 		}
 		break;
+	case EN_PROC_BINDING:
+		slog(EZDBG_SHOW, "+");
+		break;
 	case EN_PROC_CURRENT:
-		//slog(EZDBG_SHOW, ".");
+		slog(EZDBG_SHOW, ".");
 		break;
 	case EN_PROC_END:
 		slog(EZDBG_SHOW, " %ldx%ld done\n", param, opt);
