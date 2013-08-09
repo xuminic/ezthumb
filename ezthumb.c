@@ -418,16 +418,9 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
-	int64_t		dts, dtms, dts_from, dts_to;
+	int64_t		dts, dtms;
 	int		i;
 
-	/* set up the border */
-	dts_from = vidx->dts_offset;
-	dts_from += video_ms_to_dts(vidx, image->time_from);
-	dts_to = dts_from + video_ms_to_dts(vidx, image->time_during);
-
-	//slogz("video_snapshot_keyframes: %lld to %lld\n", 
-	//dts_from, dts_to);
 	video_snap_begin(vidx, image, ENX_SS_IFRAMES);
 
 	i = 0;
