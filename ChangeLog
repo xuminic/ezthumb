@@ -1,3 +1,8 @@
+20130809: Version 3.0.0
+  + Most tests have been done so it's the time to release. 
+    There are so many codes and features newly included.
+    I reckon to it's proper to jump the version number.
+
 20130808:
   + ezthumb.c: never fail the video_decode_xxx() functions.
     [BUG]: Otherwise in binding mode, alizee.rm la_lsla_bonita.wmv  

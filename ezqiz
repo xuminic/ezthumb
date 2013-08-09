@@ -1,6 +1,11 @@
 #!/bin/bash
 
-VIEWER=eog
+if [ $OS = Windows_NT ]; then
+  VIEWER=rundll32.exe C:/WINDOWS/System32/shimgvw.dll,ImageView_Fullscreen 
+else
+  VIEWER=eog
+fi
+
 BGNDSM=./background/background.jpg
 BGNDBG=./background/bigground.png
 
@@ -177,6 +182,12 @@ test_01_22()
 {
   local COMM="Update thumbnails: if thumbnail existed, skip them"
   run "--override off" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_01_23()
+{
+  local COMM="Specify the start and end time in the video clip to take thumbnails"
+  run "-g 4x4 --time-from 30 --time-end 80% --opt-ffr on" "$1" "$2" "$COMM" ${@:3}
 }
 
 
@@ -527,6 +538,18 @@ test_04_14()
   run "-g 3x5 --gap-margin 10%" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_04_15()
+{
+  local COMM="Rip out all key frames and generate seperated thumbnails"
+  run "-p key" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_04_16()
+{
+  local COMM="Rip out key frames from middle and generate gif animate"
+  run "-p key -m gif@250 --time-from 20% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 
@@ -592,6 +615,24 @@ test_05_08()
   run "-b -s 320x180 -w 1280" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_05_09()
+{
+  local COMM="Binding listed video clips with specified start time and end time"
+  run "-b --time-from 60 --time-end 80%" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_10()
+{
+  local COMM="Rip key frames from bound video clips"
+  run "-b -p key" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_05_11()
+{
+  local COMM="Rip key frames from bound video clips with specified start time and end time"
+  run "-b -p key --time-from 15% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 # automatic test inside a specified group
@@ -607,15 +648,15 @@ group_test()
 
   case $TGROUP in
     01) GRPCOMM='Basic Functionality Test';
-	GRPCASE=`echo {01..07}` ;;
+	GRPCASE=`echo {01..23}` ;;
     02) GRPCOMM='Media Information Test';
-	GRPCASE=`echo {01..05}` ;;
+	GRPCASE=`echo {01..07}` ;;
     03) GRPCOMM='Canvas Attribution Test';
-	GRPCASE=`echo {01..15}` ;;
+	GRPCASE=`echo {01..33}` ;;
     04) GRPCOMM='Thumbnail Grid Test';
-	GRPCASE=`echo {01..14}` ;;
+	GRPCASE=`echo {01..16}` ;;
     05) GRPCOMM='Binding mode Test';
-	GRPCASE=`echo {01..14}` ;;
+	GRPCASE=`echo {01..11}` ;;
     *) return ;;
   esac
 

@@ -28,6 +28,14 @@ supports the transparent background. Batch processing allows.
 
 .SH OPTIONS
 .TP
+.BR \-b , " \-\-bind"
+Bind multiple video sources to generate thumbnails as one. 
+All video sources must be listed in the command line. Note that the
+binding mode would not work with the 
+.BR \-R
+recursive option.
+
+.TP
 .BR \-c , " \-\-colour \fIMI:TM:BG\fP"
 Specify the colour of texts and canvas. 
 .I MI
@@ -80,7 +88,10 @@ Specify the full path of a TrueType font file, which would
 be used to render the media information and the inset timestamp in the output
 picture. If this option is not specified, the program will use the internal 
 fix-pixel fonts.
-Note that the fontconfig patterns is also acceptable.
+Note that the fontconfig patterns is also acceptable. For example: Utopia:Bold.
+.B ezthumb
+uses UTF-8 for file names so practically it can support different languages
+if a proper font was choosen.
 
 .TP
 .BR \-F , " \-\-fontsize \fIMI:TM\fP"
@@ -331,8 +342,8 @@ To adjust this, see
 option for the details.
 
 .TP
-.BR "\-\-decode\-otf"
-Specify the decoding-on-the-fly mode. In the scan mode, see the
+.BR "\-\-decode\-otf \fIon|off\fP"
+Turn on or off the decoding-on-the-fly mode. In the scan mode, see the
 .BR \-p 
 option,
 .B ezthumb
@@ -342,6 +353,8 @@ on the other hand, would let
 decode every key frames it met. The unused frame will be discarded 
 after decoding. This option is aimed at some video clips which rely
 on previous key frames to decode a proper frame.
+This option is usually turned on to boost the compatibility. 
+However it seems safe to turn it off with new version FFMPEG
 
 .TP
 .BR " \-\-depth \fIlevels\fP"
@@ -357,6 +370,14 @@ means unlimited.
 Define the thickness of the frame edge around each screenshots.
 The thickness is defined by pixel size.
 The default value is 0 which means these's no frame edge.
+
+.TP
+.BR " \-\-filter \fIfilter_string\fP"
+Specify the string of file extension name as a target file filter. For example,
+avi,flv,mkv,mov,mp4,mpg etc.
+The filter string is quite useful in 
+.BR \-R
+recursive mode.
 
 .TP
 .BR "\-\-gap\-shots \fIsize_of_gap\fP"

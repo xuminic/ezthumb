@@ -418,7 +418,7 @@ static int video_snapping(EZVID *vidx, EZIMG *image)
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 {
 	AVPacket	packet;
-	int64_t		dts, dts_from, dts_to;
+	int64_t		dts, dtms, dts_from, dts_to;
 	int		i;
 
 	/* set up the border */
@@ -433,7 +433,14 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 	i = 0;
 	video_keyframe_credit(vidx, -1);
 	while ((dts = video_keyframe_next(vidx, &packet)) >= 0) {
-		if (dts < dts_from) {
+		/* convert DTS to relative millisecond in all clips */
+		dtms = dts - vidx->dts_offset;
+		dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
+		if (vidx->dur_all) {	/* binding mode */
+			dtms += vidx->dur_off;
+		}
+
+		if (dtms < image->time_from) {
 			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
 			} else {
@@ -441,7 +448,7 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 			}
 			continue;
 		}
-		if (dts > dts_to) {
+		if (dtms > image->time_from + image->time_during) {
 			av_free_packet(&packet);
 			break;
 		}
@@ -1909,10 +1916,10 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	 * metamorphose to human readable form */
 	dtms = ezfrm->rf_dts - vidx->dts_offset;
 	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
-	dtms += vidx->dur_off;		/* aligning the binding clips */
-	if (vidx->dur_off == 0) {
+	if (vidx->dur_all == 0) {
 		meta_timestamp(dtms, 1, timestamp);
-	} else {
+	} else {		/* binding mode */
+		dtms += vidx->dur_off;	/* aligning the binding clips */
 		timestamp[0] = '(';
 		meta_timestamp(dtms, 1, timestamp + 1);
 		strcat(timestamp, ")");
@@ -1944,8 +1951,8 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 				image->shots, image->taken, &dts);
 	} else {	/* i-frame ripping */
 		eznotify(vidx->sysopt, EN_PROC_CURRENT, 
-				(long)(vidx->duration/100), 
-				(long)(dtms/100), &dts);
+				(long)(image->time_during/100), 
+				(long)((dtms - image->time_from)/100), &dts);
 	}
 
 	/* update the progress time stamp array */
