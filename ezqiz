@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $OS = Windows_NT ]; then
+if [ "$OS" = "Windows_NT" ]; then
   VIEWER=rundll32.exe C:/WINDOWS/System32/shimgvw.dll,ImageView_Fullscreen 
 else
   VIEWER=eog
@@ -190,6 +190,13 @@ test_01_23()
   run "-g 4x4 --time-from 30 --time-end 80% --opt-ffr on" "$1" "$2" "$COMM" ${@:3}
 }
 
+test_01_24()
+{
+  local COMM="Environment variable test: moves some option into environment"
+  export EZTHUMB="-g 3x5 -m gif -p 2pass"
+  run "-g 4x4" "$1" "$2" "$COMM" ${@:3}
+}
+
 
 
 #############################################################################
@@ -319,8 +326,8 @@ test_03_12()
 
 test_03_13()
 {
-  local COMM="Turn off the timestamp in the thumbnail"
-  run "--opt-time off" "$1" "$2" "$COMM" ${@:3}
+  local COMM="Turn off the media information as well as the timestamp in the thumbnail"
+  run "--opt-time off --opt-info off" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_03_14()
@@ -333,7 +340,7 @@ test_03_15()
 {
   local COMM="Make sure the 'tt' place does NOT work for media information and timestamp"
   run "--opt-info tt" "$1" "$2" "$COMM" ${@:3}
-  run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
+#  run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
 }
 
 test_03_16()
@@ -354,21 +361,30 @@ test_03_18()
 {
   local FONT=./fonts/sazanami-gothic.ttf
   local COMM="Test the Japanese in the file name by external fonts: $FONT"
-  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+  local TNAME=Janpanese_奇譚クラブ
+  ln -s $3 $TNAME
+  run "-f $FONT" "$1" "$2" "$COMM" $TNAME ${@:4}
+  rm $TNAME
 }
 
 test_03_19()
 {
   local FONT=./fonts/UnDotum.ttf
   local COMM="Test the Korean in the file name by external fonts: $FONT"
-  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+  local TNAME=Korean_강남스타일
+  ln -s $3 $TNAME
+  run "-f $FONT" "$1" "$2" "$COMM" $TNAME ${@:4}
+  rm $TNAME
 }
 
 test_03_20()
 {
   local FONT=./fonts/wqy-microhei.ttc
   local COMM="Test the Chinese in the file name by external fonts: $FONT"
-  run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
+  local TNAME=Chinese_完整剪辑
+  ln -s $3 $TNAME
+  run "-f $FONT" "$1" "$2" "$COMM" $TNAME ${@:4}
+  rm $TNAME
 }
 
 test_03_21()

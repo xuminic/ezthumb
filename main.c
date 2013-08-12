@@ -891,6 +891,7 @@ static int env_init(EZOPT *ezopt)
 	env = (char*) &arg[num];
 
 	len = mkargv(env, arg, num);
+	printf("ENV:%s [%d]\n", env, len);
 
 #ifdef	SANTEST_ENV_INIT
 	for (num = 0; num <= len; num++) {
