@@ -577,6 +577,18 @@ stretch the width of the picture to fit the canvas but keep its height same.
 .BR sy
 stretch the height of the picture to fit the canvas but keep its width same.
 
+.SH ENVIRONMENT
+Since 3.0.0 ezthumb started to support an environment variable
+.BR EZTHUMB
+to store some command line options. For example, the exported options by
+
+export EZTHUMB="-g 4x6 -m png"
+
+will be passed to
+.BR ezthumb
+as default options. However, these options could be overriden by explicit 
+command line options.
+
 .SH PROFILES
 The profile is used to set a group of rules about the geometry size of the 
 thumbnails. It can generate different screenshot according to the attribute

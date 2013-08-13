@@ -17,6 +17,17 @@ This program was inspired by movie thumbnailer (mtn):
 http://sourceforge.net/projects/moviethumbnail/
 
 
+Release Notes
+=============
+Version 3.0.0:
+*) Binding mode can generate one large thumbnail from multiple video sources.
+*) Support environment variable 'EZTHUMB' as part of command line arguments.
+*) Improved skim mode fits most of video files.
+*) Included a test script to help automatic test.
+*) Included an internal file name filter to help the recursive mode.
+*) Many bug fixes.
+
+
 Install
 =======
 
@@ -30,6 +41,13 @@ bzip2
 You may need to modify the Makefile, especially the INCDIR and LIBDIR macros,
 to point to proper directories.
 
+Libcsoup will be shipped with ezthumb. It's part of ezthumb project so you 
+need to enter libcsoup first:
+
+make clean
+make
+
+then go to ezthumb do the same thing.
 
 
 MinGW

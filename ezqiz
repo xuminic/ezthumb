@@ -193,7 +193,7 @@ test_01_23()
 test_01_24()
 {
   local COMM="Environment variable test: moves some option into environment"
-  export EZTHUMB="-g 3x5 -m gif -p 2pass"
+  export EZTHUMB="-g 3x5 -m gif -p 2pass --accurate"
   run "-g 4x4" "$1" "$2" "$COMM" ${@:3}
 }
 
