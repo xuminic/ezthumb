@@ -364,7 +364,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	slog(SLFUNC, "%s\n", rtbuf->optarg);
 
 	if (opt == NULL) {
-		opt = dummy = malloc(sizeof(EZOPT));
+		opt = dummy = calloc(sizeof(EZOPT), 1);
 		if (opt == NULL) {
 			free(rtbuf);
 			return CMD_ERROR;
