@@ -1,7 +1,8 @@
 #!/bin/bash
 
 if [ "$OS" = "Windows_NT" ]; then
-  VIEWER=rundll32.exe C:/WINDOWS/System32/shimgvw.dll,ImageView_Fullscreen 
+#  VIEWER=rundll32.exe C:/WINDOWS/System32/shimgvw.dll,ImageView_Fullscreen 
+  VIEWER=mspaint
 else
   VIEWER=eog
 fi
@@ -46,25 +47,25 @@ run()
 #############################################################################
 # Group 01: Basic functions
 #############################################################################
-test_01_01()
+test_1_1()
 {
   local COMM="Generate 4x4 thumbnails, 50% screen size"
   run "-g 4x4 -s 50%" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_02()
+test_1_2()
 {
   local COMM="Generate 4x4 thumbnails, 50% screen size with the most accurate frames"
   run "-g 4x4 -s 50% --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_03()
+test_1_3()
 {
   local COMM="Generate thumbnails according to the default profile"
   run " " "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_04()
+test_1_4()
 {
   local THPATH=./mydir/thumbnails
   local COMM="Save thumbnails at specified directory ($THPATH)"
@@ -75,122 +76,122 @@ test_01_04()
   rm -r $THPATH
 }
 
-test_01_05()
+test_1_5()
 {
   local FILE="mythumb.jpg"
   local COMM="Specify the file name of the thumbnail ($FILE)"
   run "-o $FILE" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_06()
+test_1_6()
 {
   local COMM="Specify the suffix of the output files"
   run "-x _pi.c-th_" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_07()
+test_1_7()
 {
   local COMM="Specify the video stream index explicitly (Need test stream)"
   run "--vindex 3" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_08()
+test_1_8()
 {
   local COMM="Generate the JPG files with a poor qualities."
   run "-m jpg@20" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_09()
+test_1_9()
 {
   local COMM="Generate PNG outputs. The tailing '@20' should be ignored"
   run "-m png@20" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_10()
+test_1_10()
 {
   local COMM="Generate GIF outputs"
   run "-m gif" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_11()
+test_1_11()
 {
   local COMM="Generate the animation GIF outputs. The time interval is 500 ms"
   run "-m gif@500" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_12()
+test_1_12()
 {
   local COMM="Generate the animation GIF outputs by key-frames without timestamps"
   run "-m gif@250 --opt-time off -g 0" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_13()
+test_1_13()
 {
   local COMM="Generate GIF output and transparent background with specified bgcolour"
   run "-m gif -c ::ff0000 --transparent" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_14()
+test_1_14()
 {
   local COMM="Generate PNG output and transparent background with specified bgcolour"
   run "-m png -c ::ff0000 --transparent" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_15()
+test_1_15()
 {
   local COMM="Skim mode test while disabled the duration challenge"
   run "-d head -p skim" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_16()
+test_1_16()
 {
   local COMM="Skim mode test with accuration option"
   run "-p skim --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_17()
+test_1_17()
 {
   local COMM="Safe mode test while disabled the duration challenge"
   run "-d head -p safe" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_18()
+test_1_18()
 {
   local COMM="Safe mode test with accuration option"
   run "-p safe --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_19()
+test_1_19()
 {
   local COMM="Scan mode test while disabled the duration challenge"
   run "-d head -p scan" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_20()
+test_1_20()
 {
   local COMM="Scan mode test with accuration option"
   run "-p scan --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_21()
+test_1_21()
 {
   local COMM="Override existed thumbnail: if thumbnail existed, override them"
   run "--override on" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_22()
+test_1_22()
 {
   local COMM="Update thumbnails: if thumbnail existed, skip them"
   run "--override off" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_23()
+test_1_23()
 {
   local COMM="Specify the start and end time in the video clip to take thumbnails"
   run "-g 4x4 --time-from 30 --time-end 80% --opt-ffr on" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_01_24()
+test_1_24()
 {
   local COMM="Environment variable test: moves some option into environment"
   export EZTHUMB="-g 3x5 -m gif -p 2pass --accurate"
@@ -202,44 +203,44 @@ test_01_24()
 #############################################################################
 # Group 02: Media information
 #############################################################################
-test_02_01()
+test_2_1()
 {
   local COMM="Display the SIMPLE information of specified media file"
   run "-i" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_02_02()
+test_2_2()
 {
   local COMM="Display the DETAILED information of specified media file"
   run "-I" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_02_03()
+test_2_3()
 {
   local COMM="Display the detail information with a FULL SCAN of the media file"
   run "-I -d scan" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_02_04()
+test_2_4()
 {
   local COMM="Display the detail information with a QUICK SCAN of the media file"
   run "-I -d fast" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_02_05()
+test_2_5()
 {
   local COMM="Check the result of '-d' option: see the difference in a broken file"
   run "-i" "$1" "$2" "$COMM" ${@:3}
   run "-i -d fast" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_02_06()
+test_2_6()
 {
   local COMM="Dump all key frames"
   run "-i -d scan -v5" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_02_07()
+test_2_7()
 {
   local COMM="List all video files in the specified directory and subdirectories"
   run "-i -R" "$1" "$2" "$COMM" ${@:3}
@@ -249,115 +250,115 @@ test_02_07()
 #############################################################################
 # Group 03: Canvas attribution
 #############################################################################
-test_03_01()
+test_3_1()
 {
   local COMM="Specify the colours: Information is BLUE, Timestamp is RED, Background is grey"
   run "-c 0000ff:ff0000:7f7f7f" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_02()
+test_3_2()
 {
   local COMM="Only setup the background colour to grey"
   run "-c ::7f7f7f" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_03()
+test_3_3()
 {
   local COMM="Set up a 4-pixel-width black edge around each thumbnail"
   run "--edge 4" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_04()
+test_3_4()
 {
   local COMM="Test the internal font with different size: media infor 16, timestamp 8"
   run "-F 16:8" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_05()
+test_3_5()
 {
   local COMM="Test the internal font with different size and colour"
   run "-F 16:8 -c 00ff00:0000ff" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_06()
+test_3_6()
 {
   local FONT=./fonts/DejaVuSansMono-Oblique.ttf
   local COMM="Test the external TTF font: $FONT"
   run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_07()
+test_3_7()
 {
   local FONT=./fonts/DejaVuSansMono-Oblique.ttf
   local COMM="Test the external TTF font with a different size: $FONT"
   run "-f $FONT -F 16:8" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_08()
+test_3_8()
 {
   local FONT=./fonts/DejaVuSansMono-Oblique.ttf
   local COMM="Test the external TTF font with timestamp size and colour: $FONT"
   run "-f $FONT -F :16 -c :ff0000:" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_09()
+test_3_9()
 {
   local COMM="Turn off the media information"
   run "--opt-info off" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_10()
+test_3_10()
 {
   local COMM="Place the media information to the right corner"
   run "--opt-info rc" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_11()
+test_3_11()
 {
   local COMM="Place the media information to the center"
   run "--opt-info mc" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_12()
+test_3_12()
 {
   local COMM="Turn off the timestamp in the thumbnail"
   run "--opt-time off" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_13()
+test_3_13()
 {
   local COMM="Turn off the media information as well as the timestamp in the thumbnail"
   run "--opt-time off --opt-info off" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_14()
+test_3_14()
 {
   local COMM="Move the timestamp to the left-bottom of thumbnail"
   run "--opt-time lb" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_15()
+test_3_15()
 {
   local COMM="Make sure the 'tt' place does NOT work for media information and timestamp"
   run "--opt-info tt" "$1" "$2" "$COMM" ${@:3}
 #  run "--opt-time tt" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_16()
+test_3_16()
 {
   local FONT=LiberationSans-Italic.ttf
   local COMM="Test the external TTF font by searching the system fonts: $FONT"
   run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_17()
+test_3_17()
 {
   local FONT="DejaVu\ Serif:style=Book"
   local COMM="Test the external TTF font by face name from fc-list: $FONT"
   run "-f $FONT" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_18()
+test_3_18()
 {
   local FONT=./fonts/sazanami-gothic.ttf
   local COMM="Test the Japanese in the file name by external fonts: $FONT"
@@ -367,7 +368,7 @@ test_03_18()
   rm $TNAME
 }
 
-test_03_19()
+test_3_19()
 {
   local FONT=./fonts/UnDotum.ttf
   local COMM="Test the Korean in the file name by external fonts: $FONT"
@@ -377,7 +378,7 @@ test_03_19()
   rm $TNAME
 }
 
-test_03_20()
+test_3_20()
 {
   local FONT=./fonts/wqy-microhei.ttc
   local COMM="Test the Chinese in the file name by external fonts: $FONT"
@@ -387,80 +388,80 @@ test_03_20()
   rm $TNAME
 }
 
-test_03_21()
+test_3_21()
 {
   local COMM="Place a small background picture in the canvas centre: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_22()
+test_3_22()
 {
 # (position code: lt,lc,lb,mt,mc,mb,rt,rc,rb)
   local COMM="Place a small background picture in the left-top of canvas: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg lt" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_23()
+test_3_23()
 {
   local COMM="Tile a small background picture all over the canvas: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg tt" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_24()
+test_3_24()
 {
   local COMM="Stretch a small background picture to the whole canvas: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg st" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_25()
+test_3_25()
 {
   local COMM="Compress a big background picture to the whole canvas: $BGNDBG"
   run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg st" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_26()
+test_3_26()
 {
   local COMM="Enlarge a small background picture to the width of the canvas while keeping proportion: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg ex" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_27()
+test_3_27()
 {
   local COMM="Shrink a big background picture to the width of the canvas while keeping proportion: $BGNDBG"
   run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg ex" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_28()
+test_3_28()
 {
   local COMM="Enlarge a small background picture to the height of the canvas while keeping proportion: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg ey" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_29()
+test_3_29()
 {
   local COMM="Shrink a big background picture to the height of the canvas while keeping proportion: $BGNDBG"
   run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg ey" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_30()
+test_3_30()
 {
   local COMM="Shrink a big background picture to the height of the canvas while keeping proportion and move to centre: $BGNDBG"
   run "-c ::7f7f7f --background $BGNDBG --gap-shots 20 --gap-margin 40 --pos-bg ey:mc" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_31()
+test_3_31()
 {
   local COMM="Stretch a small background picture to the width of the canvas: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg sx" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_32()
+test_3_32()
 {
   local COMM="Stretch a small background picture to the height of the canvas: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg sy" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_03_33()
+test_3_33()
 {
   local COMM="Stretch a small background picture to the height of the canvas and move to centre: $BGNDSM"
   run "-c ::7f7f7f --background $BGNDSM --gap-shots 20 --gap-margin 40 --pos-bg sy:mc" "$1" "$2" "$COMM" ${@:3}
@@ -470,97 +471,97 @@ test_03_33()
 #############################################################################
 # Group 04: Thumbnail Grid Test
 #############################################################################
-test_04_01()
+test_4_1()
 {
   local COMM="Set up an 8x1 grid"
   run "-g 8x1" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_02()
+test_4_2()
 {
   local COMM="Set up an 1x8 grid"
   run "-g 1x8" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_03()
+test_4_3()
 {
   local COMM="Specify the grid in width and let Ezthumb decide the height (by time step or 4)"
   run "-g 5" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_04()
+test_4_4()
 {
   local COMM="No grid and canvas at all, save to separate 8 screen shots"
   run "-g 0x8" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_05()
+test_4_5()
 {
   local COMM="No grid and canvas, save all i-frame separately"
   run "-g 0x0" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_06()
+test_4_6()
 {
   local COMM="Take snapshots and change to expected size in percentage"
   run "-g 3x5 -s 20%" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_07()
+test_4_7()
 {
   local COMM="Take snapshots and change to expected size in pixel"
   run "-g 3x5 -s 300x100" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_08()
+test_4_8()
 {
   local COMM="Limit the width of the canvas and automatically fit the snapshots"
   run "-g 3x5 -s 300x100 -w 1024" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_09()
+test_4_9()
 {
   local COMM="Remove the gap between each snapshots"
   run "-g 3x5 --gap-shots 0" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_10()
+test_4_10()
 {
   local COMM="Adjust the gap between each snapshots to specified size in pixel"
   run "-g 3x5 --gap-shots 12" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_11()
+test_4_11()
 {
   local COMM="Adjust the gap between each snapshots in proportion of the thumbnail width"
   run "-g 3x5 --gap-shots 10%" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_12()
+test_4_12()
 {
   local COMM="Remove the canvas margin"
   run "-g 3x5 --gap-margin 0" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_13()
+test_4_13()
 {
   local COMM="Adjust the canvas margin to specified size in pixel"
   run "-g 3x5 --gap-margin 20" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_14()
+test_4_14()
 {
   local COMM="Adjust the canvas margin in proportion of the thumbnail width"
   run "-g 3x5 --gap-margin 10%" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_15()
+test_4_15()
 {
   local COMM="Rip out all key frames and generate seperated thumbnails"
   run "-p key" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_04_16()
+test_4_16()
 {
   local COMM="Rip out key frames from middle and generate gif animate"
   run "-p key -m gif@250 --time-from 20% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
@@ -570,7 +571,7 @@ test_04_16()
 
 
 
-test_04_20()
+test_4_20()
 {
   local COMM="Foolproof test, no crash is required"
   run "-g x4" "$1" "$2" "$COMM" ${@:3}
@@ -583,67 +584,67 @@ test_04_20()
 # Group 05: Binding Test
 #############################################################################
 
-test_05_01()
+test_5_1()
 {
   local COMM="Binding listed video clips and generate one thumbnail"
   run "-b" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_02()
+test_5_2()
 {
   local COMM="Binding listed video clips by scan mode"
   run "-b -p scan" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_03()
+test_5_3()
 {
   local COMM="Binding listed video clips by two-pass scan mode"
   run "-b -p 2pass" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_04()
+test_5_4()
 {
   local COMM="Binding listed video clips by safe mode"
   run "-b -p safe" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_05()
+test_5_5()
 {
   local COMM="Binding listed video clips by setting time steps"
   run "-b -t 30000" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_06()
+test_5_6()
 {
   local COMM="Binding listed video clips in accurate mode by full scan"
   run "-b -p scan -d scan --accurate" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_07()
+test_5_7()
 {
   local COMM="Binding listed video clips with specified thumbnail size"
   run "-b -s 320x180" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_08()
+test_5_8()
 {
   local COMM="Binding listed video clips with specified canvas width"
   run "-b -s 320x180 -w 1280" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_09()
+test_5_9()
 {
   local COMM="Binding listed video clips with specified start time and end time"
   run "-b --time-from 60 --time-end 80%" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_10()
+test_5_10()
 {
   local COMM="Rip key frames from bound video clips"
   run "-b -p key" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_05_11()
+test_5_11()
 {
   local COMM="Rip key frames from bound video clips with specified start time and end time"
   run "-b -p key --time-from 15% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
@@ -658,32 +659,30 @@ test_05_11()
 # $3+: video file name
 group_test()
 {
-  local TGROUP=`printf %02d $1`
   local GRPCOMM=
   local GRPCASE=
 
-  case $TGROUP in
-    01) GRPCOMM='Basic Functionality Test';
-	GRPCASE=`echo {01..23}` ;;
-    02) GRPCOMM='Media Information Test';
-	GRPCASE=`echo {01..07}` ;;
-    03) GRPCOMM='Canvas Attribution Test';
-	GRPCASE=`echo {01..33}` ;;
-    04) GRPCOMM='Thumbnail Grid Test';
-	GRPCASE=`echo {01..16}` ;;
-    05) GRPCOMM='Binding mode Test';
-	GRPCASE=`echo {01..11}` ;;
+  case $1 in
+    1) GRPCOMM='Basic Functionality Test';
+	GRPCASE=`echo {1..23}` ;;
+    2) GRPCOMM='Media Information Test';
+	GRPCASE=`echo {1..7}` ;;
+    3) GRPCOMM='Canvas Attribution Test';
+	GRPCASE=`echo {1..33}` ;;
+    4) GRPCOMM='Thumbnail Grid Test';
+	GRPCASE=`echo {1..16}` ;;
+    5) GRPCOMM='Binding mode Test';
+	GRPCASE=`echo {1..11}` ;;
     *) return ;;
   esac
 
-  if [ "$2" = "00" ]; then
+  if [ "$2" = "0" ]; then
     for i in $GRPCASE
     do
-      test\_$TGROUP\_$i $TGROUP.$i "$GRPCOMM" ${@:3}
+      test\_$1\_$i $1.$i "$GRPCOMM" ${@:3}
     done
   else
-    i=`printf %02d $2`
-    test\_$TGROUP\_$i $TGROUP.$i "$GRPCOMM" ${@:3}
+    test\_$1\_$2 $1.$2 "$GRPCOMM" ${@:3}
   fi
 }
 
@@ -713,7 +712,7 @@ do  case "$1" in
     GROUP=`echo ${1:1} | cut -d. -f1`
     CASES=`echo ${1:1} | cut -s -d. -f2`
     if [ "$CASES" = "" ]; then
-      CASES="00"
+      CASES="0"
     fi
     #echo $GROUP $CASES
     ;;
@@ -728,9 +727,9 @@ if [ "$1" = "" ]; then
 fi
 
 if [ "$GROUP" = "auto" ]; then
-  for GROUP in {01..03}
+  for GROUP in {1..5}
   do
-    group_test $GROUP 00 $@
+    group_test $GROUP 0 $@
   done
   exit
 elif [ ! "$GROUP" = "" ]; then
