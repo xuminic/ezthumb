@@ -44,7 +44,7 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	int	i, len;
 
 	/* duplicate the input profile string */
-	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
+	if ((tmp = csc_strcpy_alloc(s, 0)) == NULL) {
 		return -1;
 	}
 	
@@ -52,7 +52,7 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	memset(opt->pro_pool, 0, sizeof(EZPROF) * EZ_PROF_MAX_ENTRY);
 	opt->pro_grid = opt->pro_size = NULL;
 
-	len = ziptoken(tmp, plist, sizeof(plist)/sizeof(char*), ":");
+	len = csc_ziptoken(tmp, plist, sizeof(plist)/sizeof(char*), ":");
 	for (i = 0; i < len; i++) {
 		ezopt_profile_append(opt, plist[i]);
 	}
@@ -282,14 +282,14 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 	char	pbuf[256], *argv[8];
 	int	val;
 
-	strlcopy(pbuf, ps, sizeof(pbuf));
+	csc_strlcpy(pbuf, ps, sizeof(pbuf));
 
 	val = (int) strtol(pbuf, &ps, 10);
 	if (*ps == 0) {	/* pointed to the EOL; no flag error */
 		return -1;
 	}
 
-	fixtoken(ps + 1, argv, sizeof(argv)/sizeof(char*), "xX");
+	csc_fixtoken(ps + 1, argv, sizeof(argv)/sizeof(char*), "xX");
 	node = ezopt_profile_new(ezopt, *ps, val);
 
 	switch (node->flag) {
@@ -534,12 +534,12 @@ int meta_image_format(char *input, char *fmt, int flen)
 	char	*p, arg[128];
 	int	quality = 0;
 
-	strlcopy(arg, input, sizeof(arg));
+	csc_strlcpy(arg, input, sizeof(arg));
 	if ((p = strchr(arg, '@')) != NULL) {
 		*p++ = 0;
 		quality = strtol(p, NULL, 0);
 	}
-	strlcopy(fmt, arg, flen);
+	csc_strlcpy(fmt, arg, flen);
 
 	/* foolproof of the quality parameter */
 	if (!strcmp(fmt, "jpg") || !strcmp(fmt, "jpeg")) {

@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_PARAM;
 		break;
 	case CMD_HELP:		/* help */
-		cli_print(clist);
+		csc_cli_print(clist);
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_VERSION:	/* version */
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
 		break;
 	case CMD_B_IND:
 		if (argc - optind < 1) {
-			cli_print(clist);
+			csc_cli_print(clist);
 			todo = EZ_ERR_EOP;
 			break;
 		}
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
 	case CMD_G_UI:
 		todo = EZ_ERR_EOP;
 		if (sysopt.gui == NULL) {
-			cli_print(clist);
+			csc_cli_print(clist);
 		}
 #ifdef	CFG_GUI_ON
 		else {
@@ -358,7 +358,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	char	*p;
 	int	c, todo, prof_grid, prof_size;
 
-	if ((rtbuf = cli_alloc_getopt(clist)) == NULL) {
+	if ((rtbuf = csc_cli_getopt_alloc(clist)) == NULL) {
 		return CMD_ERROR;
 	}
 	slog(SLFUNC, "%s\n", rtbuf->optarg);
@@ -556,9 +556,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			/* file name filter, for example: "avi,wmv,mkv"
  			 * The NULL filter means allow all. */
 			if (opt->accept) {
-				csoup_eff_close(opt->accept);
+				csc_extname_filter_close(opt->accept);
 			}
-			opt->accept = csoup_eff_open(optarg);
+			opt->accept = csc_extname_filter_open(optarg);
 			break;
 
 		case CMD_B_IND:
@@ -753,7 +753,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			prof_size = 0;	/* disable the profile */
 			break;
 		case CMD_SUFFI_X:
-			strlcopy(opt->suffix, optarg, 64);
+			csc_strlcpy(opt->suffix, optarg, 64);
 			break;
 		default:
 			todo = CMD_ERROR;	/* command line error */
@@ -805,7 +805,7 @@ static int main_close(EZOPT *opt)
 	}
 #endif
 	if (opt->accept) {
-		csoup_eff_close(opt->accept);
+		csc_extname_filter_close(opt->accept);
 		opt->accept = NULL;
 	}
 	if (opt->refuse) {
@@ -828,7 +828,7 @@ static int msg_info(void *option, char *path, int type, void *info)
 		slogz("Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		if (csoup_eff_match(ezopt->accept, path)) {
+		if (csc_extname_filter_match(ezopt->accept, path)) {
 			ezinfo(path, option, NULL);
 		}
 		break;
@@ -851,7 +851,7 @@ static int msg_shot(void *option, char *path, int type, void *info)
 		slogz("Entering %s:\n", path);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		if (csoup_eff_match(ezopt->accept, path)) {
+		if (csc_extname_filter_match(ezopt->accept, path)) {
 			//slogz("+++ %s\n", path);
 			ezthumb(path, option);
 		}
@@ -874,12 +874,12 @@ static int env_init(EZOPT *ezopt)
 	if ((env = getenv("EZTHUMB")) == NULL) {
 		return 0;
 	}	
-	if ((vcmd = strcpy_alloc("ezthumb ", strlen(env)+4)) == NULL) {
+	if ((vcmd = csc_strcpy_alloc("ezthumb ", strlen(env)+4)) == NULL) {
 		return -1;
 	}
 	strcat(vcmd, env);
 
-	len = ziptoken(vcmd, arg, 128, " ");
+	len = csc_ziptoken(vcmd, arg, 128, " ");
 
 	/*for (num = 0; num <= len; num++) {
 		slogz("%d: %s\n", num, arg[num]);
@@ -919,10 +919,10 @@ static int para_get_time_point(char *s)
 		return val;
 	}
 
-	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
+	if ((tmp = csc_strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
-	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
+	argcs = csc_ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
 		slos(EZDBG_WARNING, 
@@ -961,10 +961,10 @@ static int para_get_position(char *s)
 	char	*tmp, *argvs[4];
 	int	argcs;
 
-	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
+	if ((tmp = csc_strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
-	argcs = ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
+	argcs = csc_ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	if (argcs < 2) {
 		argcs = para_make_postition(s);
 	} else {
@@ -1020,10 +1020,10 @@ static int para_get_color(EZOPT *opt, char *s)
 	unsigned long	rc;
 	char	*rp, *tmp, *argvs[3];
 
-	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
+	if ((tmp = csc_strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
-	fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
+	csc_fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 
 	rp = argvs[0];
 	if (rp && *rp) {
@@ -1069,16 +1069,16 @@ static char *para_get_fontdir(char *s)
 	/* review whether the fontconfig pattern like "times:bold:italic"
 	 * was specified. The fontconfig pattern could be used directly.
 	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
-	if (csoup_cmp_file_extname(s, "ttf") && 
-			csoup_cmp_file_extname(s, "ttc")) {
+	if (csc_cmp_file_extname(s, "ttf") && 
+			csc_cmp_file_extname(s, "ttc")) {
 		gdFTUseFontConfig(1);
-		return strcpy_alloc(s, 0);
+		return csc_strcpy_alloc(s, 0);
 	}
 	/* the fontconfig pattern like "times:bold:italic" shouldn't be messed
 	 * with network path like "smb://sdfaadf/abc */
 	if (((p = strchr(s, ':')) != NULL) && isalnum(p[1])) {
 		gdFTUseFontConfig(1);
-		return strcpy_alloc(s, 0);
+		return csc_strcpy_alloc(s, 0);
 	}
 	return smm_fontpath(s, NULL);
 }
@@ -1087,10 +1087,10 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 {
 	char	*rp, *tmp, *argvs[3];
 
-	if ((tmp = strcpy_alloc(s, 0)) == NULL) {
+	if ((tmp = csc_strcpy_alloc(s, 0)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
-	fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
+	csc_fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 
 	rp = argvs[0];
 	if (rp && *rp) {

@@ -192,7 +192,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	ezopt->bg_position = EZ_POS_MIDCENTER;
 	ezopt->vs_user = -1;	/* default: first found video stream */
 	ezopt->r_flags = SMM_PATH_DIR_FIFO;
-	ezopt->accept = csoup_eff_open(EZ_DEF_FILTER);
+	ezopt->accept  = csc_extname_filter_open(EZ_DEF_FILTER);
 
 	if (profile) {
 		ezopt_profile_setup(ezopt, profile);
@@ -1370,11 +1370,11 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 
 	strcpy(buffer, "NAME: ");
 	if (vidx->dur_all) {	/* binding mode */
-		csoup_path_basename(vidx->anchor->filename, buffer + 6, i-6);
+		csc_path_basename(vidx->anchor->filename, buffer + 6, i - 6);
 		sprintf(tmp, "  + %d more", vidx->bound - 1);
 		strcat(buffer, tmp);
 	} else {
-		csoup_path_basename(vidx->filename, buffer + 6, i - 6);
+		csc_path_basename(vidx->filename, buffer + 6, i - 6);
 	}
 	image_gdcanvas_print(image, line++, 0, buffer);
 
@@ -2644,7 +2644,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 	//gdFTUseFontConfig(1);	/* enable fontconfig patterns */
 	/* 20130801 I've got the idea that the font height should be
 	 * standardalized by file name and maximum english glyph array */
-	if ((ftmp = strcpy_alloc(vidx->filename, 16)) == NULL) {
+	if ((ftmp = csc_strcpy_alloc(vidx->filename, 16)) == NULL) {
 		image_free(image);
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
@@ -3444,7 +3444,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
 	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
 	 * still a path */
-	if (!csoup_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
+	if (!csc_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
 		if (buf) {
 			strcpy(buf, ezopt->pathout);
 		}
@@ -3513,7 +3513,7 @@ static char *ezopt_name_build(char *path, char *fname, char *buf, char *sfx)
 			sep[1] = 0;
 			strcat(buf, sep);
 		}
-		strcat(buf, csoup_path_basename(fname, NULL, 0));
+		strcat(buf, csc_path_basename(fname, NULL, 0));
 	}
 	if ((p = strrchr(buf, '.')) != NULL) {
 		*p = 0;
