@@ -134,7 +134,7 @@ ifeq	($(SYSGUI),CFG_GUI_ON)
 OBJS	+= $(OBJDIR)/ezgui.o
 endif
 
-LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd
+LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd -lm
 #	 -lfreetype -lbz2 -lm
 
 ifeq	($(SYSGUI),CFG_GUI_ON)

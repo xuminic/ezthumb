@@ -1019,11 +1019,15 @@ static int video_open(EZVID *vidx)
 		return EZ_ERR_STREAM;
 	}
 
-	/* find the video stream and open the codec driver */
-	if ((vidx->vsidx < 0) && (video_find_main_stream(vidx) < 0)) {
-		eznotify(NULL, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
-		video_close(vidx);
-		return EZ_ERR_VIDEOSTREAM;
+	/* If the vsidx is uninitialized (first time opening the video),
+	 * ezthumb will go to find the video stream */
+	if (vidx->vsidx < 0) {
+		if ((vidx->vsidx = video_find_main_stream(vidx)) < 0) {
+			eznotify(NULL, EZ_ERR_VIDEOSTREAM, 
+					0, 0, vidx->filename);
+			video_close(vidx);
+			return EZ_ERR_VIDEOSTREAM;
+		}
 	}
 
 	vidx->vstream = vidx->formatx->streams[vidx->vsidx];
@@ -1164,7 +1168,7 @@ static int video_disconnect(EZVID *vidx)
 static int video_find_main_stream(EZVID *vidx)
 {
 	AVStream	*stream;
-	int	i;
+	int		i, n;
 
 #if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
@@ -1203,30 +1207,32 @@ static int video_find_main_stream(EZVID *vidx)
 		}
 	}
 
-	vidx->vsidx = vidx->sysopt->vs_user;
-	if ((vidx->vsidx >= 0) && (vidx->vsidx < vidx->formatx->nb_streams)) {
-		stream = vidx->formatx->streams[vidx->vsidx];
+	/* verify the user define stream index is a valid and 
+	 * video attributed stream index */
+	n = vidx->sysopt->vs_user;
+	if ((n >= 0) && (n < vidx->formatx->nb_streams)) {
+		stream = vidx->formatx->streams[n];
 		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
-			return vidx->vsidx;
+			return n;
 		}
 	}
 	
 #if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
-	vidx->vsidx = av_find_best_stream(vidx->formatx, AVMEDIA_TYPE_VIDEO,
+	n = av_find_best_stream(vidx->formatx, AVMEDIA_TYPE_VIDEO,
 			wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
 #else
-	vidx->vsidx = -1;
+	n = -1;
 	for (i = 0; i < vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
 			if (wanted_stream < stream->codec_info_nb_frames) {
-				vidx->vsidx = i;
+				n = i;
 				wanted_stream = stream->codec_info_nb_frames;
 			}
 		}
 	}
 #endif
-	return vidx->vsidx;
+	return n;
 }
 
 
@@ -1830,6 +1836,9 @@ static int64_t video_statistics(EZVID *vidx)
 	myntf.varg1 = mestat;
 	myntf.varg2 = vidx;
 	eznotify(vidx->sysopt, EN_MEDIA_STATIS, imax + 1, 0, &myntf);
+	if (vidx->vsidx < 0) {
+		return 0;
+	}
 	return mestat[vidx->vsidx].dts_base + mestat[vidx->vsidx].dts_last;
 }
 
@@ -2295,7 +2304,7 @@ static char *video_stream_language(AVStream *stream)
 {
 	static	char	*nolan = "(none)";
 
-#if FF_API_OLD_METADATA2
+#ifdef	AVUTIL_DICT_H
 	AVDictionaryEntry	*lang = NULL;
 
 	if (stream->metadata) {
@@ -3574,7 +3583,14 @@ static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 	case EZ_ERR_FILE:
 		slog(EZDBG_WARNING, "%s: file not found.\n", (char*) block);
 		break;
+	}
 
+	if (ezopt == NULL) {
+		slog(EZDBG_WARNING, "Unhandled event [0x%x]\n", event);
+		return event;
+	}
+
+	switch (event) {
 	case EN_FILE_OPEN:
 		vidx = block;
 		if (ezopt->flags & EZOP_CLI_INSIDE) {
@@ -3951,7 +3967,8 @@ static int dump_frame(AVFrame *frame, int got_pic)
 			frame->key_frame, 
 			frame->coded_picture_number, 
 			frame->display_picture_number,
-			frame->reference, frame->interlaced_frame,
+			0, //frame->reference, depreciated
+			frame->interlaced_frame,
 			id_lookup(id_pict_type, frame->pict_type));
 	return 0;
 }
@@ -3976,7 +3993,7 @@ static int dump_metadata(void *dict)
 {
 	struct	Metadata	{
 		int	count;
-#if FF_API_OLD_METADATA2
+#ifdef	AVUTIL_DICT_H
 		AVDictionaryEntry	*elems;
 #elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
 		AVMetadataTag		*elems;
@@ -4005,14 +4022,14 @@ int dump_metadata(void *dict)
 		"performer", "publisher", "service_name", "service_provider",
 		"title", "track", "variant_bitrate", NULL };
 	int	i;
-#if FF_API_OLD_METADATA2
+#ifdef	AVUTIL_DICT_H
 	AVDictionaryEntry	*entry;
 #elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
 	AVMetadataTag		*entry;
 #endif
 
 	for (i = 0; mtab[i]; i++) {
-#if FF_API_OLD_METADATA2
+#ifdef	AVUTIL_DICT_H
 		entry = av_dict_get(dict, mtab[i], NULL, 0);
 #elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
 		entry = av_metadata_get(dict, mtab[i], NULL, 0);
