@@ -33,10 +33,10 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
-#define DBGVSC	EZDBG_VERBS
-//#define DBGVSC	EZDBG_NONE
-#define DBGSNP	EZDBG_VERBS
-//#define DBGSNP	EZDBG_NONE
+//#define DBGVSC	EZDBG_VERBS
+#define DBGVSC	EZDBG_NONE
+//#define DBGSNP	EZDBG_VERBS
+#define DBGSNP	EZDBG_NONE
 
 static int video_snapping(EZVID *vidx, EZIMG *image);
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
@@ -830,7 +830,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 
 	/* setup the dts_offset field for future reference */
 	if (vidx->formatx->start_time && 
-			vidx->formatx->start_time != AV_NOPTS_VALUE) {
+			vidx->formatx->start_time != (int64_t)AV_NOPTS_VALUE) {
 		vidx->dts_offset = 
 			video_system_to_dts(vidx, vidx->formatx->start_time);
 	}
@@ -997,7 +997,7 @@ static int video_open(EZVID *vidx)
 
 	/* 20120814 Implemented a media type filter to block the unwanted
 	 * media files like jpg, mp3, etc */
-	for (i = 0; i < sizeof(mblock)/sizeof(char*); i++) {
+	for (i = 0; i < (int)(sizeof(mblock)/sizeof(char*)); i++) {
 		if (!strcmp(vidx->formatx->iformat->name, mblock[i])) {
 			eznotify(NULL, EZ_ERR_FORMAT, 0, 0, vidx->filename);
 			video_close(vidx);
@@ -1185,7 +1185,7 @@ static int video_find_main_stream(EZVID *vidx)
 	/* 20130719 Remove the unknown streams in display. Currently Ezthumb 
 	 * only recognize video, audio and subtitle stream */
 	vidx->ezstream = 0;
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		stream->discard = AVDISCARD_ALL;
 		switch (stream->codec->codec_type) {
@@ -1210,7 +1210,7 @@ static int video_find_main_stream(EZVID *vidx)
 	/* verify the user define stream index is a valid and 
 	 * video attributed stream index */
 	n = vidx->sysopt->vs_user;
-	if ((n >= 0) && (n < vidx->formatx->nb_streams)) {
+	if ((n >= 0) && (n < (int)vidx->formatx->nb_streams)) {
 		stream = vidx->formatx->streams[n];
 		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
 			return n;
@@ -1222,7 +1222,7 @@ static int video_find_main_stream(EZVID *vidx)
 			wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
 #else
 	n = -1;
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
 			if (wanted_stream < stream->codec_info_nb_frames) {
@@ -1413,7 +1413,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	image_gdcanvas_print(image, line++, 0, buffer);
 
 	/* Line 2+: the stream information */
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		sprintf(buffer, "%s: ", id_lookup_tail(id_codec_type, 
 					stream->codec->codec_type));
@@ -1804,7 +1804,7 @@ static int64_t video_statistics(EZVID *vidx)
 	video_keyframe_credit(vidx, -1);
 	while (av_read_frame(vidx->formatx, &packet) >= 0) {
 		i = packet.stream_index;
-		if (i > vidx->formatx->nb_streams) {
+		if (i > (int)vidx->formatx->nb_streams) {
 			i = vidx->formatx->nb_streams;
 		}
 		if (i >= EZ_ST_MAX_REC) {
@@ -1824,7 +1824,7 @@ static int64_t video_statistics(EZVID *vidx)
 						0, 0, &packet);
 			}
 		}
-		if (packet.dts != AV_NOPTS_VALUE) {
+		if (packet.dts != (int64_t)AV_NOPTS_VALUE) {
 			if (packet.dts < mestat[i].dts_last) {
 				mestat[i].rewound++;
 				mestat[i].dts_base += mestat[i].dts_last;
@@ -2337,10 +2337,10 @@ static int64_t video_packet_timestamp(AVPacket *packet)
 	int64_t	dts;
 
 	dts = packet->dts;
-	if (dts == AV_NOPTS_VALUE) {
+	if (dts == (int64_t)AV_NOPTS_VALUE) {
 		dts = packet->pts;
 	}
-	if (dts == AV_NOPTS_VALUE) {
+	if (dts == (int64_t)AV_NOPTS_VALUE) {
 		dts = -1;
 	}
 	return dts;
@@ -3308,6 +3308,7 @@ static int image_gif_anim_add(EZIMG *image, FILE *fout, int interval)
 
 static int image_gif_anim_close(EZIMG *image, FILE *fout)
 {
+	(void) image;		/* stop the gcc warning */
 	gdImageGifAnimEnd(fout);
 	fclose(fout);
 	return 0;
@@ -3808,7 +3809,7 @@ static int dump_media_brief(EZVID *vidx)
 	char	tmp[16];
 	int	i, sec;
 
-	for (i = 0; i < vidx->formatx->nb_streams; i++) {
+	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		codecx = vidx->formatx->streams[i]->codec;
 		if (codecx->codec_type == AVMEDIA_TYPE_VIDEO) {
 			/* Fixed: the video information should use the actual
@@ -3834,7 +3835,7 @@ static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx)
 	slogz("Media: %s\n", vidx->filename);
 	for (i = 0; i < n; i++) {
 		slogz("[%d] ", i);
-		if (i >= vidx->formatx->nb_streams) {
+		if (i >= (int)vidx->formatx->nb_streams) {
 			slogz("ERROR  %8lu\n", mestat[i].received);
 			continue;
 		}
@@ -3947,6 +3948,7 @@ static int dump_subtitle_context(AVCodecContext *codec)
 
 static int dump_other_context(AVCodecContext *codec)
 {
+	(void) codec;		/* stop the gcc warning */
 	return 0;
 }
 

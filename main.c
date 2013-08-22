@@ -191,7 +191,7 @@ static	char	*sysprof[] = {
 		"160w125%:400w50%:640w35%:720w30%:1280w15%:1600w10%:1920w8%"
 };
 
-#define PROFLIST	(sizeof(sysprof)/sizeof(int*))
+#define PROFLIST	((int)(sizeof(sysprof)/sizeof(int*)))
 
 static	EZOPT	sysopt;
 
@@ -840,6 +840,7 @@ static int msg_info(void *option, char *path, int type, void *info)
 		slogz("Leaving %s\n", path);
 		break;
 	}
+	(void) info;	/* stop the gcc warning */
 	return SMM_NTF_PATH_NONE;
 }
 
@@ -864,6 +865,7 @@ static int msg_shot(void *option, char *path, int type, void *info)
 		slogz("Leaving %s\n", path);
 		break;
 	}
+	(void) info;	/* stop the gcc warning */
 	return SMM_NTF_PATH_NONE;
 }
 
@@ -1120,6 +1122,8 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	int	expect;
 	static	int	dotted;
 
+	(void) vobj;		/* stop the gcc warning */
+	(void) block;		/* stop the gcc warning */
 	switch (event) {
 	case EN_PROC_BEGIN:
 		dotted = 0;
@@ -1164,6 +1168,10 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 
 static int event_list(void *vobj, int event, long param, long opt, void *block)
 {
+	(void) vobj;		/* stop the gcc warning */
+	(void) param;		/* stop the gcc warning */
+	(void) opt;		/* stop the gcc warning */
+	(void) block;		/* stop the gcc warning */
 	if (event >= 0) {
 		return EN_EVENT_PASSTHROUGH;
 	}
@@ -1220,7 +1228,7 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 	linefeed_count(i, 3, "", "\n\n");
 
 	slosz("Reference of Width:\n");
-	for (i = 0; i < sizeof(stdres)/sizeof(int); i++) {
+	for (i = 0; i < (int)(sizeof(stdres)/sizeof(int)); i++) {
 		print_profile_width(opt, stdres[i]);
 		linefeed_count(i, 3, "\n", "    ");
 	}

@@ -331,6 +331,7 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 	EZGUI	*gui = ((EZOPT*) v)->gui;
 	int	val;
 
+	(void) b;		/* stop the gcc warning */
 	switch (eid) {
 	case EN_PROC_BEGIN:
 	case EN_PROC_END:
@@ -403,6 +404,7 @@ static void ezgui_signal_win_state(EZGUI *gui, GdkEvent *event,
 		GtkWidget *widget)
 {
 	//slogz("Envent %d\n", event->type);
+	(void) widget;		 /* stop the gcc warning */
 	if (event->type == GDK_WINDOW_STATE) {
 		gui->gw_win_state = event->window_state.new_window_state;
 	}
@@ -411,6 +413,7 @@ static void ezgui_signal_win_state(EZGUI *gui, GdkEvent *event,
 static void ezgui_signal_resize(EZGUI *gui, GdkRectangle *rect, 
 		GtkWidget *parent)
 {
+	(void) parent;		 /* stop the gcc warning */
 	if (gui->gw_win_state & (GDK_WINDOW_STATE_ICONIFIED | 
 				GDK_WINDOW_STATE_MAXIMIZED | 
 				GDK_WINDOW_STATE_FULLSCREEN)) {
@@ -704,6 +707,7 @@ static int ezgui_page_main_listview_close(GtkWidget *view, EZADD *ezadd)
 {
 	int	rc;
 
+	(void) view;		 /* stop the gcc warning */
 	if (ezadd == NULL) {
 		return 0;
 	}
@@ -959,6 +963,12 @@ static void ezgui_signal_select_dragdrop(GtkWidget *view,
 	EZADD	*ezadd;
 	char	*dndl, *head, *tail, *tmp;
 
+	(void) view;		/* stop the gcc warning */
+	(void) context;		/* stop the gcc warning */
+	(void) x;		/* stop the gcc warning */
+	(void) y;		/* stop the gcc warning */
+	(void) info;		/* stop the gcc warning */
+	(void) time;		/* stop the gcc warning */
 	if ((dndl = (char*)gtk_selection_data_get_text(seldata)) == NULL) {
 		return;
 	}
@@ -1564,6 +1574,7 @@ static GtkWidget *ezgui_setup_entry(EZGUI *gui, int dw, int ww)
 {
 	GtkWidget	*entry;
 
+	(void) gui;		/* stop the gcc warning */
 	entry = gtk_entry_new();
 	gtk_entry_set_max_length(GTK_ENTRY(entry), dw);
 	gtk_widget_set_size_request(entry, ww, -1);

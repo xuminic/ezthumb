@@ -494,9 +494,9 @@ char *meta_filesize(int64_t size, char *buffer)
 	if (buffer == NULL) {
 		buffer = tmp;
 	}
-	if (size < (1ULL << 20)) {
+	if (size < (int64_t)(1ULL << 20)) {
 		sprintf(buffer, "%lu KB", (unsigned long)(size >> 10));
-	} else if (size < (1ULL << 30)) {
+	} else if (size < (int64_t)(1ULL << 30)) {
 		sprintf(buffer, "%lu.%lu MB", (unsigned long)(size >> 20), 
 				(unsigned long)(((size % (1 << 20)) >> 10) / 100));
 	} else {
