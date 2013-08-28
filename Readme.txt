@@ -19,6 +19,10 @@ http://sourceforge.net/projects/moviethumbnail/
 
 Release Notes
 =============
+Version 3.0.1:
+*) Improved method of quick scan to find the duration of video files
+*) Fixed a display bug that file size was showed wrong.
+
 Version 3.0.0:
 *) Binding mode can generate one large thumbnail from multiple video sources.
 *) Support environment variable 'EZTHUMB' as part of command line arguments.

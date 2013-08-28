@@ -1,3 +1,8 @@
+20130828: Version 3.0.1
+  + Fixed a bug that displaying wrong file size
+  + Imporved quick scan in duration test.
+  + A foolproof update while displaying language metadata.
+
 20130809: Version 3.0.0
   + Most tests have been done so it's the time to release. 
     There are so many codes and features newly included.

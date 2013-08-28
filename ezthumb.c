@@ -33,10 +33,10 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
-//#define DBGVSC	EZDBG_VERBS
-#define DBGVSC	EZDBG_NONE
-//#define DBGSNP	EZDBG_VERBS
-#define DBGSNP	EZDBG_NONE
+#define DBGVSC	EZDBG_VERBS
+//#define DBGVSC	EZDBG_NONE
+#define DBGSNP	EZDBG_VERBS
+//#define DBGSNP	EZDBG_NONE
 
 static int video_snapping(EZVID *vidx, EZIMG *image);
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
@@ -838,6 +838,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	/* update the filesize field with the ffmpeg attribute.
 	 * this is a foolproof procedure */
 	/* the file_size field will be depreciated soon */
+#if	0
 #if	LIBAVFORMAT_VERSION_INT < (53<<16)
 	if (vidx->filesize < vidx->formatx->file_size) {
 		vidx->filesize = vidx->formatx->file_size;
@@ -848,6 +849,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 			vidx->filesize = avio_size(vidx->formatx->pb);
 		}
 	}
+#endif
 #endif
 	eznotify(ezopt, EN_FILE_OPEN, 0, 0, vidx);
 
@@ -1574,29 +1576,33 @@ static EZTIME video_duration(EZVID *vidx)
  */
 static EZTIME video_duration_quickscan(EZVID *vidx)
 {
-	EZTIME	dts, ref_dur;
+	AVPacket	packet;
+	int64_t		base, rdts;
+	int		i;
 
-	/* quick scan */
-	SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);
-	ref_dur = vidx->filesize * 8000 / vidx->bitrates;
-	dts = video_ms_to_dts(vidx, ref_dur * 9 / 10);
-	dts = (dts + vidx->dts_offset) * 9 / 10;
+	SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);	/* quick scan */
 
-	video_seeking(vidx, dts);
-	slog(DBGVSC, "video_duration_quickscan: scan from %lld\n", dts);
-
-	dts = video_statistics(vidx) - vidx->dts_offset;
-	vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
-
-	/* the scanned duration should be at least half of estimated
-	 * duration. Otherwise ezthumb starts the full scan */
-	if (vidx->duration < ref_dur / 2) {
-		slog(DBGVSC, "video_duration_quickscan: quick scan failed. "
-				"(%lld/%lld)\n", vidx->duration, ref_dur);
-		return -1;
+	/* using the binary seach to constrain to the start point */
+	rdts = video_ms_to_dts(vidx, vidx->filesize * 8000 / vidx->bitrates);
+	base = 0;
+	for (i = 0; i < 4; ) {
+		rdts /= 2;
+		video_seeking(vidx, base + rdts);
+		if (video_load_packet(vidx, &packet) > 0) {
+			base += rdts;
+			av_free_packet(&packet);
+			slog(DBGVSC, "video_duration_quickscan: "
+					"scan from %lld\n", base);
+			i++;
+		}
 	}
-	slog(DBGVSC, "video_duration_quickscan: %lld\n", vidx->duration);
-	return vidx->duration;
+
+	base = video_statistics(vidx) - vidx->dts_offset;
+	rdts = video_dts_to_ms(vidx, base > 0 ? base : 0);
+
+	slog(DBGVSC, "video_duration_quickscan: %s (%lld)\n", 
+			rdts <= 0 ? "failed" : "succeed", rdts);
+	return (EZTIME) rdts;
 }
 
 static EZTIME video_duration_fullscan(EZVID *vidx)
@@ -1605,10 +1611,9 @@ static EZTIME video_duration_fullscan(EZVID *vidx)
 
 	SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
 	dts = video_statistics(vidx) - vidx->dts_offset;
-	vidx->duration = video_dts_to_ms(vidx, dts > 0 ? dts : 0);
-	slog(DBGVSC, "video_duration_fullscan: %lld %lld\n", 
-			vidx->duration, vidx->keygap);
-	return vidx->duration;
+	dts = (EZTIME) video_dts_to_ms(vidx, dts > 0 ? dts : 0);
+	slog(DBGVSC, "video_duration_fullscan: %lld %lld\n", dts,vidx->keygap);
+	return dts;
 }
 
 static int video_seek_challenge(EZVID *vidx)
@@ -1724,7 +1729,14 @@ static int video_seek_challenge(EZVID *vidx)
 				"%lld/%lld %d\n", cur_dts, next_dts, error);
 		errmin = (error < errmin) ? error : errmin;
 	}
-
+/*
+#if	LIBAVFORMAT_VERSION_INT < (53<<16)
+	dts_span = url_ftell(vidx->formatx->pb);
+#else
+	dts_span = avio_tell(vidx->formatx->pb);
+#endif
+	printf("postion %lld\n", dts_span);
+*/
 	/* calculate the reference bitrates by recent seeking results */
 	if (dts_second > dts_first) {
 		dts_span = dts_second - vidx->dts_offset;
@@ -2302,34 +2314,37 @@ static char *video_media_subtitle(AVStream *stream, char *buffer)
 
 static char *video_stream_language(AVStream *stream)
 {
-	static	char	*nolan = "(none)";
+	static	char	*nolan[] = { "(none)", "(unknown)" };
+	char	*lanstr = NULL;
 
 #ifdef	AVUTIL_DICT_H
-	AVDictionaryEntry	*lang = NULL;
-
 	if (stream->metadata) {
+		AVDictionaryEntry	*lang;
 		lang = av_dict_get(stream->metadata, "language", NULL, 0);
+		if (lang) {
+			lanstr = lang->value;
+		}
 	}
-	if (lang) {
-		return lang->value;
-	}
-	return nolan;
 #elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
-	AVMetadataTag	*lang = NULL;
-	
 	if (stream->metadata) {
+		AVMetadataTag	*lang = NULL;
 		lang = av_metadata_get(stream->metadata, "language", NULL, 0);
+		if (lang) {
+			lanstr = lang->value;
+		}
 	}
-	if (lang) {
-		return lang->value;
-	}
-	return nolan;
 #else
 	if (stream->language) {
-		return stream->language;
+		lanstr = stream->language;
 	}
-	return nolan;
 #endif
+	if (lanstr == NULL) {
+		return nolan[0];
+	}
+	if (lanstr[0] == (char) 0xff) {
+		return nolan[1];
+	}
+	return lanstr;
 }
 
 static int64_t video_packet_timestamp(AVPacket *packet)
