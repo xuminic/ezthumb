@@ -495,13 +495,11 @@ char *meta_filesize(int64_t size, char *buffer)
 		buffer = tmp;
 	}
 	if (size < (int64_t)(1ULL << 20)) {
-		sprintf(buffer, "%lu KB", (unsigned long)(size >> 10));
+		sprintf(buffer, "%.2f KB", size / 1024.0);
 	} else if (size < (int64_t)(1ULL << 30)) {
-		sprintf(buffer, "%lu.%lu MB", (unsigned long)(size >> 20), 
-				(unsigned long)(((size % (1 << 20)) >> 10) / 100));
+		sprintf(buffer, "%.2f MB", size / 1048576.0);
 	} else {
-		sprintf(buffer, "%lu.%03lu GB", (unsigned long)(size >> 30), 
-				(unsigned long)(((size % (1 << 30)) >> 20) / 100));
+		sprintf(buffer, "%.2f GB", size / 1073741824.0); 
 	}
 	return buffer;
 }
