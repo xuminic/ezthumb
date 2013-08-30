@@ -225,8 +225,7 @@ int main(int argc, char **argv)
 {
 	int	i, todo;
 
-	smm_init(0, argv[0]);				/* initialize the libsmm */
-	slog_def_open(EZDBG_NONE);
+	smm_init(EZDBG_NONE);			/* initialize the libsmm */
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	env_init(&sysopt);
 
@@ -342,7 +341,7 @@ int main(int argc, char **argv)
 		break;
 	}
 	main_close(&sysopt);
-	slog_def_close();
+	smm_destroy();
 	return todo;
 }
 
@@ -793,7 +792,7 @@ static int signal_handler(int sig)
 	slog(SLFUNC, "Signal %d\n", sig);
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
-	slog_def_close();
+	smm_destroy();
 	return sig;
 }
 
