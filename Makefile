@@ -1,7 +1,7 @@
 
 CSOUP	= ../libcsoup
 
-include $(CSOUP)/Make.conf
+include Make.conf
 
 
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
@@ -217,8 +217,8 @@ rel_source:
 	-mkdir $(RELDIR)/ezthumb
 	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* $(RELDIR)/ezthumb
 	-$(CP) COPYING ChangeLog SMirC-thumbsup.svg $(RELDIR)/ezthumb
-	#-tar czf $(RELDIR).tar.gz $(RELDIR)
-	#-$(RM) -r $(RELDIR)
+	-tar czf $(RELDIR).tar.gz $(RELDIR)
+	-$(RM) -r $(RELDIR)
 
 rel_win_dev:
 	-tar czf ezthumb-libmingw-$(RELDATE).tar.gz libmingw

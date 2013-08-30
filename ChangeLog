@@ -1,5 +1,9 @@
+20130830:
+  + Makefile: slightly modified to match the changes in libcsoup
+
 20130828: Version 3.0.1
-  + Fixed a bug that displaying wrong file size
+  + Fixed a bug that displaying wrong file size; for example, 
+    a file of 2973632284 bytes was displayed 2.01GB, not 2.77GB
   + Imporved quick scan in duration test.
   + A foolproof update while displaying language metadata.
 
