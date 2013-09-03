@@ -1,5 +1,6 @@
 
 CSOUP	= ../libcsoup
+IUP	= ../iup/iup
 
 include Make.conf
 
@@ -114,8 +115,8 @@ $(OBJDIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
-INCDIR	= $(EXINC) -I$(CSOUP)
-LIBDIR	= $(EXLIB) -L$(CSOUP)
+INCDIR	= $(EXINC) -I$(CSOUP) -I$(IUP)/include
+LIBDIR	= $(EXLIB) -L$(CSOUP) -L$(IUP)/lib/Linux26g4_64
 
 CFLAGS	+= -D_FILE_OFFSET_BITS=64 -D$(SYSGUI) $(INCDIR)
 
@@ -131,7 +132,8 @@ OBJS	= $(OBJDIR)/main.o	\
 	  $(OBJDIR)/id_lookup.o
 
 ifeq	($(SYSGUI),CFG_GUI_ON)
-OBJS	+= $(OBJDIR)/ezgui.o
+#OBJS	+= $(OBJDIR)/ezgui.o
+OBJS	+= $(OBJDIR)/eziup.o
 endif
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd -lm
@@ -152,7 +154,7 @@ all: objdir ezthumb ezthumb.pdf
 
 ifeq	($(SYSTOOL),unix)
 ezthumb: $(OBJS) 
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lcsoup
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lcsoup -liup -lX11
 else
 ezthumb:
 	SYSGUI=CFG_GUI_OFF make objdir ezthumb.exe
