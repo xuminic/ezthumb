@@ -140,7 +140,7 @@ static int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
 
 
 #ifdef	CFG_GUI_ON
-extern FILE *g_fopen(const char *filename, const char *mode);
+//extern FILE *g_fopen(const char *filename, const char *mode);
 #endif
 
 
@@ -3177,7 +3177,8 @@ static int image_gdcanvas_background(EZIMG *image)
 		return EZ_ERR_NONE;
 	}
 #ifdef	CFG_GUI_ON
-	if ((fin = g_fopen(image->sysopt->background, "rb")) == NULL) {
+	//if ((fin = g_fopen(image->sysopt->background, "rb")) == NULL) {
+	if ((fin = fopen(image->sysopt->background, "rb")) == NULL) {
 #else
 	if ((fin = fopen(image->sysopt->background, "rb")) == NULL) {
 #endif
@@ -3341,7 +3342,8 @@ static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 	}
 
 #ifdef	CFG_GUI_ON
-	fp = g_fopen(image->filename, "wb");
+	//fp = g_fopen(image->filename, "wb");
+	fp = fopen(image->filename, "wb");
 #else
 	fp = fopen(image->filename, "wb");
 #endif

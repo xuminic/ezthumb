@@ -57,7 +57,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
 		return NULL;
 	}
-	gui->sysopt = ezopt;
+	//gui->sysopt = ezopt;
 	return gui;
 }
 
@@ -80,14 +80,6 @@ int ezgui_close(EZGUI *gui)
 
 void ezgui_version(void)
 {
-	char	*path;
-
-	slogz("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION,
-			GTK_MINOR_VERSION, GTK_MICRO_VERSION);
-	path = g_build_filename(g_get_user_config_dir(),
-			CFG_SUBPATH, CFG_FILENAME, NULL);
-	slogz("Profile: %s\n", path);
-	g_free(path);
 }
 
 

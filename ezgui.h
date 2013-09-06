@@ -21,10 +21,10 @@
 #ifndef	_EZGUI_H_
 #define _EZGUI_H_
 
-#include <glib.h>
+/*#include <glib.h>
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
-
+*/
 #include "libcsoup.h"
 #include "ezthumb.h"
 
@@ -62,6 +62,7 @@
 #define CFG_PIC_ZOOM_SCREEN	"zoom by canvas"	/* Res 1024 */
 #define CFG_PIC_AUTO		"auto"			/* Grid/Zoom Auto */
 
+#if 0
 typedef	struct		{
 	char		*fname;		/* the path of the configure file */
 	GKeyFile	*ckey;		/* key entry of the configure file */
@@ -132,7 +133,10 @@ typedef	struct		{
 	EZOPT		*sysopt;
 	EZCFG		*config;
 } EZGUI;
-
+#endif
+typedef	struct		{
+	int	n;
+} EZGUI;
 
 enum	{
 	EZUI_COL_NAME = 0,

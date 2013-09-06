@@ -1,91 +1,47 @@
 
-CSOUP	= ../libcsoup
-IUP	= ../iup/iup
+ifndef	SYSTOOL		# Options: cygwin, unix, mingw, cygmingw
+ifeq	($(MSYSTEM),MINGW32)
+export	SYSTOOL = mingw
+else
+export	SYSTOOL	= unix
+endif
+endif
 
-include Make.conf
-
+ifndef	SYSAPI		# Options: CFG_WIN32_API, CFG_UNIX_API
+ifeq	($(MSYSTEM),MINGW32)
+export	SYSAPI	= CFG_WIN32_API
+else
+export	SYSAPI	= CFG_UNIX_API
+endif
+endif
 
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
 export	SYSGUI	= CFG_GUI_ON
 endif
 
 
-ifeq    ($(SYSTOOL),cygwin)
-EXDIR	= ..
-FFMPEG  = $(EXDIR)/ffmpeg-0.6.1
-LIBGD   = $(EXDIR)/gd-2.0.35
-FREETYPE= $(EXDIR)/freetype-2.4.3
-LIBJPEG = $(EXDIR)/jpeg-6b
-LIBBZ2  = $(EXDIR)/bzip2-1.0.6
-EXINC	= -I$(FFMPEG) -I$(LIBGD) -I$(FREETYPE) -I$(LIBJPEG) -I$(LIBBZ2)
-EXLIB	= -L$(FREETYPE)/objs/.libs -L$(LIBJPEG) -L$(LIBBZ2) \
-	  -L$(FFMPEG)/libavcodec        \
-	  -L$(FFMPEG)/libavdevice       \
-	  -L$(FFMPEG)/libavfilter       \
-	  -L$(FFMPEG)/libavformat       \
-	  -L$(FFMPEG)/libavutil         \
-	  -L$(FFMPEG)/libswscale        \
-	  -L$(LIBGD)/.libs
-EXDLL	= /bin/cyggd-2.dll	\
-	  /bin/cyggcc_s-1.dll	\
-	  /bin/cygwin1.dll	\
-	  /bin/cygXpm-4.dll	\
-	  /bin/cygX11-6.dll	\
-	  /bin/cygxcb-1.dll	\
-	  /bin/cygXau-6.dll	\
-	  /bin/cygXdmcp-6.dll	\
-	  /bin/cygfontconfig-1.dll	\
-	  /bin/cygexpat-1.dll	\
-	  /bin/cygfreetype-6.dll	\
-	  /bin/cygz.dll		\
-	  /bin/cygiconv-2.dll	\
-	  /bin/cygjpeg-7.dll	\
-	  /bin/cygpng12.dll
-endif
+
 
 ifeq	($(SYSTOOL),mingw)
+CC	= gcc -mms-bitfields
+AR	= ar
+CP	= cp
+RM	= rm -f
+
 EXDIR	= ./libmingw
-FFMPEG  = $(EXDIR)/ffmpeg-git-41bf67d-win32
-LIBGD   = $(EXDIR)/gd-2.0.33-1
-GTK2	= $(EXDIR)/gtk-2.24.8
-EXINC	= -I$(FFMPEG)/include -I$(LIBGD)/include 
-EXLIB	= -L$(FFMPEG)/lib -L$(LIBGD)/lib
-GTKINC	= -I$(GTK2)/include 		\
-	  -I$(GTK2)/include/atk-1.0	\
-	  -I$(GTK2)/include/gtk-2.0 	\
-	  -I$(GTK2)/include/gdk-pixbuf-2.0 \
-	  -I$(GTK2)/include/cairo 	\
-	  -I$(GTK2)/include/pango-1.0	\
-	  -I$(GTK2)/include/glib-2.0	\
-	  -I$(GTK2)/lib/gtk-2.0/include \
-	  -I$(GTK2)/lib/glib-2.0/include
-GTKLIB	= -L$(GTK2)/lib -lpthread -lgtk-win32-2.0 -lgdk-win32-2.0 -latk-1.0 \
-	  -lgobject-2.0 -lgdk_pixbuf-2.0 -lglib-2.0 -lcairo -lpango-1.0
-EXDLL	= $(FFMPEG)/bin/*.dll				\
-	  $(EXDIR)/freetype-2.3.5-1/lib/freetype6.dll	\
-	  $(LIBGD)/lib/libgd2.dll			\
-	  $(EXDIR)/libpng-1.2.37/lib/libpng13.dll	\
-	  $(EXDIR)/jpeg-6b-4/lib/jpeg62.dll		\
-	  $(EXDIR)/libiconv-1.9.2-1/lib/*.dll		\
-	  $(EXDIR)/zlib-1.2.3/lib/zlib1.dll		\
-	  $(GTK2)/bin/intl.dll				\
-	  $(GTK2)/bin/libatk-1.0-0.dll			\
-	  $(GTK2)/bin/libcairo-2.dll			\
-	  $(GTK2)/bin/libexpat-1.dll			\
-	  $(GTK2)/bin/libfontconfig-1.dll		\
-	  $(GTK2)/bin/libgdk-win32-2.0-0.dll		\
-	  $(GTK2)/bin/libgdk_pixbuf-2.0-0.dll		\
-	  $(GTK2)/bin/libgio-2.0-0.dll			\
-	  $(GTK2)/bin/libglib-2.0-0.dll			\
-	  $(GTK2)/bin/libgmodule-2.0-0.dll		\
-	  $(GTK2)/bin/libgobject-2.0-0.dll		\
-	  $(GTK2)/bin/libgthread-2.0-0.dll		\
-	  $(GTK2)/bin/libgtk-win32-2.0-0.dll		\
-	  $(GTK2)/bin/libpango-1.0-0.dll		\
-	  $(GTK2)/bin/libpangocairo-1.0-0.dll		\
-	  $(GTK2)/bin/libpangoft2-1.0-0.dll		\
-	  $(GTK2)/bin/libpangowin32-1.0-0.dll		\
-	  $(GTK2)/bin/libpng14-14.dll
+FFMPEG  = $(EXDIR)/ffmpeg
+CSOUP	= ../libcsoup
+EXINC	= -I$(FFMPEG)/include -I$(EXDIR)/include -I$(CSOUP)
+
+#WGLIB	= -lcomctl32 -lcomdlg32 -lgdi32 -Wl,--subsystem,windows
+#WGLIB	= -lcomctl32 -mconsole -mwindows
+EXDLL	= $(FFMPEG)/bin/*.dll $(EXDIR)/lib/*.dll
+
+GUIINC	= -I$(EXDIR)/include/iup
+GUILIB	= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
+SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL $(EXINC)
+LIBDIR	= -L$(FFMPEG)/lib -L$(EXDIR)/lib -L$(CSOUP)
 endif
 
 ifeq	($(SYSTOOL),unix)
@@ -96,11 +52,24 @@ RM	= rm -f
 
 EXDIR	= 
 FFMPEG  = /usr/include/ffmpeg
-EXINC	= -I$(FFMPEG)
-GTKINC	= `pkg-config gtk+-2.0 --cflags`
-GTKLIB	= `pkg-config gtk+-2.0 --libs`
+CSOUP	= ../libcsoup
+IUP	= ../iup/iup
+EXINC	= -I$(FFMPEG) -I$(CSOUP) -I$(IUP)/include
+
+GUIINC	= `pkg-config gtk+-2.0 --cflags`
+GUILIB	= `pkg-config gtk+-2.0 --libs`
+SYSFLAG	= $(EXINC)
+LIBDIR	= -L$(CSOUP) -L$(IUP)/lib/Linux26g4_64
 endif
 
+
+PREFIX	= /usr/local
+BINDIR	= /usr/local/bin
+MANDIR	= /usr/local/man/man1
+
+DEBUG	= -g -DDEBUG
+DEFINES = -D_FILE_OFFSET_BITS=64 -D$(SYSGUI)
+CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(SYSFLAG) 
 
 RELDIR	= ./release-bin
 
@@ -110,21 +79,6 @@ OBJDIR = objw
 else
 OBJDIR = objc
 endif
-
-$(OBJDIR)/%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-
-INCDIR	= $(EXINC) -I$(CSOUP) -I$(IUP)/include
-LIBDIR	= $(EXLIB) -L$(CSOUP) -L$(IUP)/lib/Linux26g4_64
-
-CFLAGS	+= -D_FILE_OFFSET_BITS=64 -D$(SYSGUI) $(INCDIR)
-
-
-ifeq	($(SYSGUI),CFG_GUI_ON)
-CFLAGS	+= $(GTKINC)
-endif
-
 
 OBJS	= $(OBJDIR)/main.o	\
 	  $(OBJDIR)/ezthumb.o	\
@@ -136,11 +90,12 @@ ifeq	($(SYSGUI),CFG_GUI_ON)
 OBJS	+= $(OBJDIR)/eziup.o
 endif
 
-LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd -lm
-#	 -lfreetype -lbz2 -lm
+LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
+	 -lfreetype -lpng -ljpeg -liconv -lz -lm -lcsoup
 
 ifeq	($(SYSGUI),CFG_GUI_ON)
-LIBS	+= $(GTKLIB)
+LIBS	+= -liup $(GUILIB)
+CFLAGS	+= $(GUIINC)
 endif
 
 RELDATE	= $(shell date  +%Y%m%d)
@@ -163,17 +118,27 @@ endif
 
 # internal rules, do not use it
 ezthumb.exe: $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) -lcsoup
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS)
 
 # internal rules, do not use it
 ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
-	$(CC) $(CFLAGS) -mwindows $(LIBDIR) -o $@ $^ $(LIBS) -lcsoup
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) 
 
 ezthumb.pdf: ezthumb.1
 	man -l -Tps $< |ps2pdf - $@
 
 objdir:
 	@if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
+
+showdll:
+	@if [ -f ezthumb.exe ]; then \
+		echo "[ezthumb.exe]:"; \
+		objdump -p ezthumb.exe | grep 'DLL Name:'; \
+	fi
+	@if [ -f ezthumb_win.exe ]; then \
+		echo "[ezthumb_win.exe]:"; \
+		objdump -p ezthumb_win.exe | grep 'DLL Name:'; \
+	fi
 
 ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
@@ -235,4 +200,6 @@ else
 release: rel_source rel_win_dev rel_win_bin
 endif
 	
+$(OBJDIR)/%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
