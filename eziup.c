@@ -30,6 +30,9 @@
 
 static int ezgui_create_window(EZGUI *gui);
 static Ihandle *ezgui_page_generate(EZGUI *gui);
+static Ihandle *ezgui_page_generate_workarea(EZGUI *gui);
+static Ihandle *ezgui_page_generate_button(EZGUI *gui);
+static Ihandle *ezgui_page_generate_gridzoom(EZGUI *gui);
 static Ihandle *ezgui_page_setup(EZGUI *gui);
 static Ihandle *ezgui_page_setup_profile(EZGUI *gui);
 static Ihandle *ezgui_page_setup_duration(EZGUI *gui);
@@ -92,13 +95,14 @@ static int ezgui_create_window(EZGUI *gui)
 {
 	Ihandle		*tabs, *vb, *dlg;
 
-	tabs = IupTabs(IupVbox(IupLabel("Hello"), NULL), IupVbox(IupFill(), NULL), IupVbox(IupFill(), NULL), NULL);
-	IupSetAttribute(tabs,"TABTITLE0","Generate");
-	IupSetAttribute(tabs,"TABTITLE1","Setup");
-	IupSetAttribute(tabs,"TABTITLE2","Advanced");
+	tabs = IupTabs(ezgui_page_generate(gui), 
+			ezgui_page_setup(gui), IupVbox(IupFill(), NULL), NULL);
+	IupSetAttribute(tabs, "TABTITLE0", "Generate");
+	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
+	IupSetAttribute(tabs, "TABTITLE2", "Advanced");
+	IupSetAttribute(tabs, "PADDING", "4");
 
-	//dlg = IupDialog(IupVbox(ezgui_page_setup(gui), NULL));
-	dlg = IupDialog(IupVbox(ezgui_page_generate(gui), NULL));
+	dlg = IupDialog(tabs);
 	IupSetAttribute(dlg, "TITLE", "Ezthumb");
 	IupShow(dlg);
 	return 0;
@@ -107,35 +111,93 @@ static int ezgui_create_window(EZGUI *gui)
 
 static Ihandle *ezgui_page_generate(EZGUI *gui)
 {
+	Ihandle	*vbox, *hbox, *hgrid, *hprog, *hbtn;
+
+	hgrid = ezgui_page_generate_gridzoom(gui);
+	hprog = IupProgressBar();
+	IupSetAttribute(hprog, "VALUE", "0.5");
+	IupSetAttribute(hprog, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(hprog, "DASHED", "YES");
+	IupSetAttribute(hprog, "RASTERSIZE", "x10");
+	hbtn = ezgui_page_generate_button(gui);
+	hbox = IupHbox(hgrid, hprog, hbtn, NULL);
+	IupSetAttribute(hbox, "NGAP", "10");
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+
+	vbox = IupVbox(ezgui_page_generate_workarea(gui), hbox, NULL);
+	IupSetAttribute(vbox, "NGAP", "4");
+	IupSetAttribute(vbox, "NMARGIN", "4x4");
+	return vbox;
+}
+
+static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
+{
 	Ihandle	*lb_main, *vb_main, *lst_main, *lb_size, *vb_size, *lst_size;
 	Ihandle *lb_len, *vb_len, *lst_len, *lb_res, *vb_res, *lst_res;
 	Ihandle	*lb_prog, *vb_prog, *lst_prog, *hbox;
 
 	lb_main = IupLabel("Files");
+	IupSetAttribute(lb_main, "RASTERSIZE", "200");
 	lst_main = IupList(NULL);
+	IupSetAttribute(lst_main, "EXPAND", "YES");
 	vb_main = IupVbox(lb_main, lst_main, NULL);
 
 	lb_size = IupLabel("Size");
+	IupSetAttribute(lb_size, "RASTERSIZE", "100");
 	lst_size = IupList(NULL);
+	IupSetAttribute(lst_size, "RASTERSIZE", "100");
+	IupSetAttribute(lst_size, "EXPAND", "VERTICAL");
 	vb_size = IupVbox(lb_size, lst_size, NULL);
 
 	lb_len = IupLabel("Length");
+	IupSetAttribute(lb_len, "RASTERSIZE", "100");
 	lst_len = IupList(NULL);
+	IupSetAttribute(lst_len, "RASTERSIZE", "100");
+	IupSetAttribute(lst_len, "EXPAND", "VERTICAL");
 	vb_len = IupVbox(lb_len, lst_len, NULL);
 
 	lb_res = IupLabel("Resolution");
+	IupSetAttribute(lb_res, "RASTERSIZE", "100");
 	lst_res = IupList(NULL);
+	IupSetAttribute(lst_res, "RASTERSIZE", "100");
+	IupSetAttribute(lst_res, "EXPAND", "VERTICAL");
 	vb_res = IupVbox(lb_res, lst_res, NULL);
 	
 	lb_prog = IupLabel("Progress");
+	IupSetAttribute(lb_prog, "RASTERSIZE", "100");
 	lst_prog = IupList(NULL);
+	IupSetAttribute(lst_prog, "RASTERSIZE", "100");
 	IupSetAttribute(lst_prog, "SCROLLBAR", "YES");
+	IupSetAttribute(lst_prog, "EXPAND", "VERTICAL");
 	vb_prog = IupVbox(lb_prog, lst_prog, NULL);
 
 	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
 	return hbox;
 }
 
+static Ihandle *ezgui_page_generate_button(EZGUI *gui)
+{
+	Ihandle	*hbox, *btn_add, *btn_rm, *btn_run;
+
+	btn_add = IupButton("Add", NULL);
+	IupSetAttribute(btn_add, "RASTERSIZE", "80");
+	btn_rm  = IupButton("Remove", NULL);
+	IupSetAttribute(btn_rm, "RASTERSIZE", "80");
+	btn_run = IupButton("Run", NULL);
+	IupSetAttribute(btn_run, "RASTERSIZE", "80");
+	hbox = IupHbox(btn_add, btn_rm, btn_run, NULL);
+	return hbox;
+}
+
+static Ihandle *ezgui_page_generate_gridzoom(EZGUI *gui)
+{
+	Ihandle	*hbox, *lb1, *lb2;
+
+	lb1 = IupLabel("Grid Auto");
+	lb2 = IupLabel("Zoom Auto");
+	hbox = IupHbox(lb1, lb2, NULL);
+	return hbox;
+}
 
 static Ihandle *ezgui_page_setup(EZGUI *gui)
 {
@@ -164,7 +226,7 @@ static Ihandle *ezgui_page_setup(EZGUI *gui)
 	vbox = IupVbox(lb_prof, hb_prof, lb_dur, hb_dur, lb_ext, hb_ext, 
 			IupFill(), hb_butt, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
-	IupSetAttribute(vbox, "NMARGIN", "10x10");
+	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
 }
 
@@ -200,7 +262,7 @@ static Ihandle *ezgui_page_setup_profile(EZGUI *gui)
 
 	hbox = IupHbox(lb_grid, lst_grid, lb_zoom, lst_zoom, NULL);
 	IupSetAttribute(hbox, "NGAP", "4");
-	IupSetAttribute(hbox, "NMARGIN", "10x10");
+	IupSetAttribute(hbox, "NMARGIN", "4x4");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	return hbox;
 }
@@ -216,7 +278,7 @@ static Ihandle *ezgui_page_setup_duration(EZGUI *gui)
 
 	hbox = IupHbox(ra_dur_auto, ra_dur_head, ra_dur_fast, ra_dur_scan, NULL);
 	IupSetAttribute(hbox, "NGAP", "4");
-	IupSetAttribute(hbox, "NMARGIN", "10x10");
+	IupSetAttribute(hbox, "NMARGIN", "4x4");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	return IupRadio(hbox);
 }
@@ -249,7 +311,7 @@ static Ihandle *ezgui_page_setup_output(EZGUI *gui)
 
 	hbox = IupHbox(IupRadio(vb_ext), vb_lbext, vb_opt, NULL);
 	IupSetAttribute(hbox, "NGAP", "4");
-	IupSetAttribute(hbox, "NMARGIN", "10x10");
+	IupSetAttribute(hbox, "NMARGIN", "4x4");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	return hbox;
 }
