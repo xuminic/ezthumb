@@ -19,6 +19,8 @@ ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
 export	SYSGUI	= CFG_GUI_ON
 endif
 
+CSOUP	= ../libcsoup
+IUP	= ../iup/iup
 
 
 
@@ -30,7 +32,6 @@ RM	= rm -f
 
 EXDIR	= ./libmingw
 FFMPEG  = $(EXDIR)/ffmpeg
-CSOUP	= ../libcsoup
 EXINC	= -I$(FFMPEG)/include -I$(EXDIR)/include -I$(CSOUP)
 
 #WGLIB	= -lcomctl32 -lcomdlg32 -lgdi32 -Wl,--subsystem,windows
@@ -40,6 +41,7 @@ EXDLL	= $(FFMPEG)/bin/*.dll $(EXDIR)/lib/*.dll
 GUIINC	= -I$(EXDIR)/include/iup
 GUILIB	= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
+# linking static libgd requires defining NONDLL 
 SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL $(EXINC)
 LIBDIR	= -L$(FFMPEG)/lib -L$(EXDIR)/lib -L$(CSOUP)
 endif
@@ -52,12 +54,10 @@ RM	= rm -f
 
 EXDIR	= 
 FFMPEG  = /usr/include/ffmpeg
-CSOUP	= ../libcsoup
-IUP	= ../iup/iup
 EXINC	= -I$(FFMPEG) -I$(CSOUP) -I$(IUP)/include
 
 GUIINC	= `pkg-config gtk+-2.0 --cflags`
-GUILIB	= `pkg-config gtk+-2.0 --libs`
+GUILIB	= `pkg-config gtk+-2.0 --libs` -lX11
 SYSFLAG	= $(EXINC)
 LIBDIR	= -L$(CSOUP) -L$(IUP)/lib/Linux26g4_64
 endif
@@ -109,7 +109,7 @@ all: objdir ezthumb ezthumb.pdf
 
 ifeq	($(SYSTOOL),unix)
 ezthumb: $(OBJS) 
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS) -lcsoup -liup -lX11
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS)
 else
 ezthumb:
 	SYSGUI=CFG_GUI_OFF make objdir ezthumb.exe
@@ -125,7 +125,7 @@ ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) 
 
 ezthumb.pdf: ezthumb.1
-	man -l -Tps $< |ps2pdf - $@
+	man -l -Tps $< | ps2pdf - $@
 
 objdir:
 	@if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
