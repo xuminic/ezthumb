@@ -103,7 +103,7 @@ static int ezgui_create_window(EZGUI *gui)
 
 static Ihandle *ezgui_page_generate(EZGUI *gui)
 {
-	Ihandle	*vbox, *hbox, *hgrid, *hprog, *hbtn;
+	Ihandle	*vbox, *hbox, *sbox, *hgrid, *hprog, *hbtn;
 
 	hgrid = ezgui_page_generate_gridzoom(gui);
 	hprog = IupProgressBar();
@@ -111,15 +111,33 @@ static Ihandle *ezgui_page_generate(EZGUI *gui)
 	IupSetAttribute(hprog, "EXPAND", "HORIZONTAL");
 	IupSetAttribute(hprog, "DASHED", "YES");
 	IupSetAttribute(hprog, "RASTERSIZE", "x10");
+	IupSetAttribute(hprog, "VISIBLE", "NO");
 	hbtn = ezgui_page_generate_button(gui);
 	hbox = IupHbox(hgrid, hprog, hbtn, NULL);
 	IupSetAttribute(hbox, "NGAP", "10");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 
-	vbox = IupVbox(ezgui_page_generate_workarea(gui), hbox, NULL);
+	sbox = IupScrollBox(ezgui_page_generate_workarea(gui));
+	IupSetAttribute(sbox, "RASTERSIZE", "x400");
+
+	vbox = IupVbox(sbox, hbox, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
+}
+
+static int ezgui_workarea_scroll(Ihandle *ih, char *text, int item, int state)
+{
+	printf("Action %s: %d %d\n", text, item, state);
+	IupSetAttribute(ih, "VALUE", NULL);
+}
+
+static void dump_ihandle(Ihandle *ih)
+{
+	struct Ihandle_	*hndl = (struct Ihandle_ *) ih;
+
+	//printf("%d %d %d %d\n", hndl->naturalwidth, hndl->naturalheight, 
+	//		hndl->currentwidth, hndl->currentheight);
 }
 
 static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
@@ -127,41 +145,67 @@ static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
 	Ihandle	*lb_main, *vb_main, *lst_main, *lb_size, *vb_size, *lst_size;
 	Ihandle *lb_len, *vb_len, *lst_len, *lb_res, *vb_res, *lst_res;
 	Ihandle	*lb_prog, *vb_prog, *lst_prog, *hbox;
+	char	*p, tmp[128];
+	int	i;
 
 	lb_main = IupLabel("Files");
 	IupSetAttribute(lb_main, "RASTERSIZE", "200");
 	lst_main = IupList(NULL);
 	IupSetAttribute(lst_main, "EXPAND", "YES");
+	IupSetAttribute(lst_main, "RASTERSIZE", "200");
+	IupSetAttribute(lst_main, "MULTIPLE", "YES");
+	IupSetAttribute(lst_main, "SCROLLBAR", "NO");
+	IupSetAttribute(lst_main, "SCROLLTOPOS", "30");
 	vb_main = IupVbox(lb_main, lst_main, NULL);
 
 	lb_size = IupLabel("Size");
-	IupSetAttribute(lb_size, "RASTERSIZE", "100");
+	IupSetAttribute(lb_size, "RASTERSIZE", "90");
 	lst_size = IupList(NULL);
-	IupSetAttribute(lst_size, "RASTERSIZE", "100");
+	IupSetAttribute(lst_size, "RASTERSIZE", "90");
 	IupSetAttribute(lst_size, "EXPAND", "VERTICAL");
+	IupSetAttribute(lst_size, "CANFOCUS", "NO");
+	IupSetAttribute(lst_size, "SCROLLBAR", "NO");
 	vb_size = IupVbox(lb_size, lst_size, NULL);
 
 	lb_len = IupLabel("Length");
-	IupSetAttribute(lb_len, "RASTERSIZE", "100");
+	IupSetAttribute(lb_len, "RASTERSIZE", "72");
 	lst_len = IupList(NULL);
-	IupSetAttribute(lst_len, "RASTERSIZE", "100");
+	IupSetAttribute(lst_len, "RASTERSIZE", "72");
 	IupSetAttribute(lst_len, "EXPAND", "VERTICAL");
+	IupSetAttribute(lst_len, "CANFOCUS", "NO");
+	IupSetAttribute(lst_len, "SCROLLBAR", "NO");
 	vb_len = IupVbox(lb_len, lst_len, NULL);
 
 	lb_res = IupLabel("Resolution");
-	IupSetAttribute(lb_res, "RASTERSIZE", "100");
+	IupSetAttribute(lb_res, "RASTERSIZE", "90");
 	lst_res = IupList(NULL);
-	IupSetAttribute(lst_res, "RASTERSIZE", "100");
+	IupSetAttribute(lst_res, "RASTERSIZE", "90");
 	IupSetAttribute(lst_res, "EXPAND", "VERTICAL");
+	IupSetAttribute(lst_res, "CANFOCUS", "NO");
+	IupSetAttribute(lst_res, "SCROLLBAR", "NO");
 	vb_res = IupVbox(lb_res, lst_res, NULL);
 	
 	lb_prog = IupLabel("Progress");
-	IupSetAttribute(lb_prog, "RASTERSIZE", "100");
+	IupSetAttribute(lb_prog, "RASTERSIZE", "64");
 	lst_prog = IupList(NULL);
-	IupSetAttribute(lst_prog, "RASTERSIZE", "100");
-	IupSetAttribute(lst_prog, "SCROLLBAR", "YES");
+	IupSetAttribute(lst_prog, "RASTERSIZE", "64");
+	IupSetAttribute(lst_prog, "SCROLLBAR", "NO");
 	IupSetAttribute(lst_prog, "EXPAND", "VERTICAL");
+	IupSetAttribute(lst_prog, "CANFOCUS", "NO");
+	IupSetCallback(lst_prog, "ACTION", (Icallback)ezgui_workarea_scroll);
 	vb_prog = IupVbox(lb_prog, lst_prog, NULL);
+
+	for (i = 1; i <= 100; i++) {
+		sprintf(tmp, "Mytestfile%03d.txt", i);
+		p = csc_strcpy_alloc(tmp, 0);
+		IupSetAttributeId(lst_main, "", i, p);
+		IupSetAttributeId(lst_size, "", i, "10.997GB");
+		IupSetAttributeId(lst_len, "", i, "10:31:97");
+		IupSetAttributeId(lst_res, "", i, "1920x1024");
+		IupSetAttributeId(lst_prog, "", i, "100%");
+	}
+	dump_ihandle(lst_main);
+	IupSetCallback(lst_prog, "VALUE", "1");
 
 	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
 	return hbox;
