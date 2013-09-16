@@ -1588,6 +1588,13 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 	for (i = 0; i < 4; ) {
 		rdts /= 2;
 		video_seeking(vidx, base + rdts);
+		/* 20130915 In the second Sjako test, I found av_read_frame() 
+		 * always return a packet right after an av_seek, even it's
+		 * ready sought out of the boundary. It caused ezthumb think
+		 * it's still inside the media file. The simplest fix is to
+		 * load the second packet so av_read_frame() could return -1
+		 * to indicate its end of stream */
+		video_load_packet(vidx, &packet);	/* dummy read */
 		if (video_load_packet(vidx, &packet) > 0) {
 			base += rdts;
 			av_free_packet(&packet);

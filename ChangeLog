@@ -1,3 +1,8 @@
+
+20130915:
+  + ezthumb.c: fixed a bug that av_read_frame() always return the first packet
+    positively after av_seek() out of the range in video_duration_quickscan().
+
 20130830:
   + Makefile: slightly modified to match the changes in libcsoup
 

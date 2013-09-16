@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libcsoup.h"
 
-#define EZTHUMB_VERSION		"3.0.1"
+#define EZTHUMB_VERSION		"3.0.2"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */

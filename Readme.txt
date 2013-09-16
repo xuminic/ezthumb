@@ -19,6 +19,9 @@ http://sourceforge.net/projects/moviethumbnail/
 
 Release Notes
 =============
+Version 3.0.2:
+*) Fixed a bug in the improved-quick-scan which sought out of the video range.
+
 Version 3.0.1:
 *) Improved method of quick scan to find the duration of video files
 *) Fixed a display bug that file size was showed wrong.
