@@ -19,6 +19,9 @@ http://sourceforge.net/projects/moviethumbnail/
 
 Release Notes
 =============
+Version 3.0.3:
+*) Updated the previous fix to prevent ezthumb drop into scan mode unreasonably.
+
 Version 3.0.2:
 *) Fixed a bug in the improved-quick-scan which sought out of the video range.
 

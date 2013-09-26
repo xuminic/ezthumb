@@ -33,9 +33,9 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
-#define DBGVSC	EZDBG_VERBS
+#define DBGVSC	EZDBG_BRIEF
 //#define DBGVSC	EZDBG_NONE
-#define DBGSNP	EZDBG_VERBS
+#define DBGSNP	EZDBG_BRIEF
 //#define DBGSNP	EZDBG_NONE
 
 static int video_snapping(EZVID *vidx, EZIMG *image);
@@ -1577,16 +1577,18 @@ static EZTIME video_duration(EZVID *vidx)
 static EZTIME video_duration_quickscan(EZVID *vidx)
 {
 	AVPacket	packet;
-	int64_t		base, rdts;
+	int64_t		base, rdts, now, recent;
 	int		i;
 
 	SETDURMOD(vidx->ses_flags, EZOP_DUR_QSCAN);	/* quick scan */
 
 	/* using the binary seach to constrain to the start point */
 	rdts = video_ms_to_dts(vidx, vidx->filesize * 8000 / vidx->bitrates);
-	base = 0;
+	base = now = recent = 0;
 	for (i = 0; i < 4; ) {
-		rdts /= 2;
+		if ((rdts /= 2) == 0) {
+			break;
+		}
 		video_seeking(vidx, base + rdts);
 		/* 20130915 In the second Sjako test, I found av_read_frame() 
 		 * always return a packet right after an av_seek, even it's
@@ -1594,22 +1596,33 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 		 * it's still inside the media file. The simplest fix is to
 		 * load the second packet so av_read_frame() could return -1
 		 * to indicate its end of stream */
-		video_load_packet(vidx, &packet);	/* dummy read */
-		if (video_load_packet(vidx, &packet) > 0) {
-			base += rdts;
+		now = video_load_packet(vidx, &packet);
+		slog(DBGVSC, "video_duration_quickscan: seek %lld get %lld\n", 
+				base + rdts, now);
+		if (now > 0) {
 			av_free_packet(&packet);
-			slog(DBGVSC, "video_duration_quickscan: "
-					"scan from %lld\n", base);
+			if (now <= recent) {
+				break;
+			}
+			base += rdts;
+			recent = now;
 			i++;
 		}
 	}
-
-	base = video_statistics(vidx) - vidx->dts_offset;
-	rdts = video_dts_to_ms(vidx, base > 0 ? base : 0);
-
-	slog(DBGVSC, "video_duration_quickscan: %s (%lld)\n", 
-			rdts <= 0 ? "failed" : "succeed", rdts);
-	return (EZTIME) rdts;
+	/* 20130926 The previous fix by the dummy readout was proved failure 
+	 * in the third Sjako test. The av_read_frame() must move the index
+	 * to the end of media file once it's out of range. Therefore it could
+	 * read back one or more packets */
+	while (video_load_packet(vidx, &packet) > 0) {
+		recent = packet.dts;
+		av_free_packet(&packet);
+	}
+	if ((recent -= vidx->dts_offset) <= 0) {
+		slog(DBGVSC, "video_duration_quickscan: failed\n");
+		return -1;
+	}
+	slog(DBGVSC, "video_duration_quickscan: succeed (%lld)\n", recent);
+	return (EZTIME) video_dts_to_ms(vidx, recent);
 }
 
 static EZTIME video_duration_fullscan(EZVID *vidx)

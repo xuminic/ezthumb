@@ -1,5 +1,8 @@
 
-20130915:
+20130926: Version 3.0.3
+  + ezthumb.c: previous fix doesn't work well so make an update
+
+20130915: Version 3.0.2
   + ezthumb.c: fixed a bug that av_read_frame() always return the first packet
     positively after av_seek() out of the range in video_duration_quickscan().
 
