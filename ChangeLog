@@ -1,3 +1,8 @@
+20131009: Version 3.0.4
+  + libcsoup: following up libcsoup 0.2.2, which fixed a problem by opening
+    files with the sharing mode in Win32 to get the file size. The test
+    harness was that running ezthumb while playing the same video by
+    mediaplayer. Without the fix it would put ezthumb into full scan mode.
 
 20130926: Version 3.0.3
   + ezthumb.c: previous fix doesn't work well so make an update

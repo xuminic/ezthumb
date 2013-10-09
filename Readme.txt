@@ -19,6 +19,10 @@ http://sourceforge.net/projects/moviethumbnail/
 
 Release Notes
 =============
+Version 3.0.4:
+*) Fixed a bug in Win32 version that ezthumb went to full scan mode while a
+   media player is playing the same file.
+
 Version 3.0.3:
 *) Updated the previous fix to prevent ezthumb drop into scan mode unreasonably.
 
