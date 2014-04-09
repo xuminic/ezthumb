@@ -62,6 +62,15 @@
 #define CFG_PIC_ZOOM_SCREEN	"zoom by canvas"	/* Res 1024 */
 #define CFG_PIC_AUTO		"auto"			/* Grid/Zoom Auto */
 
+#define CFG_PIC_DFM_HEAD	"File Head"
+#define CFG_PIC_DFM_SCAN	"Full Scan"
+#define CFG_PIC_DFM_FAST	"Fast Scan"
+
+#define CFG_PIC_FMT_JPEG	"Jpeg"
+#define CFG_PIC_FMT_PNG		"Png"
+#define CFG_PIC_FMT_GIFA	"Animated GIF"
+#define CFG_PIC_FMT_GIF		"GIF"
+
 #if 0
 typedef	struct		{
 	char		*fname;		/* the path of the configure file */
@@ -129,14 +138,75 @@ typedef	struct		{
 	GtkTreeModel	*list_model;
 	GtkTreeIter	*list_iter;
 
-	/* GUI parameters */
-	EZOPT		*sysopt;
 	EZCFG		*config;
 } EZGUI;
 #endif
 typedef	struct		{
-	int	n;
+	EZOPT		*sysopt;	/* system parameters */
+
+	/* Main Page: work place */
+	Ihandle		*list_fname;	/* the list control of file names */
+	Ihandle		*list_size;	/* the list control of file sizes */
+	Ihandle		*list_length;	/* the list control of media length */
+	Ihandle		*list_resolv;	/* the list control of resolution */
+	Ihandle		*list_prog;	/* the list control of progress */
+
+	/* Main Page: Profile selection */
+	Ihandle		*entry_col1;
+	Ihandle		*entry_col2;
+	Ihandle		*entry_row;
+	Ihandle		*entry_step;
+	Ihandle		*entry_dss_no;
+	Ihandle		*entry_dss_step;
+	Ihandle		*entry_zoom_ratio;
+	Ihandle		*entry_zoom_wid;
+	Ihandle		*entry_zoom_hei;
+	Ihandle		*entry_width;
+
+	Ihandle		*entry_zbox_grid;
+	Ihandle		*entry_zbox_zoom;
+
+	/* Main Page: Progress Bar and Buttons */
+	Ihandle		*prog_bar;
+	Ihandle		*button_del;	/* the delete button on main page */
+	Ihandle		*button_run;	/* the start button on main page */
+	Ihandle		*button_add;
+
+
+	/* Setup Page: the two main buttons in the bottom */
+	Ihandle		*butt_setup_apply;
+	Ihandle		*butt_setup_cancel;
+
+	/* Setup Page: the choise of profiles */
+	Ihandle		*prof_grid;
+	Ihandle		*prof_zoom;
+	int		grid_idx;	/* starts from 0 */
+	int		zoom_idx;	/* starts from 0 */
+	
+	/* Setup Page: the duration finding mode */
+	Ihandle		*dfm_list;
+	int		dfm_idx;
+
+	/* Setup Page: the output file format */
+	Ihandle		*fmt_list;
+	Ihandle		*fmt_gif_fr;	/* GIF frame rate */
+	Ihandle		*fmt_jpg_qf;	/* quality fact */
+	Ihandle		*fmt_transp;	/* transparent */
+	Ihandle		*fmt_zbox;
+	int		fmt_idx;
+	int		fmt_idx_tmp;
+	int		tmp_jpg_qf;
+	int		tmp_gifa_fr;
 } EZGUI;
+
+typedef	struct	{
+	char	fsize[16];
+	char	vidlen[16];
+	char	resolv[16];
+	char	progr[8];
+	char	fname[1];
+} EZMEDIA;
+
 
 enum	{
 	EZUI_COL_NAME = 0,
@@ -152,6 +222,14 @@ enum	{
 	EZUI_FMR_RDRSET,
 	EZUI_FMR_RDONLY
 };
+
+enum	{
+	EZUI_FMT_PNG = 0,
+	EZUI_FMT_GIF,
+	EZUI_FMT_GIFA,
+	EZUI_FMT_JPEG
+};
+
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
 int ezgui_run(EZGUI *gui, char *flist[], int fnum);

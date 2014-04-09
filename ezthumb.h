@@ -562,6 +562,7 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
 char *meta_filesize(int64_t size, char *buffer);
 char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int meta_image_format(char *input, char *fmt, int flen);
+int ezm_strarr_index(char *strarr[], char *elem);
 
 
 #endif	/* _EZTHUMB_H_ */
