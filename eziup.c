@@ -43,6 +43,11 @@ static	char	*list_duration[] = {
 	CFG_PIC_DFM_FAST, NULL
 };
 
+static	char	*list_format[] = {
+	CFG_PIC_FMT_JPEG, CFG_PIC_FMT_PNG, CFG_PIC_FMT_GIFA,
+	CFG_PIC_FMT_GIF, NULL
+};
+
 
 static int ezgui_create_window(EZGUI *gui);
 static EZGUI *ezgui_get_global(Ihandle *any);
@@ -56,13 +61,15 @@ static Ihandle *ezgui_page_setup_profile(EZGUI *gui);
 static Ihandle *ezgui_page_setup_duration(EZGUI *gui);
 static Ihandle *ezgui_page_setup_output(EZGUI *gui);
 static Ihandle *ezgui_page_setup_button(EZGUI *gui);
-static int ezgui_page_setup_pic_format(EZGUI *gui, int rad, int state);
-static int ezgui_event_setup_choose_png(Ihandle *ih, int state);
-static int ezgui_event_setup_choose_gif(Ihandle *ih, int state);
-static int ezgui_event_setup_choose_agif(Ihandle *ih, int state);
-static int ezgui_event_setup_choose_jpeg(Ihandle *ih, int state);
+static int ezgui_page_setup_pic_format(EZGUI *gui, char *item);
+static int ezgui_event_setup_format(Ihandle *ih, char *text, int item, int);
 static int ezgui_event_setup_ok(Ihandle *ih);
 static int ezgui_event_setup_cancel(Ihandle *ih);
+
+static Ihandle *xui_text(char *label, char *size);
+static Ihandle *xui_label(char *label, char *size, char *font);
+
+
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -89,6 +96,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	gui->zoom_idx = ezm_strarr_index(list_zoom, CFG_PIC_ZOOM_DEFINE);
 
 	gui->dfm_idx = ezm_strarr_index(list_duration, CFG_PIC_AUTO);
+	gui->fmt_idx = ezm_strarr_index(list_format, CFG_PIC_FMT_JPEG);
 
 	/* seperate the image quality and frame rate */
 	gui->tmp_jpg_qf  = 85;
@@ -247,53 +255,42 @@ static int ezgui_workarea_scroll(Ihandle *ih, char *text, int item, int state)
 
 static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
 {
-	Ihandle	*lb_main, *vb_main, *lb_size, *vb_size;
-	Ihandle *lb_len, *vb_len, *lb_res, *vb_res;
-	Ihandle	*lb_prog, *vb_prog, *hbox;
+	Ihandle	*vb_main, *vb_size, *vb_len, *vb_res, *vb_prog, *hbox;
 
-	lb_main = IupLabel("Files");
 	gui->list_fname = IupList(NULL);
 	IupSetAttribute(gui->list_fname, "EXPAND", "YES");
 	IupSetAttribute(gui->list_fname, "MULTIPLE", "YES");
 	IupSetAttribute(gui->list_fname, "SCROLLBAR", "NO");
-	vb_main = IupVbox(lb_main, gui->list_fname, NULL);
+	vb_main = IupVbox(xui_text("Files", NULL), gui->list_fname, NULL);
 
-	lb_size = IupLabel("Size");
-	IupSetAttribute(lb_size, "SIZE", "50");
 	gui->list_size = IupList(NULL);
 	IupSetAttribute(gui->list_size, "SIZE", "50");
 	IupSetAttribute(gui->list_size, "EXPAND", "VERTICAL");
 	IupSetAttribute(gui->list_size, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_size, "SCROLLBAR", "NO");
-	vb_size = IupVbox(lb_size, gui->list_size, NULL);
+	vb_size = IupVbox(xui_text("Size", "50"), gui->list_size, NULL);
 
-	lb_len = IupLabel("Length");
-	IupSetAttribute(lb_len, "SIZE", "48");
 	gui->list_length = IupList(NULL);
 	IupSetAttribute(gui->list_length, "SIZE", "48");
 	IupSetAttribute(gui->list_length, "EXPAND", "VERTICAL");
 	IupSetAttribute(gui->list_length, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_length, "SCROLLBAR", "NO");
-	vb_len = IupVbox(lb_len, gui->list_length, NULL);
+	vb_len = IupVbox(xui_text("Length", "48"), gui->list_length, NULL);
 
-	lb_res = IupLabel("Resolution");
-	IupSetAttribute(lb_res, "SIZE", "50");
 	gui->list_resolv = IupList(NULL);
 	IupSetAttribute(gui->list_resolv, "SIZE", "50");
 	IupSetAttribute(gui->list_resolv, "EXPAND", "VERTICAL");
 	IupSetAttribute(gui->list_resolv, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_resolv, "SCROLLBAR", "NO");
-	vb_res = IupVbox(lb_res, gui->list_resolv, NULL);
+	vb_res = IupVbox(xui_text("Resolution", "50"), gui->list_resolv, NULL);
 	
-	lb_prog = IupLabel("Progress");
-	IupSetAttribute(lb_prog, "SIZE", "40");
 	gui->list_prog = IupList(NULL);
 	IupSetAttribute(gui->list_prog, "SIZE", "40");
 	IupSetAttribute(gui->list_prog, "SCROLLBAR", "NO");
 	IupSetAttribute(gui->list_prog, "EXPAND", "VERTICAL");
 	//IupSetAttribute(gui->list_prog, "CANFOCUS", "NO");
 	IupSetCallback(gui->list_prog, "ACTION", (Icallback)ezgui_workarea_scroll);
-	vb_prog = IupVbox(lb_prog, gui->list_prog, NULL);
+	vb_prog = IupVbox(xui_text("Progress", "40"), gui->list_prog, NULL);
 
 	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
 	return hbox;
@@ -326,8 +323,8 @@ static Ihandle *ezgui_page_generate_gridzoom(EZGUI *gui)
 	IupSetAttribute(gui->entry_col2, "SIZE", "12x10");
 	gui->entry_step = IupText(NULL);
 	IupSetAttribute(gui->entry_step, "SIZE", "18x10");
-	hbox2 = IupHbox(IupLabel("Col "), gui->entry_col2, IupLabel("Step"),
-			gui->entry_step, IupLabel("(s) "), NULL);
+	hbox2 = IupHbox(IupLabel("Col"), gui->entry_col2, IupLabel("Step"),
+			gui->entry_step, IupLabel("(s)"), NULL);
 	IupSetAttribute(hbox2, "ALIGNMENT", "ACENTER");
 
 	gui->entry_dss_no = IupText(NULL);
@@ -385,30 +382,16 @@ static Ihandle *ezgui_page_generate_gridzoom(EZGUI *gui)
  ****************************************************************************/
 static Ihandle *ezgui_page_setup(EZGUI *gui)
 {
-	Ihandle	*lb_prof, *hb_prof, *lb_dur, *hb_dur, *lb_ext, *hb_ext;
-	Ihandle	*hb_butt, *vbox;
+	Ihandle	*vbox;
 
-	/* the label of Profile Selection */
-	lb_prof = IupLabel("Profile Selection");
-	IupSetAttribute(lb_prof, "FONTSTYLE", "Bold");
-
-	hb_prof = ezgui_page_setup_profile(gui);
-
-	/* the label of Duration finding */
-	lb_dur = IupLabel("Duration Finding Mode");
-	IupSetAttribute(lb_dur, "FONTSTYLE", "Bold");
-
-	hb_dur = ezgui_page_setup_duration(gui);
-
-	/* the label of output file */
-	lb_ext = IupLabel("Output File Format");
-	IupSetAttribute(lb_ext, "FONTSTYLE", "Bold");
-	hb_ext = ezgui_page_setup_output(gui);
-	
-	hb_butt = ezgui_page_setup_button(gui);
-
-	vbox = IupVbox(lb_prof, hb_prof, lb_dur, hb_dur, lb_ext, hb_ext, 
-			IupFill(), hb_butt, NULL);
+	vbox = IupVbox(xui_label("Profile Selection", NULL, "Bold"), 
+			ezgui_page_setup_profile(gui), 
+			xui_label("Duration Finding Mode", NULL, "Bold"), 
+			ezgui_page_setup_duration(gui), 
+			xui_label("Output File Format", NULL, "Bold"), 
+			ezgui_page_setup_output(gui), 
+			IupFill(), 
+			ezgui_page_setup_button(gui), NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
 
@@ -422,58 +405,40 @@ static int ezgui_page_setup_reset(EZGUI *gui)
 	IupSetInt(gui->prof_zoom, "VALUE", gui->zoom_idx + 1);
 	IupSetInt(gui->dfm_list, "VALUE", gui->dfm_idx + 1);
 
-	ezgui_page_setup_pic_format(gui, EZUI_FMT_PNG, 0);
+	IupSetInt(gui->fmt_list, "VALUE", gui->fmt_idx + 1);
 	if (gui->sysopt->flags & EZOP_TRANSPARENT) {
-		IupSetAttribute(gui->off_transp, "VALUE", "ON");
+		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
 	} else {
-		IupSetAttribute(gui->off_transp, "VALUE", "OFF");
+		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
 	}
-	if (!strcmp(gui->sysopt->img_format, "png")) {
-		IupSetAttribute(gui->off_png, "VALUE", "ON");
-		ezgui_page_setup_pic_format(gui, EZUI_FMT_PNG, 1);
-	} else if (!strcmp(gui->sysopt->img_format, "gif")) {
-		if (gui->sysopt->img_quality == 0) {
-			IupSetAttribute(gui->off_gif, "VALUE", "ON");
-			ezgui_page_setup_pic_format(gui, EZUI_FMT_GIF, 1);
-		} else {
-			IupSetAttribute(gui->off_gifa, "VALUE", "ON");
-			ezgui_page_setup_pic_format(gui, EZUI_FMT_GIFA, 1);
-		}
-	} else {	/* default is "jpg" */
-		IupSetAttribute(gui->off_jpg, "VALUE", "ON");
-		ezgui_page_setup_pic_format(gui, EZUI_FMT_JPEG, 1);
-	}
+	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
+	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
+	ezgui_page_setup_pic_format(gui, list_format[gui->fmt_idx]);
 	return 0;
 }
 
 static Ihandle *ezgui_page_setup_profile(EZGUI *gui)
 {
-	Ihandle	*hbox1, *hbox2, *vbox, *lb_grid, *lb_zoom;
+	Ihandle	*hbox1, *hbox2, *vbox;
 	int	i;
 
-	lb_grid = IupLabel("Grid Setting");
-	IupSetAttribute(lb_grid, "SIZE", "120");
-
 	gui->prof_grid = IupList(NULL);
-	IupSetAttribute(gui->prof_grid, "SIZE", "120x12");
+	IupSetAttribute(gui->prof_grid, "SIZE", "100x12");
 	IupSetAttribute(gui->prof_grid, "DROPDOWN", "YES");
 	for (i = 0; list_grid[i]; i++) {
 		IupSetAttributeId(gui->prof_grid, "", i+1, list_grid[i]);
 	}
 
-	lb_zoom = IupLabel("Zoom Setting");
-	IupSetAttribute(lb_zoom, "SIZE", "120");
-
 	gui->prof_zoom = IupList(NULL);
-	IupSetAttribute(gui->prof_zoom, "SIZE", "120x12");
+	IupSetAttribute(gui->prof_zoom, "SIZE", "100x12");
 	IupSetAttribute(gui->prof_zoom, "DROPDOWN", "YES");
 	for (i = 0; list_zoom[i]; i++) {
 		IupSetAttributeId(gui->prof_zoom, "", i+1, list_zoom[i]);
 	}
 
-	hbox1 = IupHbox(lb_grid, gui->prof_grid, NULL);
+	hbox1 = IupHbox(xui_text("Grid Setting", "120"), gui->prof_grid, NULL);
 	IupSetAttribute(hbox1, "ALIGNMENT", "ACENTER");
-	hbox2 = IupHbox(lb_zoom, gui->prof_zoom, NULL);
+	hbox2 = IupHbox(xui_text("Zoom Setting", "120"), gui->prof_zoom, NULL);
 	IupSetAttribute(hbox2, "ALIGNMENT", "ACENTER");
 	vbox = IupVbox(hbox1, hbox2, NULL);
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
@@ -482,20 +447,19 @@ static Ihandle *ezgui_page_setup_profile(EZGUI *gui)
 
 static Ihandle *ezgui_page_setup_duration(EZGUI *gui)
 {
-	Ihandle	*hbox, *lb_dur;
+	Ihandle	*hbox;
 	int	i;
 
+
 	gui->dfm_list = IupList(NULL);
-	IupSetAttribute(gui->dfm_list, "SIZE", "120x12");
+	IupSetAttribute(gui->dfm_list, "SIZE", "100x12");
 	IupSetAttribute(gui->dfm_list, "DROPDOWN", "YES");
 	for (i = 0; list_duration[i]; i++) {
 		IupSetAttributeId(gui->dfm_list, "", i+1, list_duration[i]);
 	}
 
-	lb_dur = IupLabel("Find Media Duration By");
-	IupSetAttribute(lb_dur, "SIZE", "120");
-
-	hbox = IupHbox(lb_dur, gui->dfm_list, NULL);
+	hbox = IupHbox(xui_text("Find Media Duration By", "120"), 
+			gui->dfm_list, NULL);
 	IupSetAttribute(hbox, "NMARGIN", "16x4");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	return hbox;
@@ -503,72 +467,51 @@ static Ihandle *ezgui_page_setup_duration(EZGUI *gui)
 
 static Ihandle *ezgui_page_setup_output(EZGUI *gui)
 {
-	Ihandle	*lb_speed, *lb_quality, *vb_ext, *dummy1, *dummy2;
-	Ihandle	*vb_opt, *hbox, *hb_speed, *hb_quality, *hb_transp;
+	Ihandle	*hb_speed, *hb_quality;
+	Ihandle	*lb_dummy, *hbox1, *hbox2;
+	int	i;
 
-	/* display radio buttons of picture formats */
-	gui->off_png = IupToggle("PNG", NULL);
-	IupSetAttribute(gui->off_png, "SIZE", "120");
-	IupSetCallback(gui->off_png, "ACTION", 
-			(Icallback) ezgui_event_setup_choose_png);
+	/* first display line */
+	gui->fmt_list = IupList(NULL);
+	IupSetAttribute(gui->fmt_list, "SIZE", "100x12");
+	IupSetAttribute(gui->fmt_list, "DROPDOWN", "YES");
+	IupSetCallback(gui->fmt_list, "ACTION",
+			(Icallback) ezgui_event_setup_format);
+	for (i = 0; list_format[i]; i++) {
+		IupSetAttributeId(gui->fmt_list, "", i+1, list_format[i]);
+	}
 
-	gui->off_gif = IupToggle("GIF", NULL);
-	IupSetAttribute(gui->off_gif, "SIZE", "120");
-	IupSetCallback(gui->off_gif, "ACTION",
-			(Icallback) ezgui_event_setup_choose_gif);
+	hbox1 = IupHbox(xui_text("Save Picture As", "120"), 
+			gui->fmt_list, NULL);
+	IupSetAttribute(hbox1, "NMARGIN", "16x4");
+	IupSetAttribute(hbox1, "ALIGNMENT", "ACENTER");
 	
-	gui->off_gifa = IupToggle("Animated GIF", NULL);
-	IupSetAttribute(gui->off_gifa, "SIZE", "120");
-	IupSetCallback(gui->off_gifa, "ACTION",
-			(Icallback) ezgui_event_setup_choose_agif);
-
-	gui->off_jpg = IupToggle("JPEG", NULL);
-	IupSetAttribute(gui->off_jpg, "SIZE", "120");
-	IupSetCallback(gui->off_jpg, "ACTION",
-			(Icallback) ezgui_event_setup_choose_jpeg);
-	
-	dummy1 = IupText(NULL);
-	IupSetAttribute(dummy1, "VISIBLE", "NO");
-	IupSetAttribute(dummy1, "SIZE", "12x10");
-
-	vb_ext = IupVbox(gui->off_png, gui->off_gif, gui->off_gifa, 
-			gui->off_jpg, dummy1, NULL);
-	IupSetAttribute(vb_ext, "HOMOGENEOUS", "YES");
-
-	/* display attributes of specified picture formats */
-	lb_speed = IupLabel("Speed:");
-	IupSetAttribute(lb_speed, "SIZE", "36");
-	gui->off_gifa_fr = IupText(NULL);
-	IupSetAttribute(gui->off_gifa_fr, "SIZE", "40x10");
-	IupSetAttribute(gui->off_gifa_fr, "ACTIVE", "NO");
-	IupSetInt(gui->off_gifa_fr, "VALUE", gui->tmp_gifa_fr);
-	hb_speed = IupHbox(lb_speed, gui->off_gifa_fr, NULL);
+	/* second display line */
+	gui->fmt_gif_fr = IupText(NULL);
+	IupSetAttribute(gui->fmt_gif_fr, "SIZE", "40x10");
+	hb_speed = IupHbox(xui_text("FRate:", NULL), gui->fmt_gif_fr, NULL);
 	IupSetAttribute(hb_speed, "ALIGNMENT", "ACENTER");
 
-	lb_quality = IupLabel("Quality:");
-	IupSetAttribute(lb_quality, "SIZE", "36");
-	gui->off_jpg_qf = IupText(NULL);
-	IupSetAttribute(gui->off_jpg_qf, "SIZE", "40x10");
-	IupSetAttribute(gui->off_jpg_qf, "ACTIVE", "NO");
-	IupSetInt(gui->off_jpg_qf, "VALUE", gui->tmp_jpg_qf);
-	hb_quality = IupHbox(lb_quality, gui->off_jpg_qf, NULL);
+	gui->fmt_jpg_qf = IupText(NULL);
+	IupSetAttribute(gui->fmt_jpg_qf, "SIZE", "40x10");
+	hb_quality = IupHbox(xui_text("Quality:", NULL), 
+			gui->fmt_jpg_qf, NULL);
 	IupSetAttribute(hb_quality, "ALIGNMENT", "ACENTER");
 
-	dummy2 = IupText(NULL);
-	IupSetAttribute(dummy2, "SIZE", "36x10");
-	IupSetAttribute(dummy2, "VISIBLE", "NO");
-	gui->off_transp = IupToggle("Transparent", NULL);
-	IupSetAttribute(gui->off_transp, "ACTIVE", "NO");
-	hb_transp = IupHbox(dummy2, gui->off_transp, NULL);
-	IupSetAttribute(hb_transp, "ALIGNMENT", "ACENTER");
+	gui->fmt_transp = IupToggle("Transparent", NULL);
 
-	vb_opt = IupVbox(IupLabel(""), IupLabel(""), hb_speed, hb_quality, 
-			hb_transp, NULL);
-	IupSetAttribute(vb_opt, "HOMOGENEOUS", "YES");
+	gui->fmt_zbox = IupZbox(IupFill(), hb_speed, hb_quality, NULL);
+	IupSetInt(gui->fmt_zbox, "VALUEPOS", 0);
 
-	hbox = IupHbox(IupRadio(vb_ext), vb_opt, IupFill(), NULL);
-	IupSetAttribute(hbox, "NMARGIN", "16x4");
-	return hbox;
+	lb_dummy = xui_text("dummy", "120");
+	IupSetAttribute(lb_dummy, "VISIBLE", "NO");
+
+	hbox2 = IupHbox(lb_dummy, gui->fmt_zbox, gui->fmt_transp, NULL);
+	IupSetAttribute(hbox2, "NMARGIN", "16x4");
+	IupSetAttribute(hbox2, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox2, "GAP", "4");
+
+	return IupVbox(hbox1, hbox2, NULL);
 }
 
 static Ihandle *ezgui_page_setup_button(EZGUI *gui)
@@ -589,53 +532,26 @@ static Ihandle *ezgui_page_setup_button(EZGUI *gui)
 	return hbox;
 }
 
-static int ezgui_event_setup_choose_png(Ihandle *ih, int state)
+static int ezgui_page_setup_pic_format(EZGUI *gui, char *item)
 {
-	return ezgui_page_setup_pic_format(ezgui_get_global(ih), 
-			EZUI_FMT_PNG, state);
-}
+	/* hide the transparent toggle and quality editboxes */
+	IupSetAttribute(gui->fmt_transp, "VISIBLE", "NO");
+	IupSetInt(gui->fmt_zbox, "VALUEPOS", 0);
 
-static int ezgui_page_setup_pic_format(EZGUI *gui, int rad, int state)
-{
-	if (state == 0) {
-		IupSetAttribute(gui->off_jpg_qf, "ACTIVE", "NO");
-		IupSetAttribute(gui->off_transp, "ACTIVE", "NO");
-		IupSetAttribute(gui->off_gifa_fr, "ACTIVE", "NO");
-		return IUP_DEFAULT;
-	}
-
-	if (rad == EZUI_FMT_JPEG) {
-		IupSetAttribute(gui->off_jpg_qf, "ACTIVE", "YES");
-		IupSetInt(gui->off_jpg_qf, "VALUE", gui->tmp_jpg_qf);
+	if (!strcmp(item, CFG_PIC_FMT_JPEG)) {
+		IupSetInt(gui->fmt_zbox, "VALUEPOS", 2);
 	} else {
-		IupSetAttribute(gui->off_transp, "ACTIVE", "YES");
-		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
-			IupSetAttribute(gui->off_transp, "VALUE", "ON");
-		}
-		if (rad == EZUI_FMT_GIFA) {
-			IupSetAttribute(gui->off_gifa_fr, "ACTIVE", "YES");
-			IupSetInt(gui->off_gifa_fr, "VALUE", gui->tmp_gifa_fr);
+		IupSetAttribute(gui->fmt_transp, "VISIBLE", "YES");
+		if (!strcmp(item, CFG_PIC_FMT_GIFA)) {
+			IupSetInt(gui->fmt_zbox, "VALUEPOS", 1);
 		}
 	}	
 	return IUP_DEFAULT;
 }
 
-static int ezgui_event_setup_choose_gif(Ihandle *ih, int state)
+static int ezgui_event_setup_format(Ihandle *ih, char *text, int item, int state)
 {
-	return ezgui_page_setup_pic_format(ezgui_get_global(ih), 
-			EZUI_FMT_GIF, state);
-}
-
-static int ezgui_event_setup_choose_agif(Ihandle *ih, int state)
-{
-	return ezgui_page_setup_pic_format(ezgui_get_global(ih), 
-			EZUI_FMT_GIFA, state);
-}
-
-static int ezgui_event_setup_choose_jpeg(Ihandle *ih, int state)
-{
-	return ezgui_page_setup_pic_format(ezgui_get_global(ih), 
-			EZUI_FMT_JPEG, state);
+	return ezgui_page_setup_pic_format(ezgui_get_global(ih), text);
 }
 
 static int ezgui_event_setup_ok(Ihandle *ih)
@@ -647,4 +563,30 @@ static int ezgui_event_setup_cancel(Ihandle *ih)
 	ezgui_page_setup_reset(ezgui_get_global(ih));
 	return IUP_DEFAULT;
 }
+
+static Ihandle *xui_text(char *label, char *size)
+{
+	Ihandle	*ih;
+
+	ih = IupLabel(label);
+	if (size) {
+		IupSetAttribute(ih, "SIZE", size);
+	}
+	return ih;
+}
+
+static Ihandle *xui_label(char *label, char *size, char *font)
+{
+	Ihandle	*ih;
+
+	ih = IupLabel(label);
+	if (size) {
+		IupSetAttribute(ih, "SIZE", size);
+	}
+	if (font) {
+		IupSetAttribute(ih, "FONTSTYLE", font);
+	}
+	return ih;
+}
+
 
