@@ -28,6 +28,8 @@
 #include "ezthumb.h"
 #include "ezgui.h"
 
+#define	EZGSINI		-999	/* initialization status */
+
 static	char	*list_grid[] = {
 	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP,
 	CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
@@ -54,22 +56,26 @@ static EZGUI *ezgui_get_global(Ihandle *any);
 static Ihandle *ezgui_page_generate(EZGUI *gui);
 static Ihandle *ezgui_page_generate_workarea(EZGUI *gui);
 static Ihandle *ezgui_page_generate_button(EZGUI *gui);
-static Ihandle *ezgui_page_generate_gridzoom(EZGUI *gui);
 static Ihandle *ezgui_page_setup(EZGUI *gui);
 static int ezgui_page_setup_reset(EZGUI *gui);
 static Ihandle *ezgui_page_setup_profile(EZGUI *gui);
+static Ihandle *ezgui_page_setup_grid_zbox(EZGUI *gui);
+static Ihandle *ezgui_page_setup_zoom_zbox(EZGUI *gui);
 static Ihandle *ezgui_page_setup_duration(EZGUI *gui);
 static Ihandle *ezgui_page_setup_output(EZGUI *gui);
 static Ihandle *ezgui_page_setup_button(EZGUI *gui);
-static int ezgui_page_setup_pic_format(EZGUI *gui, char *item);
 static int ezgui_event_setup_format(Ihandle *ih, char *text, int item, int);
+static int ezgui_event_setup_grid(Ihandle *ih, char *text, int i, int s);
+static int ezgui_event_setup_zoom(Ihandle *ih, char *text, int i, int s);
 static int ezgui_event_setup_ok(Ihandle *ih);
 static int ezgui_event_setup_cancel(Ihandle *ih);
 
 static Ihandle *xui_text(char *label, char *size);
 static Ihandle *xui_label(char *label, char *size, char *font);
-
-
+static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
+static int xui_list_get_idx(Ihandle *ih);
+static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
+static Ihandle *xui_button(char *prompt, Icallback ntf);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -224,17 +230,16 @@ static EZGUI *ezgui_get_global(Ihandle *any)
  ****************************************************************************/
 static Ihandle *ezgui_page_generate(EZGUI *gui)
 {
-	Ihandle	*vbox, *hbox, *sbox, *hgrid, *hbtn;
+	Ihandle	*vbox, *hbox, *sbox;
 
-	hgrid = ezgui_page_generate_gridzoom(gui);
 	gui->prog_bar = IupProgressBar();
 	IupSetAttribute(gui->prog_bar, "VALUE", "0.5");
 	IupSetAttribute(gui->prog_bar, "EXPAND", "HORIZONTAL");
 	IupSetAttribute(gui->prog_bar, "DASHED", "YES");
 	IupSetAttribute(gui->prog_bar, "SIZE", "x10");
 	//IupSetAttribute(gui->prog_bar, "VISIBLE", "NO");
-	hbtn = ezgui_page_generate_button(gui);
-	hbox = IupHbox(hgrid, gui->prog_bar, hbtn, NULL);
+
+	hbox = IupHbox(gui->prog_bar, ezgui_page_generate_button(gui), NULL);
 	IupSetAttribute(hbox, "NGAP", "10");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 
@@ -248,8 +253,7 @@ static Ihandle *ezgui_page_generate(EZGUI *gui)
 
 static int ezgui_workarea_scroll(Ihandle *ih, char *text, int item, int state)
 {
-	printf("Action %s: %d %d\n", text, item, state);
-	IupSetAttribute(ih, "VALUE", NULL);
+	printf("Action %s: %p %d %d\n", text, ih, item, state);
 	return 0;
 }
 
@@ -262,34 +266,35 @@ static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
 	IupSetAttribute(gui->list_fname, "MULTIPLE", "YES");
 	IupSetAttribute(gui->list_fname, "SCROLLBAR", "NO");
 	vb_main = IupVbox(xui_text("Files", NULL), gui->list_fname, NULL);
+	IupSetCallback(gui->list_fname, "ACTION", 
+			(Icallback) ezgui_workarea_scroll);
 
 	gui->list_size = IupList(NULL);
 	IupSetAttribute(gui->list_size, "SIZE", "50");
 	IupSetAttribute(gui->list_size, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_size, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_size, "SCROLLBAR", "NO");
+	IupSetAttribute(gui->list_size, "ACTIVE", "NO");
 	vb_size = IupVbox(xui_text("Size", "50"), gui->list_size, NULL);
 
 	gui->list_length = IupList(NULL);
 	IupSetAttribute(gui->list_length, "SIZE", "48");
 	IupSetAttribute(gui->list_length, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_length, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_length, "SCROLLBAR", "NO");
+	IupSetAttribute(gui->list_length, "ACTIVE", "NO");
 	vb_len = IupVbox(xui_text("Length", "48"), gui->list_length, NULL);
 
 	gui->list_resolv = IupList(NULL);
 	IupSetAttribute(gui->list_resolv, "SIZE", "50");
 	IupSetAttribute(gui->list_resolv, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_resolv, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_resolv, "SCROLLBAR", "NO");
+	IupSetAttribute(gui->list_resolv, "ACTIVE", "NO");
 	vb_res = IupVbox(xui_text("Resolution", "50"), gui->list_resolv, NULL);
 	
 	gui->list_prog = IupList(NULL);
 	IupSetAttribute(gui->list_prog, "SIZE", "40");
 	IupSetAttribute(gui->list_prog, "SCROLLBAR", "NO");
 	IupSetAttribute(gui->list_prog, "EXPAND", "VERTICAL");
-	//IupSetAttribute(gui->list_prog, "CANFOCUS", "NO");
-	IupSetCallback(gui->list_prog, "ACTION", (Icallback)ezgui_workarea_scroll);
+	IupSetAttribute(gui->list_prog, "ACTIVE", "NO");
 	vb_prog = IupVbox(xui_text("Progress", "40"), gui->list_prog, NULL);
 
 	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
@@ -298,82 +303,10 @@ static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
 
 static Ihandle *ezgui_page_generate_button(EZGUI *gui)
 {
-	gui->button_add = IupButton("Add", NULL);
-	IupSetAttribute(gui->button_add, "SIZE", "42");
-	gui->button_del  = IupButton("Remove", NULL);
-	IupSetAttribute(gui->button_del, "SIZE", "42");
-	gui->button_run = IupButton("Run", NULL);
-	IupSetAttribute(gui->button_run, "SIZE", "42");
+	gui->button_add = xui_button("Add", NULL);
+	gui->button_del = xui_button("Remove", NULL);
+	gui->button_run = xui_button("Run", NULL);
 	return IupHbox(gui->button_add, gui->button_del, gui->button_run, NULL);
-}
-
-static Ihandle *ezgui_page_generate_gridzoom(EZGUI *gui)
-{
-	Ihandle	*hbox1, *hbox2, *hbox3, *hbox4, *hbox5, *hbox6, *hbox7;
-
-	gui->entry_col1 = IupText(NULL);
-	IupSetAttribute(gui->entry_col1, "SIZE", "12x10");
-	gui->entry_row = IupText(NULL);
-	IupSetAttribute(gui->entry_row, "SIZE", "12x10");
-	hbox1 = IupHbox(IupLabel("Grid"), gui->entry_col1, 
-			IupLabel("x"), gui->entry_row, NULL);
-	IupSetAttribute(hbox1, "ALIGNMENT", "ACENTER");
-	
-	gui->entry_col2 = IupText(NULL);
-	IupSetAttribute(gui->entry_col2, "SIZE", "12x10");
-	gui->entry_step = IupText(NULL);
-	IupSetAttribute(gui->entry_step, "SIZE", "18x10");
-	hbox2 = IupHbox(IupLabel("Col"), gui->entry_col2, IupLabel("Step"),
-			gui->entry_step, IupLabel("(s)"), NULL);
-	IupSetAttribute(hbox2, "ALIGNMENT", "ACENTER");
-
-	gui->entry_dss_no = IupText(NULL);
-	IupSetAttribute(gui->entry_dss_no, "SIZE", "24x10");
-	hbox3 = IupHbox(IupLabel("Dss No. "), gui->entry_dss_no, NULL);
-	IupSetAttribute(hbox3, "ALIGNMENT", "ACENTER");
-
-	gui->entry_dss_step = IupText(NULL);
-	IupSetAttribute(gui->entry_dss_step, "SIZE", "24x10");
-	hbox4 = IupHbox(IupLabel("Dss Step "), gui->entry_dss_step, 
-			IupLabel("(s) "), NULL);
-	IupSetAttribute(hbox4, "ALIGNMENT", "ACENTER");
-
-	gui->entry_zbox_grid = IupZbox(IupLabel("Grid Auto"), hbox1, hbox2, 
-			hbox3, hbox4, IupLabel("DSS I-Frame "), NULL);
-	IupSetAttribute(gui->entry_zbox_grid, "ALIGNMENT", "ACENTER");
-
-	gui->entry_zoom_ratio = IupText(NULL);
-	IupSetAttribute(gui->entry_zoom_ratio, "SIZE", "24x11");
-	IupSetAttribute(gui->entry_zoom_ratio, "SPIN", "YES");
-	IupSetAttribute(gui->entry_zoom_ratio, "SPINMIN", "5");
-	IupSetAttribute(gui->entry_zoom_ratio, "SPINMAX", "200");
-	IupSetAttribute(gui->entry_zoom_ratio, "SPININC", "5");
-	IupSetAttribute(gui->entry_zoom_ratio, "SPINALIGN", "LEFT");
-	IupSetAttribute(gui->entry_zoom_ratio, "SPINVALUE", "50");
-	hbox5 = IupHbox(IupLabel("Zoom"), gui->entry_zoom_ratio,
-			IupLabel("%"), NULL);
-	IupSetAttribute(hbox5, "ALIGNMENT", "ACENTER");
-
-	gui->entry_zoom_wid = IupText(NULL);
-	IupSetAttribute(gui->entry_zoom_wid, "SIZE", "18x10");
-	gui->entry_zoom_hei = IupText(NULL);
-	IupSetAttribute(gui->entry_zoom_hei, "SIZE", "18x10");
-	hbox6 = IupHbox(IupLabel("Zoom"), gui->entry_zoom_wid, IupLabel("x"),
-			gui->entry_zoom_hei, NULL);
-	IupSetAttribute(hbox6, "ALIGNMENT", "ACENTER");
-	
-	gui->entry_width = IupText(NULL);
-	IupSetAttribute(gui->entry_width, "SIZE", "24x10");
-	hbox7 = IupHbox(IupLabel("Canvas "), gui->entry_width, NULL);
-	IupSetAttribute(hbox7, "ALIGNMENT", "ACENTER");
-
-	gui->entry_zbox_zoom = IupZbox(IupLabel("Zoom Auto"), hbox5, hbox6, 
-			hbox7, NULL);
-	IupSetAttribute(gui->entry_zbox_zoom, "ALIGNMENT", "ACENTER");
-
-	IupSetInt(gui->entry_zbox_grid, "VALUEPOS", gui->grid_idx);
-	IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", gui->zoom_idx);
-	return IupHbox(gui->entry_zbox_grid, gui->entry_zbox_zoom, NULL);
 }
 
 
@@ -406,6 +339,9 @@ static int ezgui_page_setup_reset(EZGUI *gui)
 	IupSetInt(gui->dfm_list, "VALUE", gui->dfm_idx + 1);
 
 	IupSetInt(gui->fmt_list, "VALUE", gui->fmt_idx + 1);
+	ezgui_event_setup_format((Ihandle*) gui, 
+			list_format[gui->fmt_idx], gui->fmt_idx + 1, EZGSINI);
+
 	if (gui->sysopt->flags & EZOP_TRANSPARENT) {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
 	} else {
@@ -413,7 +349,9 @@ static int ezgui_page_setup_reset(EZGUI *gui)
 	}
 	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
 	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
-	ezgui_page_setup_pic_format(gui, list_format[gui->fmt_idx]);
+
+	IupSetInt(gui->entry_zbox_grid, "VALUEPOS", gui->grid_idx);
+	IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", gui->zoom_idx);
 	return 0;
 }
 
@@ -422,140 +360,259 @@ static Ihandle *ezgui_page_setup_profile(EZGUI *gui)
 	Ihandle	*hbox1, *hbox2, *vbox;
 	int	i;
 
-	gui->prof_grid = IupList(NULL);
-	IupSetAttribute(gui->prof_grid, "SIZE", "100x12");
-	IupSetAttribute(gui->prof_grid, "DROPDOWN", "YES");
+	/* First line: Grid Setting */
+	hbox1 = xui_list_setting(&gui->prof_grid, "Grid Setting");
 	for (i = 0; list_grid[i]; i++) {
-		IupSetAttributeId(gui->prof_grid, "", i+1, list_grid[i]);
+		IupSetAttributeId(gui->prof_grid, "", i + 1, list_grid[i]);
 	}
+	IupSetCallback(gui->prof_grid, "ACTION",
+			(Icallback) ezgui_event_setup_grid);
+	gui->entry_zbox_grid = ezgui_page_setup_grid_zbox(gui);
+	IupAppend(hbox1, gui->entry_zbox_grid);
 
-	gui->prof_zoom = IupList(NULL);
-	IupSetAttribute(gui->prof_zoom, "SIZE", "100x12");
-	IupSetAttribute(gui->prof_zoom, "DROPDOWN", "YES");
+	/* Second line: Zoom Setting */
+	hbox2 = xui_list_setting(&gui->prof_zoom, "Zoom Setting");
 	for (i = 0; list_zoom[i]; i++) {
-		IupSetAttributeId(gui->prof_zoom, "", i+1, list_zoom[i]);
+		IupSetAttributeId(gui->prof_zoom, "", i + 1, list_zoom[i]);
 	}
+	IupSetCallback(gui->prof_zoom, "ACTION",
+			(Icallback) ezgui_event_setup_zoom);
+	gui->entry_zbox_zoom = ezgui_page_setup_zoom_zbox(gui);
+	IupAppend(hbox2, gui->entry_zbox_zoom);
 
-	hbox1 = IupHbox(xui_text("Grid Setting", "120"), gui->prof_grid, NULL);
-	IupSetAttribute(hbox1, "ALIGNMENT", "ACENTER");
-	hbox2 = IupHbox(xui_text("Zoom Setting", "120"), gui->prof_zoom, NULL);
-	IupSetAttribute(hbox2, "ALIGNMENT", "ACENTER");
+	/* assemble the Profile Setting area */
 	vbox = IupVbox(hbox1, hbox2, NULL);
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
 	return vbox;
 }
+
+static Ihandle *ezgui_page_setup_grid_zbox(EZGUI *gui)
+{
+	Ihandle	*hbox, *zbox;
+
+	zbox = IupZbox(IupFill(), NULL);
+
+	hbox = xui_text_setting(&gui->entry_col1, "Grid", "x");
+	gui->entry_row = IupText(NULL);
+	IupSetAttribute(gui->entry_row, "SIZE", "12x10");
+	IupAppend(hbox, gui->entry_row);
+
+	/*gui->entry_col1 = IupText(NULL);
+	IupSetAttribute(gui->entry_col1, "SIZE", "12x10");
+	gui->entry_row = IupText(NULL);
+	IupSetAttribute(gui->entry_row, "SIZE", "12x10");
+	hbox = IupHbox(IupLabel("Grid"), gui->entry_col1, 
+			IupLabel("x"), gui->entry_row, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");*/
+	IupAppend(zbox, hbox);
+	
+	gui->entry_col2 = IupText(NULL);
+	IupSetAttribute(gui->entry_col2, "SIZE", "12x10");
+	gui->entry_step = IupText(NULL);
+	IupSetAttribute(gui->entry_step, "SIZE", "18x10");
+	hbox = IupHbox(IupLabel("Col"), gui->entry_col2, IupLabel("Step"),
+			gui->entry_step, IupLabel("(s)"), NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupAppend(zbox, hbox);
+
+	gui->entry_dss_no = IupText(NULL);
+	IupSetAttribute(gui->entry_dss_no, "SIZE", "24x10");
+	hbox = IupHbox(IupLabel("Dss No. "), gui->entry_dss_no, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupAppend(zbox, hbox);
+
+	gui->entry_dss_step = IupText(NULL);
+	IupSetAttribute(gui->entry_dss_step, "SIZE", "24x10");
+	hbox = IupHbox(IupLabel("Dss Step "), gui->entry_dss_step, 
+			IupLabel("(s) "), NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupAppend(zbox, hbox);
+	IupAppend(zbox, IupFill());
+	return zbox;
+}
+
+static Ihandle *ezgui_page_setup_zoom_zbox(EZGUI *gui)
+{
+	Ihandle	*hbox, *zbox;
+
+	zbox = IupZbox(IupFill(), NULL);
+
+	gui->entry_zoom_ratio = IupText(NULL);
+	IupSetAttribute(gui->entry_zoom_ratio, "SIZE", "24x11");
+	IupSetAttribute(gui->entry_zoom_ratio, "SPIN", "YES");
+	IupSetAttribute(gui->entry_zoom_ratio, "SPINMIN", "5");
+	IupSetAttribute(gui->entry_zoom_ratio, "SPINMAX", "200");
+	IupSetAttribute(gui->entry_zoom_ratio, "SPININC", "5");
+	IupSetAttribute(gui->entry_zoom_ratio, "SPINALIGN", "LEFT");
+	IupSetAttribute(gui->entry_zoom_ratio, "SPINVALUE", "50");
+	hbox = IupHbox(IupLabel("Zoom"), gui->entry_zoom_ratio,
+			IupLabel("%"), NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupAppend(zbox, hbox);
+
+	gui->entry_zoom_wid = IupText(NULL);
+	IupSetAttribute(gui->entry_zoom_wid, "SIZE", "18x10");
+	gui->entry_zoom_hei = IupText(NULL);
+	IupSetAttribute(gui->entry_zoom_hei, "SIZE", "18x10");
+	hbox = IupHbox(IupLabel("Zoom"), gui->entry_zoom_wid, IupLabel("x"),
+			gui->entry_zoom_hei, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupAppend(zbox, hbox);
+	
+	gui->entry_width = IupText(NULL);
+	IupSetAttribute(gui->entry_width, "SIZE", "24x10");
+	hbox = IupHbox(IupLabel("Canvas "), gui->entry_width, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupAppend(zbox, hbox);
+	return zbox;
+}
+
 
 static Ihandle *ezgui_page_setup_duration(EZGUI *gui)
 {
 	Ihandle	*hbox;
 	int	i;
 
-
-	gui->dfm_list = IupList(NULL);
-	IupSetAttribute(gui->dfm_list, "SIZE", "100x12");
-	IupSetAttribute(gui->dfm_list, "DROPDOWN", "YES");
+	hbox = xui_list_setting(&gui->dfm_list, "Find Media Duration By");
 	for (i = 0; list_duration[i]; i++) {
-		IupSetAttributeId(gui->dfm_list, "", i+1, list_duration[i]);
+		IupSetAttributeId(gui->dfm_list, "", i + 1, list_duration[i]);
 	}
-
-	hbox = IupHbox(xui_text("Find Media Duration By", "120"), 
-			gui->dfm_list, NULL);
 	IupSetAttribute(hbox, "NMARGIN", "16x4");
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	return hbox;
 }
 
 static Ihandle *ezgui_page_setup_output(EZGUI *gui)
 {
-	Ihandle	*hb_speed, *hb_quality;
-	Ihandle	*lb_dummy, *hbox1, *hbox2;
+	Ihandle	*hbox1, *hbox2, *vbox;
 	int	i;
 
 	/* first display line */
-	gui->fmt_list = IupList(NULL);
-	IupSetAttribute(gui->fmt_list, "SIZE", "100x12");
-	IupSetAttribute(gui->fmt_list, "DROPDOWN", "YES");
-	IupSetCallback(gui->fmt_list, "ACTION",
-			(Icallback) ezgui_event_setup_format);
+	gui->fmt_transp = IupToggle("Transparent", NULL);
+	hbox1 = xui_list_setting(&gui->fmt_list, "Save Picture As");
 	for (i = 0; list_format[i]; i++) {
 		IupSetAttributeId(gui->fmt_list, "", i+1, list_format[i]);
 	}
+	IupAppend(hbox1, gui->fmt_transp);
+	IupSetCallback(gui->fmt_list, "ACTION",
+			(Icallback) ezgui_event_setup_format);
 
-	hbox1 = IupHbox(xui_text("Save Picture As", "120"), 
-			gui->fmt_list, NULL);
-	IupSetAttribute(hbox1, "NMARGIN", "16x4");
-	IupSetAttribute(hbox1, "ALIGNMENT", "ACENTER");
-	
 	/* second display line */
-	gui->fmt_gif_fr = IupText(NULL);
-	IupSetAttribute(gui->fmt_gif_fr, "SIZE", "40x10");
-	hb_speed = IupHbox(xui_text("FRate:", NULL), gui->fmt_gif_fr, NULL);
-	IupSetAttribute(hb_speed, "ALIGNMENT", "ACENTER");
+	gui->fmt_zbox = IupZbox(IupFill(), 
+			xui_text_setting(&gui->fmt_gif_fr, "FRate:", "(ms)"),
+			xui_text_setting(&gui->fmt_jpg_qf, "Quality:", NULL),
+			NULL);
+	hbox2 = IupHbox(xui_text("", "120"), gui->fmt_zbox, NULL);
+	IupSetAttribute(hbox2, "NGAP", "4");
 
-	gui->fmt_jpg_qf = IupText(NULL);
-	IupSetAttribute(gui->fmt_jpg_qf, "SIZE", "40x10");
-	hb_quality = IupHbox(xui_text("Quality:", NULL), 
-			gui->fmt_jpg_qf, NULL);
-	IupSetAttribute(hb_quality, "ALIGNMENT", "ACENTER");
-
-	gui->fmt_transp = IupToggle("Transparent", NULL);
-
-	gui->fmt_zbox = IupZbox(IupFill(), hb_speed, hb_quality, NULL);
-	IupSetInt(gui->fmt_zbox, "VALUEPOS", 0);
-
-	lb_dummy = xui_text("dummy", "120");
-	IupSetAttribute(lb_dummy, "VISIBLE", "NO");
-
-	hbox2 = IupHbox(lb_dummy, gui->fmt_zbox, gui->fmt_transp, NULL);
-	IupSetAttribute(hbox2, "NMARGIN", "16x4");
-	IupSetAttribute(hbox2, "ALIGNMENT", "ACENTER");
-	IupSetAttribute(hbox2, "GAP", "4");
-
-	return IupVbox(hbox1, hbox2, NULL);
+	/* assemble the Picture Format area */
+	vbox = IupVbox(hbox1, hbox2, NULL);
+	IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+	return vbox;
 }
 
 static Ihandle *ezgui_page_setup_button(EZGUI *gui)
 {
 	Ihandle *hbox;
 	
-	gui->butt_setup_apply = IupButton("OK", NULL);
-	IupSetAttribute(gui->butt_setup_apply, "SIZE", "42");
-	IupSetCallback(gui->butt_setup_cancel, "ACTION",
-			(Icallback) ezgui_event_setup_ok);
+	gui->butt_setup_apply = 
+		xui_button("OK", (Icallback) ezgui_event_setup_ok);
 
-	gui->butt_setup_cancel = IupButton("Cancel", NULL);
-	IupSetAttribute(gui->butt_setup_cancel, "SIZE", "42");
-	IupSetCallback(gui->butt_setup_cancel, "ACTION",
-			(Icallback) ezgui_event_setup_cancel);
+	gui->butt_setup_cancel = 
+		xui_button("Cancel", (Icallback) ezgui_event_setup_cancel);
+
 	hbox = IupHbox(IupFill(), gui->butt_setup_cancel, 
 			gui->butt_setup_apply, NULL);
 	return hbox;
 }
 
-static int ezgui_page_setup_pic_format(EZGUI *gui, char *item)
+static int ezgui_event_setup_format(Ihandle *ih, char *text, int i, int s)
 {
+	EZGUI	*gui;
+
+	(void) i;
+
+	/* The normal state of 's' from IUP callback should be 0 or 1.
+	 * The special state EZGSINI is applied for initializing stage
+	 * while the dialog hasn't been linked with the GUI object. */
+	if (s == 0) {
+		return IUP_DEFAULT;	/* ignore the leaving item */
+	} else if (s == EZGSINI) {
+		gui = (EZGUI *) ih;
+	} else {
+		gui = ezgui_get_global(ih);
+	}
+
 	/* hide the transparent toggle and quality editboxes */
 	IupSetAttribute(gui->fmt_transp, "VISIBLE", "NO");
 	IupSetInt(gui->fmt_zbox, "VALUEPOS", 0);
 
-	if (!strcmp(item, CFG_PIC_FMT_JPEG)) {
+	if (!strcmp(text, CFG_PIC_FMT_JPEG)) {
 		IupSetInt(gui->fmt_zbox, "VALUEPOS", 2);
 	} else {
 		IupSetAttribute(gui->fmt_transp, "VISIBLE", "YES");
-		if (!strcmp(item, CFG_PIC_FMT_GIFA)) {
+		if (!strcmp(text, CFG_PIC_FMT_GIFA)) {
 			IupSetInt(gui->fmt_zbox, "VALUEPOS", 1);
 		}
 	}	
 	return IUP_DEFAULT;
 }
 
-static int ezgui_event_setup_format(Ihandle *ih, char *text, int item, int state)
+static int ezgui_event_setup_grid(Ihandle *ih, char *text, int i, int s)
 {
-	return ezgui_page_setup_pic_format(ezgui_get_global(ih), text);
+	EZGUI	*gui = ezgui_get_global(ih);
+	
+	(void) text;	/* stop the gcc complaining */
+	//printf("ezgui_event_setup_grid: %s %d %d\n", text, i, s);
+	
+	if (s) {
+		IupSetInt(gui->entry_zbox_grid, "VALUEPOS", i - 1);
+	}
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_setup_zoom(Ihandle *ih, char *text, int i, int s)
+{
+	EZGUI	*gui = ezgui_get_global(ih);
+
+	(void) text;	/* stop the gcc complaining */
+
+	if (s) {
+		IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", i - 1);
+	}
+	return IUP_DEFAULT;
 }
 
 static int ezgui_event_setup_ok(Ihandle *ih)
 {
+	EZGUI	*gui = ezgui_get_global(ih);
+	char	*val;
+
+	gui->grid_idx = xui_list_get_idx(gui->prof_grid);
+	gui->zoom_idx = xui_list_get_idx(gui->prof_zoom);
+	gui->dfm_idx  = xui_list_get_idx(gui->dfm_list);
+	gui->fmt_idx  = xui_list_get_idx(gui->fmt_list);
+
+	gui->tmp_jpg_qf = (int) strtol(
+			IupGetAttribute(gui->fmt_jpg_qf, "VALUE"), NULL, 10);
+	gui->tmp_gifa_fr = (int) strtol(
+			IupGetAttribute(gui->fmt_gif_fr, "VALUE"), NULL, 10);
+
+	val = IupGetAttribute(gui->fmt_transp, "VALUE");
+	if (!strcmp(val, "ON")) {
+		gui->sysopt->flags |= EZOP_TRANSPARENT;
+	} else {
+		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
+	}
+	
+	/*
+	printf("SETUP: Grid=%d Zoom=%d Dur=%d Fmt=%d JPG=%d GIFA=%d Tra=%s\n",
+			gui->grid_idx, gui->zoom_idx, gui->dfm_idx, 
+			gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr, val);
+	*/
+	IupSetInt(gui->entry_zbox_grid, "VALUEPOS", gui->grid_idx);
+	IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", gui->zoom_idx);
+	return IUP_DEFAULT;
 }
 
 static int ezgui_event_setup_cancel(Ihandle *ih)
@@ -589,4 +646,60 @@ static Ihandle *xui_label(char *label, char *size, char *font)
 	return ih;
 }
 
+/* define the standart dropdown list for the setup page */
+static Ihandle *xui_list_setting(Ihandle **xlst, char *label)
+{
+	Ihandle	*list, *hbox;
+
+	list = IupList(NULL);
+	IupSetAttribute(list, "SIZE", "100x12");
+	IupSetAttribute(list, "DROPDOWN", "YES");
+
+	hbox = IupHbox(xui_text(label, "120"), list, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+
+	if (xlst) {
+		*xlst = list;
+	}
+	return hbox;
+}
+
+static int xui_list_get_idx(Ihandle *ih)
+{
+	int	val;
+
+	val = (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 10);
+	return val - 1;
+}
+
+static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
+{
+	Ihandle	*hbox, *text;
+
+	text = IupText(NULL);
+	IupSetAttribute(text, "SIZE", "40x10");
+
+	hbox = IupHbox(IupLabel(label), text,
+			ext ? IupLabel(ext) : NULL, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+
+	if (xtxt) {
+		*xtxt = text;
+	}
+	return hbox;
+}
+
+static Ihandle *xui_button(char *prompt, Icallback ntf)
+{
+	Ihandle	*button;
+
+	button = IupButton(prompt, NULL);
+	IupSetAttribute(button, "SIZE", "42");
+	if (ntf) {
+		IupSetCallback(button, "ACTION", ntf);
+	}
+	return button;
+}
 
