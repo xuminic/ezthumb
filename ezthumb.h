@@ -344,7 +344,6 @@ typedef	struct	{
 
 	int	time_from;	/* from where to take shots (ms) */
 	int	time_to;	/* to where the process end (ms) */
-	int	dur_mode;	/* howto get the clip's duration */
 
 	int	vs_user;	/* specify the stream index */
 	int	key_ripno;	/* specify the number when ripping keyframes*/

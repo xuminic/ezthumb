@@ -53,9 +53,18 @@ static	char	*list_format[] = {
 
 static int ezgui_create_window(EZGUI *gui);
 static EZGUI *ezgui_get_global(Ihandle *any);
-static Ihandle *ezgui_page_generate(EZGUI *gui);
-static Ihandle *ezgui_page_generate_workarea(EZGUI *gui);
-static Ihandle *ezgui_page_generate_button(EZGUI *gui);
+
+static Ihandle *ezgui_page_main(EZGUI *gui);
+static int ezgui_page_main_reset(EZGUI *gui);
+static Ihandle *ezgui_page_main_workarea(EZGUI *gui);
+static Ihandle *ezgui_page_main_button(EZGUI *gui);
+static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text);
+static int ezgui_event_main_dragdrop(Ihandle *ih, int drag_id, int drop_id, int isshift, int iscontrol);
+static int ezgui_event_main_multi_select(Ihandle *ih, char *value);
+static int ezgui_event_main_add(Ihandle *ih);
+static int ezgui_event_main_remove(Ihandle *ih);
+static int ezgui_event_main_run(Ihandle *ih);
+
 static Ihandle *ezgui_page_setup(EZGUI *gui);
 static int ezgui_page_setup_reset(EZGUI *gui);
 static Ihandle *ezgui_page_setup_profile(EZGUI *gui);
@@ -74,7 +83,9 @@ static Ihandle *xui_text(char *label, char *size);
 static Ihandle *xui_label(char *label, char *size, char *font);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
 static int xui_list_get_idx(Ihandle *ih);
+static int xui_text_get_number(Ihandle *ih);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
+static Ihandle *xui_text_grid(char *label, Ihandle **xcol, Ihandle **xrow, char *ext);
 static Ihandle *xui_button(char *prompt, Icallback ntf);
 
 
@@ -95,6 +106,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	}
 
 	/* initialize GUI structure with parameters from command line */
+	gui->magic  = EZGUI_MAGIC;
 	gui->sysopt = ezopt;
 
 	/* the index of profile of grid and zoom parameters */
@@ -125,6 +137,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 
 	ezgui_create_window(gui);
 
+	gui->magic  = EZGUI_MAGIC;
 	/* filling the work area with file names from command line */
 	for (i = 0; i < fnum; i++) {
 		/* 20120903 Bugfix: set the codepage to utf-8 before calling
@@ -195,7 +208,7 @@ static int ezgui_create_window(EZGUI *gui)
 {
 	Ihandle		*tabs, *dlg;
 
-	tabs = IupTabs(ezgui_page_generate(gui), 
+	tabs = IupTabs(ezgui_page_main(gui), 
 			ezgui_page_setup(gui), IupVbox(IupFill(), NULL), NULL);
 	IupSetAttribute(tabs, "TABTITLE0", "Generate");
 	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
@@ -210,6 +223,9 @@ static int ezgui_create_window(EZGUI *gui)
 	 * in its sub-controls */
 	IupSetAttribute(dlg, "GUIEXT", (char*) gui);
 	IupShow(dlg);
+
+	ezgui_page_setup_reset(gui);
+	ezgui_page_main_reset(gui);
 	return 0;
 }
 
@@ -228,22 +244,33 @@ static EZGUI *ezgui_get_global(Ihandle *any)
 /****************************************************************************
  * Page Main 
  ****************************************************************************/
-static Ihandle *ezgui_page_generate(EZGUI *gui)
+static Ihandle *ezgui_page_main(EZGUI *gui)
 {
 	Ihandle	*vbox, *hbox, *sbox;
 
+	/* the unique progress bar */
 	gui->prog_bar = IupProgressBar();
 	IupSetAttribute(gui->prog_bar, "VALUE", "0.5");
 	IupSetAttribute(gui->prog_bar, "EXPAND", "HORIZONTAL");
 	IupSetAttribute(gui->prog_bar, "DASHED", "YES");
 	IupSetAttribute(gui->prog_bar, "SIZE", "x10");
-	//IupSetAttribute(gui->prog_bar, "VISIBLE", "NO");
 
-	hbox = IupHbox(gui->prog_bar, ezgui_page_generate_button(gui), NULL);
+	/* the status bar */
+	gui->stat_bar = IupLabel("");
+	IupSetAttribute(gui->stat_bar, "EXPAND", "HORIZONTAL");
+
+	/* status bar and progress bar share the same conner. normally it
+	 * display the status until in the running mode */
+	gui->ps_zbox = IupZbox(gui->stat_bar, gui->prog_bar, NULL);
+	IupSetAttribute(gui->ps_zbox, "ALIGNMENT", "ACENTER");
+
+	/* progres bar and buttons are in the same bottom line */
+	hbox = IupHbox(gui->ps_zbox, ezgui_page_main_button(gui), NULL);
 	IupSetAttribute(hbox, "NGAP", "10");
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 
-	sbox = IupScrollBox(ezgui_page_generate_workarea(gui));
+	/* grouping with the work area, a group of lists inside a scroll box */
+	sbox = IupScrollBox(ezgui_page_main_workarea(gui));
 
 	vbox = IupVbox(sbox, hbox, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
@@ -251,13 +278,15 @@ static Ihandle *ezgui_page_generate(EZGUI *gui)
 	return vbox;
 }
 
-static int ezgui_workarea_scroll(Ihandle *ih, char *text, int item, int state)
+static int ezgui_page_main_reset(EZGUI *gui)
 {
-	printf("Action %s: %p %d %d\n", text, ih, item, state);
+	IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
+	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
+	IupSetAttribute(gui->button_run, "ACTIVE", "NO");
 	return 0;
 }
 
-static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
+static Ihandle *ezgui_page_main_workarea(EZGUI *gui)
 {
 	Ihandle	*vb_main, *vb_size, *vb_len, *vb_res, *vb_prog, *hbox;
 
@@ -265,9 +294,14 @@ static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
 	IupSetAttribute(gui->list_fname, "EXPAND", "YES");
 	IupSetAttribute(gui->list_fname, "MULTIPLE", "YES");
 	IupSetAttribute(gui->list_fname, "SCROLLBAR", "NO");
+	IupSetAttribute(gui->list_fname, "SHOWDRAGDROP", "YES");
 	vb_main = IupVbox(xui_text("Files", NULL), gui->list_fname, NULL);
-	IupSetCallback(gui->list_fname, "ACTION", 
-			(Icallback) ezgui_workarea_scroll);
+	IupSetCallback(gui->list_fname, "DBLCLICK_CB", 
+			(Icallback) ezgui_event_main_workarea);
+	IupSetCallback(gui->list_fname, "DRAGDROP_CB",
+			(Icallback) ezgui_event_main_dragdrop);
+	IupSetCallback(gui->list_fname, "MULTISELECT_CB",
+			(Icallback) ezgui_event_main_multi_select);
 
 	gui->list_size = IupList(NULL);
 	IupSetAttribute(gui->list_size, "SIZE", "50");
@@ -301,13 +335,114 @@ static Ihandle *ezgui_page_generate_workarea(EZGUI *gui)
 	return hbox;
 }
 
-static Ihandle *ezgui_page_generate_button(EZGUI *gui)
+static Ihandle *ezgui_page_main_button(EZGUI *gui)
 {
 	gui->button_add = xui_button("Add", NULL);
+	IupSetCallback(gui->button_add, "ACTION",
+			(Icallback) ezgui_event_main_add);
 	gui->button_del = xui_button("Remove", NULL);
+	IupSetCallback(gui->button_del, "ACTION",
+			(Icallback) ezgui_event_main_remove);
 	gui->button_run = xui_button("Run", NULL);
+	IupSetCallback(gui->button_run, "ACTION",
+			(Icallback) ezgui_event_main_run);
 	return IupHbox(gui->button_add, gui->button_del, gui->button_run, NULL);
 }
+
+
+static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
+{
+	printf("Action %s: %p %d\n", text, ih, item);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_dragdrop(Ihandle *ih, int drag_id, int drop_id, int isshift, int iscontrol)
+{
+	printf("dragdrop: dragid=%d dropid=%d shift=%d control=%d\n", 
+			drag_id, drop_id, isshift, iscontrol);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_multi_select(Ihandle *ih, char *value)
+{
+	EZGUI	*gui = (EZGUI *) ih;
+	int	i;
+
+	if (gui->magic != EZGUI_MAGIC) {
+		gui = ezgui_get_global(ih);
+	}
+
+	//printf("multi_select: %s\n", value);
+	//printf("value=%s\n", IupGetAttribute(gui->list_fname, "VALUE"));
+	
+	/* the parameter 'value' is useless. grab list myself */
+	value = IupGetAttribute(gui->list_fname, "VALUE");
+	for (i = 0; value[i]; i++) {
+		if (value[i] == '+') {
+			IupSetAttribute(gui->button_del, "ACTIVE", "YES");
+			IupSetAttribute(gui->button_run, "ACTIVE", "YES");
+			return IUP_DEFAULT;
+		}
+	}
+	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
+	IupSetAttribute(gui->button_run, "ACTIVE", "NO");
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_add(Ihandle *ih)
+{
+	EZGUI	*gui = (EZGUI *) ih;
+
+	if (gui->magic != EZGUI_MAGIC) {
+		gui = ezgui_get_global(ih);
+	}
+	printf("add\n");
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_remove(Ihandle *ih)
+{
+	EZGUI	*gui = (EZGUI *) ih;
+	char	*value;
+	int	i;
+
+	if (gui->magic != EZGUI_MAGIC) {
+		gui = ezgui_get_global(ih);
+	}
+
+	//printf("value=%s\n", IupGetAttribute(gui->list_fname, "VALUE"));
+	while (1) {
+		value = IupGetAttribute(gui->list_fname, "VALUE");
+		for (i = 0; value[i]; i++) {
+			if (value[i] == '+') {
+				IupSetInt(gui->list_fname, "REMOVEITEM", i + 1);
+				IupSetInt(gui->list_size, "REMOVEITEM", i + 1);
+				IupSetInt(gui->list_length, "REMOVEITEM", i + 1);
+				IupSetInt(gui->list_resolv, "REMOVEITEM", i + 1);
+				IupSetInt(gui->list_prog, "REMOVEITEM", i + 1);
+				break;
+			}
+		}
+		if (!value[i]) {
+			break;
+		}
+	}
+	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
+	IupSetAttribute(gui->button_run, "ACTIVE", "NO");
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_run(Ihandle *ih)
+{
+	EZGUI	*gui = (EZGUI *) ih;
+
+	if (gui->magic != EZGUI_MAGIC) {
+		gui = ezgui_get_global(ih);
+	}
+	printf("run\n");
+	return IUP_DEFAULT;
+}
+
 
 
 /****************************************************************************
@@ -327,8 +462,6 @@ static Ihandle *ezgui_page_setup(EZGUI *gui)
 			ezgui_page_setup_button(gui), NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
-
-	ezgui_page_setup_reset(gui);
 	return vbox;
 }
 
@@ -337,21 +470,32 @@ static int ezgui_page_setup_reset(EZGUI *gui)
 	IupSetInt(gui->prof_grid, "VALUE", gui->grid_idx + 1);
 	IupSetInt(gui->prof_zoom, "VALUE", gui->zoom_idx + 1);
 	IupSetInt(gui->dfm_list, "VALUE", gui->dfm_idx + 1);
-
 	IupSetInt(gui->fmt_list, "VALUE", gui->fmt_idx + 1);
-	ezgui_event_setup_format((Ihandle*) gui, 
-			list_format[gui->fmt_idx], gui->fmt_idx + 1, EZGSINI);
+
+	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
+	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
 
 	if (gui->sysopt->flags & EZOP_TRANSPARENT) {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
 	} else {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
 	}
-	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
-	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
 
-	IupSetInt(gui->entry_zbox_grid, "VALUEPOS", gui->grid_idx);
-	IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", gui->zoom_idx);
+	IupSetInt(gui->entry_col_grid, "VALUE", gui->sysopt->grid_col);
+	IupSetInt(gui->entry_col_step, "VALUE", gui->sysopt->grid_col);
+	IupSetInt(gui->entry_row, "VALUE", gui->sysopt->grid_row);
+	IupSetInt(gui->entry_step, "VALUE", gui->sysopt->tm_step / 1000);
+	IupSetInt(gui->entry_dss_amnt, "VALUE", gui->sysopt->grid_row);
+	IupSetInt(gui->entry_dss_step, "VALUE", gui->sysopt->tm_step / 1000);
+	IupSetInt(gui->entry_zoom_ratio, "VALUE", gui->sysopt->tn_facto);
+	IupSetInt(gui->entry_zoom_wid, "VALUE", gui->sysopt->tn_width);
+	IupSetInt(gui->entry_zoom_hei, "VALUE", gui->sysopt->tn_height);
+	IupSetInt(gui->entry_width, "VALUE", gui->sysopt->canvas_width);
+
+	ezgui_event_setup_format((Ihandle*) gui, 
+			list_format[gui->fmt_idx], gui->fmt_idx + 1, 1);
+
+	ezgui_event_setup_ok((Ihandle*) gui);
 	return 0;
 }
 
@@ -392,41 +536,20 @@ static Ihandle *ezgui_page_setup_grid_zbox(EZGUI *gui)
 
 	zbox = IupZbox(IupFill(), NULL);
 
-	hbox = xui_text_setting(&gui->entry_col1, "Grid", "x");
-	gui->entry_row = IupText(NULL);
-	IupSetAttribute(gui->entry_row, "SIZE", "12x10");
-	IupAppend(hbox, gui->entry_row);
-
-	/*gui->entry_col1 = IupText(NULL);
-	IupSetAttribute(gui->entry_col1, "SIZE", "12x10");
-	gui->entry_row = IupText(NULL);
-	IupSetAttribute(gui->entry_row, "SIZE", "12x10");
-	hbox = IupHbox(IupLabel("Grid"), gui->entry_col1, 
-			IupLabel("x"), gui->entry_row, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");*/
+	hbox = xui_text_grid("Grid Of", 
+			&gui->entry_col_grid, &gui->entry_row, NULL);
 	IupAppend(zbox, hbox);
 	
-	gui->entry_col2 = IupText(NULL);
-	IupSetAttribute(gui->entry_col2, "SIZE", "12x10");
-	gui->entry_step = IupText(NULL);
-	IupSetAttribute(gui->entry_step, "SIZE", "18x10");
-	hbox = IupHbox(IupLabel("Col"), gui->entry_col2, IupLabel("Step"),
-			gui->entry_step, IupLabel("(s)"), NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	hbox = xui_text_grid("Column", 
+			&gui->entry_col_step, &gui->entry_step, "(s)");
 	IupAppend(zbox, hbox);
 
-	gui->entry_dss_no = IupText(NULL);
-	IupSetAttribute(gui->entry_dss_no, "SIZE", "24x10");
-	hbox = IupHbox(IupLabel("Dss No. "), gui->entry_dss_no, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	hbox = xui_text_grid("Total", &gui->entry_dss_amnt, NULL, NULL);
 	IupAppend(zbox, hbox);
 
-	gui->entry_dss_step = IupText(NULL);
-	IupSetAttribute(gui->entry_dss_step, "SIZE", "24x10");
-	hbox = IupHbox(IupLabel("Dss Step "), gui->entry_dss_step, 
-			IupLabel("(s) "), NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	hbox = xui_text_grid("Every", &gui->entry_dss_step, NULL, "(s) ");
 	IupAppend(zbox, hbox);
+
 	IupAppend(zbox, IupFill());
 	return zbox;
 }
@@ -437,7 +560,7 @@ static Ihandle *ezgui_page_setup_zoom_zbox(EZGUI *gui)
 
 	zbox = IupZbox(IupFill(), NULL);
 
-	gui->entry_zoom_ratio = IupText(NULL);
+	hbox = xui_text_grid("Ratio", &gui->entry_zoom_ratio, NULL, "%");
 	IupSetAttribute(gui->entry_zoom_ratio, "SIZE", "24x11");
 	IupSetAttribute(gui->entry_zoom_ratio, "SPIN", "YES");
 	IupSetAttribute(gui->entry_zoom_ratio, "SPINMIN", "5");
@@ -445,24 +568,12 @@ static Ihandle *ezgui_page_setup_zoom_zbox(EZGUI *gui)
 	IupSetAttribute(gui->entry_zoom_ratio, "SPININC", "5");
 	IupSetAttribute(gui->entry_zoom_ratio, "SPINALIGN", "LEFT");
 	IupSetAttribute(gui->entry_zoom_ratio, "SPINVALUE", "50");
-	hbox = IupHbox(IupLabel("Zoom"), gui->entry_zoom_ratio,
-			IupLabel("%"), NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(zbox, hbox);
 
-	gui->entry_zoom_wid = IupText(NULL);
-	IupSetAttribute(gui->entry_zoom_wid, "SIZE", "18x10");
-	gui->entry_zoom_hei = IupText(NULL);
-	IupSetAttribute(gui->entry_zoom_hei, "SIZE", "18x10");
-	hbox = IupHbox(IupLabel("Zoom"), gui->entry_zoom_wid, IupLabel("x"),
-			gui->entry_zoom_hei, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	hbox = xui_text_grid("Resolu", &gui->entry_zoom_wid, &gui->entry_zoom_hei, NULL);
 	IupAppend(zbox, hbox);
 	
-	gui->entry_width = IupText(NULL);
-	IupSetAttribute(gui->entry_width, "SIZE", "24x10");
-	hbox = IupHbox(IupLabel("Canvas "), gui->entry_width, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	hbox = xui_text_grid("Width", &gui->entry_width, NULL, NULL);
 	IupAppend(zbox, hbox);
 	return zbox;
 }
@@ -532,14 +643,15 @@ static int ezgui_event_setup_format(Ihandle *ih, char *text, int i, int s)
 
 	(void) i;
 
-	/* The normal state of 's' from IUP callback should be 0 or 1.
-	 * The special state EZGSINI is applied for initializing stage
-	 * while the dialog hasn't been linked with the GUI object. */
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
-	} else if (s == EZGSINI) {
-		gui = (EZGUI *) ih;
-	} else {
+	}
+	
+	/* the EZGUI structure can be an impostor of the Ihandle when 
+	 * initializing the widgets, where the dialog hasn't been linked 
+	 * with the GUI object. A magic word is used to tell them */
+	gui = (EZGUI *) ih;
+	if (gui->magic != EZGUI_MAGIC) {
 		gui = ezgui_get_global(ih);
 	}
 
@@ -585,8 +697,18 @@ static int ezgui_event_setup_zoom(Ihandle *ih, char *text, int i, int s)
 
 static int ezgui_event_setup_ok(Ihandle *ih)
 {
-	EZGUI	*gui = ezgui_get_global(ih);
-	char	*val;
+	EZGUI	*gui;
+	EZOPT	*opt;
+	char	*val, tmp[128];
+
+	/* the EZGUI structure can be an impostor of the Ihandle when 
+	 * initializing the widgets, where the dialog hasn't been linked 
+	 * with the GUI object. A magic word is used to tell them */
+	gui = (EZGUI *) ih;
+	if (gui->magic != EZGUI_MAGIC) {
+		gui = ezgui_get_global(ih);
+	}
+	opt = gui->sysopt;
 
 	gui->grid_idx = xui_list_get_idx(gui->prof_grid);
 	gui->zoom_idx = xui_list_get_idx(gui->prof_zoom);
@@ -610,6 +732,103 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 			gui->grid_idx, gui->zoom_idx, gui->dfm_idx, 
 			gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr, val);
 	*/
+	/* FIXME: not quite readible */
+	switch (gui->grid_idx) {
+	case 0:
+		strcpy(gui->status, "Auto Grid ");
+		break;
+	case 1:
+		opt->grid_col = xui_text_get_number(gui->entry_col_grid);
+		opt->grid_row = xui_text_get_number(gui->entry_row);
+		sprintf(gui->status, "Grid:%dx%d ", 
+				opt->grid_col, opt->grid_row);
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
+		break;
+	case 2:
+		opt->grid_col = xui_text_get_number(gui->entry_col_step);
+		opt->tm_step  = xui_text_get_number(gui->entry_step);
+		sprintf(gui->status, "Column:%d Step:%d(s) ", 
+				opt->grid_col, opt->tm_step);
+		opt->tm_step *= 1000;
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
+		break;
+	case 3:
+		opt->grid_col = 0;
+		opt->grid_row = xui_text_get_number(gui->entry_dss_amnt);
+		sprintf(gui->status, "Total %d snaps ", opt->grid_row);
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
+		break;
+	case 4:
+		opt->grid_col = 0;
+		opt->grid_row = 0;
+		opt->tm_step  = xui_text_get_number(gui->entry_dss_step);
+		sprintf(gui->status, "Snap every %d(s) ", 
+				opt->tm_step);
+		gui->sysopt->tm_step *= 1000;
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
+		break;
+	case 5:
+		opt->grid_col = 0;
+		opt->grid_row = 0;
+		opt->tm_step  = 0;
+		strcpy(gui->status, "Separate I-Frames ");
+		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
+		break;
+	default:
+		strcpy(gui->status, "Oops; ");
+		break;
+	}
+	switch (gui->zoom_idx) {
+	case 0:
+		strcpy(tmp, "Auto Zoom ");
+		break;
+	case 1:
+		opt->tn_facto  = xui_text_get_number(gui->entry_zoom_ratio);
+		sprintf(tmp, "Zoom to %d%% ", opt->tn_facto);
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
+		break;
+	case 2:
+		opt->tn_width  = xui_text_get_number(gui->entry_zoom_wid);
+		opt->tn_height = xui_text_get_number(gui->entry_zoom_hei);
+		sprintf(tmp, "Zoom to %dx%d ", 
+				opt->tn_width, opt->tn_height);
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
+		break;
+	case 3:
+		opt->canvas_width = xui_text_get_number(gui->entry_width);
+		sprintf(tmp, "Canvas Width %d ", opt->canvas_width);
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
+		break;
+	default:
+		strcpy(tmp, "Oops; ");
+		break;
+	}
+	strcat(gui->status, tmp);
+	switch (gui->dfm_idx) {
+	case 0:
+		SETDURMOD(opt->flags, EZOP_DUR_AUTO);
+		strcpy(tmp, "Auto detect");
+		break;
+	case 1:
+		SETDURMOD(opt->flags, EZOP_DUR_HEAD);
+		strcpy(tmp, "Detect by Head");
+		break;
+	case 2:
+		SETDURMOD(opt->flags, EZOP_DUR_FSCAN);
+		strcpy(tmp, "Detect by Full Scan");
+		break;
+	case 3:
+		SETDURMOD(opt->flags, EZOP_DUR_QSCAN);
+		strcpy(tmp, "Detect by Partial Scan");
+		break;
+	default:
+		strcpy(tmp, "Oops; ");
+		break;
+	}
+	strcat(gui->status, tmp);
+	IupSetAttribute(gui->stat_bar, "TITLE", gui->status);
+	//printf("%s\n", gui->status);
+	      	
 	IupSetInt(gui->entry_zbox_grid, "VALUEPOS", gui->grid_idx);
 	IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", gui->zoom_idx);
 	return IUP_DEFAULT;
@@ -673,6 +892,11 @@ static int xui_list_get_idx(Ihandle *ih)
 	return val - 1;
 }
 
+static int xui_text_get_number(Ihandle *ih)
+{
+	return (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 0);
+}
+
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 {
 	Ihandle	*hbox, *text;
@@ -690,6 +914,43 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 	}
 	return hbox;
 }
+
+static Ihandle *xui_text_grid(char *label, Ihandle **xcol, Ihandle **xrow, char *ext)
+{
+	Ihandle	*hbox, *text1, *text2;
+
+	if ((xcol == NULL) && (xrow == NULL)) {
+		return NULL;
+	}
+
+	if ((xcol == NULL) || (xrow == NULL)) {
+		text1 = IupText(NULL);
+		IupSetAttribute(text1, "SIZE", "24x10");
+		if (xcol) {
+			*xcol = text1;
+		} else {
+			*xrow = text1;
+		}
+		hbox = IupHbox(xui_text(label, "28"), text1,
+				ext ? IupLabel(ext) : NULL, NULL);
+		IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+		IupSetAttribute(hbox, "NGAP", "4");
+		return hbox;
+	}
+
+	text1 = IupText(NULL);
+	*xcol = text1;
+	IupSetAttribute(text1, "SIZE", "18x10");
+	text2 = IupText(NULL);
+	*xrow = text2;
+	IupSetAttribute(text2, "SIZE", "18x10");
+	hbox = IupHbox(xui_text(label, "28"), text1, IupLabel("x"), text2,
+				ext ? IupLabel(ext) : NULL, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+	return hbox;
+}
+
 
 static Ihandle *xui_button(char *prompt, Icallback ntf)
 {

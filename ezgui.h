@@ -56,7 +56,7 @@
 #define CFG_PIC_GRID_STEP	"Column and Step"	/* Grid 4 Step 15 */
 #define CFG_PIC_DIS_NUM		"Discrete by Number"	/* DSS No 20 */
 #define CFG_PIC_DIS_STEP	"Discrete by Step"	/* DSS Step 15 */
-#define CFG_PIC_DIS_KEY		"Discrete key Frame"	/* DSS I-Frame */
+#define CFG_PIC_DIS_KEY		"Discrete key Frames"	/* DSS I-Frame */
 #define CFG_PIC_ZOOM_RATIO	"Zoom by Ratio"		/* Zoom 50% */
 #define CFG_PIC_ZOOM_DEFINE	"Zoom by Size"		/* Zoom 320x240 */
 #define CFG_PIC_ZOOM_SCREEN	"Zoom by Canvas"	/* Res 1024 */
@@ -70,6 +70,8 @@
 #define CFG_PIC_FMT_PNG		"Png"
 #define CFG_PIC_FMT_GIFA	"Animated GIF"
 #define CFG_PIC_FMT_GIF		"GIF"
+
+#define EZGUI_MAGIC		(('E'<<24) | ('Z'<<16) | ('U'<<8) | 'I')
 
 #if 0
 typedef	struct		{
@@ -142,6 +144,7 @@ typedef	struct		{
 } EZGUI;
 #endif
 typedef	struct		{
+	unsigned	magic;		/* "EZUI" */
 	EZOPT		*sysopt;	/* system parameters */
 
 	/* Main Page: work place */
@@ -153,9 +156,12 @@ typedef	struct		{
 
 	/* Main Page: Progress Bar and Buttons */
 	Ihandle		*prog_bar;
+	Ihandle		*stat_bar;
+	Ihandle		*ps_zbox;
 	Ihandle		*button_del;	/* the delete button on main page */
 	Ihandle		*button_run;	/* the start button on main page */
 	Ihandle		*button_add;
+	char		status[256];
 
 	/* Setup Page: the two main buttons in the bottom */
 	Ihandle		*butt_setup_apply;
@@ -168,11 +174,11 @@ typedef	struct		{
 	int		zoom_idx;	/* starts from 0 */
 	
 	/* Main Page: Profile selection */
-	Ihandle		*entry_col1;
-	Ihandle		*entry_col2;
+	Ihandle		*entry_col_grid;
+	Ihandle		*entry_col_step;
 	Ihandle		*entry_row;
 	Ihandle		*entry_step;
-	Ihandle		*entry_dss_no;
+	Ihandle		*entry_dss_amnt;
 	Ihandle		*entry_dss_step;
 	Ihandle		*entry_zoom_ratio;
 	Ihandle		*entry_zoom_wid;
