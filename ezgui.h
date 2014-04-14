@@ -146,6 +146,7 @@ typedef	struct		{
 typedef	struct		{
 	unsigned	magic;		/* "EZUI" */
 	EZOPT		*sysopt;	/* system parameters */
+	char		inst_id[64];	/* instant identity */
 
 	/* Main Page: work place */
 	Ihandle		*list_fname;	/* the list control of file names */
@@ -153,6 +154,7 @@ typedef	struct		{
 	Ihandle		*list_length;	/* the list control of media length */
 	Ihandle		*list_resolv;	/* the list control of resolution */
 	Ihandle		*list_prog;	/* the list control of progress */
+	int		list_idx;	/* starts from 1 */
 
 	/* Main Page: Progress Bar and Buttons */
 	Ihandle		*prog_bar;
@@ -161,7 +163,8 @@ typedef	struct		{
 	Ihandle		*button_del;	/* the delete button on main page */
 	Ihandle		*button_run;	/* the start button on main page */
 	Ihandle		*button_add;
-	char		status[256];
+	char		status[256];	/* displaying the status on bottom */
+	char		*filefilter;	/* don't forget to release it */
 
 	/* Setup Page: the two main buttons in the bottom */
 	Ihandle		*butt_setup_apply;

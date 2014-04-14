@@ -28,7 +28,7 @@
 #include "ezthumb.h"
 #include "ezgui.h"
 
-#define	EZGSINI		-999	/* initialization status */
+#define EZGUI_INST	"GUIEXT"
 
 static	char	*list_grid[] = {
 	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP,
@@ -58,12 +58,14 @@ static Ihandle *ezgui_page_main(EZGUI *gui);
 static int ezgui_page_main_reset(EZGUI *gui);
 static Ihandle *ezgui_page_main_workarea(EZGUI *gui);
 static Ihandle *ezgui_page_main_button(EZGUI *gui);
+static void *ezgui_page_main_file_append(EZGUI *gui, char *fname);
 static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text);
 static int ezgui_event_main_dragdrop(Ihandle *ih, int drag_id, int drop_id, int isshift, int iscontrol);
 static int ezgui_event_main_multi_select(Ihandle *ih, char *value);
 static int ezgui_event_main_add(Ihandle *ih);
 static int ezgui_event_main_remove(Ihandle *ih);
 static int ezgui_event_main_run(Ihandle *ih);
+static char *ezgui_make_filters(char *slist);
 
 static Ihandle *ezgui_page_setup(EZGUI *gui);
 static int ezgui_page_setup_reset(EZGUI *gui);
@@ -108,6 +110,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	/* initialize GUI structure with parameters from command line */
 	gui->magic  = EZGUI_MAGIC;
 	gui->sysopt = ezopt;
+	sprintf(gui->inst_id, "EZTHUMB_%p", gui);
 
 	/* the index of profile of grid and zoom parameters */
 	gui->grid_idx = ezm_strarr_index(list_grid, CFG_PIC_GRID_STEP);
@@ -126,53 +129,25 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 			gui->sysopt->img_quality) {
 		gui->tmp_gifa_fr = gui->sysopt->img_quality;
 	}
+
+	gui->filefilter = ezgui_make_filters(EZ_DEF_FILTER);
+	//printf("%s\n", gui->filefilter);
 	return gui;
 }
 
 int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 {
-	EZVID	vobj;
-	EZMEDIA	*minfo;
 	int	i;
 
 	ezgui_create_window(gui);
 
-	gui->magic  = EZGUI_MAGIC;
 	/* filling the work area with file names from command line */
 	for (i = 0; i < fnum; i++) {
-		/* 20120903 Bugfix: set the codepage to utf-8 before calling
-		 * ezthumb core. In Win32 version, the ezthumb core uses the 
-		 * default codepage to process file name. However the GTK 
-		 * converted the file name to UTF-8 so the Windows version 
-		 * could not find the file. 
-		 * There's no such problem in linux.*/
-		smm_codepage_set(65001);
-		if (ezinfo(flist[i], gui->sysopt, &vobj) != EZ_ERR_NONE) {
-			smm_codepage_reset();
-			continue;
-		}
-		smm_codepage_reset();
-
-		/* FIXME: memory leak */
-		minfo = malloc(strlen(flist[i]) + sizeof(EZMEDIA) + 4);
-		if (minfo == NULL) {
-			continue;
-		}
-
-		strcpy(minfo->fname, flist[i]);
-		meta_timestamp(vobj.duration, 0, minfo->vidlen);
-		meta_filesize(vobj.filesize, minfo->fsize);
-		sprintf(minfo->resolv, "%dx%d", vobj.width, vobj.height);
-		sprintf(minfo->progr, "0%%");
-
-		IupSetAttributeId(gui->list_fname,  "", i+1, minfo->fname);
-		IupSetAttributeId(gui->list_size,   "", i+1, minfo->fsize);
-		IupSetAttributeId(gui->list_length, "", i+1, minfo->vidlen);
-		IupSetAttributeId(gui->list_resolv, "", i+1, minfo->resolv);
-		IupSetAttributeId(gui->list_prog,   "", i+1, minfo->progr);
+		ezgui_page_main_file_append(gui, flist[i]);
 	}
 
-	for ( ; i <= 20; i++) {
+	/*for ( ; i <= 20; i++) {
+		EZMEDIA	*minfo;
 		minfo = malloc(sizeof(EZMEDIA) + 64);
 		sprintf(minfo->fname, "Mytestfile%03d.txt", i);
 		strcpy(minfo->vidlen, "10:31:97");
@@ -184,7 +159,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 		IupSetAttributeId(gui->list_length, "", i+1, minfo->vidlen);
 		IupSetAttributeId(gui->list_resolv, "", i+1, minfo->resolv);
 		IupSetAttributeId(gui->list_prog,   "", i+1, minfo->progr);
-	}
+	}*/
 
 	IupMainLoop();
 	return 0;
@@ -194,6 +169,9 @@ int ezgui_close(EZGUI *gui)
 {
 	if (gui) {
 		IupClose();
+		if (gui->filefilter) {
+			free(gui->filefilter);
+		}
 		free(gui);
 	}
 	return 0;
@@ -218,10 +196,11 @@ static int ezgui_create_window(EZGUI *gui)
 	dlg = IupDialog(tabs);
 	IupSetAttribute(dlg, "TITLE", "Ezthumb");
 	IupSetAttribute(dlg, "SIZE", "HALFx");
+	IupSetHandle(gui->inst_id, dlg);
 
 	/* bind the GUI structure into the current dialog so it can be accessed
 	 * in its sub-controls */
-	IupSetAttribute(dlg, "GUIEXT", (char*) gui);
+	IupSetAttribute(dlg, EZGUI_INST, (char*) gui);
 	IupShow(dlg);
 
 	ezgui_page_setup_reset(gui);
@@ -235,7 +214,7 @@ static EZGUI *ezgui_get_global(Ihandle *any)
 	Ihandle	*dlg = IupGetDialog(any);
 
 	if (dlg) {
-		return (EZGUI*) IupGetAttribute(dlg, "GUIEXT");
+		return (EZGUI*) IupGetAttribute(dlg, EZGUI_INST);
 	}
 	return NULL;
 }
@@ -349,6 +328,48 @@ static Ihandle *ezgui_page_main_button(EZGUI *gui)
 	return IupHbox(gui->button_add, gui->button_del, gui->button_run, NULL);
 }
 
+static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
+{
+	EZVID	vobj;
+	EZMEDIA	*minfo;
+
+	/* 20120903 Bugfix: set the codepage to utf-8 before calling
+	 * ezthumb core. In Win32 version, the ezthumb core uses the 
+	 * default codepage to process file name. However the GTK 
+	 * converted the file name to UTF-8 so the Windows version 
+	 * could not find the file. 
+	 * There's no such problem in linux.*/
+	smm_codepage_set(65001);
+	if (ezinfo(fname, gui->sysopt, &vobj) != EZ_ERR_NONE) {
+		smm_codepage_reset();
+		/* FIXME: disaster control */
+		return NULL;
+	}
+	smm_codepage_reset();
+
+	/* FIXME: memory leak */
+	minfo = malloc(strlen(fname) + sizeof(EZMEDIA) + 4);
+	if (minfo == NULL) {
+		return NULL;
+	}
+
+	strcpy(minfo->fname, fname);
+	meta_timestamp(vobj.duration, 0, minfo->vidlen);
+	meta_filesize(vobj.filesize, minfo->fsize);
+	sprintf(minfo->resolv, "%dx%d", vobj.width, vobj.height);
+	sprintf(minfo->progr, "0%%");
+
+	/* increase the list index first because the IUP list control
+	 * starts from 1 */
+	gui->list_idx++;
+
+	IupSetAttributeId(gui->list_fname,  "", gui->list_idx, minfo->fname);
+	IupSetAttributeId(gui->list_size,   "", gui->list_idx, minfo->fsize);
+	IupSetAttributeId(gui->list_length, "", gui->list_idx, minfo->vidlen);
+	IupSetAttributeId(gui->list_resolv, "", gui->list_idx, minfo->resolv);
+	IupSetAttributeId(gui->list_prog,   "", gui->list_idx, minfo->progr);
+	return minfo;
+}
 
 static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 {
@@ -392,11 +413,40 @@ static int ezgui_event_main_multi_select(Ihandle *ih, char *value)
 static int ezgui_event_main_add(Ihandle *ih)
 {
 	EZGUI	*gui = (EZGUI *) ih;
+	Ihandle	*dlg = IupFileDlg();
+	char	*flist, *fname, *path, *sdir;
 
 	if (gui->magic != EZGUI_MAGIC) {
 		gui = ezgui_get_global(ih);
 	}
-	printf("add\n");
+	
+	IupSetAttribute(dlg, "PARENTDIALOG", gui->inst_id);
+	IupSetAttribute(dlg, "TITLE", "Open");
+	IupSetAttribute(dlg, "MULTIPLEFILES", "YES");
+	IupSetAttribute(dlg, "EXTFILTER", gui->filefilter);
+
+	IupPopup(dlg, IUP_CENTERPARENT, IUP_CENTERPARENT);
+
+	if (IupGetInt(dlg, "STATUS") >= 0) {
+		//printf("  New file - VALUE(%s)\n", IupGetAttribute(dlg, "VALUE"));
+		//printf("  DIRECTORY(%s)\n", IupGetAttribute(dlg, "DIRECTORY"));
+		/* duplicate the path and filename list */
+		flist = csc_strcpy_alloc(IupGetAttribute(dlg, "VALUE"), 16);
+		/* isolate the path first */
+		flist = csc_cuttoken(flist, &sdir, "|");
+		/* extract the file names */
+		while ((flist = csc_cuttoken(flist, &fname, "|")) != NULL) {
+			path = csc_strcpy_alloc(sdir, strlen(fname)+8);
+			strcat(path, "/");
+			strcat(path, fname);
+			//printf("%s\n", path);
+			ezgui_page_main_file_append(gui, path);
+			free(path);
+		}
+		free(flist);
+	}
+	
+	//IupDestroy(dlg);
 	return IUP_DEFAULT;
 }
 
@@ -415,11 +465,13 @@ static int ezgui_event_main_remove(Ihandle *ih)
 		value = IupGetAttribute(gui->list_fname, "VALUE");
 		for (i = 0; value[i]; i++) {
 			if (value[i] == '+') {
+				printf("Remove %s\n", IupGetAttributeId(gui->list_fname, "",  i + 1));
 				IupSetInt(gui->list_fname, "REMOVEITEM", i + 1);
 				IupSetInt(gui->list_size, "REMOVEITEM", i + 1);
 				IupSetInt(gui->list_length, "REMOVEITEM", i + 1);
 				IupSetInt(gui->list_resolv, "REMOVEITEM", i + 1);
 				IupSetInt(gui->list_prog, "REMOVEITEM", i + 1);
+				gui->list_idx--;
 				break;
 			}
 		}
@@ -443,7 +495,28 @@ static int ezgui_event_main_run(Ihandle *ih)
 	return IUP_DEFAULT;
 }
 
+/* expand the short form extension list to the full length */
+static char *ezgui_make_filters(char *slist)
+{
+	char	*flt, token[32];
+	int	n;
 
+	/* Assuming the worst case of the short list is like "a;b;c;d",
+	 * it will then be expanded to "*.a;*.b;*.c;*.d". The biggest length 
+	 * is N + (N/2+1) * 2 */
+	if ((flt = malloc(strlen(slist) * 2 + 64)) == NULL) {
+		return NULL;
+	}
+
+	strcpy(flt, "Video Files|");
+	n = strlen(flt);
+	while ((slist = csc_gettoken(slist, token, ",;:")) != NULL) {
+		n += sprintf(flt + n, "*.%s;", token);
+	}
+	flt[strlen(flt)-1] = 0;		/* cut out the tailing ';' */
+	strcat(flt, "|All Files|*.*|");
+	return flt;
+}
 
 /****************************************************************************
  * Page Setup 
