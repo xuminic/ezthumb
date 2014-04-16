@@ -166,6 +166,11 @@ typedef	struct		{
 	char		status[256];	/* displaying the status on bottom */
 	char		*filefilter;	/* don't forget to release it */
 
+	/* Main Page: dialog of Open File */
+	Ihandle		*dlg_main;	/* the main dialog itself */
+	Ihandle		*dlg_open;	/* dialog of Open File */
+	char		*cur_dir;	/* current directory */
+
 	/* Setup Page: the two main buttons in the bottom */
 	Ihandle		*butt_setup_apply;
 	Ihandle		*butt_setup_cancel;

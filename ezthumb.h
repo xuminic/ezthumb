@@ -222,7 +222,7 @@
 #define EZ_THUMB_OVERCOPY	4	/* copy full: override the last one */
 
 /* Duration Seeking Challenge Profile */
-#define EZ_DSCP_RANGE_INIT	1000	/* range of initial scan (ms) */
+#define EZ_DSCP_RANGE_INIT	10000	/* range of initial scan (ms) */
 #define EZ_DSCP_RANGE_EXT	10	/* extended rate of initial range */
 #define EZ_DSCP_STEP_ERROR	300	/* 30% error acceptable */
 #define EZ_DSCP_N_STEP		5	/* number of seeks */
@@ -495,7 +495,8 @@ typedef	struct	_EzVid	{
 	int		pts[EZ_PTS_MAX<<1]; /* progress timestamp array */
 	int		pidx;		/* PTS array index */
 
-	int64_t		keygap;		/* maximum gap between keyframe */
+	int64_t		keygap;		/* maximum DTS between keyframe */
+	int64_t		keydts;		/* avarage DTS per key frame */
 	int64_t		keyalldts;	/* total surveyed DTS */
 	int64_t		keyallkey;	/* total surveyed key frame */
 	int64_t		keyfirst;	/* first DTS since reset */

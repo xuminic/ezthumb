@@ -584,7 +584,7 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			/* the distance between current position to the snap 
 			 * point is quite small so ezthumb will decode to the
 			 * snap point directly */
-			VSkLOG("[SD]", dts, dts_snap);
+			VSSLOG("[SD]", dts, dts_snap);
 			dts = video_decode_load(vidx, &packet, dts_snap);
 			goto vs_scan_update;
 		}
@@ -802,6 +802,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	vidx->seekable = ENX_SEEK_UNKNOWN;
 	vidx->filesize = smm_filesize(filename);
 	vidx->vsidx    = -1;	/* must be initialized before video_open() */
+	vidx->keygap   = -1;	/* for tracking the single i-frame videos */
 
 	smm_time_get_epoch(&vidx->tmark);	/* get current time stamp */
 	video_timing(vidx, EZ_PTS_RESET);	/* clear progress timestamp*/
@@ -1240,14 +1241,21 @@ static int video_find_main_stream(EZVID *vidx)
 
 static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 {
-	int64_t		dts;
+	int64_t		dts, lastdts = 0;
 
 	while ((dts = video_load_packet(vidx, packet)) >= 0) {
+		lastdts = dts;
 		if (packet->flags != AV_PKT_FLAG_KEY) {
 			av_free_packet(packet);
 			continue;
 		}
 		break;
+	}
+	/* A small trick here. If video_load_packet() read out of the media
+	 * file, the last good dts will be hiden in the packet structure for
+	 * the futurn access. It's the last DTS in the file */
+	if (dts < 0) {
+		packet->dts = lastdts;
 	}
 	return dts;
 }
@@ -1295,6 +1303,11 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 	/* record the status of the first key frame since resetted */
 	if (vidx->keylast < 0) {
 		vidx->keylast = vidx->keyfirst = dts;
+		/* 20140416 Issue 'deashi.wmv': using the keygap to track
+		 * the single i-frame videos */
+		if (vidx->keygap < 0) {
+			vidx->keygap = 0;
+		}
 		eznotify(vidx->sysopt, EN_IFRAME_CREDIT, 
 				ENX_IFRAME_SET, 0, vidx);
 		return vidx->keycount;
@@ -1307,22 +1320,32 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 	}
 	vidx->keycount++;
 	vidx->keylast = dts;
+
+	/* update the avarage DTS per key frame */
+	vidx->keydts = (vidx->keyalldts + vidx->keylast - vidx->keyfirst) /
+		(vidx->keyallkey + vidx->keycount);
 	return vidx->keycount;
 }
 
 static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts)
 {
 	int64_t	span;
+	int	n;
 
 	if (ndts > cdts) {
 		span = ndts - cdts;
 	} else {
 		span = cdts - ndts;
 	}
-	if (vidx->keygap <= 0) {
-		return INT_MAX;	/* accredit system is not ready */
+	if (vidx->keygap > 0) {
+		n = (int)(span / vidx->keygap);
+	} else if (vidx->keygap < 0) {
+		n = INT_MAX;	/* accredit system is not ready */
+	} else {
+		n = 0;	/* one i-frame only */
 	}
-	return (int)(span / vidx->keygap);
+	//printf("video_dts_ruler: %lld %lld %d\n", cdts, ndts, n);
+	return n;
 }
 
 /* 20130726 Integrated the key frame accrediting into video_load_packet()
@@ -1454,7 +1477,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 static EZTIME video_duration(EZVID *vidx)
 {
 	EZIMG	*image;
-	int64_t	ref_dur, key_dts;
+	int64_t	ref_dur;
 	int	ref_err, shots, key_num;
 
 	video_timing(vidx, EZ_PTS_CLEAR);
@@ -1479,13 +1502,15 @@ static EZTIME video_duration(EZVID *vidx)
 		/* test the seekability of the media file */
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
-		if (!SEEKABLE(vidx->seekable)) {
+		if (vidx->seekable == ENX_SEEK_UNKNOWN) {
+			slos(DBGVSC, "video_duration: [Q] scan done\n");
+		} else if (!SEEKABLE(vidx->seekable)) {
 			slos(DBGVSC, "video_duration: [Q] fullscan\n");
 			vidx->duration = video_duration_fullscan(vidx);
 		} else if ((ref_dur = video_duration_quickscan(vidx)) > 0) {
 			slos(DBGVSC, "video_duration: [Q] quickscan\n");
 			vidx->duration = ref_dur;
-		} else {
+		} else {	/* foolproof mode */
 			slos(DBGVSC, "video_duration: [Q] fullscan back\n");
 			video_seeking(vidx, 0);
 			vidx->duration = video_duration_fullscan(vidx);
@@ -1494,12 +1519,12 @@ static EZTIME video_duration(EZVID *vidx)
 		break;
 
 	case EZOP_DUR_FSCAN:
-		vidx->duration = video_duration_fullscan(vidx);
-		video_timing(vidx, EZ_PTS_DSCAN);
-		/* rewind the media file and test the seekability */
-		video_seeking(vidx, 0);
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
+		if (vidx->seekable != ENX_SEEK_UNKNOWN) {
+			vidx->duration = video_duration_fullscan(vidx);
+			video_timing(vidx, EZ_PTS_DSCAN);
+		}
 		break;
 
 	case EZOP_DUR_AUTO:
@@ -1507,6 +1532,10 @@ static EZTIME video_duration(EZVID *vidx)
 		/* test the seekability of the media file */
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
+		if (vidx->seekable == ENX_SEEK_UNKNOWN) {
+			slos(DBGVSC, "video_duration: [A] scan done\n");
+			break;
+		}
 		/* estimate the duration of the video file */
 		ref_dur = vidx->filesize * 8000 / vidx->bitrates;
 		/* get the error of the duration by head and by calculation */
@@ -1514,12 +1543,8 @@ static EZTIME video_duration(EZVID *vidx)
 					/ vidx->duration);
 		slog(DBGVSC, "video_duration: compared (%lld/%lld/%d)\n", 
 				vidx->duration, ref_dur, ref_err);
-
-		/* calculate the avarage DTS of a keyframe */
-		key_dts = (vidx->keyalldts + vidx->keylast - vidx->keyfirst) /
-				(vidx->keyallkey + vidx->keycount);
 		/* calculate the possible keyframes in the video file */
-		key_num = (int)(video_ms_to_dts(vidx, ref_dur) / key_dts);
+		key_num = (int)(video_ms_to_dts(vidx, ref_dur) / vidx->keydts);
 		/* estimate the total shots */
 		shots = 0;
 		if ((image = image_allocate(vidx, ref_dur, NULL)) != NULL) {
@@ -1624,8 +1649,8 @@ static int video_seek_challenge(EZVID *vidx)
 	int64_t		key_dts, key_num;
 	int		i, error, errmin;
 
-	/* initial scan the beginning part of the video up to 1 second
-	 * (EZ_DSCP_RANGE_INIT) to calculate the bitrates */
+	/* initial scan the beginning part of the video up to 10 second
+	 * (EZ_DSCP_RANGE_INIT) and 10 keyframe to calculate the bitrates */
 	dts_first = pos_first = 0;
 	dts_target = video_ms_to_dts(vidx, EZ_DSCP_RANGE_INIT);
 	dts_target += vidx->dts_offset;
@@ -1634,19 +1659,28 @@ static int video_seek_challenge(EZVID *vidx)
 		dts_first = cur_dts;
 		pos_first = packet.pos;
 		av_free_packet(&packet);
-		if (vidx->keycount && (dts_first > dts_target)) {
+		if ((dts_first > dts_target) && (vidx->keycount > 10)) {
 			break;
 		}
 	}
-	if (dts_first <= 0) {
-		return -1;	/* no keyframe in the media, abort */
+	if (cur_dts < 0) {	/* END OF FILE so save the last dts */
+		/* the media file is too short to do an autodetection;
+		 * actually it's done a full scan already */
+		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
+		/* retrieve the last good DTS */
+		cur_dts = packet.dts - vidx->dts_offset;
+		/* return the duration and mark it SEEK_UNKNOWN */
+		vidx->duration = (EZTIME) video_dts_to_ms(vidx, cur_dts);
+		slog(DBGVSC, "video_seek_challenge: short video %lld\n", 
+				vidx->duration);
+		return ENX_SEEK_UNKNOWN;
 	}
 	slog(DBGVSC, "video_seek_challenge: reference i-frame "
 			"DTS=%lld POS=%lld\n", dts_first, pos_first);
 
 	/* The current postion should be around the first second in the video
 	 * file. If it's smaller than 1/10 (EZ_DSCP_RANGE_EXT) of the whole 
-	 * file, ezthumb will extend the sample range to around 10 second to 
+	 * file, ezthumb will extend the sample range to around 100 second to 
 	 * get an accurate reading */
 	if (vidx->filesize / pos_first > EZ_DSCP_RANGE_EXT) {
 		dts_target = dts_first * EZ_DSCP_RANGE_EXT - 
@@ -1659,12 +1693,20 @@ static int video_seek_challenge(EZVID *vidx)
 				break;
 			}
 		}
+		if (cur_dts < 0) {	/* END OF FILE so save the last dts */
+			SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
+			cur_dts = packet.dts - vidx->dts_offset;
+			vidx->duration = (EZTIME) video_dts_to_ms(vidx, cur_dts);
+			slog(DBGVSC, "video_seek_challenge: short video %lld\n", 
+					vidx->duration);
+			return ENX_SEEK_UNKNOWN;
+		}
 		slog(DBGVSC, "video_seek_challenge: reference extended "
 				"DTS=%lld POS=%lld\n", dts_first, pos_first);
 	}
-	
+
 	/* calculate the key-frame rate in dts. I use this rate instead
-	 * of bitrate to simply the calculation.
+	 * of bitrate to simplify the calculation.
 	 * key frame rate means how many dts in avarage per key frame */
 	key_dts = (vidx->keylast - vidx->keyfirst) / vidx->keycount;
 	key_num = av_rescale(vidx->filesize, vidx->keycount, pos_first);
@@ -1678,18 +1720,12 @@ static int video_seek_challenge(EZVID *vidx)
 		dts_begin  = dts_first;
 		dts_target = key_dts * 2;
 	} else {
-		/* tricky thing could be here. There's not enough key frames
-		 * left in the video file, probably a too small clip. The
-		 * compromise is seeking back to head and start again */
-		video_seeking(vidx, 0);
-		dts_begin  = video_keyframe_next(vidx, &packet);
-		av_free_packet(&packet);
-		/* estimate the end DTS in the file */
-		dts_target = av_rescale(vidx->filesize, 
-				dts_first - vidx->dts_offset, pos_first);
-		/* apply 1/10th of available DTS as sampling step */
-		dts_target = (dts_target - dts_begin + vidx->dts_offset)
-				/ EZ_DSCP_N_STEP;
+		/* There's not enough key frames left in the video file 
+		 * worthing a seekable test, probably a too small clip. */
+		vidx->duration = video_duration_fullscan(vidx);
+		slog(DBGVSC, "video_seek_challenge: short video %lld\n", 
+				vidx->duration);
+		return ENX_SEEK_UNKNOWN;
 	}
 
 	slog(DBGVSC, "video_seek_challenge: seek forward from %lld by %lld\n",
