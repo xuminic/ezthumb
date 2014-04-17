@@ -36,6 +36,7 @@ EXINC	= -I$(FFMPEG)/include -I$(EXDIR)/include -I$(CSOUP)
 
 #WGLIB	= -lcomctl32 -lcomdlg32 -lgdi32 -Wl,--subsystem,windows
 #WGLIB	= -lcomctl32 -mconsole -mwindows
+WGLIB	= -liconv
 EXDLL	= $(FFMPEG)/bin/*.dll $(EXDIR)/lib/*.dll
 
 GUIINC	= -I$(EXDIR)/include/iup
@@ -93,7 +94,7 @@ OBJS	+= $(OBJDIR)/eziup.o
 endif
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup -liconv
+	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup $(WGLIB)
 
 ifeq	($(SYSGUI),CFG_GUI_ON)
 LIBS	+= -liup $(GUILIB)

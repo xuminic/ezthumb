@@ -27,6 +27,7 @@
 #include "libcsoup.h"
 #include "ezthumb.h"
 #include "ezgui.h"
+#include "ezicon.h"
 
 #define EZGUI_INST	"GUIEXT"
 
@@ -152,11 +153,13 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	ezgui_create_window(gui);
 
 	/* filling the work area with file names from command line */
-	for (i = 0; i < fnum; i++) {
-		ezgui_page_main_file_append(gui, flist[i]);
+	if (fnum) {
+		for (i = 0; i < fnum; i++) {
+			ezgui_page_main_file_append(gui, flist[i]);
+			ezgui_show_progress(gui, i, fnum);
+		}
 		ezgui_show_progress(gui, i, fnum);
 	}
-	ezgui_show_progress(gui, i, fnum);
 
 	/*for ( ; i <= 20; i++) {
 		EZMEDIA	*minfo;
@@ -217,9 +220,11 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetAttribute(tabs, "TABTITLE2", "Advanced");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
+	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
 	gui->dlg_main = IupDialog(tabs);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
 	IupSetAttribute(gui->dlg_main, "SIZE", "HALFx");
+	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
 	IupSetHandle(gui->inst_id, gui->dlg_main);
 
 	/* bind the GUI structure into the current dialog so it can be accessed
@@ -669,7 +674,6 @@ static int ezgui_show_progress(EZGUI *gui, int cur, int range)
 		IupFlush();
 	} else if (cur == range) {	/* end of display */
 		IupSetInt(gui->prog_bar, "VALUE", range);
-		IupFlush();
 		smm_sleep(0, 500000);
 		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 		IupFlush();
@@ -698,7 +702,6 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 		break;
 	case EN_PROC_END:
 		IupSetInt(gui->prog_bar, "VALUE", param);
-		IupFlush();
 		smm_sleep(0, 500000);
 		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 		IupFlush();
