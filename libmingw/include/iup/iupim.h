@@ -16,7 +16,9 @@ int IupSaveImage(Ihandle* ih, const char* file_name, const char* format);
 
 #ifdef __IM_IMAGE_H
 imImage* IupGetNativeHandleImage(void* handle);
-void* IupGetImageNativeHandle(imImage* image);
+void* IupGetImageNativeHandle(const imImage* image);
+
+Ihandle* IupImageFromImImage(const imImage* image);
 #endif
 
 

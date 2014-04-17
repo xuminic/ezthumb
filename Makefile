@@ -39,8 +39,10 @@ EXINC	= -I$(FFMPEG)/include -I$(EXDIR)/include -I$(CSOUP)
 EXDLL	= $(FFMPEG)/bin/*.dll $(EXDIR)/lib/*.dll
 
 GUIINC	= -I$(EXDIR)/include/iup
-GUILIB	= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
-	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32 -liconv
+#GUILIB	= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+#	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
+GUILIB	= -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
 # linking static libgd requires defining NONDLL 
 SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL $(EXINC)
 LIBDIR	= -L$(FFMPEG)/lib -L$(EXDIR)/lib -L$(CSOUP)
@@ -91,7 +93,7 @@ OBJS	+= $(OBJDIR)/eziup.o
 endif
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup
+	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup -liconv
 
 ifeq	($(SYSGUI),CFG_GUI_ON)
 LIBS	+= -liup $(GUILIB)

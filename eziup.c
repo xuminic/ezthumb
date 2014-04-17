@@ -60,14 +60,17 @@ static Ihandle *ezgui_page_main_workarea(EZGUI *gui);
 static Ihandle *ezgui_page_main_button(EZGUI *gui);
 static void *ezgui_page_main_file_append(EZGUI *gui, char *fname);
 static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text);
-static int ezgui_event_main_dropfiles(Ihandle *ih, const char* filename, int num, int x, int y);
+static int ezgui_event_main_dropfiles(Ihandle *ih, 
+		const char* filename, int num, int x, int y);
 static int ezgui_event_main_multi_select(Ihandle *ih, char *value);
-static int ezgui_event_main_moused(Ihandle *ih, int button, int pressed, int x, int y, char *status);
+static int ezgui_event_main_moused(Ihandle *ih, 
+		int button, int pressed, int x, int y, char *status);
 static int ezgui_event_main_add(Ihandle *ih);
 static int ezgui_event_main_remove(Ihandle *ih);
 static int ezgui_event_main_run(Ihandle *ih);
 static char *ezgui_make_filters(char *slist);
-static int ezgui_page_main_progress(EZGUI *gui, int cur, int range);
+static int ezgui_remove_item(EZGUI *gui, int idx);
+static int ezgui_show_progress(EZGUI *gui, int cur, int range);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
 static Ihandle *ezgui_page_setup(EZGUI *gui);
@@ -90,7 +93,8 @@ static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
 static int xui_list_get_idx(Ihandle *ih);
 static int xui_text_get_number(Ihandle *ih);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
-static Ihandle *xui_text_grid(char *label, Ihandle **xcol, Ihandle **xrow, char *ext);
+static Ihandle *xui_text_grid(char *label, 
+		Ihandle **xcol, Ihandle **xrow, char *ext);
 static Ihandle *xui_button(char *prompt, Icallback ntf);
 
 
@@ -150,9 +154,9 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	/* filling the work area with file names from command line */
 	for (i = 0; i < fnum; i++) {
 		ezgui_page_main_file_append(gui, flist[i]);
-		ezgui_page_main_progress(gui, i, fnum);
+		ezgui_show_progress(gui, i, fnum);
 	}
-	ezgui_page_main_progress(gui, i, fnum);
+	ezgui_show_progress(gui, i, fnum);
 
 	/*for ( ; i <= 20; i++) {
 		EZMEDIA	*minfo;
@@ -348,7 +352,7 @@ static Ihandle *ezgui_page_main_button(EZGUI *gui)
 	gui->button_run = xui_button("Run", NULL);
 	IupSetCallback(gui->button_run, "ACTION",
 			(Icallback) ezgui_event_main_run);
-	return IupHbox(gui->button_add, gui->button_del, gui->button_run, NULL);
+	return IupHbox(gui->button_add, gui->button_del, gui->button_run,NULL);
 }
 
 static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
@@ -418,9 +422,17 @@ static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 	return IUP_DEFAULT;
 }
 
-static int ezgui_event_main_dropfiles(Ihandle *ih, const char* filename, int num, int x, int y)
+static int ezgui_event_main_dropfiles(Ihandle *ih, 
+		const char* filename, int num, int x, int y)
 {
+	EZGUI	*gui = (EZGUI *) ih;
+
+	if (gui->magic != EZGUI_MAGIC) {
+		gui = ezgui_get_global(ih);
+	}
+
 	printf("dropfiles: fname=%s number=%d %dx%d\n", filename, num, x, y);
+	ezgui_page_main_file_append(gui, (char*) filename);
 	return IUP_DEFAULT;
 }
 
@@ -448,7 +460,8 @@ static int ezgui_event_main_multi_select(Ihandle *ih, char *value)
 	return IUP_DEFAULT;
 }
 
-static int ezgui_event_main_moused(Ihandle *ih, int button, int pressed, int x, int y, char *status)
+static int ezgui_event_main_moused(Ihandle *ih, 
+		int button, int pressed, int x, int y, char *status)
 {
 	EZGUI	*gui = (EZGUI *) ih;
 
@@ -497,8 +510,10 @@ static int ezgui_event_main_add(Ihandle *ih)
 	 * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
 	 * 			lan_ke_er.flv|Powered_by_Discuz.flv|
 	 * Last  DIRECTORY: /home/xum1/dwhelper0 *///FIXME: BUG?
-	/*printf("Open File VALUE: %s\n", IupGetAttribute(gui->dlg_open, "VALUE"));
-	printf("Last  DIRECTORY: %s\n", IupGetAttribute(gui->dlg_open, "DIRECTORY"));*/
+	/*printf("Open File VALUE: %s\n", 
+			IupGetAttribute(gui->dlg_open, "VALUE"));
+	printf("Last  DIRECTORY: %s\n", 
+			IupGetAttribute(gui->dlg_open, "DIRECTORY"));*/
 	/* duplicate the path and filename list */
 	flist = csc_strcpy_alloc(IupGetAttribute(gui->dlg_open, "VALUE"), 16);
 	/* find out how many files is in */
@@ -510,7 +525,7 @@ static int ezgui_event_main_add(Ihandle *ih)
 	} else {
 		amnt--;
 	}
-	ezgui_page_main_progress(gui, 0, amnt);
+	ezgui_show_progress(gui, 0, amnt);
 
 	/* store the current path first */
 	path = IupGetAttribute(gui->dlg_open, "DIRECTORY");
@@ -526,7 +541,7 @@ static int ezgui_event_main_add(Ihandle *ih)
 	/* process the single file list */
 	if (amnt == 1) {
 		ezgui_page_main_file_append(gui, flist);
-		ezgui_page_main_progress(gui, amnt, amnt);
+		ezgui_show_progress(gui, amnt, amnt);
 		return IUP_DEFAULT;
 	}
 
@@ -543,11 +558,11 @@ static int ezgui_event_main_add(Ihandle *ih)
 		strcat(path, fname);
 		//printf("%s\n", path);
 		ezgui_page_main_file_append(gui, path);
-		ezgui_page_main_progress(gui, ++i, amnt);
+		ezgui_show_progress(gui, ++i, amnt);
 		free(path);
 	}
 	if (i < amnt) {
-		ezgui_page_main_progress(gui, amnt, amnt);
+		ezgui_show_progress(gui, amnt, amnt);
 	}
 	free(flist);
 	return IUP_DEFAULT;
@@ -568,13 +583,7 @@ static int ezgui_event_main_remove(Ihandle *ih)
 		value = IupGetAttribute(gui->list_fname, "VALUE");
 		for (i = 0; value[i]; i++) {
 			if (value[i] == '+') {
-				printf("Remove %s\n", IupGetAttributeId(gui->list_fname, "",  i + 1));
-				IupSetInt(gui->list_fname, "REMOVEITEM", i + 1);
-				IupSetInt(gui->list_size, "REMOVEITEM", i + 1);
-				IupSetInt(gui->list_length, "REMOVEITEM", i + 1);
-				IupSetInt(gui->list_resolv, "REMOVEITEM", i + 1);
-				IupSetInt(gui->list_prog, "REMOVEITEM", i + 1);
-				gui->list_idx--;
+				ezgui_remove_item(gui, i+1);
 				break;
 			}
 		}
@@ -639,7 +648,19 @@ static char *ezgui_make_filters(char *slist)
 	return flt;
 }
 
-static int ezgui_page_main_progress(EZGUI *gui, int cur, int range)
+static int ezgui_remove_item(EZGUI *gui, int idx)
+{
+	printf("Remove %s\n", IupGetAttributeId(gui->list_fname, "",  idx));
+	IupSetInt(gui->list_fname, "REMOVEITEM", idx);
+	IupSetInt(gui->list_size, "REMOVEITEM", idx);
+	IupSetInt(gui->list_length, "REMOVEITEM", idx);
+	IupSetInt(gui->list_resolv, "REMOVEITEM", idx);
+	IupSetInt(gui->list_prog, "REMOVEITEM", idx);
+	gui->list_idx--;
+	return 0;
+}
+
+static int ezgui_show_progress(EZGUI *gui, int cur, int range)
 {
 	if (cur == 0) {		/* begin to display progress */
 		IupSetInt(gui->prog_bar, "MIN", 0);
@@ -670,7 +691,8 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 		IupFlush();
 		break;
 	case EN_PROC_CURRENT:
-		//IupSetAttributeId(gui->list_prog,   "", gui->list_idx, minfo->progr);
+		//IupSetAttributeId(gui->list_prog,   "", 
+		//gui->list_idx, minfo->progr);
 		IupSetInt(gui->prog_bar, "MAX", param);
 		IupSetInt(gui->prog_bar, "VALUE", opt);
 		break;
@@ -812,7 +834,8 @@ static Ihandle *ezgui_page_setup_zoom_zbox(EZGUI *gui)
 	IupSetAttribute(gui->entry_zoom_ratio, "SPINVALUE", "50");
 	IupAppend(zbox, hbox);
 
-	hbox = xui_text_grid("Resolu", &gui->entry_zoom_wid, &gui->entry_zoom_hei, NULL);
+	hbox = xui_text_grid("Resolu", 
+			&gui->entry_zoom_wid, &gui->entry_zoom_hei, NULL);
 	IupAppend(zbox, hbox);
 	
 	hbox = xui_text_grid("Width", &gui->entry_width, NULL, NULL);
@@ -1157,7 +1180,8 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 	return hbox;
 }
 
-static Ihandle *xui_text_grid(char *label, Ihandle **xcol, Ihandle **xrow, char *ext)
+static Ihandle *xui_text_grid(char *label, 
+		Ihandle **xcol, Ihandle **xrow, char *ext)
 {
 	Ihandle	*hbox, *text1, *text2;
 

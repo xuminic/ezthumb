@@ -10,8 +10,8 @@
 #ifndef __IUP_H 
 #define __IUP_H
 
-#include <iupkey.h>
-#include <iupdef.h>
+#include "iupkey.h"
+#include "iupdef.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,11 +19,11 @@ extern "C" {
 
 
 #define IUP_NAME "IUP - Portable User Interface"
-#define IUP_COPYRIGHT  "Copyright (C) 1994-2013 Tecgraf, PUC-Rio."
+#define IUP_COPYRIGHT  "Copyright (C) 1994-2014 Tecgraf, PUC-Rio."
 #define IUP_DESCRIPTION	"Multi-platform toolkit for building graphical user interfaces."
-#define IUP_VERSION "3.8"         /* bug fixes are reported only by IupVersion functions */
-#define IUP_VERSION_NUMBER 308000
-#define IUP_VERSION_DATE "2013/05/08"  /* does not include bug fix releases */
+#define IUP_VERSION "3.10"         /* bug fixes are reported only by IupVersion functions */
+#define IUP_VERSION_NUMBER 310000
+#define IUP_VERSION_DATE "2014/01/17"  /* does not include bug fix releases */
 
 typedef struct Ihandle_ Ihandle;
 typedef int (*Icallback)(Ihandle*);
@@ -52,8 +52,6 @@ void      IupRedraw        (Ihandle* ih, int children);
 void      IupRefresh       (Ihandle* ih);
 void      IupRefreshChildren(Ihandle* ih);
 
-char*     IupMapFont       (const char *iupfont);
-char*     IupUnMapFont     (const char *driverfont);
 int       IupHelp          (const char* url);
 char*     IupLoad          (const char *filename);
 char*     IupLoadBuffer    (const char *buffer);
@@ -61,8 +59,13 @@ char*     IupLoadBuffer    (const char *buffer);
 char*     IupVersion       (void);
 char*     IupVersionDate   (void);
 int       IupVersionNumber (void);
+
 void      IupSetLanguage   (const char *lng);
 char*     IupGetLanguage   (void);
+void      IupSetLanguageString(const char* name, const char* str);
+void      IupStoreLanguageString(const char* name, const char* str);
+char*     IupGetLanguageString(const char* name);
+void      IupSetLanguagePack(Ihandle* ih);
 
 void      IupDestroy      (Ihandle* ih);
 void      IupDetach       (Ihandle* child);
@@ -85,56 +88,71 @@ int       IupHide          (Ihandle* ih);
 int       IupMap           (Ihandle* ih);
 void      IupUnmap         (Ihandle *ih);
 
-void      IupSetAttribute  (Ihandle* ih, const char* name, const char* value);
-void      IupStoreAttribute(Ihandle* ih, const char* name, const char* value);
-Ihandle*  IupSetAttributes (Ihandle* ih, const char *str);
-char*     IupGetAttribute  (Ihandle* ih, const char* name);
-char*     IupGetAttributes (Ihandle* ih);
-int       IupGetInt        (Ihandle* ih, const char* name);
-int       IupGetInt2       (Ihandle* ih, const char* name);
-int       IupGetIntInt     (Ihandle *ih, const char* name, int *i1, int *i2);
-float     IupGetFloat      (Ihandle* ih, const char* name);
-void      IupSetfAttribute (Ihandle* ih, const char* name, const char* format, ...);
 void      IupResetAttribute(Ihandle *ih, const char* name);
 int       IupGetAllAttributes(Ihandle* ih, char** names, int n);
 Ihandle*  IupSetAtt(const char* handle_name, Ihandle* ih, const char* name, ...);
+Ihandle*  IupSetAttributes (Ihandle* ih, const char *str);
+char*     IupGetAttributes (Ihandle* ih);
+
+void      IupSetAttribute   (Ihandle* ih, const char* name, const char* value);
+void      IupSetStrAttribute(Ihandle* ih, const char* name, const char* value);
+void      IupSetStrf        (Ihandle* ih, const char* name, const char* format, ...);
+void      IupSetInt         (Ihandle* ih, const char* name, int value);
+void      IupSetFloat       (Ihandle* ih, const char* name, float value);
+void      IupSetRGB         (Ihandle *ih, const char* name, unsigned char r, unsigned char g, unsigned char b);
+
+char*     IupGetAttribute(Ihandle* ih, const char* name);
+int       IupGetInt      (Ihandle* ih, const char* name);
+int       IupGetInt2     (Ihandle* ih, const char* name);
+int       IupGetIntInt   (Ihandle *ih, const char* name, int *i1, int *i2);
+float     IupGetFloat    (Ihandle* ih, const char* name);
+void      IupGetRGB      (Ihandle *ih, const char* name, unsigned char *r, unsigned char *g, unsigned char *b);
 
 void  IupSetAttributeId(Ihandle *ih, const char* name, int id, const char *value);
-void  IupStoreAttributeId(Ihandle *ih, const char* name, int id, const char *value);
+void  IupSetStrAttributeId(Ihandle *ih, const char* name, int id, const char *value);
+void  IupSetStrfId(Ihandle *ih, const char* name, int id, const char* format, ...);
+void  IupSetIntId(Ihandle* ih, const char* name, int id, int value);
+void  IupSetFloatId(Ihandle* ih, const char* name, int id, float value);
+void  IupSetRGBId(Ihandle *ih, const char* name, int id, unsigned char r, unsigned char g, unsigned char b);
+
 char* IupGetAttributeId(Ihandle *ih, const char* name, int id);
-float IupGetFloatId(Ihandle *ih, const char* name, int id);
 int   IupGetIntId(Ihandle *ih, const char* name, int id);
-void  IupSetfAttributeId(Ihandle *ih, const char* name, int id, const char* format, ...);
+float IupGetFloatId(Ihandle *ih, const char* name, int id);
+void  IupGetRGBId(Ihandle *ih, const char* name, int id, unsigned char *r, unsigned char *g, unsigned char *b);
 
 void  IupSetAttributeId2(Ihandle* ih, const char* name, int lin, int col, const char* value);
-void  IupStoreAttributeId2(Ihandle* ih, const char* name, int lin, int col, const char* value);
+void  IupSetStrAttributeId2(Ihandle* ih, const char* name, int lin, int col, const char* value);
+void  IupSetStrfId2(Ihandle* ih, const char* name, int lin, int col, const char* format, ...);
+void  IupSetIntId2(Ihandle* ih, const char* name, int lin, int col, int value);
+void  IupSetFloatId2(Ihandle* ih, const char* name, int lin, int col, float value);
+void  IupSetRGBId2(Ihandle *ih, const char* name, int lin, int col, unsigned char r, unsigned char g, unsigned char b);
+
 char* IupGetAttributeId2(Ihandle* ih, const char* name, int lin, int col);
 int   IupGetIntId2(Ihandle* ih, const char* name, int lin, int col);
 float IupGetFloatId2(Ihandle* ih, const char* name, int lin, int col);
-void  IupSetfAttributeId2(Ihandle* ih, const char* name, int lin, int col, const char* format, ...);
+void  IupGetRGBId2(Ihandle *ih, const char* name, int lin, int col, unsigned char *r, unsigned char *g, unsigned char *b);
 
-void      IupSetGlobal     (const char* name, const char* value);
-void      IupStoreGlobal   (const char* name, const char* value);
-char*     IupGetGlobal     (const char* name);
+void      IupSetGlobal  (const char* name, const char* value);
+void      IupSetStrGlobal(const char* name, const char* value);
+char*     IupGetGlobal  (const char* name);
 
-Ihandle*  IupSetFocus      (Ihandle* ih);
-Ihandle*  IupGetFocus      (void);
-Ihandle*  IupPreviousField (Ihandle* ih);  
-Ihandle*  IupNextField     (Ihandle* ih);
+Ihandle*  IupSetFocus     (Ihandle* ih);
+Ihandle*  IupGetFocus     (void);
+Ihandle*  IupPreviousField(Ihandle* ih);  
+Ihandle*  IupNextField    (Ihandle* ih);
 
-Icallback IupGetCallback(Ihandle* ih, const char *name);
-Icallback IupSetCallback(Ihandle* ih, const char *name, Icallback func);
+Icallback IupGetCallback (Ihandle* ih, const char *name);
+Icallback IupSetCallback (Ihandle* ih, const char *name, Icallback func);
 Ihandle*  IupSetCallbacks(Ihandle* ih, const char *name, Icallback func, ...);
 
-Icallback   IupGetFunction   (const char *name);
-Icallback   IupSetFunction   (const char *name, Icallback func);
-const char* IupGetActionName (void);
+Icallback IupGetFunction(const char *name);
+Icallback IupSetFunction(const char *name, Icallback func);
 
-Ihandle*  IupGetHandle     (const char *name);
-Ihandle*  IupSetHandle     (const char *name, Ihandle* ih);
-int       IupGetAllNames   (char** names, int n);
-int       IupGetAllDialogs (char** names, int n);
-char*     IupGetName       (Ihandle* ih);
+Ihandle*  IupGetHandle    (const char *name);
+Ihandle*  IupSetHandle    (const char *name, Ihandle* ih);
+int       IupGetAllNames  (char** names, int n);
+int       IupGetAllDialogs(char** names, int n);
+char*     IupGetName      (Ihandle* ih);
 
 void      IupSetAttributeHandle(Ihandle* ih, const char* name, Ihandle* ih_named);
 Ihandle*  IupGetAttributeHandle(Ihandle* ih, const char* name);
@@ -177,6 +195,8 @@ Ihandle*  IupScrollBox  (Ihandle* child);
 Ihandle*  IupGridBox    (Ihandle* child, ...);
 Ihandle*  IupGridBoxv   (Ihandle **children);
 Ihandle*  IupExpander   (Ihandle *child);
+Ihandle*  IupDetachBox  (Ihandle *child);
+Ihandle*  IupBackgroundBox(Ihandle *child);
 
 Ihandle*  IupFrame      (Ihandle* child);
 
@@ -208,11 +228,14 @@ Ihandle*  IupTabsv      (Ihandle* *children);
 Ihandle*  IupTree       (void);
 Ihandle*  IupLink       (const char* url, const char* title);
 
-
-/* Deprecated controls, use SPIN attribute of IupText */
+/* Old controls, use SPIN attribute of IupText */
 Ihandle*  IupSpin       (void);
 Ihandle*  IupSpinbox    (Ihandle* child);
 
+
+/************************************************************************/
+/*                      Utilities                                       */
+/************************************************************************/
 
 /* IupImage utility */
 int IupSaveImageAsText(Ihandle* ih, const char* file_name, const char* format, const char* name);
@@ -224,19 +247,35 @@ void  IupTextConvertPosToLinCol(Ihandle* ih, int pos, int *lin, int *col);
 /* IupText, IupList, IupTree, IupMatrix and IupScintilla utility */
 int   IupConvertXYToPos(Ihandle* ih, int x, int y);
 
+/* OLD names, kept for backward compatibility, will never be removed. */
+void IupStoreGlobal(const char* name, const char* value);
+void IupStoreAttribute(Ihandle* ih, const char* name, const char* value);
+void IupSetfAttribute(Ihandle* ih, const char* name, const char* format, ...);
+void IupStoreAttributeId(Ihandle *ih, const char* name, int id, const char *value);
+void IupSetfAttributeId(Ihandle *ih, const char* name, int id, const char* f, ...);
+void IupStoreAttributeId2(Ihandle* ih, const char* name, int lin, int col, const char* value);
+void IupSetfAttributeId2(Ihandle* ih, const char* name, int lin, int col, const char* format, ...);
+
 /* IupTree utilities */
 int   IupTreeSetUserId(Ihandle* ih, int id, void* userid);
 void* IupTreeGetUserId(Ihandle* ih, int id);
 int   IupTreeGetId(Ihandle* ih, void *userid);
+void  IupTreeSetAttributeHandle(Ihandle* ih, const char* name, int id, Ihandle* ih_named);
 
-/* Deprecated IupTree utilities, use Iup*AttributeId functions */
+/* DEPRECATED IupTree utilities, use Iup*AttributeId functions. It will be removed in a future version.  */
 void  IupTreeSetAttribute  (Ihandle* ih, const char* name, int id, const char* value);
 void  IupTreeStoreAttribute(Ihandle* ih, const char* name, int id, const char* value);
 char* IupTreeGetAttribute  (Ihandle* ih, const char* name, int id);
 int   IupTreeGetInt        (Ihandle* ih, const char* name, int id);
 float IupTreeGetFloat      (Ihandle* ih, const char* name, int id);
 void  IupTreeSetfAttribute (Ihandle* ih, const char* name, int id, const char* format, ...);
-void  IupTreeSetAttributeHandle(Ihandle* ih, const char* a, int id, Ihandle* ih_named);
+
+/* DEPRECATED callback management. It will be removed in a future version. */
+const char* IupGetActionName(void);
+
+/* DEPRECATED font names. It will be removed in a future version.  */
+char*     IupMapFont       (const char *iupfont);
+char*     IupUnMapFont     (const char *driverfont);
 
 
 /************************************************************************/
@@ -247,6 +286,7 @@ Ihandle* IupFileDlg(void);
 Ihandle* IupMessageDlg(void);
 Ihandle* IupColorDlg(void);
 Ihandle* IupFontDlg(void);
+Ihandle* IupProgressDlg(void);
 
 int  IupGetFile(char *arq);
 void IupMessage(const char *title, const char *msg);
@@ -271,12 +311,14 @@ Ihandle* IupElementPropertiesDialog(Ihandle* elem);
 #endif
 
 /************************************************************************/
-/*                   Common Return Values                               */
+/*                   Common Flags and Return Values                     */
 /************************************************************************/
 #define IUP_ERROR     1
 #define IUP_NOERROR   0
 #define IUP_OPENED   -1
 #define IUP_INVALID  -1
+#define IUP_INVALID_ID -10
+
 
 /************************************************************************/
 /*                   Callback Return Values                             */
@@ -389,7 +431,7 @@ int IupMain (int argc, char** argv); /* In C++ we have to declare the prototype 
 #endif
 
 /******************************************************************************
-* Copyright (C) 1994-2013 Tecgraf, PUC-Rio.
+* Copyright (C) 1994-2014 Tecgraf, PUC-Rio.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the

@@ -1,2 +1,3 @@
 /* dummy header for backward compatibility */
-#include <iup.h>
+#include "iup.h"
+#pragma message("Warning: Including an DEPRECATED header \"iuptabs.h\". It will be removed in a future version. Declarations already in \"iup.h\", simply remove the include.") 

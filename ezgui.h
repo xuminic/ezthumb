@@ -27,6 +27,7 @@
 */
 #include "libcsoup.h"
 #include "ezthumb.h"
+#include "iup.h"
 
 
 #define	CFG_SUBPATH	"ezthumb"
