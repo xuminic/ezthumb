@@ -4,9 +4,9 @@
 #pragma align 4 (ezicon_pixbuf)
 #endif
 #ifdef __GNUC__
-static const guint8 ezicon_pixbuf[] __attribute__ ((__aligned__ (4))) = 
+static const unsigned char ezicon_pixbuf[] __attribute__ ((__aligned__ (4))) = 
 #else
-static const guint8 ezicon_pixbuf[] = 
+static const unsigned char ezicon_pixbuf[] = 
 #endif
 { ""
   /* Pixbuf magic (0x47646b50) */

@@ -486,7 +486,6 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
  * Utility Functions
  ****************************************************************************/
 
-
 char *meta_filesize(int64_t size, char *buffer)
 {
 	static	char	tmp[32];
@@ -556,6 +555,23 @@ int meta_image_format(char *input, char *fmt, int flen)
 		quality = 85;
 	}
 	return quality;
+}
+
+
+/****************************************************************************
+ * Support Functions
+ ****************************************************************************/
+
+int ezm_strarr_index(char *strarr[], char *elem)
+{
+	int	i;
+
+	for (i = 0; strarr[i]; i++) {
+		if (!strcmp(strarr[i], elem)) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 

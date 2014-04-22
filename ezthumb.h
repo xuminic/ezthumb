@@ -26,7 +26,7 @@
 #include "gd.h"
 #include "libcsoup.h"
 
-#define EZTHUMB_VERSION		"3.0.4"
+#define EZTHUMB_VERSION		"3.2.0"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -222,7 +222,7 @@
 #define EZ_THUMB_OVERCOPY	4	/* copy full: override the last one */
 
 /* Duration Seeking Challenge Profile */
-#define EZ_DSCP_RANGE_INIT	1000	/* range of initial scan (ms) */
+#define EZ_DSCP_RANGE_INIT	10000	/* range of initial scan (ms) */
 #define EZ_DSCP_RANGE_EXT	10	/* extended rate of initial range */
 #define EZ_DSCP_STEP_ERROR	300	/* 30% error acceptable */
 #define EZ_DSCP_N_STEP		5	/* number of seeks */
@@ -344,7 +344,6 @@ typedef	struct	{
 
 	int	time_from;	/* from where to take shots (ms) */
 	int	time_to;	/* to where the process end (ms) */
-	int	dur_mode;	/* howto get the clip's duration */
 
 	int	vs_user;	/* specify the stream index */
 	int	key_ripno;	/* specify the number when ripping keyframes*/
@@ -496,7 +495,8 @@ typedef	struct	_EzVid	{
 	int		pts[EZ_PTS_MAX<<1]; /* progress timestamp array */
 	int		pidx;		/* PTS array index */
 
-	int64_t		keygap;		/* maximum gap between keyframe */
+	int64_t		keygap;		/* maximum DTS between keyframe */
+	int64_t		keydts;		/* avarage DTS per key frame */
 	int64_t		keyalldts;	/* total surveyed DTS */
 	int64_t		keyallkey;	/* total surveyed key frame */
 	int64_t		keyfirst;	/* first DTS since reset */
@@ -562,6 +562,7 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
 char *meta_filesize(int64_t size, char *buffer);
 char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int meta_image_format(char *input, char *fmt, int flen);
+int ezm_strarr_index(char *strarr[], char *elem);
 
 
 #endif	/* _EZTHUMB_H_ */

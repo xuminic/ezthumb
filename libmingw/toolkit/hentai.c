@@ -1,5 +1,6 @@
 
 /* Changes:
+ * 20130905: ehentai seems updated their webpages
  * 20120522: update the proxy list; minor coding adjustment
  * 20120419: image name test before overwritten
  * 20120419: update the proxy list
@@ -189,9 +190,10 @@ static int e_hentai_harvest(char *url, int flags)
 {
 	char	curl[1024];
 
-	if (((flags & EHENTAI_IMAGE) == 0) && !strncmp(url, "http:", 5)) {
+	/* 20130905 dump url only mode */
+	/*if (((flags & EHENTAI_IMAGE) == 0) && !strncmp(url, "http:", 5)) {
 		flags |= EHENTAI_IMAGE;
-	}
+	}*/
 	strcpy(curl, url);
 
 	if (flags & EHENTAI_START_NEXT) {
@@ -203,6 +205,8 @@ static int e_hentai_harvest(char *url, int flags)
 	if (flags & EHENTAI_RETURN_NEXT) {
 		while (e_hentai_safe_download(curl, flags) == 0) {
 			if (pidx >= 0) {
+				sleep(1);
+			} else if ((flags & EHENTAI_IMAGE) == 0) {
 				sleep(1);
 			} else {
 				sleep(10);
@@ -439,8 +443,11 @@ static EHBUF *e_hentai_url_list(char *htm_file)
 
 	p = ehbuf->buffer;
 	n = 0;
-	while ((p = strstr(p, "a href=\"")) != NULL) {
-		p += 8;
+	/* 20130905 ehentai seems updated their webpages */
+	//while ((p = strstr(p, "a href=\"")) != NULL) {
+	//	p += 8;
+	while ((p = strstr(p, "href=\"")) != NULL) {
+		p += 6;
 		ehbuf->urlist[n][0] = p;
 		if ((q = strchr(p, '"')) == NULL) {
 			break;
@@ -450,6 +457,20 @@ static EHBUF *e_hentai_url_list(char *htm_file)
 		p = q;
 		if (!strncmp(p, "><img src=\"", 11)) {
 			p += 11;
+			ehbuf->urlist[n][1] = p;
+			if ((q = strchr(p, '"')) == NULL) {
+				break;
+			}
+			*q++ = 0;
+			p = q;
+			n++;
+			if (n >= MAX_URL_LIST) {
+				break;
+			}
+		}
+		/* 20130905 ehentai seems updated their webpages */
+		else if (!strncmp(p, "><img id=\"img\" src=\"", 20)) {
+			p += 20;
 			ehbuf->urlist[n][1] = p;
 			if ((q = strchr(p, '"')) == NULL) {
 				break;

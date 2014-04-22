@@ -1,0 +1,53 @@
+#!/bin/sh
+
+if ! test $1; then
+  echo $0 mingw_repository_directory
+  exit 1
+fi
+
+if ! test -d include; then
+  mkdir include
+fi
+if ! test -d lib; then
+  mkdir lib
+fi
+
+rm -f liblist.txt
+
+LIBSRC=$1/bzip2-*
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/*.a lib
+basename $LIBSRC >> liblist.txt
+
+LIBSRC=$1/freetype-*
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/*.a lib
+basename $LIBSRC >> liblist.txt
+
+LIBSRC=$1/gd-*
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/*.a lib
+basename $LIBSRC >> liblist.txt
+
+LIBSRC=$1/jpeg-6b
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/*.a lib
+basename $LIBSRC >> liblist.txt
+
+LIBSRC=$1/libpng-*
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/libpng.a lib
+cp -afv $LIBSRC/lib/libpng15.a lib
+basename $LIBSRC >> liblist.txt
+
+LIBSRC=$1/zlib-*
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/*.a lib
+basename $LIBSRC >> liblist.txt
+
+LIBSRC=$1/curl-*
+cp -afv $LIBSRC/include/* include
+cp -afv $LIBSRC/lib/libcurl.a lib
+basename $LIBSRC >> liblist.txt
+
+
