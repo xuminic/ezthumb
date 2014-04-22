@@ -139,11 +139,6 @@ static int dump_duration(EZVID *vidx, int use_ms);
 static int dump_ezthumb(EZOPT *ezopt, EZIMG *image);
 
 
-#ifdef	CFG_GUI_ON
-//extern FILE *g_fopen(const char *filename, const char *mode);
-#endif
-
-
 void ezopt_init(EZOPT *ezopt, char *profile)
 {
 	memset(ezopt, 0, sizeof(EZOPT));
@@ -3232,12 +3227,7 @@ static int image_gdcanvas_background(EZIMG *image)
 	if (image->sysopt->background == NULL) {
 		return EZ_ERR_NONE;
 	}
-#ifdef	CFG_GUI_ON
-	//if ((fin = g_fopen(image->sysopt->background, "rb")) == NULL) {
 	if ((fin = fopen(image->sysopt->background, "rb")) == NULL) {
-#else
-	if ((fin = fopen(image->sysopt->background, "rb")) == NULL) {
-#endif
 		perror(image->sysopt->background);
 		return EZ_ERR_FILE;
 	}
@@ -3397,13 +3387,7 @@ static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 		return NULL;	/* skip the existed files */
 	}
 
-#ifdef	CFG_GUI_ON
-	//fp = g_fopen(image->filename, "wb");
-	fp = fopen(image->filename, "wb");
-#else
-	fp = fopen(image->filename, "wb");
-#endif
-	if (fp == NULL) {
+	if ((fp = fopen(image->filename, "wb")) == NULL) {
 		slog(EZDBG_WARNING, "%s: failed to create\n", image->filename);
 	}
 	return fp;

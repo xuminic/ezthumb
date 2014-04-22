@@ -26,7 +26,7 @@
 #include <math.h>
 
 #include "ezthumb.h"
-#ifdef	CFG_GUI_ON
+#ifndef	CFG_GUI_OFF
 #include "ezgui.h"
 #endif
 
@@ -95,7 +95,7 @@ static	struct	cliopt	clist[] = {
 		2, "the size setting of the font" },
 	{ CMD_G_RID, "grid", 
 		2, "the thumbnail grid in the canvas." },
-#ifdef	CFG_GUI_ON
+#ifndef	CFG_GUI_OFF
 	{ CMD_G_UI, "gui",
 		0, "enable the graphic user interface" },
 #endif
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	env_init(&sysopt);
 
-#ifdef	CFG_GUI_ON
+#ifndef	CFG_GUI_OFF
 	if (command_line_parser(argc, argv, NULL) == 'G') {
 		/* initialize the GUI module and read the configure file */
 		sysopt.gui =  ezgui_init(&sysopt, &argc, &argv);
@@ -260,7 +260,7 @@ int main(int argc, char **argv)
 	case CMD_VERSION:	/* version */
 		slosz(version);
 		version_ffmpeg();
-#ifdef	CFG_GUI_ON
+#ifndef	CFG_GUI_OFF
 		ezgui_version();
 #endif
 		todo = EZ_ERR_EOP;
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
 		if (sysopt.gui == NULL) {
 			csc_cli_print(clist);
 		}
-#ifdef	CFG_GUI_ON
+#ifndef	CFG_GUI_OFF
 		else {
 			todo = ezgui_run(sysopt.gui, argv+optind, argc-optind);
 		}
@@ -798,7 +798,7 @@ static int signal_handler(int sig)
 
 static int main_close(EZOPT *opt)
 {
-#ifdef	CFG_GUI_ON
+#ifndef	CFG_GUI_OFF
 	if (opt->gui) {
 		ezgui_close(opt->gui);
 		opt->gui = NULL;

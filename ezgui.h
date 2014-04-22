@@ -21,13 +21,16 @@
 #ifndef	_EZGUI_H_
 #define _EZGUI_H_
 
-/*#include <glib.h>
+#ifdef	CFG_GUI_GTK
+#include <glib.h>
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
-*/
+#else
+#include "iup.h"
+#endif
+
 #include "libcsoup.h"
 #include "ezthumb.h"
-#include "iup.h"
 
 
 #define	CFG_SUBPATH	"ezthumb"
@@ -74,7 +77,7 @@
 
 #define EZGUI_MAGIC		(('E'<<24) | ('Z'<<16) | ('U'<<8) | 'I')
 
-#if 0
+#if CFG_GUI_GTK
 typedef	struct		{
 	char		*fname;		/* the path of the configure file */
 	GKeyFile	*ckey;		/* key entry of the configure file */
@@ -142,6 +145,7 @@ typedef	struct		{
 	GtkTreeIter	*list_iter;
 
 	EZCFG		*config;
+	EZOPT		*sysopt;	/* system parameters */
 } EZGUI;
 #else
 typedef	struct		{

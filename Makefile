@@ -77,26 +77,28 @@ CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(SYSFLAG)
 RELDIR	= ./release-bin
 
 
-ifeq   ($(SYSGUI),CFG_GUI_ON)
-OBJDIR = objw
-else
+ifeq   ($(SYSGUI),CFG_GUI_OFF)
 OBJDIR = objc
+else
+# CFG_GUI_ON and CFG_GUI_GTK
+OBJDIR = objw
 endif
+
+LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
+	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup $(WGLIB)
 
 OBJS	= $(OBJDIR)/main.o	\
 	  $(OBJDIR)/ezthumb.o	\
 	  $(OBJDIR)/ezutil.o	\
 	  $(OBJDIR)/id_lookup.o
 
-ifeq	($(SYSGUI),CFG_GUI_ON)
-#OBJS	+= $(OBJDIR)/ezgui.o
-OBJS	+= $(OBJDIR)/eziup.o
+ifeq	($(SYSGUI),CFG_GUI_GTK)
+OBJS	+= $(OBJDIR)/ezgui.o
+LIBS	+= $(GUILIB)
+CFLAGS	+= $(GUIINC)
 endif
-
-LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup $(WGLIB)
-
 ifeq	($(SYSGUI),CFG_GUI_ON)
+OBJS	+= $(OBJDIR)/eziup.o
 LIBS	+= -liup $(GUILIB)
 CFLAGS	+= $(GUIINC)
 endif
@@ -105,8 +107,7 @@ RELDATE	= $(shell date  +%Y%m%d)
 RELDIR	= ezthumb-$(shell version.sh)
 
 
-
-.PHONY: all 
+.PHONY: all
 
 all: objdir ezthumb ezthumb.pdf
 
