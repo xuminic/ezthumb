@@ -142,6 +142,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	}
 
 	gui->filefilter = ezgui_make_filters(EZ_DEF_FILTER);
+	gui->list_cache = NULL;
 	//printf("%s\n", gui->filefilter);
 	return gui;
 }
@@ -190,6 +191,7 @@ int ezgui_close(EZGUI *gui)
 		if (gui->cur_dir) {
 			free(gui->cur_dir);
 		}
+		csc_cdl_destroy(&gui->list_cache);
 		free(gui);
 	}
 	return 0;
@@ -289,7 +291,7 @@ static int ezgui_page_main_reset(EZGUI *gui)
 {
 	IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
-	if (gui->list_idx == 0) {
+	if (gui->list_count == 0) {
 		IupSetAttribute(gui->button_run, "ACTIVE", "NO");
 	}
 	return 0;
@@ -364,6 +366,8 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 {
 	EZVID	vobj;
 	EZMEDIA	*minfo;
+	CSCLNK	*node;
+	int	len;
 
 	/* 20120903 Bugfix: set the codepage to utf-8 before calling
 	 * ezthumb core. In Win32 version, the ezthumb core uses the 
@@ -379,11 +383,11 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 	}
 	smm_codepage_reset();
 
-	/* FIXME: memory leak */
-	minfo = malloc(strlen(fname) + sizeof(EZMEDIA) + 4);
-	if (minfo == NULL) {
+	len = strlen(fname) + sizeof(EZMEDIA) + 4;
+	if ((node = csc_cdl_alloc_tail(&gui->list_cache, len)) == NULL) {
 		return NULL;
 	}
+	minfo = (EZMEDIA *)node->payload;
 
 	/* highlight the RUN button when the list is not empty */
 	IupSetAttribute(gui->button_run, "ACTIVE", "YES");
@@ -396,13 +400,13 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 
 	/* increase the list index first because the IUP list control
 	 * starts from 1 */
-	gui->list_idx++;
+	gui->list_count++;
 
-	IupSetAttributeId(gui->list_fname,  "", gui->list_idx, minfo->fname);
-	IupSetAttributeId(gui->list_size,   "", gui->list_idx, minfo->fsize);
-	IupSetAttributeId(gui->list_length, "", gui->list_idx, minfo->vidlen);
-	IupSetAttributeId(gui->list_resolv, "", gui->list_idx, minfo->resolv);
-	IupSetAttributeId(gui->list_prog,   "", gui->list_idx, minfo->progr);
+	IupSetAttributeId(gui->list_fname,  "", gui->list_count, minfo->fname);
+	IupSetAttributeId(gui->list_size,   "", gui->list_count, minfo->fsize);
+	IupSetAttributeId(gui->list_length, "", gui->list_count, minfo->vidlen);
+	IupSetAttributeId(gui->list_resolv, "", gui->list_count, minfo->resolv);
+	IupSetAttributeId(gui->list_prog,   "", gui->list_count, minfo->progr);
 
 	IupFlush();
 	//if (gui->dlg_main) {
@@ -420,6 +424,7 @@ static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 	}
 
 	//printf("Action %s: %p %d\n", text, ih, item);
+	gui->list_idx = item;	/* store the current index */
 	
 	smm_codepage_set(65001);
 	ezthumb(text, gui->sysopt);
@@ -597,7 +602,7 @@ static int ezgui_event_main_remove(Ihandle *ih)
 		}
 	}
 	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
-	if (gui->list_idx == 0) {
+	if (gui->list_count == 0) {
 		IupSetAttribute(gui->button_run, "ACTIVE", "NO");
 	}
 	return IUP_DEFAULT;
@@ -622,7 +627,7 @@ static int ezgui_event_main_run(Ihandle *ih)
 		}
 	}
 	if (n == 0) {
-		for (i = 0; i < gui->list_idx; i++) {
+		for (i = 0; i < gui->list_count; i++) {
 			fname = IupGetAttributeId(gui->list_fname, "",  i+1);
 			ezgui_event_main_workarea((Ihandle*)gui, i+1, fname);
 		}
@@ -655,13 +660,22 @@ static char *ezgui_make_filters(char *slist)
 
 static int ezgui_remove_item(EZGUI *gui, int idx)
 {
-	printf("Remove %s\n", IupGetAttributeId(gui->list_fname, "",  idx));
+	CSCLNK	*node;
+	char	*fname;
+
+	fname = IupGetAttributeId(gui->list_fname, "",  idx);
+	printf("Remove %s\n", fname);
+
 	IupSetInt(gui->list_fname, "REMOVEITEM", idx);
 	IupSetInt(gui->list_size, "REMOVEITEM", idx);
 	IupSetInt(gui->list_length, "REMOVEITEM", idx);
 	IupSetInt(gui->list_resolv, "REMOVEITEM", idx);
 	IupSetInt(gui->list_prog, "REMOVEITEM", idx);
-	gui->list_idx--;
+	gui->list_count--;
+
+	if ((node = csc_cdl_goto(gui->list_cache, idx - 1)) != NULL) {
+		csc_cdl_free(&gui->list_cache, node);
+	}
 	return 0;
 }
 
@@ -686,29 +700,43 @@ static int ezgui_show_progress(EZGUI *gui, int cur, int range)
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 {
 	EZGUI	*gui = ((EZOPT*) v)->gui;
+	EZVID	*vidx = ((EZOPT*) v)->vidobj;
+	EZMEDIA	*minfo = NULL;
+	CSCLNK	*node;
 
 	switch (eid) {
 	case EN_PROC_BEGIN:
 		IupSetInt(gui->prog_bar, "MIN", 0);
 		IupSetInt(gui->prog_bar, "VALUE", 0);
 		IupSetInt(gui->ps_zbox, "VALUEPOS", 1);	/* show progress */
-		IupFlush();
 		break;
 	case EN_PROC_CURRENT:
-		//IupSetAttributeId(gui->list_prog,   "", 
-		//gui->list_idx, minfo->progr);
+		node = csc_cdl_goto(gui->list_cache, gui->list_idx - 1);
+		if (node) {
+			minfo = (EZMEDIA*) node->payload;
+			sprintf(minfo->progr, "%d%%", (int)(opt*100/param));
+			IupSetAttributeId(gui->list_prog, "", 
+					gui->list_idx, minfo->progr);
+		}
 		IupSetInt(gui->prog_bar, "MAX", param);
 		IupSetInt(gui->prog_bar, "VALUE", opt);
 		break;
 	case EN_PROC_END:
+		node = csc_cdl_goto(gui->list_cache, gui->list_idx - 1);
+		if (node) {
+			minfo = (EZMEDIA*) node->payload;
+			strcpy(minfo->progr, "100%");
+			IupSetAttributeId(gui->list_prog, "", 
+					gui->list_idx, minfo->progr);
+		}
 		IupSetInt(gui->prog_bar, "VALUE", param);
 		smm_sleep(0, 500000);
 		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
-		IupFlush();
 		break;
 	default:
 		return EN_EVENT_PASSTHROUGH;
 	}
+	IupFlush();
 	return eid;
 }
 

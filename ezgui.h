@@ -143,7 +143,7 @@ typedef	struct		{
 
 	EZCFG		*config;
 } EZGUI;
-#endif
+#else
 typedef	struct		{
 	unsigned	magic;		/* "EZUI" */
 	EZOPT		*sysopt;	/* system parameters */
@@ -155,7 +155,9 @@ typedef	struct		{
 	Ihandle		*list_length;	/* the list control of media length */
 	Ihandle		*list_resolv;	/* the list control of resolution */
 	Ihandle		*list_prog;	/* the list control of progress */
-	int		list_idx;	/* starts from 1 */
+	int		list_idx;	/* current active item start from 1 */
+	int 		list_count;	/* total items in the list */
+	CSCLNK		*list_cache;
 
 	/* Main Page: Progress Bar and Buttons */
 	Ihandle		*prog_bar;
@@ -211,6 +213,7 @@ typedef	struct		{
 	int		tmp_jpg_qf;
 	int		tmp_gifa_fr;
 } EZGUI;
+#endif
 
 typedef	struct	{
 	char	fsize[16];
