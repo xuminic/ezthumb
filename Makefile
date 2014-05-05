@@ -1,26 +1,18 @@
 
 ifndef	SYSTOOL		# Options: cygwin, unix, mingw, cygmingw
 ifeq	($(MSYSTEM),MINGW32)
-export	SYSTOOL = mingw
+SYSTOOL = mingw
 else
-export	SYSTOOL	= unix
+SYSTOOL	= unix
 endif
 endif
 
-ifndef	SYSAPI		# Options: CFG_WIN32_API, CFG_UNIX_API
-ifeq	($(MSYSTEM),MINGW32)
-export	SYSAPI	= CFG_WIN32_API
-else
-export	SYSAPI	= CFG_UNIX_API
-endif
+ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF, CFG_GUI_GTK
+SYSGUI	= CFG_GUI_ON
 endif
 
-ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
-export	SYSGUI	= CFG_GUI_ON
-endif
-
-CSOUP	= ../libcsoup
-IUP	= ../iup/iup
+CSOUP	= external/libcsoup
+IUP	= external/iup
 
 
 
@@ -49,20 +41,23 @@ SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL $(EXINC)
 LIBDIR	= -L$(FFMPEG)/lib -L$(EXDIR)/lib -L$(CSOUP)
 endif
 
+
+# This setting is used for POSIX environment with the following libraries
+# installed: GTK+, FFMPEG, FreeType and libgd
 ifeq	($(SYSTOOL),unix)
 CC	= gcc
 AR	= ar
 CP	= cp
 RM	= rm -f
 
-EXDIR	= 
-FFMPEG  = /usr/include/ffmpeg
-EXINC	= -I$(FFMPEG) -I$(CSOUP) -I$(IUP)/include
-
 GUIINC	= `pkg-config gtk+-2.0 --cflags`
 GUILIB	= `pkg-config gtk+-2.0 --libs` -lX11
-SYSFLAG	= $(EXINC)
-LIBDIR	= -L$(CSOUP) -L$(IUP)/lib/Linux26g4_64
+SYSINC	= -I/usr/include/ffmpeg $(GUIINC)
+SYSLIB	= -L$(IUP)/lib/Linux26g4_64
+EXLIB	= $(CSOUP)/libcsoup.a $(IUP)/lib/Linux26g4_64/libiup.a
+ifneq 	($(SYSGUI),CFG_GUI_GTK)
+GUILIB	+= -liup
+endif
 endif
 
 
@@ -71,68 +66,117 @@ BINDIR	= /usr/local/bin
 MANDIR	= /usr/local/man/man1
 
 DEBUG	= -g -DDEBUG
-DEFINES = -D_FILE_OFFSET_BITS=64 -D$(SYSGUI)
-CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(SYSFLAG) 
+DEFINES = -D_FILE_OFFSET_BITS=64
+INCDIR	= -I$(CSOUP) -I$(IUP)/include $(SYSINC)
+LIBDIR  = -L$(CSOUP) $(SYSLIB)
+CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(INCDIR) $(SYSFLAG) 
 
 RELDIR	= ./release-bin
-
-
-ifeq   ($(SYSGUI),CFG_GUI_OFF)
-OBJDIR = objc
-else
-# CFG_GUI_ON and CFG_GUI_GTK
-OBJDIR = objw
-endif
+OBJDIR  = ./objs
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	 -lfreetype -lpng -ljpeg -lz -lm -lcsoup $(WGLIB)
-
-OBJS	= $(OBJDIR)/main.o	\
-	  $(OBJDIR)/ezthumb.o	\
-	  $(OBJDIR)/ezutil.o	\
-	  $(OBJDIR)/id_lookup.o
+	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup $(WGLIB)
 
 ifeq	($(SYSGUI),CFG_GUI_GTK)
-OBJS	+= $(OBJDIR)/ezgui.o
-LIBS	+= $(GUILIB)
-CFLAGS	+= $(GUIINC)
+OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/ezgui.o
+else
+OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/eziup.o
 endif
-ifeq	($(SYSGUI),CFG_GUI_ON)
-OBJS	+= $(OBJDIR)/eziup.o
-LIBS	+= -liup $(GUILIB)
-CFLAGS	+= $(GUIINC)
-endif
+OBJCON	= $(OBJDIR)/main_con.o
+
+OBJS	= $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o  $(OBJDIR)/id_lookup.o
+
 
 RELDATE	= $(shell date  +%Y%m%d)
 RELDIR	= ezthumb-$(shell version.sh)
 
-
-.PHONY: all
-
-all: objdir ezthumb ezthumb.pdf
-
 ifeq	($(SYSTOOL),unix)
-ezthumb: $(OBJS) 
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJS) $(LIBS)
+TGTGUI	= ezthumb
+TGTCON	= ezthumb_con
+TARGET	= $(TGTGUI)
 else
-ezthumb:
-	SYSGUI=CFG_GUI_OFF make objdir ezthumb.exe
-	SYSGUI=CFG_GUI_ON  make objdir ezthumb_win.exe
+TGTGUI	= ezthumb_win.exe
+TGTCON	= ezthumb.exe
+TARGET	= $(TGTGUI) $(TGTCON)
 endif
 
-# internal rules, do not use it
-ezthumb.exe: $(OBJS)
+$(OBJDIR)/%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+
+.PHONY: objs
+
+all: objdir $(EXLIB) $(TARGET)
+
+$(TGTGUI): $(OBJGUI) $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) $(GUILIB)
+
+$(TGTCON): $(OBJCON) $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS)
 
-# internal rules, do not use it
-ezthumb_win.exe: $(OBJDIR)/ezthumb_icon.o $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) 
+$(OBJDIR)/main_con.o: main.c
+	$(CC) $(CFLAGS) -DCFG_GUI_OFF -c -o $@ $<
+
+$(OBJDIR)/main_gui.o: main.c
+	$(CC) $(CFLAGS) -D$(SYSGUI) -c -o $@ $<
 
 ezthumb.pdf: ezthumb.1
 	man -l -Tps $< | ps2pdf - $@
 
+$(IUP)/lib/Linux26g4_64/libiup.a:
+	make -C $(IUP) do_all
+
+$(CSOUP)/libcsoup.a:
+	make -C $(CSOUP) all
+
 objdir:
 	@if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
+
+ezicon.h: SMirC-thumbsup.svg
+	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
+
+$(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
+	windres $< -o $@
+
+install: all
+	install -s $(TARGET) $(BINDIR)
+	install ezthumb.1 $(MANDIR)
+
+debug: all
+	$(CP) $(TARGET) ~/bin
+
+clean:
+	$(RM) -r $(OBJDIR)
+	$(RM) $(TGTGUI) $(TGTCON)
+
+cleanall: clean
+	make -C $(IUP) clean
+	make -C $(CSOUP) clean
+
+ifeq	($(SYSTOOL),unix)
+release: rel_source
+else
+release: rel_source rel_win_bin
+endif
+	
+rel_source: cleanall
+	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
+	-mkdir $(RELDIR)
+	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* $(RELDIR)
+	-$(CP) COPYING ChangeLog SMirC-thumbsup.svg $(RELDIR)
+	-$(CP) -a external libmingw $(RELDIR)
+	-tar czf $(RELDIR).tar.gz $(RELDIR)
+	-$(RM) -r $(RELDIR)
+
+install_win: all
+	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
+	-mkdir $(RELDIR)-win-bin
+	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
+	-$(CP) $(EXDLL) $(RELDIR)-win-bin
+
+rel_win_bin: install_win
+	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin
+	-$(RM) -r $(RELDIR)-win-bin
 
 showdll:
 	@if [ -f ezthumb.exe ]; then \
@@ -143,67 +187,4 @@ showdll:
 		echo "[ezthumb_win.exe]:"; \
 		objdump -p ezthumb_win.exe | grep 'DLL Name:'; \
 	fi
-
-ezicon.h: SMirC-thumbsup.svg
-	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
-
-$(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
-	windres $< -o $@
-
-ifeq	($(SYSTOOL),unix)
-install: ezthumb
-	install -s ezthumb $(BINDIR)
-	install ezthumb.1 $(MANDIR)
-else
-install: ezthumb 
-	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
-	-mkdir $(RELDIR)-win-bin
-	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
-	-$(CP) $(EXDLL) $(RELDIR)-win-bin
-endif
-
-debug: ezthumb
-	$(CP) ezthumb ~/bin
-
-cleanobj:
-	$(RM) -r $(OBJDIR)
-
-ifeq	($(SYSTOOL),unix)
-clean: cleanobj
-	$(RM) ezthumb 
-else
-clean:
-	SYSGUI=CFG_GUI_OFF make cleanobj
-	SYSGUI=CFG_GUI_ON  make cleanobj
-	$(RM) ezthumb.exe ezthumb_win.exe 
-endif
-
-cleanall: clean
-	$(RM) ezthumb.pdf
-
-rel_source:
-	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
-	-mkdir $(RELDIR)
-	RELCS=`pwd`/$(RELDIR)/libcsoup make -C $(CSOUP) release
-	-mkdir $(RELDIR)/ezthumb
-	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* $(RELDIR)/ezthumb
-	-$(CP) COPYING ChangeLog SMirC-thumbsup.svg $(RELDIR)/ezthumb
-	-tar czf $(RELDIR).tar.gz $(RELDIR)
-	-$(RM) -r $(RELDIR)
-
-rel_win_dev:
-	-tar czf ezthumb-libmingw-$(RELDATE).tar.gz libmingw
-
-rel_win_bin: install
-	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin
-	-$(RM) -r $(RELDIR)-win-bin
-
-ifeq	($(SYSTOOL),unix)
-release: rel_source
-else
-release: rel_source rel_win_dev rel_win_bin
-endif
-	
-$(OBJDIR)/%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
 

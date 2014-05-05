@@ -3569,16 +3569,14 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 
 static char *ezopt_name_build(char *path, char *fname, char *buf, char *sfx)
 {
-	char	*p, sep[4];
+	char	*p;
 
 	if (!path || !*path) {
 		strcpy(buf, fname);
 	} else {
 		strcpy(buf, path);
-		if (buf[strlen(buf)-1] != SMM_DELIM) {
-			sep[0] = SMM_DELIM;
-			sep[1] = 0;
-			strcat(buf, sep);
+		if (!csc_isdelim(SMM_PATH_DELIM, buf[strlen(buf)-1])) {
+			strcat(buf, SMM_DEF_DELIM);
 		}
 		strcat(buf, csc_path_basename(fname, NULL, 0));
 	}

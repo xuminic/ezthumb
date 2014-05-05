@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#define CFG_GUI_GTK	1
 #include "ezgui.h"
 #include "ezicon.h"
 
