@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1EBC7A53-4677-4C3A-8D4A-49D301F17D85}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\lib\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\lib\x64\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\obj\Debug\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_x64\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\src;..\include;..\srclua5;..\srclua5\lh;..\..\lua5.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;IUPLUA_USELH;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0416</Culture>
+    </ResourceCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\src;..\include;..\srclua5;..\srclua5\lh;..\..\lua5.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;IUPLUA_USELH;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0416</Culture>
+    </ResourceCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\srclua5\il_backgroundbox.c" />
+    <ClCompile Include="..\srclua5\il_detachbox.c" />
+    <ClCompile Include="..\srclua5\il_expander.c" />
+    <ClCompile Include="..\srclua5\il_gridbox.c" />
+    <ClCompile Include="..\srclua5\il_link.c" />
+    <ClCompile Include="..\srclua5\il_progressdlg.c" />
+    <ClCompile Include="..\srclua5\iuplua.c">
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level4</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level4</WarningLevel>
+    </ClCompile>
+    <ClCompile Include="..\srclua5\iuplua_api.c" />
+    <ClCompile Include="..\srclua5\il_button.c" />
+    <ClCompile Include="..\srclua5\il_canvas.c" />
+    <ClCompile Include="..\srclua5\il_cbox.c" />
+    <ClCompile Include="..\srclua5\il_clipboard.c" />
+    <ClCompile Include="..\srclua5\il_colordlg.c" />
+    <ClCompile Include="..\srclua5\il_dialog.c" />
+    <ClCompile Include="..\srclua5\il_filedlg.c" />
+    <ClCompile Include="..\srclua5\il_fill.c" />
+    <ClCompile Include="..\srclua5\il_fontdlg.c" />
+    <ClCompile Include="..\srclua5\il_frame.c" />
+    <ClCompile Include="..\srclua5\il_hbox.c" />
+    <ClCompile Include="..\srclua5\il_image.c" />
+    <ClCompile Include="..\srclua5\il_imagergb.c" />
+    <ClCompile Include="..\srclua5\il_imagergba.c" />
+    <ClCompile Include="..\srclua5\il_item.c" />
+    <ClCompile Include="..\srclua5\il_label.c" />
+    <ClCompile Include="..\srclua5\il_list.c" />
+    <ClCompile Include="..\srclua5\il_menu.c" />
+    <ClCompile Include="..\srclua5\il_messagedlg.c" />
+    <ClCompile Include="..\srclua5\il_multiline.c" />
+    <ClCompile Include="..\srclua5\il_normalizer.c" />
+    <ClCompile Include="..\srclua5\il_progressbar.c" />
+    <ClCompile Include="..\srclua5\il_radio.c" />
+    <ClCompile Include="..\srclua5\il_sbox.c" />
+    <ClCompile Include="..\srclua5\il_scrollbox.c" />
+    <ClCompile Include="..\srclua5\il_separator.c" />
+    <ClCompile Include="..\srclua5\il_spin.c" />
+    <ClCompile Include="..\srclua5\il_spinbox.c" />
+    <ClCompile Include="..\srclua5\il_split.c" />
+    <ClCompile Include="..\srclua5\il_submenu.c" />
+    <ClCompile Include="..\srclua5\il_tabs.c" />
+    <ClCompile Include="..\srclua5\il_text.c" />
+    <ClCompile Include="..\srclua5\il_timer.c" />
+    <ClCompile Include="..\srclua5\il_toggle.c" />
+    <ClCompile Include="..\srclua5\il_tree.c" />
+    <ClCompile Include="..\srclua5\il_user.c" />
+    <ClCompile Include="..\srclua5\il_val.c" />
+    <ClCompile Include="..\srclua5\il_vbox.c" />
+    <ClCompile Include="..\srclua5\il_zbox.c" />
+    <ClCompile Include="..\srclua5\iuplua_getcolor.c" />
+    <ClCompile Include="..\srclua5\iuplua_getparam.c" />
+    <ClCompile Include="..\srclua5\iuplua_scanf.c" />
+    <ClCompile Include="..\srclua5\iuplua_tree_aux.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\srclua5\backgroundbox.lua" />
+    <None Include="..\srclua5\detachbox.lua" />
+    <None Include="..\srclua5\expander.lua" />
+    <None Include="..\srclua5\gridbox.lua" />
+    <None Include="..\srclua5\iuplua.def" />
+    <None Include="..\srclua5\constants.lua" />
+    <None Include="..\srclua5\ctrl_template.lua" />
+    <None Include="..\srclua5\generator.lua" />
+    <None Include="..\srclua5\iuplua.lua" />
+    <None Include="..\srclua5\button.lua" />
+    <None Include="..\srclua5\canvas.lua" />
+    <None Include="..\srclua5\cbox.lua" />
+    <None Include="..\srclua5\clipboard.lua" />
+    <None Include="..\srclua5\colordlg.lua" />
+    <None Include="..\srclua5\dialog.lua" />
+    <None Include="..\srclua5\filedlg.lua" />
+    <None Include="..\srclua5\fill.lua" />
+    <None Include="..\srclua5\fontdlg.lua" />
+    <None Include="..\srclua5\frame.lua" />
+    <None Include="..\srclua5\hbox.lua" />
+    <None Include="..\srclua5\image.lua" />
+    <None Include="..\srclua5\imagergb.lua" />
+    <None Include="..\srclua5\imagergba.lua" />
+    <None Include="..\srclua5\item.lua" />
+    <None Include="..\srclua5\label.lua" />
+    <None Include="..\srclua5\link.lua" />
+    <None Include="..\srclua5\list.lua" />
+    <None Include="..\srclua5\menu.lua" />
+    <None Include="..\srclua5\messagedlg.lua" />
+    <None Include="..\srclua5\multiline.lua" />
+    <None Include="..\srclua5\normalizer.lua" />
+    <None Include="..\srclua5\progressbar.lua" />
+    <None Include="..\srclua5\radio.lua" />
+    <None Include="..\srclua5\sbox.lua" />
+    <None Include="..\srclua5\scrollbox.lua" />
+    <None Include="..\srclua5\separator.lua" />
+    <None Include="..\srclua5\spin.lua" />
+    <None Include="..\srclua5\spinbox.lua" />
+    <None Include="..\srclua5\split.lua" />
+    <None Include="..\srclua5\submenu.lua" />
+    <None Include="..\srclua5\tabs.lua" />
+    <None Include="..\srclua5\text.lua" />
+    <None Include="..\srclua5\timer.lua" />
+    <None Include="..\srclua5\toggle.lua" />
+    <None Include="..\srclua5\tree.lua" />
+    <None Include="..\srclua5\user.lua" />
+    <None Include="..\srclua5\val.lua" />
+    <None Include="..\srclua5\vbox.lua" />
+    <None Include="..\srclua5\zbox.lua" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\srclua5\il.h" />
+    <ClInclude Include="..\include\iuplua.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

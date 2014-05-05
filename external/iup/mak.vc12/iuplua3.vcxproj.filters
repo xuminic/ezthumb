@@ -1,0 +1,99 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{24521c17-0f80-403e-93f1-17741e1fd93e}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;hpj;bat;for;f90</Extensions>
+    </Filter>
+    <Filter Include="Lua">
+      <UniqueIdentifier>{488cfa4b-78b7-475e-9ef4-bc96baba5ae5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Includes">
+      <UniqueIdentifier>{2d093331-3237-4eea-b071-52a6ffa2682a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\srclua3\il_cbox.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_getcolor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_getparam.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_sbox.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_scanf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_scrollbox.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_spin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_split.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_tabs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_tree.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\il_val.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\iuplua.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\iuplua_api.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srclua3\iuplua_widgets.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\srclua3\constants.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\iuplua.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\iuplua_widgets.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\sbox.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\scrollbox.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\spin.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\split.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\tabs.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\tree.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\srclua3\val.lua">
+      <Filter>Lua</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\srclua3\il.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iuplua.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

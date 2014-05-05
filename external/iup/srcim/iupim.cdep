@@ -1,0 +1,11 @@
+$(OBJDIR)/iup_im.o: iup_im.c /cygdrive/d/tecgraf/im/include/im.h \
+ /cygdrive/d/tecgraf/im/include/old_im.h \
+ /cygdrive/d/tecgraf/im/include/im_convert.h \
+ /cygdrive/d/tecgraf/im/include/im_image.h \
+ /cygdrive/d/tecgraf/im/include/im_counter.h \
+ /cygdrive/d/tecgraf/im/include/im_util.h \
+ /cygdrive/d/tecgraf/im/include/im_image.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupim.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_assert.h ../src/iup_str.h \
+ ../src/iup_image.h

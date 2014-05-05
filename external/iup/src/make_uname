@@ -1,0 +1,4 @@
+#This builds all the libraries of the folder for 1 uname
+
+tecmake USE_MOTIF=Yes $1 $2 $3 $4 $5 $6 $7
+tecmake USE_GTK=Yes $1 $2 $3 $4 $5 $6 $7

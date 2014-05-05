@@ -1,0 +1,62 @@
+$(OBJDIR)/iuplua.o: iuplua.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../include/iuplua.h il.h loh/iuplua.loh loh/constants.loh
+$(OBJDIR)/iuplua_api.o: iuplua_api.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h il.h \
+ ../src/iup_attrib.h ../src/iup_globalattrib.h
+$(OBJDIR)/iuplua_widgets.o: iuplua_widgets.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h il.h \
+ loh/iuplua_widgets.loh
+$(OBJDIR)/il_scanf.o: il_scanf.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h il.h \
+ ../src/iup_str.h ../src/iup_predialogs.h
+$(OBJDIR)/il_cbox.o: il_cbox.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../include/iuplua.h il.h il_controls.h
+$(OBJDIR)/il_sbox.o: il_sbox.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/lua/include/lua.h \
+ ../include/iuplua.h il.h il_controls.h loh/sbox.loh
+$(OBJDIR)/il_scrollbox.o: il_scrollbox.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/lua/include/lua.h \
+ ../include/iuplua.h il.h il_controls.h loh/scrollbox.loh
+$(OBJDIR)/il_split.o: il_split.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/lua/include/lua.h \
+ ../include/iuplua.h il.h il_controls.h loh/split.loh
+$(OBJDIR)/il_spin.o: il_spin.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/lua/include/lua.h \
+ ../include/iuplua.h il.h il_controls.h loh/spin.loh
+$(OBJDIR)/il_val.o: il_val.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcontrols.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iuplua.h il.h \
+ il_controls.h loh/val.loh
+$(OBJDIR)/il_tree.o: il_tree.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcontrols.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iuplua.h il.h \
+ il_controls.h loh/tree.loh
+$(OBJDIR)/il_tabs.o: il_tabs.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iuplua.h il.h \
+ il_controls.h loh/tabs.loh
+$(OBJDIR)/il_getcolor.o: il_getcolor.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iuplua.h il.h \
+ il_controls.h
+$(OBJDIR)/il_getparam.o: il_getparam.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h il.h \
+ il_controls.h

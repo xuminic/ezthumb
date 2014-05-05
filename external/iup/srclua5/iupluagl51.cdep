@@ -1,0 +1,13 @@
+$(OBJDIR)/iuplua_glcanvas.o: iuplua_glcanvas.c \
+ /cygdrive/d/tecgraf/lua5.1/include/lua.h \
+ /cygdrive/d/tecgraf/lua5.1/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua5.1/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua5.1/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupgl.h \
+ ../include/iuplua.h ../include/iupluagl.h il.h
+$(OBJDIR)/il_glcanvas.o: il_glcanvas.c /cygdrive/d/tecgraf/lua5.1/include/lua.h \
+ /cygdrive/d/tecgraf/lua5.1/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua5.1/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua5.1/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupgl.h il.h lh/glcanvas.lh

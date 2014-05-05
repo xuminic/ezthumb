@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5A42028B-912C-AAB9-D3E1-12DF9264A5FD}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\lib\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\lib\x64\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\obj\Debug\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_x64\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;..\src;..\srcmglplot;..\srcmglplot\ftgl;..\srcmglplot\freetype;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;_DEBUG;IUP_ASSERT;NO_PNG;NO_GSL;FTGL_LIBRARY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;..\src;..\srcmglplot;..\srcmglplot\ftgl;..\srcmglplot\freetype;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;_DEBUG;IUP_ASSERT;NO_PNG;NO_GSL;FTGL_LIBRARY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\iup_mglplot.h" />
+    <ClInclude Include="..\srcmglplot\mgl\config.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_ab.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_addon.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_c.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_data.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_define.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_eps.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_eval.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_evalc.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_f.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_font.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_gl.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_parse.h" />
+    <ClInclude Include="..\srcmglplot\mgl\mgl_zb.h" />
+    <ClInclude Include="..\srcmglplot\mgl_makefont.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\srcmglplot\mgl\mgl_1d.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_2d.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_3d.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_ab.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_addon.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_axis.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_c.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_combi.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_cont.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_crust.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_data.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_data_cf.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_data_io.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_data_png.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_def_font.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_eps.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_eval.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_evalc.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_evalp.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_exec.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_export.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_f.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_fit.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_flow.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_font.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_gl.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_main.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_parse.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_pde.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_tex_table.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_vect.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_zb.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl\mgl_zb2.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTCharmap.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTContour.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTFace.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTFont\FTFont.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTGlyph\FTGlyph.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTGlyphContainer.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTLibrary.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTPoint.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTSize.cpp" />
+    <ClCompile Include="..\srcmglplot\ftgl\FTVectoriser.cpp" />
+    <ClCompile Include="..\srcmglplot\iup_mglplot.cpp" />
+    <ClCompile Include="..\srcmglplot\mgl_makefont.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\srcmglplot\iup_mglplot.def" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

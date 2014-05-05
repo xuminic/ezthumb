@@ -1,0 +1,5 @@
+$(OBJDIR)/iup_lua52.o: iup_lua52.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/lualib.h lh/indent.lh lh/console5.lh

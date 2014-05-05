@@ -1,0 +1,14 @@
+$(OBJDIR)/iuplua_matrixex_aux.o: iuplua_matrixex_aux.c \
+ /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupmatrixex.h \
+ ../include/iuplua.h il.h ../src/iup_attrib.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h
+$(OBJDIR)/il_matrixex.o: il_matrixex.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupmatrixex.h il.h lh/matrixex.lh

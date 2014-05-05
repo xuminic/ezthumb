@@ -1,0 +1,67 @@
+$(OBJDIR)/iuplua_controls.o: iuplua_controls.c \
+ /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lualib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupcontrols.h \
+ ../include/iuplua.h ../include/iupluacontrols.h il.h il_controls.h
+$(OBJDIR)/iuplua_mask.o: iuplua_mask.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupmask.h \
+ ../include/iuplua.h il.h il_controls.h
+$(OBJDIR)/iuplua_matrix_aux.o: iuplua_matrix_aux.c \
+ /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupcontrols.h \
+ /cygdrive/d/tecgraf/cd/include/cd.h \
+ /cygdrive/d/tecgraf/cd/include/cd_old.h \
+ /cygdrive/d/tecgraf/cd/include/cdlua.h ../include/iuplua.h il.h \
+ il_controls.h ../src/iup_attrib.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h
+$(OBJDIR)/il_dial.o: il_dial.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/dial.lh
+$(OBJDIR)/il_gauge.o: il_gauge.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/gauge.lh
+$(OBJDIR)/il_colorbrowser.o: il_colorbrowser.c \
+ /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/colorbrowser.lh
+$(OBJDIR)/il_colorbar.o: il_colorbar.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/colorbar.lh
+$(OBJDIR)/il_matrix.o: il_matrix.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/matrix.lh
+$(OBJDIR)/il_matrixlist.o: il_matrixlist.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/matrixlist.lh
+$(OBJDIR)/il_cells.o: il_cells.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h lh/cells.lh

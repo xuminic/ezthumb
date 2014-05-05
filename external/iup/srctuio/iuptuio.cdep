@@ -1,0 +1,41 @@
+$(OBJDIR)/TuioClient.o: tuio/TuioClient.cpp tuio/TuioClient.h \
+ oscpack/osc/OscReceivedElements.h oscpack/osc/OscTypes.h \
+ oscpack/osc/OscException.h oscpack/osc/OscPrintReceivedElements.h \
+ oscpack/ip/UdpSocket.h oscpack/ip/NetworkingUtils.h \
+ oscpack/ip/IpEndpointName.h oscpack/ip/PacketListener.h \
+ tuio/TuioListener.h tuio/TuioObject.h tuio/TuioContainer.h \
+ tuio/TuioPoint.h tuio/TuioTime.h tuio/TuioCursor.h
+$(OBJDIR)/TuioServer.o: tuio/TuioServer.cpp tuio/TuioServer.h \
+ oscpack/osc/OscOutboundPacketStream.h oscpack/osc/OscTypes.h \
+ oscpack/osc/OscException.h oscpack/ip/NetworkingUtils.h \
+ oscpack/ip/UdpSocket.h oscpack/ip/NetworkingUtils.h \
+ oscpack/ip/IpEndpointName.h tuio/TuioObject.h tuio/TuioContainer.h \
+ tuio/TuioPoint.h tuio/TuioTime.h tuio/TuioCursor.h
+$(OBJDIR)/TuioTime.o: tuio/TuioTime.cpp tuio/TuioTime.h
+$(OBJDIR)/OscTypes.o: oscpack/osc/OscTypes.cpp oscpack/osc/OscTypes.h
+$(OBJDIR)/OscOutboundPacketStream.o: oscpack/osc/OscOutboundPacketStream.cpp \
+ oscpack/osc/OscOutboundPacketStream.h oscpack/osc/OscTypes.h \
+ oscpack/osc/OscException.h oscpack/osc/OscHostEndianness.h
+$(OBJDIR)/OscReceivedElements.o: oscpack/osc/OscReceivedElements.cpp \
+ oscpack/osc/OscReceivedElements.h oscpack/osc/OscTypes.h \
+ oscpack/osc/OscException.h oscpack/osc/OscHostEndianness.h
+$(OBJDIR)/OscPrintReceivedElements.o: oscpack/osc/OscPrintReceivedElements.cpp \
+ oscpack/osc/OscPrintReceivedElements.h oscpack/osc/OscReceivedElements.h \
+ oscpack/osc/OscTypes.h oscpack/osc/OscException.h
+$(OBJDIR)/iup_tuio.o: iup_tuio.cpp tuio/TuioListener.h tuio/TuioObject.h \
+ tuio/TuioContainer.h tuio/TuioPoint.h tuio/TuioTime.h tuio/TuioCursor.h \
+ tuio/TuioClient.h oscpack/osc/OscReceivedElements.h \
+ oscpack/osc/OscTypes.h oscpack/osc/OscException.h \
+ oscpack/osc/OscPrintReceivedElements.h oscpack/ip/UdpSocket.h \
+ oscpack/ip/NetworkingUtils.h oscpack/ip/IpEndpointName.h \
+ oscpack/ip/PacketListener.h tuio/TuioListener.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuptuio.h \
+ ../include/iupcbs.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_assert.h \
+ ../src/iup_str.h ../src/iup_register.h ../src/iup_drv.h \
+ ../src/iup_drvinfo.h
+$(OBJDIR)/NetworkingUtils.o: oscpack/ip/posix/NetworkingUtils.cpp \
+ oscpack/ip/NetworkingUtils.h
+$(OBJDIR)/UdpSocket.o: oscpack/ip/posix/UdpSocket.cpp oscpack/ip/UdpSocket.h \
+ oscpack/ip/NetworkingUtils.h oscpack/ip/IpEndpointName.h \
+ oscpack/ip/PacketListener.h oscpack/ip/TimerListener.h

@@ -1,0 +1,5 @@
+$(OBJDIR)/iup_cd.o: iup_cd.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h /cygdrive/d/tecgraf/cd/include/cd.h \
+ /cygdrive/d/tecgraf/cd/include/cd_private.h \
+ /cygdrive/d/tecgraf/cd/include/cdiup.h \
+ /cygdrive/d/tecgraf/cd/include/cdnative.h

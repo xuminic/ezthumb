@@ -1,0 +1,12 @@
+20140430: 0.4.0
+  Revised the codes with Doxygen supporting
+20131009: 0.2.2
+   Open files with the sharing mode when retrieving file size
+20130830: 0.2.1
+  Merged all modules into libcsoup 0.2.1
+20120820: SMM V1.1.0.0 
+  Replaced the error codes strategy by smm style consistently
+  Improved the smm_pathtrek() function
+20111103: SMM V1.0.0.0 
+  Port from ezthum project
+	

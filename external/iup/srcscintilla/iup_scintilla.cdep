@@ -1,0 +1,766 @@
+$(OBJDIR)/AutoComplete.o: src/AutoComplete.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/lexlib/CharacterSet.h src/AutoComplete.h \
+ ../srcscintilla/include/Scintilla.h
+$(OBJDIR)/CallTip.o: src/CallTip.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/CallTip.h
+$(OBJDIR)/Catalogue.o: src/Catalogue.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/LexerModule.h src/Catalogue.h
+$(OBJDIR)/CellBuffer.o: src/CellBuffer.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/SplitVector.h src/Partitioning.h \
+ src/CellBuffer.h src/UniConversion.h
+$(OBJDIR)/CharClassify.o: src/CharClassify.cxx src/CharClassify.h
+$(OBJDIR)/ContractionState.o: src/ContractionState.cxx \
+ ../srcscintilla/include/Platform.h src/SplitVector.h src/Partitioning.h \
+ src/RunStyles.h src/ContractionState.h
+$(OBJDIR)/Decoration.o: src/Decoration.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/SplitVector.h src/Partitioning.h \
+ src/RunStyles.h src/Decoration.h
+$(OBJDIR)/Document.o: src/Document.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ src/SplitVector.h src/Partitioning.h src/RunStyles.h src/CellBuffer.h \
+ src/PerLine.h src/CharClassify.h ../srcscintilla/lexlib/CharacterSet.h \
+ src/Decoration.h src/CaseFolder.h src/Document.h src/RESearch.h \
+ src/UniConversion.h
+$(OBJDIR)/Editor.o: src/Editor.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ src/SplitVector.h src/Partitioning.h src/RunStyles.h \
+ src/ContractionState.h src/CellBuffer.h src/KeyMap.h src/Indicator.h \
+ src/XPM.h src/LineMarker.h src/Style.h src/ViewStyle.h \
+ src/CharClassify.h src/Decoration.h src/CaseFolder.h src/Document.h \
+ src/UniConversion.h src/Selection.h src/PositionCache.h src/Editor.h
+$(OBJDIR)/ExternalLexer.o: src/ExternalLexer.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/include/SciLexer.h ../srcscintilla/lexlib/LexerModule.h \
+ src/Catalogue.h src/ExternalLexer.h
+$(OBJDIR)/Indicator.o: src/Indicator.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/XPM.h src/Indicator.h
+$(OBJDIR)/KeyMap.o: src/KeyMap.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/KeyMap.h
+$(OBJDIR)/LineMarker.o: src/LineMarker.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/XPM.h src/LineMarker.h
+$(OBJDIR)/PerLine.o: src/PerLine.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/SplitVector.h src/Partitioning.h \
+ src/CellBuffer.h src/PerLine.h
+$(OBJDIR)/PositionCache.o: src/PositionCache.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/SplitVector.h src/Partitioning.h \
+ src/RunStyles.h src/ContractionState.h src/CellBuffer.h src/KeyMap.h \
+ src/Indicator.h src/XPM.h src/LineMarker.h src/Style.h src/ViewStyle.h \
+ src/CharClassify.h src/Decoration.h ../srcscintilla/include/ILexer.h \
+ src/CaseFolder.h src/Document.h src/UniConversion.h src/Selection.h \
+ src/PositionCache.h
+$(OBJDIR)/RESearch.o: src/RESearch.cxx src/CharClassify.h src/RESearch.h
+$(OBJDIR)/RunStyles.o: src/RunStyles.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/SplitVector.h src/Partitioning.h \
+ src/RunStyles.h
+$(OBJDIR)/ScintillaBase.o: src/ScintillaBase.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/lexlib/PropSetSimple.h \
+ ../srcscintilla/include/SciLexer.h ../srcscintilla/lexlib/LexerModule.h \
+ src/Catalogue.h src/SplitVector.h src/Partitioning.h src/RunStyles.h \
+ src/ContractionState.h src/CellBuffer.h src/CallTip.h src/KeyMap.h \
+ src/Indicator.h src/XPM.h src/LineMarker.h src/Style.h src/ViewStyle.h \
+ src/AutoComplete.h src/CharClassify.h src/Decoration.h src/CaseFolder.h \
+ src/Document.h src/Selection.h src/PositionCache.h src/Editor.h \
+ src/ScintillaBase.h
+$(OBJDIR)/Selection.o: src/Selection.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/Selection.h
+$(OBJDIR)/Style.o: src/Style.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/Style.h
+$(OBJDIR)/UniConversion.o: src/UniConversion.cxx src/UniConversion.h
+$(OBJDIR)/ViewStyle.o: src/ViewStyle.cxx ../srcscintilla/include/Platform.h \
+ ../srcscintilla/include/Scintilla.h src/SplitVector.h src/Partitioning.h \
+ src/RunStyles.h src/Indicator.h src/XPM.h src/LineMarker.h src/Style.h \
+ src/ViewStyle.h
+$(OBJDIR)/XPM.o: src/XPM.cxx ../srcscintilla/include/Platform.h src/XPM.h
+$(OBJDIR)/CaseConvert.o: src/CaseConvert.cxx src/CaseConvert.h src/UniConversion.h \
+ src/UnicodeFromUTF8.h
+$(OBJDIR)/CaseFolder.o: src/CaseFolder.cxx src/CaseConvert.h src/UniConversion.h \
+ src/CaseFolder.h
+$(OBJDIR)/LexA68k.o: lexers/LexA68k.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAbaqus.o: lexers/LexAbaqus.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAda.o: lexers/LexAda.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAPDL.o: lexers/LexAPDL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAsm.o: lexers/LexAsm.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h
+$(OBJDIR)/LexAsn1.o: lexers/LexAsn1.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexASY.o: lexers/LexASY.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAU3.o: lexers/LexAU3.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAVE.o: lexers/LexAVE.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexAVS.o: lexers/LexAVS.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexBaan.o: lexers/LexBaan.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexBash.o: lexers/LexBash.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexBasic.o: lexers/LexBasic.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h
+$(OBJDIR)/LexBullant.o: lexers/LexBullant.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCaml.o: lexers/LexCaml.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/PropSetSimple.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCLW.o: lexers/LexCLW.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCmake.o: lexers/LexCmake.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCOBOL.o: lexers/LexCOBOL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCoffeeScript.o: lexers/LexCoffeeScript.cxx \
+ ../srcscintilla/include/Platform.h ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexConf.o: lexers/LexConf.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCPP.o: lexers/LexCPP.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h \
+ ../srcscintilla/lexlib/SparseState.h ../srcscintilla/lexlib/SubStyles.h
+$(OBJDIR)/LexCrontab.o: lexers/LexCrontab.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCsound.o: lexers/LexCsound.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexCSS.o: lexers/LexCSS.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexD.o: lexers/LexD.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h
+$(OBJDIR)/LexECL.o: lexers/LexECL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/PropSetSimple.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h
+$(OBJDIR)/LexEiffel.o: lexers/LexEiffel.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexErlang.o: lexers/LexErlang.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexEScript.o: lexers/LexEScript.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexFlagship.o: lexers/LexFlagship.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexForth.o: lexers/LexForth.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexFortran.o: lexers/LexFortran.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexGAP.o: lexers/LexGAP.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexGui4Cli.o: lexers/LexGui4Cli.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexHaskell.o: lexers/LexHaskell.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/PropSetSimple.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h \
+ ../srcscintilla/lexlib/CharacterCategory.h
+$(OBJDIR)/LexHTML.o: lexers/LexHTML.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexInno.o: lexers/LexInno.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexKix.o: lexers/LexKix.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexLisp.o: lexers/LexLisp.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexLout.o: lexers/LexLout.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexLua.o: lexers/LexLua.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMagik.o: lexers/LexMagik.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMarkdown.o: lexers/LexMarkdown.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMatlab.o: lexers/LexMatlab.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMetapost.o: lexers/LexMetapost.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMMIXAL.o: lexers/LexMMIXAL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexModula.o: lexers/LexModula.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/PropSetSimple.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMPT.o: lexers/LexMPT.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMSSQL.o: lexers/LexMSSQL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexMySQL.o: lexers/LexMySQL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexNimrod.o: lexers/LexNimrod.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexNsis.o: lexers/LexNsis.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexOpal.o: lexers/LexOpal.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexOScript.o: lexers/LexOScript.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexOthers.o: lexers/LexOthers.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPascal.o: lexers/LexPascal.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPB.o: lexers/LexPB.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPerl.o: lexers/LexPerl.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h
+$(OBJDIR)/LexPLM.o: lexers/LexPLM.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPO.o: lexers/LexPO.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPOV.o: lexers/LexPOV.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPowerPro.o: lexers/LexPowerPro.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPowerShell.o: lexers/LexPowerShell.cxx \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/include/SciLexer.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexProgress.o: lexers/LexProgress.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPS.o: lexers/LexPS.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexPython.o: lexers/LexPython.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexR.o: lexers/LexR.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexRebol.o: lexers/LexRebol.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexRuby.o: lexers/LexRuby.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexScriptol.o: lexers/LexScriptol.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexSmalltalk.o: lexers/LexSmalltalk.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexSML.o: lexers/LexSML.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexSorcus.o: lexers/LexSorcus.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexSpecman.o: lexers/LexSpecman.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexSpice.o: lexers/LexSpice.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexSQL.o: lexers/LexSQL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h \
+ ../srcscintilla/lexlib/SparseState.h
+$(OBJDIR)/LexTACL.o: lexers/LexTACL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexTADS3.o: lexers/LexTADS3.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexTAL.o: lexers/LexTAL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexTCL.o: lexers/LexTCL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexTCMD.o: lexers/LexTCMD.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexTeX.o: lexers/LexTeX.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexTxt2tags.o: lexers/LexTxt2tags.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexVB.o: lexers/LexVB.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexVerilog.o: lexers/LexVerilog.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexVHDL.o: lexers/LexVHDL.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexVisualProlog.o: lexers/LexVisualProlog.cxx \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/include/SciLexer.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/CharacterCategory.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h
+$(OBJDIR)/LexYAML.o: lexers/LexYAML.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexKVIrc.o: lexers/LexKVIrc.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexLaTeX.o: lexers/LexLaTeX.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/PropSetSimple.h ../srcscintilla/lexlib/WordList.h \
+ ../srcscintilla/lexlib/LexAccessor.h ../srcscintilla/lexlib/Accessor.h \
+ ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/LexerBase.h
+$(OBJDIR)/LexSTTXT.o: lexers/LexSTTXT.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h
+$(OBJDIR)/LexRust.o: lexers/LexRust.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/lexlib/WordList.h ../srcscintilla/lexlib/LexAccessor.h \
+ ../srcscintilla/lexlib/Accessor.h ../srcscintilla/lexlib/StyleContext.h \
+ ../srcscintilla/lexlib/CharacterSet.h \
+ ../srcscintilla/lexlib/LexerModule.h ../srcscintilla/lexlib/OptionSet.h \
+ ../srcscintilla/lexlib/PropSetSimple.h
+$(OBJDIR)/Accessor.o: lexlib/Accessor.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ lexlib/PropSetSimple.h lexlib/WordList.h lexlib/LexAccessor.h \
+ lexlib/Accessor.h
+$(OBJDIR)/CharacterSet.o: lexlib/CharacterSet.cxx lexlib/CharacterSet.h
+$(OBJDIR)/LexerBase.o: lexlib/LexerBase.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ lexlib/PropSetSimple.h lexlib/WordList.h lexlib/LexAccessor.h \
+ lexlib/Accessor.h lexlib/LexerModule.h lexlib/LexerBase.h
+$(OBJDIR)/LexerModule.o: lexlib/LexerModule.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ lexlib/PropSetSimple.h lexlib/WordList.h lexlib/LexAccessor.h \
+ lexlib/Accessor.h lexlib/LexerModule.h lexlib/LexerBase.h \
+ lexlib/LexerSimple.h
+$(OBJDIR)/LexerNoExceptions.o: lexlib/LexerNoExceptions.cxx \
+ ../srcscintilla/include/ILexer.h ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/include/SciLexer.h lexlib/PropSetSimple.h \
+ lexlib/WordList.h lexlib/LexAccessor.h lexlib/Accessor.h \
+ lexlib/LexerModule.h lexlib/LexerBase.h lexlib/LexerNoExceptions.h
+$(OBJDIR)/LexerSimple.o: lexlib/LexerSimple.cxx ../srcscintilla/include/ILexer.h \
+ ../srcscintilla/include/Scintilla.h ../srcscintilla/include/SciLexer.h \
+ lexlib/PropSetSimple.h lexlib/WordList.h lexlib/LexAccessor.h \
+ lexlib/Accessor.h lexlib/LexerModule.h lexlib/LexerBase.h \
+ lexlib/LexerSimple.h
+$(OBJDIR)/PropSetSimple.o: lexlib/PropSetSimple.cxx lexlib/PropSetSimple.h
+$(OBJDIR)/StyleContext.o: lexlib/StyleContext.cxx ../srcscintilla/include/ILexer.h \
+ lexlib/LexAccessor.h lexlib/Accessor.h lexlib/StyleContext.h
+$(OBJDIR)/WordList.o: lexlib/WordList.cxx lexlib/WordList.h
+$(OBJDIR)/CharacterCategory.o: lexlib/CharacterCategory.cxx \
+ lexlib/CharacterCategory.h
+$(OBJDIR)/scintilla-marshal.o: gtk/scintilla-marshal.c
+$(OBJDIR)/iupsci_clipboard.o: iupsci_clipboard.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_folding.o: iupsci_folding.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_lexer.o: iupsci_lexer.c ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/include/SciLexer.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_margin.o: iupsci_margin.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_overtype.o: iupsci_overtype.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_scrolling.o: iupsci_scrolling.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_scintilla.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_selection.o: iupsci_selection.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_scintilla.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_style.o: iupsci_style.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_drvfont.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_tab.o: iupsci_tab.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_text.o: iupsci_text.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_wordwrap.o: iupsci_wordwrap.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_markers.o: iupsci_markers.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_bracelight.o: iupsci_bracelight.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_cursor.o: iupsci_cursor.c ../srcscintilla/include/Scintilla.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_whitespace.o: iupsci_whitespace.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_annotation.o: iupsci_annotation.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iup_scintilla.o: iup_scintilla.cpp ../srcscintilla/include/Scintilla.h \
+ ../srcscintilla/include/SciLexer.h \
+ ../srcscintilla/include/ScintillaWidget.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iup_scintilla.h \
+ ../include/iupcbs.h ../src/iup_key.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_attrib.h ../src/iup_str.h ../src/iup_drv.h \
+ ../src/iup_drvfont.h ../src/iup_register.h ../src/iup_layout.h \
+ ../src/iup_assert.h ../src/gtk/iupgtk_drv.h iupsci.h
+$(OBJDIR)/iupsci_autocompletion.o: iupsci_autocompletion.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h
+$(OBJDIR)/iupsci_searching.o: iupsci_searching.c \
+ ../srcscintilla/include/Scintilla.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h iupsci.h

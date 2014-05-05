@@ -1,0 +1,12 @@
+$(OBJDIR)/iup_lua3.o: iup_lua3.c /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lualib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/luadebug.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iupgl.h ../include/iupluagl.h ../include/iupcontrols.h \
+ ../include/iupluacontrols.h ../include/iup_pplot.h \
+ ../include/iuplua_pplot.h /cygdrive/d/tecgraf/cd/include/cd.h \
+ /cygdrive/d/tecgraf/cd/include/cd_old.h \
+ /cygdrive/d/tecgraf/cd/include/cdlua.h \
+ /cygdrive/d/tecgraf/cd/include/cdluaiup.h ../include/iupluaim.h \
+ /cygdrive/d/tecgraf/im/include/imlua.h loh3/console3.loh

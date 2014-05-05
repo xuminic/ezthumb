@@ -1,0 +1,21 @@
+$(OBJDIR)/iup_image_library.o: iup_image_library.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h
+$(OBJDIR)/iup_imglib_bitmapsgtk.o: iup_imglib_bitmapsgtk.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h iup_imglib_bitmapsgtk.h
+$(OBJDIR)/iup_imglib_icons.o: iup_imglib_icons.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h iup_imglib_icons.h
+$(OBJDIR)/iup_imglib_logos.o: iup_imglib_logos.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h
+$(OBJDIR)/iup_imglib_bitmaps8.o: iup_imglib_bitmaps8.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h iup_imglib_bitmaps8.h
+$(OBJDIR)/iup_imglib_icons8.o: iup_imglib_icons8.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h iup_imglib_icons8.h
+$(OBJDIR)/iup_imglib_logos8.o: iup_imglib_logos8.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
+ ../src/iup_image.h iup_imglib.h

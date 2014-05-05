@@ -1,0 +1,6 @@
+$(OBJDIR)/iuplua_olecontrol.o: iuplua_olecontrol.c \
+ /cygdrive/d/tecgraf/lua/include/lua.h \
+ /cygdrive/d/tecgraf/lua/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupole.h \
+ ../include/iupluaole.h

@@ -1,0 +1,13 @@
+$(OBJDIR)/iuplua_mglplot.o: iuplua_mglplot.c \
+ /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iup_mglplot.h \
+ ../include/iuplua.h ../include/iuplua_mglplot.h il.h
+$(OBJDIR)/il_mglplot.o: il_mglplot.c /cygdrive/d/tecgraf/lua52/include/lua.h \
+ /cygdrive/d/tecgraf/lua52/include/luaconf.h \
+ /cygdrive/d/tecgraf/lua52/include/lauxlib.h \
+ /cygdrive/d/tecgraf/lua52/include/lua.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
+ ../include/iup_mglplot.h il.h lh/mglplot.lh
