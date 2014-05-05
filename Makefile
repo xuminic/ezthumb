@@ -46,7 +46,7 @@ AR	= ar
 CP	= cp
 RM	= rm -f
 
-IUPLIB	= $(IUP)/lib/Linux26g4_64
+IUPLIB	= $(shell echo $(IUP)/lib/*)
 EXTLIB	= $(CSOUP)/libcsoup.a $(IUPLIB)/libiup.a
 GUILIB	+= `pkg-config gtk+-2.0 --libs` -lX11
 SYSINC	= -I/usr/include/ffmpeg `pkg-config gtk+-2.0 --cflags`
@@ -117,7 +117,7 @@ $(OBJDIR)/main_gui.o: main.c
 ezthumb.pdf: ezthumb.1
 	man -l -Tps $< | ps2pdf - $@
 
-$(IUP)/lib/Linux26g4_64/libiup.a:
+$(IUPLIB)/libiup.a:
 	make -C $(IUP) do_all
 
 $(CSOUP)/libcsoup.a:
