@@ -10,10 +10,17 @@ endif
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF, CFG_GUI_GTK
 SYSGUI	= CFG_GUI_ON
 endif
+ifneq 	($(SYSGUI),CFG_GUI_GTK)
+GUILIB	= -liup
+endif
 
-CSOUP	= external/libcsoup
-IUP	= external/iup
+# Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
+ifndef	WINCON		
+WINCON	= -mwindows
+endif
 
+CSOUP	= ./external/libcsoup
+IUP	= ./external/iup
 
 
 ifeq	($(SYSTOOL),mingw)
@@ -22,25 +29,14 @@ AR	= ar
 CP	= cp
 RM	= rm -f
 
-EXDIR	= ./libmingw
-FFMPEG  = $(EXDIR)/ffmpeg
-EXINC	= -I$(FFMPEG)/include -I$(EXDIR)/include -I$(CSOUP)
-
-#WGLIB	= -lcomctl32 -lcomdlg32 -lgdi32 -Wl,--subsystem,windows
-#WGLIB	= -lcomctl32 -mconsole -mwindows
-WGLIB	= -liconv
-EXDLL	= $(FFMPEG)/bin/*.dll $(EXDIR)/lib/*.dll
-
-GUIINC	= -I$(EXDIR)/include/iup
-#GUILIB	= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
-#	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
-GUILIB	= -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+IUPLIB	= $(IUP)/lib/mingw4
+EXTDIR	= ./libmingw
+GUILIB	+= -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
-# linking static libgd requires defining NONDLL 
-SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL $(EXINC)
-LIBDIR	= -L$(FFMPEG)/lib -L$(EXDIR)/lib -L$(CSOUP)
+SYSINC	= -I$(EXTDIR)/ffmpeg/include -I$(EXTDIR)/include
+LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib $(WINCON)
+SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL #For linking static libgd 
 endif
-
 
 # This setting is used for POSIX environment with the following libraries
 # installed: GTK+, FFMPEG, FreeType and libgd
@@ -50,32 +46,30 @@ AR	= ar
 CP	= cp
 RM	= rm -f
 
-GUIINC	= `pkg-config gtk+-2.0 --cflags`
-GUILIB	= `pkg-config gtk+-2.0 --libs` -lX11
-SYSINC	= -I/usr/include/ffmpeg $(GUIINC)
-SYSLIB	= -L$(IUP)/lib/Linux26g4_64
-EXLIB	= $(CSOUP)/libcsoup.a $(IUP)/lib/Linux26g4_64/libiup.a
-ifneq 	($(SYSGUI),CFG_GUI_GTK)
-GUILIB	+= -liup
-endif
+IUPLIB	= $(IUP)/lib/Linux26g4_64
+EXTLIB	= $(CSOUP)/libcsoup.a $(IUPLIB)/libiup.a
+GUILIB	+= `pkg-config gtk+-2.0 --libs` -lX11
+SYSINC	= -I/usr/include/ffmpeg `pkg-config gtk+-2.0 --cflags`
+LIBDIR	= -L$(IUPLIB) -L$(CSOUP)
+SYSFLAG	= 
 endif
 
 
 PREFIX	= /usr/local
 BINDIR	= /usr/local/bin
 MANDIR	= /usr/local/man/man1
+RELDIR	= ./release-bin
+OBJDIR  = ./objs
 
 DEBUG	= -g -DDEBUG
 DEFINES = -D_FILE_OFFSET_BITS=64
 INCDIR	= -I$(CSOUP) -I$(IUP)/include $(SYSINC)
-LIBDIR  = -L$(CSOUP) $(SYSLIB)
 CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(INCDIR) $(SYSFLAG) 
 
-RELDIR	= ./release-bin
-OBJDIR  = ./objs
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup $(WGLIB)
+	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup -liconv
+
 
 ifeq	($(SYSGUI),CFG_GUI_GTK)
 OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/ezgui.o
@@ -97,7 +91,7 @@ TARGET	= $(TGTGUI)
 else
 TGTGUI	= ezthumb_win.exe
 TGTCON	= ezthumb.exe
-TARGET	= $(TGTGUI) $(TGTCON)
+TARGET	= $(TGTCON) $(TGTGUI)
 endif
 
 $(OBJDIR)/%.o: %.c
@@ -106,7 +100,7 @@ $(OBJDIR)/%.o: %.c
 
 .PHONY: objs
 
-all: objdir $(EXLIB) $(TARGET)
+all: objdir $(EXTLIB) $(TARGET)
 
 $(TGTGUI): $(OBJGUI) $(OBJS)
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) $(GUILIB)
@@ -172,7 +166,7 @@ install_win: all
 	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
 	-mkdir $(RELDIR)-win-bin
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
-	-$(CP) $(EXDLL) $(RELDIR)-win-bin
+	-$(CP) $(EXTDIR)/ffmpeg/bin/*.dll $(EXTDIR)/lib/*.dll $(RELDIR)-win-bin
 
 rel_win_bin: install_win
 	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin

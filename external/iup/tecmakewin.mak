@@ -1308,7 +1308,8 @@ endif
 # Dynamic Library Build
 
 .PHONY: dynamic-lib
-dynamic-lib: $(TARGETDLL) addmanifest
+#dynamic-lib: $(TARGETDLL) addmanifest
+dynamic-lib:
 
 $(TARGETDLL) : $(LUAS) $(OBJS) $(EXTRADEPS) $(DEF_FILE)
 	@echo ''; echo Tecmake: linking $(@F) ...

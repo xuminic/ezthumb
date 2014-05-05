@@ -1,14 +1,21 @@
 ifeq ($(OS), Windows_NT)
   WINLIBS = iupole
+  export MINGW4=/c/mingw
+  export TEC_UNAME=mingw4
 endif
+
 
 .PHONY: do_all iup iupgtk iupmot iupcd iupcontrols iupgl iup_pplot iup_mglplot iup_scintilla iupim iupimglib ledc iupview iuplua3 iuplua5 iupconsole iupole iupweb iuptuio
 #do_all: iup iupcd iupcontrols iupgl iup_pplot iup_mglplot iup_scintilla iupim iupimglib $(WINLIBS) iupweb iuptuio ledc iupview iuplua5 iupconsole
+
+ifeq    ($(MSYSTEM),MINGW32)
+do_all: iup $(WINLIBS)
+else
 do_all: iup iupgtk
+endif
 
 iup iupgtk iupmot:
 	@$(MAKE) --no-print-directory -C ./src/ $@
-	rm ./lib/Linux26g4_64/*.so
 clean:
 	rm -rf ./lib/* ./obj/*
 iupcd:

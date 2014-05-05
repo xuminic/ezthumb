@@ -1360,7 +1360,8 @@ system-check:
 # Dynamic Library Build
 
 .PHONY: dynamic-lib
-dynamic-lib: $(TARGETDIR)/$(TARGETDLIBNAME)
+#dynamic-lib: $(TARGETDIR)/$(TARGETDLIBNAME)
+dynamic-lib: 
 
 $(TARGETDIR)/$(TARGETDLIBNAME) : $(LUAS) $(OBJS) $(EXTRADEPS)
 	@echo ''; echo Tecmake: linking $(@F) ...
