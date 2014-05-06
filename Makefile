@@ -31,10 +31,10 @@ RM	= rm -f
 
 IUPLIB	= $(IUP)/lib/mingw4
 EXTDIR	= ./libmingw
-GUILIB	+= -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+GUILIB	+= $(WINCON) -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
 SYSINC	= -I$(EXTDIR)/ffmpeg/include -I$(EXTDIR)/include
-LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib $(WINCON)
+LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib
 SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL #For linking static libgd 
 endif
 
@@ -68,7 +68,7 @@ CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(INCDIR) $(SYSFLAG)
 
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup -liconv
+	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup
 
 
 ifeq	($(SYSGUI),CFG_GUI_GTK)
@@ -89,6 +89,8 @@ TGTGUI	= ezthumb
 TGTCON	= ezthumb_con
 TARGET	= $(TGTGUI)
 else
+LIBS	+= -liconv
+OBJGUI	+= $(OBJDIR)/ezthumb_icon.o
 TGTGUI	= ezthumb_win.exe
 TGTCON	= ezthumb.exe
 TARGET	= $(TGTCON) $(TGTGUI)
@@ -140,7 +142,7 @@ debug: all
 	$(CP) $(TARGET) ~/bin
 
 clean:
-	$(RM) -r $(OBJDIR)
+	$(RM) -f $(OBJDIR)/*
 	$(RM) $(TGTGUI) $(TGTCON)
 
 cleanall: clean

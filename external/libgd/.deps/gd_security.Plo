@@ -1,0 +1,31 @@
+gd_security.lo: gd_security.c config.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdio.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/_mingw.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stddef.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stdarg.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/sys/types.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdlib.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/limits.h gd.h \
+ gd_io.h gdfx.h
+
+config.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdio.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/_mingw.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stddef.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stdarg.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/sys/types.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdlib.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/limits.h:
+
+gd.h:
+
+gd_io.h:
+
+gdfx.h:
