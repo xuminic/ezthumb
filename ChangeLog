@@ -1,282 +1,313 @@
+20140512: Pre Version 3.2.0
+	* external: integrated external source codes into ezthumb to make
+	them consistent and easy to maintain.
+	* libcsoup: updated to 0.5.0
+	* eziup.c: fully migrate to iup.
+	* ezthumb.c: support av_frame_alloc() if avcodec is higher than 53.6.0
+
 20131009: Version 3.0.4
-  + libcsoup: following up libcsoup 0.2.2, which fixed a problem by opening
-    files with the sharing mode in Win32 to get the file size. The test
-    harness was that running ezthumb while playing the same video by
-    mediaplayer. Without the fix it would put ezthumb into full scan mode.
+	* libcsoup: following up libcsoup 0.2.2, which fixed a problem by 
+	opening	files with the sharing mode in Win32 to get the file size. 
+	The test harness was that running ezthumb while playing the same video
+	by mediaplayer. Without the fix it would put ezthumb into full scan 
+	mode.
 
 20130926: Version 3.0.3
-  + ezthumb.c: previous fix doesn't work well so make an update
+	* ezthumb.c: previous fix doesn't work well so make an update
 
 20130915: Version 3.0.2
-  + ezthumb.c: fixed a bug that av_read_frame() always return the first packet
-    positively after av_seek() out of the range in video_duration_quickscan().
+	* ezthumb.c: fixed a bug that av_read_frame() always return the first 
+	packet positively after av_seek() out of the range in 
+	video_duration_quickscan().
 
 20130830:
-  + Makefile: slightly modified to match the changes in libcsoup
+	* Makefile: slightly modified to match the changes in libcsoup
 
 20130828: Version 3.0.1
-  + Fixed a bug that displaying wrong file size; for example, 
-    a file of 2973632284 bytes was displayed 2.01GB, not 2.77GB
-  + Imporved quick scan in duration test.
-  + A foolproof update while displaying language metadata.
+	Fixed a bug that displaying wrong file size; for example, 
+	a file of 2973632284 bytes was displayed 2.01GB, not 2.77GB
+	
+	Imporved quick scan in duration test.
+	
+	A foolproof update while displaying language metadata.
 
 20130809: Version 3.0.0
-  + Most tests have been done so it's the time to release. 
-    There are so many codes and features newly included.
-    I reckon to it's proper to jump the version number.
+	Most tests have been done so it's the time to release. 
+	There are so many codes and features newly included.
+	I reckon to it's proper to jump the version number.
 
 20130808:
-  + ezthumb.c: never fail the video_decode_xxx() functions.
-    [BUG]: Otherwise in binding mode, alizee.rm la_lsla_bonita.wmv  
-    SeeYa.mkv  shakira1.mp4 shakira2.mp4, ezthumb -b --opt-ffr on *,
-    the last frame run out of la_lsla_bonita.wmv cause the index
-    disordered in between clips
+	* ezthumb.c: never fail the video_decode_xxx() functions.
+	[BUG]: Otherwise in binding mode, alizee.rm la_lsla_bonita.wmv  
+	SeeYa.mkv  shakira1.mp4 shakira2.mp4, ezthumb -b --opt-ffr on *,
+	the last frame run out of la_lsla_bonita.wmv cause the index
+	disordered in between clips
 
 20130724:
-  + ezthumb.c: remove the heuristic process because it's already integrated
-    into the scan mode as default function.
-  + ezthumb.c: since the scan mode is heuristically, the two-pass mode is 
-    much less important now. Thus turned the two-pass mode to the tradition
-    way to cut down the memory usage.
+	* ezthumb.c: remove the heuristic process because it's already 
+	integrated into the scan mode as default function.
+	* ezthumb.c: since the scan mode is heuristically, the two-pass mode
+	is much less important now. Thus turned the two-pass mode to the 
+	tradition way to cut down the memory usage.
 
 20130718:
-  + video_dts_to_ms(): removed the offset adjustment to formatx->start_time
-    because it made confusing and not consistent to other convert functions.
+	* video_dts_to_ms(): removed the offset adjustment to 
+	formatx->start_time because it made confusing and not consistent to 
+	other convert functions.
 
 20130628: move to 2.2.0
-  + Major update to support binding mode.
+	Major update to support binding mode.
 
 20120902: quickfix branch V2.1.10
-  + ezgui.c: temporarily change the default codepage to UTF-8 to fix the
-    file name issue. The problem is that ezthumb uses native codepage to 
-    translate the file name, which came from the command line as the native
-    form. However, the file name passed from GTK had been converted to UTF-8.
-    When command line version works good, the GUI version failed.
-    Temporarily changing the codepage to UTF-8 before calling ezthumb core
-    functions, the MultiByteToWideChar() could work properly.
+	ezgui.c: temporarily change the default codepage to UTF-8 to fix the
+	file name issue. The problem is that ezthumb uses native codepage to 
+	translate the file name, which came from the command line as the native
+	form. However, the file name passed from GTK had been converted to 
+	UTF-8. When command line version works good, the GUI version failed.
+	Temporarily changing the codepage to UTF-8 before calling ezthumb core
+	functions, the MultiByteToWideChar() could work properly.
 
-20120829: quickfix branch
-  + https://sourceforge.net/p/ezthumb/discussion/general/thread/3fe795fe/
-    A bug was found in Win32 version that ezthumb failed to open certain
-    files with unknown codepage characters in the file name. 
-    When MultiByteToWideChar() converted the file name to UTF-16 string,
-    it was using the output codepage of console, which was ANSI. However
-    the CreateFile() was waiting for the name converted to 623 in my machine.
-    Both converting are correct but dismatched. This problem only happens 
-    in Windows because Linux uses UTF-8 as default.
-  + smm_codepage.c: fixed the default codepage by GetACP()
+20120829: quickfix branch	
+	https://sourceforge.net/p/ezthumb/discussion/general/thread/3fe795fe/
+	
+	A bug was found in Win32 version that ezthumb failed to open certain
+	files with unknown codepage characters in the file name. 
+	When MultiByteToWideChar() converted the file name to UTF-16 string,
+	it was using the output codepage of console, which was ANSI. However
+	the CreateFile() was waiting for the name converted to 623 in my 
+	machine. Both converting are correct but dismatched. This problem 
+	only happens in Windows because Linux uses UTF-8 as default.
+	
+	* smm_codepage.c: fixed the default codepage by GetACP()
 
 20120822: quickfix branch V2.1.9
-  + Makefile: convert man page to PDF file when releasing the ezthumb
-  - Makefile: could be a problem in Windows
-  + Makefile: decided to generate PDF page in linux and manage with git
-  + id_lookup.c: fixed the deprecated symbols in ffmpeg-1.x
-    (LIBAVCODEC_VERSION_MAJOR == 54)
+	* Makefile: convert man page to PDF file when releasing the ezthumb
+	* -Makefile: could be a problem in Windows
+	* Makefile: decided to generate PDF page in linux and manage with git
+	* id_lookup.c: fixed the deprecated symbols in ffmpeg-1.x
+		(LIBAVCODEC_VERSION_MAJOR == 54)
 
 20120821: quickfix branch
-  + libsmm: Reviewed the error code strategy of libsmm
-    Use the consistent error codes instead of the system dependent ones
-  + smm_pathtrek.c: many bugs were found and fixed
-  + introduced the recursive depth control
+	* libsmm: Reviewed the error code strategy of libsmm
+	Use the consistent error codes instead of the system dependent ones
+	* smm_pathtrek.c: many bugs were found and fixed
+	introduced the recursive depth control
 
 20120816: quickfix branch
-  + Improved the --override option. Testing the existance of thumbnails 
-    before creating the thumbnail.
+	Improved the --override option. Testing the existance of thumbnails
+	before creating the thumbnail.
 
 20120814: V2.1.8
-  + file_size field is depreciated and soon removed. use avio_size() instead
-  + document update
-  + reviewed and adjusted the debug levels
-  + id_lookup.c: id_lookup_tail() introduced to removed the fix coded offset
-  + improved filter to block unwanted/fake media files
-  + eznotify.c: file_size field replaced by avio_size()
+	file_size field is depreciated and soon removed. use avio_size() instead
+	document update
+	
+	reviewed and adjusted the debug levels
+	
+	* id_lookup.c: id_lookup_tail() introduced to removed the fix coded offset
+	improved filter to block unwanted/fake media files
+	
+	* eznotify.c: file_size field replaced by avio_size()
 
 20120813:
-  + Replaced FF_I_TYPE by AV_PICTURE_TYPE_I since it was deprecated
-    since 4 Jan 2012. See
-    https://lists.ffmpeg.org/pipermail/ffmpeg-cvslog/2012-January/045452.html
+	Replaced FF_I_TYPE by AV_PICTURE_TYPE_I since it was deprecated
+	since 4 Jan 2012. See
+	https://lists.ffmpeg.org/pipermail/ffmpeg-cvslog/2012-January/045452.html
 
 20120812:
-  + Introduced the recursive mode to batch process video files
-  + Introduced an option to override/skip/copy the existed thumbnails
-    The default is 'copy'.
+	Introduced the recursive mode to batch process video files
+	Introduced an option to override/skip/copy the existed thumbnails
+	The default is 'copy'.
 
 20120807:
-  + a better foolproof way to process the size of file
-  + video_media_on_canvas(): display combined bitrate by calculating it.
+	a better foolproof way to process the size of file
+	video_media_on_canvas(): display combined bitrate by calculating it.
 
 20120807: V2.1.7
-  + added a warning info about the internal field of file size. 
-    I remember once before this field returned 0. Thus I tried to get the 
-    size by stream function. Perhaps it's been fixed in the ffmpeg.
-  + added a smm function to retrieve the file size. 
-  + video_media_on_canvas(): calculate the bitrate upon file size.
-    A new issue was found that in some video clips, the ffmpep filled
-    the AVFormatContext->bit_rate with audio stream's. The video
-    AVCodecContext->bit_rate was 0.
+	Added a warning info about the internal field of file size. 
+
+	I remember once before this field returned 0. Thus I tried to get the 
+	size by stream function. Perhaps it's been fixed in the ffmpeg.
+	added a smm function to retrieve the file size. 
+	
+	* video_media_on_canvas(): calculate the bitrate upon file size.
+	
+	A new issue was found that in some video clips, the ffmpep filled
+	the AVFormatContext->bit_rate with audio stream's. The video
+	AVCodecContext->bit_rate was 0.
 
 20120803:
-  + Fixed the 32-bit I/O error by using the internal file size field
-    in the AVFormatContext structure. Hope it make no surprise in different
-    version FFMPEGs
+	Fixed the 32-bit I/O error by using the internal file size field
+	in the AVFormatContext structure. Hope it make no surprise in 
+	different version FFMPEGs.
 
 20120803:
-  + A bug was witnessed in Win32 version that when ezthumb was processing
-    files over 4GB, it would enforce the 2-pass mode automatically, which
-    took a long time. Linux version doesn't have this problem.
+	A bug was witnessed in Win32 version that when ezthumb was processing
+	files over 4GB, it would enforce the 2-pass mode automatically, which
+	took a long time. Linux version doesn't have this problem.
 
-    The cause of this issue is in the video_allocate() where fopen()/ftell()
-    was used to retrieve the length of file. Apparently the 32-bit file
-    I/O failed to work on the large files. stat() doesn't work either.
-    What's more, the FFMPEG was compiled in 32-bit mode so it could not get
-    the correct file length either. It returned the same result to stat()
-    in AVFormatContext->file_size.
+	The cause of this issue is in the video_allocate() where fopen() and
+	ftell() was used to retrieve the length of file. Apparently the 32-bit
+	file I/O failed to work on the large files. The stat() function does 
+	not work either. What's more, the FFMPEG was compiled in 32-bit mode 
+	so it could not get the correct file length either. It returned the 
+	same result to stat() in AVFormatContext->file_size.
 
-    Linux version doesn't have this problem, which must be contributed by 
-    compiled in the 64-bit system. The I/O is natively 64-bit. I reckon
-    the same issue should appear in the 32-bit system.
+	Linux version doesn't have this problem, which must be contributed by 
+	compiled in the 64-bit system. The I/O is natively 64-bit. I reckon
+	the same issue should appear in the 32-bit system.
 
-    The fix should be implementing the 64-bit I/O, or better, split it into
-    32-bit and 64-bit version and integrating the 64-bit FFMPEG.
+	The fix should be implementing the 64-bit I/O, or better, split it 
+	into 32-bit and 64-bit version and integrating the 64-bit FFMPEG.
 
 20120724: V2.1.6
-  + Moved the registering of video and image object to their allocating
-    functions, as well as the deregistering process to the free functions.
-  + Removed the appendix snapshots. In previous version, if snapshooting
-    was interrupted by broken files, the last snapshot would fill the empty
-    canvas. In this version, the empty canvas will be leave blank.
-  + After weighed by balance, I think it may be a good idea to restart the
-    ezthumb in the safe mode if no thumbnail was generated in the required 
-    process method, better than nothing .
+	Moved the registering of video and image object to their allocating
+	functions, as well as the deregistering process to the free functions.
+	
+	Removed the appendix snapshots. In previous version, if snapshooting
+	was interrupted by broken files, the last snapshot would fill the 
+	empty canvas. In this version, the empty canvas will be leave blank.
+	
+	After weighed by balance, I think it may be a good idea to restart the
+	ezthumb in the safe mode if no thumbnail was generated in the required
+	process method, better than nothing .
 
 20120723:
-  + Fixed the accidental saving of full-scan mode into configure file
-    When using 'ezthumb -p 2pass', the 'duration_mode' in the configure
-    file would be changed to 'full scan', which was default in the '2pass'
-    but should not be stored permenantly. It's a logical issue and be fixed
-    by using the session mode.
-  + Fixed the "ezthumb --accurate Blender_C4_2012-07-19_14-30.ts" broken
-    issue. It caused by the video_frame_best() had picked the empty frame.
-    Should initialize the DTS of empty frames to -1.
+	 Fixed the accidental saving of full-scan mode into configure file
+	 When using 'ezthumb -p 2pass', the 'duration_mode' in the configure
+	 file would be changed to 'full scan', which was default in the 
+	 '2pass' but should not be stored permenantly. It's a logical issue 
+	 and be fixed by using the session mode.
+	 
+	 Fixed the "ezthumb --accurate Blender_C4_2012-07-19_14-30.ts" broken
+	 issue. It caused by the video_frame_best() had picked the empty 
+	 frame. Should initialize the DTS of empty frames to -1.
 
 20120720:
-  + ezthumb.c: applied the AR correction to the thumbnails. 
-    The AR parameter came from the AVCodecContext->sample_aspect_ratio.
+	* ezthumb.c: applied the AR correction to the thumbnails. 
+	The AR parameter came from the AVCodecContext->sample_aspect_ratio.
 
 20120720:
-  + Fixed a zooming problem:
-    1. use ezthumb -s 480x240 small.avi to receive the 480x240 thumbnail
-    2. use ezthumb -s 25% small.avi to expect a 180x144 thumbnail, but still
-       received the 480x240 one, which was in the configure file.
-    The zoomed width and height were written in the configure file. 
-    The '-s' disabled the profile so ezthumb retrieved them from the configure
-    file, which included the recent width and height. They have higher
-    priority than the ratio so the command line ratio was ignored.
-    The quick fix is to reset the width and height if a command line was
-    specified. As well as '-t' and '-w' options.
+	Fixed a zooming problem:
+	1. use ezthumb -s 480x240 small.avi to receive the 480x240 thumbnail
+	2. use ezthumb -s 25% small.avi to expect a 180x144 thumbnail, but 
+	still received the 480x240 one, which was in the configure file.
+	The zoomed width and height were written in the configure file. 
+	The '-s' disabled the profile so ezthumb retrieved them from the 
+	configure file, which included the recent width and height. 
+	They have higher priority than the ratio so the command line ratio
+	was ignored.
+	
+	The quick fix is to reset the width and height if a command line was
+	specified. As well as '-t' and '-w' options.
 
 20120717: V2.1.5
-  + Expended the profile system.
-    The profile now accept a logarithmic formula to take screen shots.
-    The formula is 
-        lg(n)(M + a) - b
-    'n' is the base. 'M' is the video length in minutes. 
-    The related profile item is 
-        WEIGHT + 'L' + a + 'x' + b + 'x' + n.
-    For example, the default profile is 180L10x100x1.027, so if a video
-    length is 120 minutes, it would take
-        lg(1.027)(120+10) - 100 == 82 shots
-    Combined with the relative screen size profile 100R4x320, which means
-    to generate 4 shots in a row, each shot closed to 320 in width. 
-    It will generate a 4x21 thumbnail array.
-  + A hidden command line option, --protest, was applied to test the 
-    new profile system and help to find out the proper parameter of the
-    formula.
-  + ezthumb.c: fixed the bug that "-g 4" option made the program crash
+	Expended the profile system.
+	The profile now accept a logarithmic formula to take screen shots.
+	The formula is:
+		lg(n)(M + a) - b
+		'n' is the base. 'M' is the video length in minutes. 
+	The related profile item is 
+		WEIGHT + 'L' + a + 'x' + b + 'x' + n.
+	For example, the default profile is 180L10x100x1.027, so if a video
+	length is 120 minutes, it would take
+		lg(1.027)(120+10) - 100 == 82 shots
+	Combined with the relative screen size profile 100R4x320, which means
+	to generate 4 shots in a row, each shot closed to 320 in width. 
+	It will generate a 4x21 thumbnail array.
+	
+	A hidden command line option, --protest, was applied to test the 
+	new profile system and help to find out the proper parameter of the
+	formula.
+
+	* ezthumb.c: fixed the bug that "-g 4" option made the program crash
 
 20120620: V2.1.4
-  + Fixed a build system problem in Win32. The install rule in the Makefile
-    required ezthumb.exe and ezthumb_win.exe rule. After a successful
-    building, the object files would be the GUI version at last. The install
-    rule will make it link again so the console version ezthumb accidentally
-    linked by the GUI version objects, which is annoying.
+	Fixed a build system problem in Win32. 
+	The install rule in the Makefile required ezthumb.exe and 
+	ezthumb_win.exe rule. After a successful building, the object files 
+	would be the GUI version at last. The install rule will make it link
+	again so the console version ezthumb accidentally linked by the GUI 
+	version objects, which is annoying.
 
 20120615: V2.1.3
-  + Fixed a problem that when the video length ran out of the profile range,
-    say 180 minute, ezthumb would use the default 4x4 grid which was bad.
-    The fix extended the profile's range so if video ran out, it uses the
-    last field of the profile.
+	Fixed a problem that when the video length ran out of the profile 
+	range, say 180 minute, ezthumb would use the default 4x4 grid which 
+	was bad. The fix extended the profile's range so if video ran out, 
+	it uses the last field of the profile.
 
 20120613: V2.1.2
-  + Fixed the Chinese filename issue.
-  This issue happened on MS Windows porting. If the filename, or part of the
-  directory contain Chinese, for example, 测试文件, which isnatively
-  \262\342\312\324\316\304\274\376 in Windows file system, it would be failed
-  to be open because the GTK file chooser changed it to utf-8, which is
-  230 181 139 232 175 149 230 150 135 228 187 182. The fopen() doesn't know 
-  the conversion so it fails. The fix is to use g_fopen() instead.
+	Fixed the Chinese filename issue.
+	
+	This issue happened on MS Windows porting. If the filename, or part of
+	the directory contain Chinese, for example, 测试文件, which isnatively
+	\262\342\312\324\316\304\274\376 in Windows file system, it would be 
+	failed to be open because the GTK file chooser changed it to utf-8, 
+	which is 230 181 139 232 175 149 230 150 135 228 187 182. The fopen() 
+	doesn't know  the conversion so it fails. The fix is to use g_fopen() 
+	instead.
 
-  A good thing is the avformat_open_input() supports utf-8 itself so the
-  simple replacement of fopen() can do the trick.
+	A good thing is the avformat_open_input() supports utf-8 itself so the
+	simple replacement of fopen() can do the trick.
 
 20120612: V2.1.1
-  + improved the file type selection function
-  + fixed the application icon issue in MS Windows
+	Improved the file type selection function
+	Fixed the application icon issue in MS Windows
 
 20120413: V2.1.0
-  + introduced the safe mode as the default single step
-  + introduced the dual frame buffer
-  + improved the towpass mode
+	Introduced the safe mode as the default single step
+	Introduced the dual frame buffer
+	Improved the towpass mode
 
 20120403:
-  + ezthumb.c: improved twopass method after sanity test.
-    Replace the scan mode with the safe mode
-  + ezthumb.c: decode-on-the-fly is now the default setting.
-    --decode-otf option will still be available but no effect at all
+	* ezthumb.c: improved twopass method after sanity test.
+	Replace the scan mode with the safe mode
+	* ezthumb.c: decode-on-the-fly is now the default setting.
+	--decode-otf option will still be available but no effect at all
 
 20120322:
-  + ezthumb.c: reapply the twopass method
+	* ezthumb.c: reapply the twopass method
 
 20120320:
-  + ezthumb.c: introduced two frame buffers while decoding, one is the 
-    current decoded frame and another one is the previous decoded frame.
-    It could be useful while deciding the closest frames.
+	* ezthumb.c: introduced two frame buffers while decoding, one is the 
+	current decoded frame and another one is the previous decoded frame.
+	It could be useful while deciding the closest frames.
 
 20120316:
-  + main.c/ezthumb.c: introduced the safe mode as part of the -p option.
+	* main.c/ezthumb.c: introduced the safe mode as part of the -p option.
 
 20120315: V2.0.1
-  + main.c: fixed the '-p key' issue which caused by the profile
-  + workaround for DVB rip file by this option:
-    ezthumb -p scan --accurate --decode-otf Argus_20120222-114427384.ts
+	* main.c: fixed the '-p key' issue which caused by the profile
+	* workaround for DVB rip file by this option:
+	  ezthumb -p scan --accurate --decode-otf Argus_20120222-114427384.ts
 
 20120313:
-  + video_duration(): there are two issues in this function. First the video
-  header might be non-existed or inaccurate. In that case the video duration
-  could be a redicules number. Using a bitrate threshold to workaround this
-  problem. Second is that in the function avformat_seek_file(), the
-  AVSEEK_FLAG_BYTE acts terrible (with middle.avi). Sometimes there is no way
-  to seek to 90% of the video file so have to make a workabound.
+	* video_duration(): there are two issues in this function. First the 
+	video header might be non-existed or inaccurate. In that case the 
+	video duration could be a redicules number. Using a bitrate threshold
+	to workaround this problem. Second is that in the function 
+	avformat_seek_file(), the AVSEEK_FLAG_BYTE acts terrible (with 
+	middle.avi). Sometimes there is no way to seek to 90% of the video 
+	file so have to make a workabound.
  
 20120214: V2.0.0
-  + GUI mode added
+	GUI mode added.
 
 20111214: V1.5.8
-  + ezthumb.c, main.c: improved progress display for i-frame ripping by using
-  DTS as the indicator
+	* ezthumb.c, main.c: improved progress display for i-frame ripping by 
+	using DTS as the indicator
 
 20111213:
-  + ezthumb.c: verify the validation of the video file by checking its screen
-  resolution and by opening the file.
+	* ezthumb.c: verify the validation of the video file by checking its 
+	screen resolution and by opening the file.
 
 20111204: V1.5.7
-  + smm_signal_break.c: Fixed a bug that the custom signal callback was not
-  hooked indeed.
+	* smm_signal_break.c: Fixed a bug that the custom signal callback was
+	not hooked indeed.
 
 20111125: FFMPEG version list
-  + Finally found the culprit. There were two FFMPEG installs in my 
-    ubuntu 10.10. One was 0.6.x. Another one appeared as 0.8.x. 
-    By removing the latter the problem is gone.
+	Finally found the culprit. There were two FFMPEG installs in my ubuntu
+	10.10. One was 0.6.x. Another one appeared as 0.8.x. By removing the 
+	latter the problem is gone.
 
 Library:        libavformat  libavcodec  libavdevice  libavutil  libswscale  libavfilter
 ffmpeg-0.6.1:   52.64.2      52.72.2     52.2.0       50.15.1    0.11.0      1.19.0
@@ -288,121 +319,133 @@ ubuntu extra:   53.0.3       53.1.1      53.0.0       51.1.0     0.14.0
 
 
 20111124:
-  + I've got sick off the endless guess work about the FFMPEG's API version
-    changes so I downloaded the 0.7.8 to revise the proper version macro.
-    I believe most parts are fine except the av_dump_format(). There's no clue
-    of when it was introduced.
-  + Apparently the FFMPEG's APIChanges.txt has something wrong about the 
-    version and avformat_open_input(). Defer to current FFMPEG lib
-  + Made up the missing freetype6.dll in the Windows release
+	I've got sick off the endless guess work about the FFMPEG's API 
+	version changes so I downloaded the 0.7.8 to revise the proper version
+	macro. I believe most parts are fine except the av_dump_format(). 
+	There's no clue of when it was introduced.
+	
+	Apparently the FFMPEG's APIChanges.txt has something wrong about the 
+	version and avformat_open_input(). Defer to current FFMPEG lib.
+	
+	Made up the missing freetype6.dll in the Windows release
 
 20111123: V1.5.6
-  + Merged partly from guidev about the LIBAVFORMAT_VERSION macro to 
-    make the makefile workable in archlinux, ubuntu 10.10 and mingw
-  + Implemented a simple build-in profile.
+	Merged partly from guidev about the LIBAVFORMAT_VERSION macro to 
+	make the makefile workable in archlinux, ubuntu 10.10 and mingw
+	
+	Implemented a simple build-in profile.
 
 20111122: 
-  + Release tag: RELEASE_1_5_5
-  + All .a files were missing under the mswin/ directory because of the 
-    wrong setting of the .gitignore file. Now retrieved them.
+	Release tag: RELEASE_1_5_5.
+	
+	All .a files were missing under the mswin/ directory because of the 
+	wrong setting of the .gitignore file. Now retrieved them.
 
 20111115: V1.5.5 
-  + Integrated other libraries into the mswin branch so they could 
-    be managed by git
-  + Revisioned the makefile for MinGW
+	Integrated other libraries into the mswin branch so they could 
+	be managed by git.
+	
+	Revisioned the makefile for MinGW
 
 20111104:
-  + Revisioned this project in MinGW and made it workable in MS Windows
-  + Fixed the conditional compiling error for the FFMPEG version control
+	Revisioned this project in MinGW and made it workable in MS Windows
+	
+	Fixed the conditional compiling error for the FFMPEG version control
 
 20111021: V1.5.4
-  + merged the id_*.c into id_lookup.c
-  + slightly adjusted the Makefile
+	* id_lookup.c: merged the id_*.c into id_lookup.c
+	Slightly adjusted the Makefile
 
 20111021: V1.5.3
-  + Release tag: RELEASE_1_5_3
-  + Merge two branches into the new version for release
+	* Release tag: RELEASE_1_5_3
+	Merge two branches into the new version for release
 
 20111021: V1.5.2
-  + Supported the maximum number when ripping the key frames
-    Command line now support the '-p key@N' opion
+	Supported the maximum number when ripping the key frames
+	Command line now support the '-p key@N' opion
 
 20111007: V1.5.2
-  + Added a rectify function in video_snapshot_skim() to speed up the
-    doing in the unseekable media files.
-  + Refined the video_find_stream() so it could also support 0.6.3 ffmpeg
+	Added a rectify function in video_snapshot_skim() to speed up the
+	doing in the unseekable media files.
+	
+	Refined the video_find_stream() so it could also support 0.6.3 ffmpeg
 
 20111006: V1.5.1
-  + Fixed a bug of finding the video stream, now using av_find_best_stream().
-  + Added the signal handler. Now ezthumb can be broken in the middle.
+	Fixed a bug of finding the video stream, now using 
+	av_find_best_stream().
+	
+	Added the signal handler. Now ezthumb can be broken in the middle.
 
 20111001: V1.5.0
-  Make fixes and ready for release
+	Make fixes and ready for release
 
 20110908: V1.4.2
-  Displaying the screen shot method has been moved into video_snap_begin()
+	Displaying the screen shot method has been moved into 
+	video_snap_begin()
 
 20110908: V1.4.1
-  heuristic method is ready for test.
+	heuristic method is ready for test.
 
 20110906: V1.4.0
-  Many codes regroups in recent day. Begin with a thought that reducing 
-  scan passes if video file doesn't support backward seek. I roughly
-  have got an idea of a heuristic method. Hope it can be done in 1.4.1
+	Many codes regroups in recent day. Begin with a thought that reducing
+	scan passes if video file doesn't support backward seek. I roughly
+	have got an idea of a heuristic method. Hope it can be done in 1.4.1.
 
 20110831:
-  + ezthumb.c: a little bit speed up of the video_duration() function
+	* ezthumb.c: a little bit speed up of the video_duration() function
 
 20110830: V1.3.3
-  + ezthumb.c: duration structure changed
+	* ezthumb.c: duration structure changed
 
 20110829:
-  + main.c: '--index' option and adjust the '-i', '-S' and '-I' options
-  + ezthumb.c: fixed the bug about no video stream issue
-  + LIBAVFORMAT_VERSION_MAJOR: is used to control the depreciated APIs
-  - BUGGY: the "APIchanges" in FFMPEG has error in av_open_input_file() so
-    the version number is not correct about this
-    function.
+	* main.c: '--index' option and adjust the '-i', '-S' and '-I' options
+	* ezthumb.c: fixed the bug about no video stream issue
+	* LIBAVFORMAT_VERSION_MAJOR: is used to control the depreciated APIs
+	* BUGGY: the "APIchanges" in FFMPEG has error in av_open_input_file()
+	so the version number is not correct about this function.
 
 20110824: V1.3.2
-  + eznotify.c: fixed a bug that calling the eznotify() with null pointer
+	* eznotify.c: fixed a bug that calling the eznotify() with null 
+	pointer.
 
 20110821: V1.3.1
-  + main.c: add '-I' option and move av_log_set_level() to main()
-  + ezthumb.c: video_seek_available() fixed a bug that desn't rewind the video
-    stream when this function failed.
-  - A problem: if the video clip is shorted than it claimed, the output would
-    be nasty
+	* main.c: add '-I' option and move av_log_set_level() to main().
+	* ezthumb.c: video_seek_available() fixed a bug that desn't rewind 
+	the video stream when this function failed.
+	+ A problem: if the video clip is shorted than it claimed, the output
+	would be nasty
 
 20110820: V1.3
-  + ezthumb.c: fixed the buggy video_ms_to_pts() and video_system_to_pts()
+	* ezthumb.c: fixed the buggy video_ms_to_pts() and
+	video_system_to_pts().
 
 20110819: merged change from 1.2.2, the '--outdir' option
-  + main.c: add command line option "--linear" to indicate the ezthumb
-    to walk through the whole video rather than using av_seek_frame()
-    Change command line option "--opt-key" to "--anyframe"
+	* main.c: add command line option "--linear" to indicate the ezthumb
+	to walk through the whole video rather than using av_seek_frame().
+	Change command line option "--opt-key" to "--anyframe".
 
 20110818: pre V1.3
-  + main.c: use a generic event_cb() to handle all notifications.
-  + eznotify.c: generic module to handle all notifications.
-  + ezthumb.c: isolated the functions to generate thumbnails to:
-    video_save_scan_pass(), video_save_quick_pass()
-    The problem comes with some .wmv files which could not apply 
-    av_seek_frame(). The solution is to walk through the whole video from
-    first packet to the last.
+	* main.c: use a generic event_cb() to handle all notifications.
+	* eznotify.c: generic module to handle all notifications.
+	* ezthumb.c: isolated the functions to generate thumbnails to:
+	video_save_scan_pass(), video_save_quick_pass()
+	
+	The problem comes with some .wmv files which could not apply 
+	av_seek_frame(). The solution is to walk through the whole video from
+	first packet to the last.
 
 20110302:
-  + main.c: add command line options to set up colours and font size.
+	* main.c: add command line options to set up colours and font size.
 
 20110301:
-  + ezthumb.c: fix the coredump if using still images as input sources.
+	* ezthumb.c: fix the coredump if using still images as input sources.
 
 20110227: V1.2
-  + support setting the starting and the ending time position
-  + add a status line to the bottom of the canvas
+	Support setting the starting and the ending time position.
+	Add a status line to the bottom of the canvas.
 
 20110223: V1.1
-  + support the animated GIF
-  + support the transparent background
+	Support the animated GIF.
+	Support the transparent background.
 
 

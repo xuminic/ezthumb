@@ -212,12 +212,12 @@ static int do_path_trek(char *path, int flags)
 
 static	struct	cliopt	clist[] = {
 	{   0, NULL,      0, "OPTIONS:" },
-	{ 'c', NULL,      2, "change current working directory" },
-	{ 'f', NULL,	  2, "configure file process" },
-	{ 'm', NULL,	  2, "make directory" },
-	{ 'p', NULL,      2, "push/pop current working directory" },
-	{ 'r', NULL,      2, "process directory recurrsively" },
-	{ 's', NULL,      2, "state of the file" },
+	{ 'c', NULL,      1, "change current working directory" },
+	{ 'f', NULL,	  1, "configure file process" },
+	{ 'm', NULL,	  1, "make directory" },
+	{ 'p', NULL,      1, "push/pop current working directory" },
+	{ 'r', NULL,      1, "process directory recurrsively" },
+	{ 's', NULL,      1, "state of the file" },
 	{   1, "help",    0, "*Display the help message" },
 	{   2, "version", 0, "*Display the version message" },
 	{   3, "dir-fifo", 0, NULL },
@@ -226,7 +226,6 @@ static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, NULL }
 };
 
-
 static  char    *version = "smm " VERSION
 ", Test program for the System Masquerade Module library.\n\
 Copyright (C) 2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
@@ -234,22 +233,25 @@ License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
-int smm_main(int argc, char **argv)
+int smm_main(void *rtime, int argc, char **argv)
 {
-	struct	clirun	*rtbuf;
+	void	*rtbuf;
 	int	c, d_flags;
 
-	if ((rtbuf = csc_cli_getopt_alloc(clist)) == NULL) {
+	/* stop the compiler complaining */
+	(void) rtime;
+
+	if ((rtbuf = csc_cli_getopt_open(clist)) == NULL) {
 		return -1;
 	}
 
 	smm_signal_break(do_signal_break);
 
 	d_flags = SMM_PATH_DIR_FIFO;
-	while ((c = getopt_long(argc, argv, rtbuf->optarg, rtbuf->oplst, NULL)) > 0) {
+	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
 		switch (c) {
 		case 1:
-			csc_cli_print(clist);
+			csc_cli_print(clist, NULL);
 			goto quick_quit;
 		case 2:
 			slogs(tstdbg, SLINFO, version, strlen(version));
@@ -290,7 +292,12 @@ int smm_main(int argc, char **argv)
 		}
 	}
 quick_quit:
-	free(rtbuf);
+	csc_cli_getopt_close(rtbuf);
 	return 0;
 }
+
+struct	clicmd	smm_cmd = { 
+	"smm", smm_main, clist, "Testing the smm functions" 
+};
+extern	struct	clicmd	smm_cmd;
 

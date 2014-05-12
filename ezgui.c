@@ -105,11 +105,11 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 
 	gtk_init(argcs, argvs);
 
-	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
+	if ((gui = smm_alloc(sizeof(EZGUI))) == NULL) {
 		return NULL;
 	}
 	if ((gui->config = ezgui_cfg_alloc()) == NULL) {
-		free(gui);
+		smm_free(gui);
 		return NULL;
 	}
 	gui->sysopt = ezopt;
@@ -121,19 +121,19 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 		p = ezopt_profile_export_alloc(ezopt);
 		ezgui_cfg_write(gui->config, CFG_KEY_PROF_SIMPLE, p);
 	}
-	free(p);
+	smm_free(p);
 
 	/* setup the grid profile */
 	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID)) == NULL) {
 		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
 	} else {
-		free(p);
+		smm_free(p);
 	}
 	/* setup the zoom profile */
 	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM)) == NULL) {
 		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
 	} else {
-		free(p);
+		smm_free(p);
 	}
 	
 	gui->w_width  = ezgui_cfg_read_int(gui->config, 
@@ -201,7 +201,7 @@ int ezgui_close(EZGUI *gui)
 	if (gui) {
 		ezgui_option_save(gui);
 		ezgui_cfg_free(gui->config);
-		free(gui);
+		smm_free(gui);
 	}
 	return 0;
 }
@@ -688,7 +688,7 @@ static EZADD *ezgui_page_main_listview_open(GtkWidget *view)
 {
 	EZADD	*ezadd;
 
-	if ((ezadd = calloc(sizeof(EZADD), 1)) == NULL) {
+	if ((ezadd = smm_alloc(sizeof(EZADD))) == NULL) {
 		return NULL;
 	}
 
@@ -723,7 +723,7 @@ static int ezgui_page_main_listview_close(GtkWidget *view, EZADD *ezadd)
 		ezgui_page_main_dialog_invalid_files(ezadd);
 	}
 	g_object_unref(ezadd->discarded);
-	free(ezadd);
+	smm_free(ezadd);
 	return rc;
 }
 
@@ -1322,7 +1322,7 @@ static EZCFG *ezgui_cfg_alloc(void)
 	EZCFG	*cfg;
 	char	*path;
 
-	if ((cfg = calloc(sizeof(EZCFG), 1)) == NULL) {
+	if ((cfg = smm_alloc(sizeof(EZCFG))) == NULL) {
 		return NULL;
 	}
 
@@ -1362,7 +1362,7 @@ static int  ezgui_cfg_free(EZCFG *cfg)
 	/*if (cfg->ckey) {
 		g_free(cfg->ckey);
 	}*/
-	free(cfg);
+	smm_free(cfg);
 	return 0;
 }
 
@@ -1637,7 +1637,7 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 
 	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_FILE_FORMAT)) != NULL) {
 		ezopt->img_quality = meta_image_format(p, ezopt->img_format, 8);
-		free(p);
+		smm_free(p);
 	} else if (rwcfg == EZUI_FMR_RDWR) {
 		sprintf(tmp, "%s@%d", ezopt->img_format, ezopt->img_quality);
 		ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, tmp);
@@ -1659,7 +1659,7 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 		} else {
 			ezopt->flags &= ~EZOP_TRANSPARENT;
 		}
-		free(p);
+		smm_free(p);
 	} else if (rwcfg) {
 		ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
 				ezopt->flags & EZOP_TRANSPARENT ? "yes":"no");

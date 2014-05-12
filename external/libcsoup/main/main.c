@@ -24,62 +24,21 @@
 
 #include "libcsoup.h"
 
+#include "main_define.h"
 
 SMMDBG	*tstdbg = NULL;
 
-extern int fixtoken_main(int argc, char **argv);
-extern int fontpath_main(int argc, char **argv);
-extern int smm_main(int argc, char **argv);
-extern int memdump_main(int argc, char **argv);
-extern int slog_main(int argc, char **argv);
-extern int crc_main(int argc, char **argv);
-extern int config_main(int argc, char **argv);
-extern int csc_cdll_main(int argc, char **argv);
-
-static	struct	{
-	char	*cmd;
-	int	(*entry)(int argc, char **argv);
-	char	*comment;
-} cmdlist[] = {
-	{ "cdll", csc_cdll_main, NULL },
-	{ "config", config_main, NULL },
-	{ "fixtoken", fixtoken_main, NULL },
-	{ "fontpath", fontpath_main, NULL },
-	{ "smm", smm_main, NULL },
-	{ "memdump", memdump_main, NULL },
-	{ "slog", slog_main, NULL },
-	{ "crc", crc_main, NULL },
-	{ NULL, NULL, NULL }
-};
-
-
-static void usage(void)
-{
-	int	i;
-
-	slogc(tstdbg, SLINFO, "Usage: csoup COMMAND [args ...]\n");
-	for (i = 0; cmdlist[i].cmd; i++) {
-		slogc(tstdbg, SLINFO, "  %-20s %s\n", cmdlist[i].cmd,
-				cmdlist[i].comment ? cmdlist[i].comment : "");
-	}
-}
-
 int main(int argc, char **argv)
 {
-	int	i;
-
 	tstdbg = slog_open(SLINFO);
 	smm_init(0);
 
 	if (argc > 1) {
-		for (i = 0; cmdlist[i].cmd; i++) {
-			if (!strcmp(argv[1], cmdlist[i].cmd)) {
-				return cmdlist[i].entry(--argc, ++argv);
-			}
-		}
+		csc_cli_cmd_run(cmdlist, NULL, --argc, ++argv);
+	} else {
+		slogc(tstdbg, SLINFO, "Usage: csoup COMMAND [args ...]\n");
+		csc_cli_cmd_print(cmdlist, NULL);
 	}
-	usage();
-	
 	slog_close(tstdbg);
 	return -1;
 }

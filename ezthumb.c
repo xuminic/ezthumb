@@ -651,7 +651,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		return scnt;
 	}
 	/* allocate a buffer for storing the reference key frames */
-	if ((refdts = calloc(image->shots, sizeof(int64_t))) == NULL) {
+	if ((refdts = smm_alloc(image->shots * sizeof(int64_t))) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 
@@ -738,7 +738,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	}
 
 	video_snap_end(vidx, image);
-	free(refdts);
+	smm_free(refdts);
 	return scnt;	/* return the number of thumbnails */
 }
 
@@ -787,7 +787,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		return NULL;
 	}
 
-	if ((vidx = calloc(sizeof(EZVID), 1)) == NULL) {
+	if ((vidx = smm_alloc(sizeof(EZVID))) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
 	}
@@ -820,7 +820,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 
 	if ((rc = video_open(vidx)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
-		free(vidx);
+		smm_free(vidx);
 		return NULL;
 	}
 
@@ -961,7 +961,7 @@ static int video_free(EZVID *vidx)
 
 		vp = vidx;
 		vidx = vidx->next;
-		free(vp);
+		smm_free(vp);
 	}
 	return EZ_ERR_NONE;
 }
@@ -1085,11 +1085,19 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 	int	size;
 
 	/* allocate a reusable video frame structure */
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+	if ((vidx->fgroup[0].frame = av_frame_alloc()) == NULL) {
+#else
 	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
+#endif
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
+#else
 	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
+#endif
 		video_disconnect(vidx);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
@@ -1113,7 +1121,11 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+	if ((vidx->swsframe = av_frame_alloc()) == NULL) {
+#else
 	if ((vidx->swsframe = avcodec_alloc_frame()) == NULL) {
+#endif
 		video_disconnect(vidx);
 		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
 		return EZ_ERR_SWSCALE;
@@ -1142,7 +1154,11 @@ static int video_disconnect(EZVID *vidx)
 		vidx->swsbuffer = NULL;
 	}
 	if (vidx->swsframe) {
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+		av_frame_free(vidx->swsframe);
+#else
 		av_free(vidx->swsframe);
+#endif
 		vidx->swsframe = NULL;
 	}
 	if (vidx->swsctx) {
@@ -1150,11 +1166,19 @@ static int video_disconnect(EZVID *vidx)
 		vidx->swsctx = NULL;
 	}
 	if (vidx->fgroup[1].frame) {
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+		av_frame_free(vidx->fgroup[1].frame);
+#else
 		av_free(vidx->fgroup[1].frame);
+#endif
 		vidx->fgroup[1].frame = NULL;
 	}
 	if (vidx->fgroup[0].frame) {
+#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+		av_frame_free(vidx->fgroup[0].frame);
+#else
 		av_free(vidx->fgroup[0].frame);
+#endif
 		vidx->fgroup[0].frame = NULL;
 	}
 	return EZ_ERR_NONE;
@@ -1390,7 +1414,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	if (i < 256) {
 		i = 256;
 	}
-	if ((buffer = malloc(i)) == NULL) {
+	if ((buffer = smm_alloc(i)) == NULL) {
 		return EZ_ERR_LOWMEM;
 	}
 
@@ -1456,7 +1480,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		}
 		image_gdcanvas_print(image, line++, 0, buffer);
 	}
-	free(buffer);
+	smm_free(buffer);
 	return EZ_ERR_NONE;
 }
 
@@ -2551,9 +2575,8 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 	int	pro_canvas;
 	int	src_width, ar_height;
 
-	// FIXME: the filename could be utf-8 or widebytes
 	size = sizeof(EZIMG) + strlen(vidx->filename) + 128;
-	if ((image = calloc(size, 1)) == NULL) {
+	if ((image = smm_alloc(size)) == NULL) {
 		uperror(errcode, EZ_ERR_LOWMEM);
 		return NULL;
 	}
@@ -2728,7 +2751,7 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 	size = image_gdcanvas_strlen(image, image->sysopt->mi_size, ftmp);
 	/* we only need the font height plus the gap size */
 	image->mift_height = EZ_LO_WORD(size) + EZ_TEXT_MINFO_GAP;
-	free(ftmp);
+	smm_free(ftmp);
 
 	/* enlarge the canvas height to include the media information */
 	if ((ezopt->flags & EZOP_INFO) == 0) {
@@ -2824,7 +2847,7 @@ static int image_free(EZIMG *image)
 	if (image->gdframe) {
 		gdImageDestroy(image->gdframe);
 	}
-	free(image);
+	smm_free(image);
 	return EZ_ERR_NONE;
 }
 
@@ -3519,7 +3542,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	}
 
 	if (buf == NULL) {
-		buf = inbuf = malloc(strlen(fname) + 128 + 32);
+		buf = inbuf = smm_alloc(strlen(fname) + 128 + 32);
 		if (buf == NULL) {
 			return rc;
 		}
@@ -3561,7 +3584,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 		rc = EZ_THUMB_OVERCOPY;	/* override the last one */
 	}
 	if (inbuf) {
-		free(inbuf);
+		smm_free(inbuf);
 	}
 	//slogz("ezopt_thumb_name: %d\n", rc);
 	return rc;

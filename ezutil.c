@@ -60,7 +60,7 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	/* 20130809 make a copy of pro_size as an extension of grip profile */
 	opt->pro_gext = opt->pro_size;
 	
-	free(tmp);
+	smm_free(tmp);
 	return 0;
 }
 
@@ -92,7 +92,7 @@ char *ezopt_profile_export_alloc(EZOPT *ezopt)
 
 	for (p = ezopt->pro_grid; p; p = p->next, n++);
 	for (p = ezopt->pro_size; p; p = p->next, n++);
-	if ((buf = calloc(n, 64)) == NULL) {
+	if ((buf = smm_alloc(n * 64)) == NULL) {
 		return NULL;
 	}
 	buf[0] = 0;

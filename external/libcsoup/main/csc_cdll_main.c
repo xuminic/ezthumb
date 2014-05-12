@@ -5,11 +5,14 @@
 
 #include "libcsoup.h"
 
-int csc_cdll_main(int argc, char **argv)
+int csc_cdll_main(void *rtime, int argc, char **argv)
 {
 	CSCLNK	*node, *anchor = NULL;
 	char	*cont[] = { "Hello", "World", "Peace", "Love", "Bullshit", NULL };
 
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
+	
 	node = csc_cdl_alloc_head(&anchor, 16);
 	strcpy((char*)node->payload, cont[0]);
 
@@ -24,4 +27,9 @@ int csc_cdll_main(int argc, char **argv)
 	}
 	return 0;
 }
+struct	clicmd	cdll_cmd = {
+	"csc_cdll", csc_cdll_main, NULL, "Testing the functions of doubly circular link list"
+};
+
+extern  struct  clicmd  cdll_cmd;
 

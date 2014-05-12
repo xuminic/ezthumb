@@ -25,19 +25,19 @@ TARGET	= libcsoup.a
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
-.PHONY: all clean soup slog smm main doc
+.PHONY: all clean cli soup slog smm main doc
 	
 all: main
 
 main: $(TARGET)
 	make -C main all
 
-$(TARGET) : soup slog smm
+$(TARGET) : cli slog smm soup
 	$(RM) $(TARGET)
-	$(AR) crus $(TARGET) soup/*.o slog/*.o smm/*.o
+	$(AR) crus $(TARGET) cli/*.o slog/*.o smm/*.o soup/*.o 
 
-soup:
-	make -C soup all
+cli:
+	make -C cli all
 
 slog:
 	make -C slog all
@@ -45,22 +45,29 @@ slog:
 smm:
 	make -C smm all
 
+soup:
+	make -C soup all
+
 doc:
 	doxygen doc/Doxyfile
 
+cleandoc:
+	$(RM) -r doc/html  doc/latex
+
 clean:
-	make -C soup clean
+	make -C cli clean
+	make -C main clean
 	make -C slog clean
 	make -C smm clean
-	make -C main clean
+	make -C soup clean
 	$(RM) $(TARGET)
 
 release:
 	if [ -d $(RELCS) ]; then $(RM) -r $(RELCS); fi
-	-mkdir $(RELCS)
-	$(CP) *.h Make* $(RELCS)
-	$(CP) -a soup slog smm main $(RELCS)
+	-mkdir $(RELCS) $(RELCS)/doc
+	$(CP) ChangeLog Makefile *.h *.sh $(RELCS)
+	$(CP) -a cli main slog smm soup $(RELCS)
+	$(CP) doc/Doxyfile $(RELCS)/doc
 	make -C $(RELCS) clean
-	make -C $(RELCS)/main clean
-
+	tar czf $(RELCS).tar.gz $(RELCS)
 

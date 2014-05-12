@@ -7,7 +7,7 @@ RM      = rm -f
 CFLAGS	+= -I..
 
 SRCS	= main.c fixtoken.c smm.c memdump.c slog.c crc.c fontpath.c config.c \
-	  csc_cdll_main.c
+	  csc_cdll_main.c csc_cli.c
 
 TARGET	= csoup
 
@@ -15,8 +15,15 @@ TARGET	= csoup
 .PHONY: all clean $(TARGET)
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
+$(TARGET): $(SRCS) main_define.h
 	$(CC) $(CFLAGS) -L.. -o $@ $(SRCS) -lcsoup
+
+main_define.h: mkclicmd
+	grep "extern.*struct.*clicmd" *.c|cut -d: -f2 |tr -d '\r' > $@
+	mkclicmd $@
+
+mkclicmd: mkclicmd.c
+	$(CC) $(CFLAGS) -L.. -o $@ $< -lcsoup
 
 universal_crc: universal_crc.c
 	$(CC) $(CFLAGS) -o $@ $<
@@ -27,7 +34,7 @@ crc: universal_crc
 	universal_crc -a tab -b 8 -p 0x7 > crc8.c
 
 clean:
-	$(RM) $(TARGET)
+	$(RM) $(TARGET) main_define.h
 	$(RM) universal_crc
 
 

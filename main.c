@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_PARAM;
 		break;
 	case CMD_HELP:		/* help */
-		csc_cli_print(clist);
+		csc_cli_print(clist, NULL);
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_VERSION:	/* version */
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
 		break;
 	case CMD_B_IND:
 		if (argc - optind < 1) {
-			csc_cli_print(clist);
+			csc_cli_print(clist, NULL);
 			todo = EZ_ERR_EOP;
 			break;
 		}
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
 	case CMD_G_UI:
 		todo = EZ_ERR_EOP;
 		if (sysopt.gui == NULL) {
-			csc_cli_print(clist);
+			csc_cli_print(clist, NULL);
 		}
 #ifndef	CFG_GUI_OFF
 		else {
@@ -353,20 +353,19 @@ int main(int argc, char **argv)
  */
 static int command_line_parser(int argc, char **argv, EZOPT *opt)
 {
-	struct	clirun	*rtbuf;
 	EZOPT	*dummy = NULL;
+	void	*rtbuf;
 	char	*p;
 	int	c, todo, prof_grid, prof_size;
 
-	if ((rtbuf = csc_cli_getopt_alloc(clist)) == NULL) {
+	if ((rtbuf = csc_cli_getopt_open(clist)) == NULL) {
 		return CMD_ERROR;
 	}
-	slog(SLFUNC, "%s\n", rtbuf->optarg);
 
 	if (opt == NULL) {
-		opt = dummy = calloc(sizeof(EZOPT), 1);
+		opt = dummy = smm_alloc(sizeof(EZOPT));
 		if (opt == NULL) {
-			free(rtbuf);
+			csc_cli_getopt_close(rtbuf);
 			return CMD_ERROR;
 		}
 	}
@@ -374,8 +373,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	todo = CMD_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	optind = 1;			/* reset the getopt() function */
-	while ((c = getopt_long(argc, argv, 
-				rtbuf->optarg, rtbuf->oplst, NULL)) > 0) {
+	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
 		switch (c) {
 		case CMD_HELP:
 		case CMD_VERSION:
@@ -594,7 +592,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_F_ONT:
 			if (opt->mi_font) {
-				free(opt->mi_font);
+				smm_free(opt->mi_font);
 			}
 			opt->mi_font = opt->ins_font = 
 					para_get_fontdir(optarg);
@@ -780,9 +778,9 @@ break_parse:
 	}
 	if (dummy) {
 		main_close(dummy);
-		free(dummy);
+		smm_free(dummy);
 	}
-	free(rtbuf);
+	csc_cli_getopt_close(rtbuf);
 	return todo;
 }
 
@@ -809,11 +807,11 @@ static int main_close(EZOPT *opt)
 		opt->accept = NULL;
 	}
 	if (opt->refuse) {
-		free(opt->refuse);
+		smm_free(opt->refuse);
 		opt->refuse = NULL;
 	}
 	if (opt->mi_font) {
-		free(opt->mi_font);
+		smm_free(opt->mi_font);
 		opt->mi_font = NULL;
 	}
 	return 0;
@@ -888,7 +886,7 @@ static int env_init(EZOPT *ezopt)
 	}*/
 
 	command_line_parser(len, arg, ezopt);
-	free(vcmd);
+	smm_free(vcmd);
 	return 0;
 }
 
@@ -946,10 +944,10 @@ static int para_get_time_point(char *s)
 		val = strtol(argvs[0], NULL, 0) * 3600 +
 			strtol(argvs[1], NULL, 0) * 60 +
 			strtol(argvs[2], NULL, 0);
-		free(tmp);
+		smm_free(tmp);
 		return val * 1000 + strtol(argvs[3], NULL, 0);
 	}
-	free(tmp);
+	smm_free(tmp);
 	return val * 1000;
 }
 
@@ -973,7 +971,7 @@ static int para_get_position(char *s)
 		argcs = para_make_postition(argvs[0]) | 
 			para_make_postition(argvs[1]);
 	}
-	free(tmp);
+	smm_free(tmp);
 	return argcs;
 }
 
@@ -1030,7 +1028,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	rp = argvs[0];
 	if (rp && *rp) {
 		if (!isxdigit(*rp)) {
-			free(tmp);
+			smm_free(tmp);
 			return EZ_ERR_PARAM;
 		}
 		rc = strtoul(rp, NULL, 16);
@@ -1041,7 +1039,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	rp = argvs[1];
 	if (rp && *rp) {
 		if (!isxdigit(*rp)) {
-			free(tmp);
+			smm_free(tmp);
 			return EZ_ERR_PARAM;
 		}
 		rc = strtoul(rp, NULL, 16);
@@ -1052,7 +1050,7 @@ static int para_get_color(EZOPT *opt, char *s)
 	rp = argvs[2];
 	if (rp && *rp) {
 		if (!isxdigit(*rp)) {
-			free(tmp);
+			smm_free(tmp);
 			return EZ_ERR_PARAM;
 		}
 		rc = strtoul(rp, NULL, 16);
@@ -1060,7 +1058,7 @@ static int para_get_color(EZOPT *opt, char *s)
 		opt->canvas_color[1] = (unsigned char)((rc >> 8) & 0xff);
 		opt->canvas_color[2] = (unsigned char)(rc & 0xff);
 	}
-	free(tmp);
+	smm_free(tmp);
 	return EZ_ERR_NONE;
 }
 
@@ -1099,7 +1097,7 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 		if (isdigit(*rp)) {
 			opt->mi_size = (int) strtol(rp, NULL, 0);
 		} else {
-			free(tmp);
+			smm_free(tmp);
 			return EZ_ERR_PARAM;
 		}
 	}
@@ -1108,11 +1106,11 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 		if (isdigit(*rp)) {
 			opt->ins_size = (int) strtol(rp, NULL, 0);
 		} else {
-			free(tmp);
+			smm_free(tmp);
 			return EZ_ERR_PARAM;
 		}
 	}
-	free(tmp);
+	smm_free(tmp);
 	return EZ_ERR_NONE;
 }
 

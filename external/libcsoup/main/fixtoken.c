@@ -59,12 +59,12 @@ static int fixtoken_test(char *content, char *delim)
 	slogc(tstdbg, SLINFO, "\n");
 
 	strcpy(buf, content);
-	argc = csc_mkargv(buf, argv, sizeof(argv)/sizeof(char*));
+	/*argc = csc_mkargv(buf, argv, sizeof(argv)/sizeof(char*));
 	slogc(tstdbg, SLINFO, "MKARGV:   ");
 	for (i = 0; i < argc; i++) {
 		slogc(tstdbg, SLINFO, "{%s} ", argv[i]);
 	}
-	slogc(tstdbg, SLINFO, "\n\n");
+	slogc(tstdbg, SLINFO, "\n\n");*/
 	return 0;
 }
 
@@ -90,9 +90,12 @@ static int fixtoken_run(void)
 }
 
 
-int fixtoken_main(int argc, char **argv)
+int fixtoken_main(void *rtime, int argc, char **argv)
 {
 	int	i;
+
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
 
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "-h") || !strcmp(*argv, "--help")) {
@@ -111,4 +114,10 @@ int fixtoken_main(int argc, char **argv)
 	}
 	return 0;
 }
+
+struct	clicmd	fixtoken_cmd = {
+	"fixtoken", fixtoken_main, NULL, "Testing the fixtoken and ziptoken"
+};
+
+extern  struct  clicmd  fixtoken_cmd;
 

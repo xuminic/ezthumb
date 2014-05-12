@@ -5,8 +5,6 @@
    CSOUP is a group of functions for general reusing purpose.
 
    \author "Andy Xuming" <xuming@users.sourceforge.net>
-   
-   \copyright GNU Public License.
 */
 /* Copyright (C) 2013  "Andy Xuming" <xuming@users.sourceforge.net>
 
@@ -30,68 +28,66 @@
 #include <stdio.h>
 #include <getopt.h>
 
-#define LIBCSOUP_VERSION	"0.4.0"
+#define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
-#define LIBCSOUP_VER_MINOR	4		/* 0-4095 */
+#define LIBCSOUP_VER_MINOR	5		/* 0-4095 */
 #define LIBCSOUP_VER_BUGFIX	0		/* 0-4095 */
-#define LIBCSOUP_VER_NUMBER	((LIBCSOUP_VER_MAJOR << 24) | \
-			(LIBCSOUP_VER_MINOR << 12) | LIBCSOUP_VER_BUGFIX)
+
 
 /****************************************************************************
  * Command line process functions
  ****************************************************************************/
-#define CLIOPT_PARAM_NONE	0
-#define CLIOPT_PARAM_NUMBER	1
-#define CLIOPT_PARAM_STRING	2
-#define CLIOPT_PARAM_CHAR	3
 
-#define CLI_SHORT		1
-#define CLI_LONG		2
-#define CLI_BOTH		3
-#define CLI_COMMENT		4
-#define CLI_EXTLINE		8
-#define CLI_EOL			16
+#define CSC_CLI_UNCMD	(('U'<<24)|('C'<<16)|('M'<<8)|'D')
 
-#define CLI_LF_GATE		20
-
+/*!
+ * The option list of Command line interface.
+ */
 struct	cliopt	{
-	int	opt_char;
-	char	*opt_long;
+	int	opt_char;	///Short form of option characters.
+	char	*opt_long;	///Long form of option strings.
+
+	/*! param 
+	 *  How many arguments are required.
+	 *  - 0: No argument required.
+	 *  - 1: One argument required.
+	 *  - 2: Optional argument.  */
 	int	param;
+	char	*comment;	///A description about thi option
+};
+
+/*!
+ * The command list structure of Command line interface. 
+ */
+struct	clicmd	{
+	char	*cmd;
+	int	(*entry)(void *rtime, int argc, char **argv);
+	struct	cliopt	*param;
 	char	*comment;
 };
-
-struct	clirun	{
-	int	optind;
-	char	*optarg;
-	int	argc;
-	char	**argv;
-	struct	option	oplst[1];
-};
-
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+int csc_cli_make_list(struct cliopt *optbl, char *list, int len);
+int csc_cli_make_table(struct cliopt *optbl, struct option *oplst, int len);
+int csc_cli_print(struct cliopt *optbl, int (*show)(char *));
 
-/* see csc_cli_option.c */
-int csc_cli_type(struct cliopt *optbl);
-int csc_cli_table_size(struct cliopt *optbl);
-int csc_cli_print(struct cliopt *optbl);
+void *csc_cli_getopt_open(struct cliopt *optbl);
+int csc_cli_getopt_close(void *clibuf);
+int csc_cli_getopt(int argc, char * const argv[], void *clibuf);
 
-/* see csc_cli_alloc_list.c */
-char *csc_cli_alloc_list(struct cliopt *optbl);
+void *csc_cli_qopt_open(int argc, char **argv);
+int csc_cli_qopt_close(void *ropt);
+int csc_cli_qopt_optind(void *ropt);
+int csc_cli_qopt_optopt(void *ropt);
+char *csc_cli_qopt_optarg(void *ropt);
+int csc_cli_qopt(void *ropt, struct cliopt *optbl);
 
-/* see csc_cli_alloc_table.c */
-void *csc_cli_alloc_table(struct cliopt *optbl);
-
-/* see csc_cli_getopt_alloc.c */
-void *csc_cli_getopt_alloc(struct cliopt *optbl);
-
-/* see csc_cli_getopt.c */
-void *csc_cli_setopt(void *clibuf, int argc, char **argv);
-int csc_cli_getopt(void *clibuf, struct cliopt *optbl);
+int csc_cli_mkargv(char *sour, char **idx, int ids);
+int csc_cli_cmd_print(struct clicmd **cmdtbl, int (*show)(char *));
+int csc_cli_cmd_run(struct clicmd **cmdtbl, void *rtime, int argc, char **);
 
 #ifdef __cplusplus
 } // __cplusplus defined.
@@ -247,6 +243,7 @@ void *csc_extname_filter_open(char *s);
 int csc_extname_filter_close(void *efft);
 int csc_extname_filter_match(void *efft, char *fname);
 
+char *csc_strfill(char *s, int padto, int ch);
 size_t csc_strlcpy(char *dst, const char *src, size_t siz);
 char *csc_strcpy_alloc(const char *src, int extra);
 int csc_fixtoken(char *sour, char **idx, int ids, char *delim);
@@ -254,7 +251,6 @@ char **csc_fixtoken_copy(char *sour, char *delim, int *ids);
 int csc_ziptoken(char *sour, char **idx, int ids, char *delim);
 char **csc_ziptoken_copy(char *sour, char *delim, int *ids);
 int csc_isdelim(char *delim, int ch);
-int csc_mkargv(char *sour, char **idx, int ids);
 char *csc_cuttoken(char *sour, char **token, char *delim);
 char *csc_gettoken(char *sour, char *buffer, char *delim);
 

@@ -1,12 +1,30 @@
+
+20140509: 0.5.0
+	* cli: a lot of changes in the command line interface.
+
+20140507: 0.4.2
+	* csc_mkargs.c: updated and reviewed the codes.
+	* main/csc_cdll_main.c: example and test codes added.
+
+20140507: 0.4.1
+	Removed the \copyright field in doxygen part because it doesn't 
+	compatible with pre-1.8.x.
+	
+	Create 'cli' directory to host command line interface process functions.
+
 20140430: 0.4.0
-  Revised the codes with Doxygen supporting
+	Revised the codes with Doxygen supporting
+
 20131009: 0.2.2
-   Open files with the sharing mode when retrieving file size
+	Open files with the sharing mode when retrieving file size
+
 20130830: 0.2.1
-  Merged all modules into libcsoup 0.2.1
+	Merged all modules into libcsoup 0.2.1
+
 20120820: SMM V1.1.0.0 
-  Replaced the error codes strategy by smm style consistently
-  Improved the smm_pathtrek() function
+	Replaced the error codes strategy by smm style consistently
+	Improved the smm_pathtrek() function
+
 20111103: SMM V1.0.0.0 
-  Port from ezthum project
+	Port from ezthum project
 	

@@ -26,15 +26,15 @@
 
 static	char	testbuf[2048];
 
-int crc_main(int argc, char **argv)
+int crc_main(void *rtime, int argc, char **argv)
 {
 	unsigned long	c32;
 	unsigned short	c16, cci;
 	unsigned char	c8;
 	int		i;
 
-	(void) argc;
-	(void) argv;
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
 
 	for (i = 0; i < (int) sizeof(testbuf); i++) {
 		testbuf[i] = i + 1;
@@ -70,3 +70,8 @@ int crc_main(int argc, char **argv)
 	return 0;
 }
 
+struct	clicmd	crc_cmd = {
+	"crc", crc_main, NULL, "Testing the CRC functions"
+};
+
+extern  struct  clicmd  crc_cmd;

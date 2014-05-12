@@ -41,12 +41,12 @@ static int my_stdout(int flush, char *buf, int len)
 	return len;
 }
 
-int slog_main(int argc, char **argv)
+int slog_main(void *rtime, int argc, char **argv)
 {
 	int	i, level, control;
 
-	(void) argc;
-	(void) argv;
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
 
 	slogc(tstdbg, SLINFO, "## slog can be used before initialized\n");
 	level = SLSHOW;
@@ -139,4 +139,9 @@ int slog_main(int argc, char **argv)
 	slog_close(NULL);
 	return 0;
 }
+
+struct	clicmd	slog_cmd = {
+	"slog", slog_main, NULL, "Testing the slog functions"
+};
+extern  struct  clicmd  slog_cmd;
 

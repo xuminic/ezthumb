@@ -23,7 +23,7 @@
 
 #include "libcsoup.h"
 
-int memdump_main(int argc, char **argv)
+int memdump_main(void *rtime, int argc, char **argv)
 {
 	char	user[384], buf[256];
 	int	i, len;
@@ -44,8 +44,8 @@ int memdump_main(int argc, char **argv)
 		0
 	};
 
-	(void) argc;
-	(void) argv;	/* stop the compiler warning */
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
 
 	for (i = 0; i < (int)sizeof(user); user[i] = i, i++);
 
@@ -77,4 +77,10 @@ int memdump_main(int argc, char **argv)
 			sizeof(long long), sizeof(float), sizeof(double));
 	return 0;
 }
+
+struct	clicmd	memdump_cmd = {
+	"memdump", memdump_main, NULL, "Testing the memory dump"
+};
+
+extern  struct  clicmd  memdump_cmd;
 

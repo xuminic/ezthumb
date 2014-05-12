@@ -240,31 +240,61 @@ int config_create_new(void)
 	return 0;
 }
 
-int config_main(int argc, char **argv)
+static	struct	cliopt	clist[] = {
+	{   0, NULL,        0, "OPTIONS:" },
+	{ 'h', "help",      0, "This help" },
+	{ 'o', "open-read", 0, "Open the configure file in read-only mode" },
+	{ 'k', "key-test",  0, "Test the key and value pairs" },
+	{ 'b', "block",     1, "Test the block in the configure file" },
+	{ 'c', "create",    0, "Create a new configure file" },
+	{ 0, NULL, 0, NULL }
+};
+
+int config_main(void *rtime, int argc, char **argv)
 {
-	while (--argc && (**++argv == '-')) {
-		if (!strcmp(*argv, "-h") || !strcmp(*argv, "--help")) {
-			slogz("config \n");
-			return 0;
-		} else if (!strcmp(*argv, "--open-rdonly")) {
+	int	c;
+
+	if (argc < 2) {
+		csc_cli_print(clist, NULL);
+		return 0;
+	}
+	if ((rtime = csc_cli_qopt_open(argc, argv)) == NULL) {
+		return -1;
+	}
+	while ((c = csc_cli_qopt(rtime, clist)) >= 0) {
+		switch (c) {
+		case 'h':
+			csc_cli_print(clist, NULL);
+			break;
+		case 'o':
 			config_open_rdonly();
-		} else if (!strcmp(*argv, "--key-test")) {
+			break;
+		case 'k':
 			config_key_test();
-		} else if (!strcmp(*argv, "--block")) {
-			argv++;
-			argc--;
-			if (argc > 0) {
-				config_block_test(*argv);
-			}
-		} else if (!strcmp(*argv, "--create")) {
+			break;
+		case 'b':
+			config_block_test(csc_cli_qopt_optarg(rtime));
+			break;
+		case 'c':
 			config_create_new();
-		} else {
-			slogz("Unknown option. [%s]\n", *argv);
-			return -1;
+			break;
+		default:
+			if (csc_cli_qopt_optopt(rtime) == ':') {
+				slogz("%c: missing argument\n", c);
+			} else {
+				slogz("%c: unknown option\n", c);
+			}
+			csc_cli_print(clist, NULL);
+			break;
 		}
 	}
-	/*if (argc > 0) {
-	}*/
+	csc_cli_qopt_close(rtime);
 	return 0;
 }
+
+struct	clicmd	config_cmd = {
+	"config", config_main, clist, "Testing the configure file management"
+};
+
+extern  struct  clicmd  config_cmd;
 

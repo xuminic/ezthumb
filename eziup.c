@@ -111,7 +111,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 		return NULL;
 	}
 
-	if ((gui = calloc(sizeof(EZGUI), 1)) == NULL) {
+	if ((gui = smm_alloc(sizeof(EZGUI))) == NULL) {
 		return NULL;
 	}
 
@@ -164,7 +164,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 
 	/*for ( ; i <= 20; i++) {
 		EZMEDIA	*minfo;
-		minfo = malloc(sizeof(EZMEDIA) + 64);
+		minfo = smm_alloc(sizeof(EZMEDIA) + 64);
 		sprintf(minfo->fname, "Mytestfile%03d.txt", i);
 		strcpy(minfo->vidlen, "10:31:97");
 		strcpy(minfo->fsize, "10.997GB");
@@ -186,13 +186,13 @@ int ezgui_close(EZGUI *gui)
 	if (gui) {
 		IupClose();
 		if (gui->filefilter) {
-			free(gui->filefilter);
+			smm_free(gui->filefilter);
 		}
 		if (gui->cur_dir) {
-			free(gui->cur_dir);
+			smm_free(gui->cur_dir);
 		}
 		csc_cdl_destroy(&gui->list_cache);
-		free(gui);
+		smm_free(gui);
 	}
 	return 0;
 }
@@ -542,7 +542,7 @@ static int ezgui_event_main_add(Ihandle *ih)
 	if (gui->cur_dir == NULL) {
 		gui->cur_dir = csc_strcpy_alloc(path, 4);
 	} else {
-		free(gui->cur_dir);
+		smm_free(gui->cur_dir);
 		gui->cur_dir = csc_strcpy_alloc(path, 4);
 	}
 	/* cut out the tailing '/' or '0' */
@@ -569,12 +569,12 @@ static int ezgui_event_main_add(Ihandle *ih)
 		//printf("%s\n", path);
 		ezgui_page_main_file_append(gui, path);
 		ezgui_show_progress(gui, ++i, amnt);
-		free(path);
+		smm_free(path);
 	}
 	if (i < amnt) {
 		ezgui_show_progress(gui, amnt, amnt);
 	}
-	free(flist);
+	smm_free(flist);
 	return IUP_DEFAULT;
 }
 
@@ -644,7 +644,7 @@ static char *ezgui_make_filters(char *slist)
 	/* Assuming the worst case of the short list is like "a;b;c;d",
 	 * it will then be expanded to "*.a;*.b;*.c;*.d". The biggest length 
 	 * is N + (N/2+1) * 2 */
-	if ((flt = malloc(strlen(slist) * 2 + 64)) == NULL) {
+	if ((flt = smm_alloc(strlen(slist) * 2 + 64)) == NULL) {
 		return NULL;
 	}
 

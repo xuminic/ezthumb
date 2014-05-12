@@ -24,9 +24,12 @@
 
 #include "libcsoup.h"
 
-int fontpath_main(int argc, char **argv)
+int fontpath_main(void *rtime, int argc, char **argv)
 {
 	char	*fdir;
+
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
 
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "-h") || !strcmp(*argv, "--help")) {
@@ -44,4 +47,11 @@ int fontpath_main(int argc, char **argv)
 	}
 	return 0;
 }
+
+struct	clicmd	fontpath_cmd = {
+	"fontpath", fontpath_main, NULL, "Testing the smm_fontpath() function"
+};
+
+extern  struct  clicmd  fontpath_cmd;
+
 
