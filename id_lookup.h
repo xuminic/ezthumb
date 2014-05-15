@@ -28,10 +28,12 @@
 #define ID_LOOKUP_VERSION	1
 
 struct	idtbl	{
-	int	no;
-	char	*id;
+	int	id;
+	char	*s;
 };
 
+extern	struct	idtbl	id_layout[];
+extern	struct	idtbl	id_duration[];
 extern	struct	idtbl	id_codec[];
 extern	struct	idtbl	id_codec_flag[];
 extern	struct	idtbl	id_codec_type[];
@@ -42,6 +44,7 @@ extern	struct	idtbl	id_sam_format[];
 
 char *id_lookup(struct idtbl *table, int id);
 char *id_lookup_tail(struct idtbl *table, int id);
+int id_lookup_id(struct idtbl *table, char *s);
 
 #endif	/* _ID_LOOKUP_H_ */
 

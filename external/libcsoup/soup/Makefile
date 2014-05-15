@@ -12,8 +12,7 @@ SRCS	:= csc_cdll.c		\
 	   csc_crc32.c		\
 	   csc_crc8.c		\
 	   csc_cuttoken.c	\
-	   csc_extname_filter_match.c \
-	   csc_extname_filter_open.c \
+	   csc_extname_filter.c \
 	   csc_file_load.c	\
 	   csc_file_store.c	\
 	   csc_path_basename.c	\

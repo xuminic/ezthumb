@@ -69,5 +69,10 @@ release:
 	$(CP) -a cli main slog smm soup $(RELCS)
 	$(CP) doc/Doxyfile $(RELCS)/doc
 	make -C $(RELCS) clean
+	$(RM) $(RELCS).tar.gz
 	tar czf $(RELCS).tar.gz $(RELCS)
+
+export: release
+	$(RM) $(RELCS).tar.gz
+	cp -au $(RELCS)/* ../ezthumb/external/libcsoup
 

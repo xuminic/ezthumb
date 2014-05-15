@@ -97,6 +97,7 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
 static Ihandle *xui_text_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext);
 static Ihandle *xui_button(char *prompt, Icallback ntf);
+static int string_array_indexer(char *strarr[], char *elem);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -124,11 +125,11 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	gui->sysopt->notify = ezgui_notificate;
 
 	/* the index of profile of grid and zoom parameters */
-	gui->grid_idx = ezm_strarr_index(list_grid, CFG_PIC_GRID_STEP);
-	gui->zoom_idx = ezm_strarr_index(list_zoom, CFG_PIC_ZOOM_DEFINE);
+	gui->grid_idx = string_array_indexer(list_grid, CFG_PIC_GRID_STEP);
+	gui->zoom_idx = string_array_indexer(list_zoom, CFG_PIC_ZOOM_DEFINE);
 
-	gui->dfm_idx = ezm_strarr_index(list_duration, CFG_PIC_AUTO);
-	gui->fmt_idx = ezm_strarr_index(list_format, CFG_PIC_FMT_JPEG);
+	gui->dfm_idx = string_array_indexer(list_duration, CFG_PIC_AUTO);
+	gui->fmt_idx = string_array_indexer(list_format, CFG_PIC_FMT_JPEG);
 
 	/* seperate the image quality and frame rate */
 	gui->tmp_jpg_qf  = 85;
@@ -1260,4 +1261,18 @@ static Ihandle *xui_button(char *prompt, Icallback ntf)
 	}
 	return button;
 }
+
+
+static int string_array_indexer(char *strarr[], char *elem)
+{
+	int	i;
+
+	for (i = 0; strarr[i]; i++) {
+		if (!strcmp(strarr[i], elem)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 

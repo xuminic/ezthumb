@@ -194,6 +194,121 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	}
 }
 
+int ezopt_load_config(EZOPT *ezopt, void *config)
+{
+	char	*s;
+	long	rc;
+
+	smm_config_read_long(config, NULL, CFG_KEY_GRID_COLUMN, &rc);
+	ezopt->grid_col = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_GRID_ROW, &rc);
+	ezopt->grid_row = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_CANVAS_WIDTH, &rc);
+	ezopt->canvas_width = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_TIME_STEP, &rc);
+	ezopt->tm_step = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_GRID_GAP_WID, &rc);
+	ezopt->grid_gap_w = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_GRID_GAP_HEI, &rc);
+	ezopt->grid_gap_h = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_CANVAS_RIM_WID, &rc);
+	ezopt->grid_rim_w = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_CANVAS_RIM_HEI, &rc);
+	ezopt->grid_rim_h = (int) rc;
+
+	if ((s = smm_config_read(config, NULL, CFG_KEY_COLOR_EDGE)) != NULL) {
+		meta_make_color(s, ezopt->edge_color);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_COLOR_SHADOW)) != NULL) {
+		meta_make_color(s, ezopt->shadow_color);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_COLOR_CANVAS)) != NULL) {
+		meta_make_color(s, ezopt->canvas_color);
+	}
+
+	smm_config_read_long(config, NULL, CFG_KEY_EDGE_WIDTH, &rc);
+	ezopt->edge_width = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_SHADOW_WIDTH, &rc);
+	ezopt->shadow_width = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_ZOOM_WIDTH, &rc);
+	ezopt->tn_width = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_ZOOM_HEIGHT, &rc);
+	ezopt->tn_height = (int) rc;
+	smm_config_read_long(config, NULL, CFG_KEY_ZOOM_RATIO, &rc);
+	ezopt->tn_facto = (int) rc;
+
+	if ((s = smm_config_read(config, NULL, CFG_KEY_INFO_FONT)) != NULL) {
+		if (ezopt->mi_font) {
+			smm_free(ezopt->mi_font);
+		}
+		ezopt->mi_font = ezopt->ins_font = meta_make_fontdir(s);
+	}
+	smm_config_read_long(config, NULL, CFG_KEY_INFO_SIZE, &rc);
+	ezopt->mi_size = (int) rc;
+	if ((s = smm_config_read(config, NULL, CFG_KEY_INFO_COLOR)) != NULL) {
+		meta_make_color(s, ezopt->mi_color);
+	}
+	smm_config_read_long(config, NULL, CFG_KEY_INFO_SHADOW, &rc);
+	ezopt->mi_shadow = (int) rc;
+	if ((s = smm_config_read(config, NULL, CFG_KEY_INFO_LAYOUT)) != NULL) {
+		ezopt->mi_position = id_lookup_id(id_layout, s);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_INFO_STATUS)) != NULL) {
+		ezopt->st_position = id_lookup_id(id_layout, s);
+	}
+
+	smm_config_read_long(config, NULL, CFG_KEY_INSET_SIZE, &rc);
+	ezopt->ins_size = (int) rc;
+	if ((s = smm_config_read(config, NULL, CFG_KEY_INSET_COLOR)) != NULL) {
+		meta_make_color(s, ezopt->ins_color);
+	}
+	smm_config_read_long(config, NULL, CFG_KEY_INSET_SHADOW, &rc);
+	ezopt->ins_shadow = (int) rc;
+	if ((s = smm_config_read(config, NULL, CFG_KEY_INSET_LAYOUT)) != NULL) {
+		ezopt->ins_position = id_lookup_id(id_layout, s);
+	}
+
+	if ((s = smm_config_read(config, NULL, CFG_KEY_FILE_FORMAT)) != NULL) {
+		ezopt->img_quality = meta_image_format(s, ezopt->img_format, 8);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_TRANSPARENCY)) != NULL) {
+		if (!strcasecmp(s, "yes")) {
+			ezopt->flags |= EZOP_TRANSPARENT;
+			ezopt->canvas_color[3] = 0;
+		} else {
+			ezopt->flags &= ~EZOP_TRANSPARENT;
+		}
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_FILE_SUFFIX)) != NULL) {
+		csc_strlcpy(ezopt->suffix, s, 64);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_BG_PICTURE)) != NULL) {
+		if (ezopt->background) {
+			smm_free(ezopt->background);
+		}
+		ezopt->background = csc_strcpy_alloc(s, 0);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_BG_LAYOUT)) != NULL) {
+		ezopt->bg_position |= id_lookup_id(id_layout, s);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_BG_QUALITY)) != NULL) {
+		ezopt->bg_position |= id_lookup_id(id_layout, s);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_SUFFIX_FILTER)) != NULL) {
+		if (ezopt->accept) {
+			csc_extname_filter_close(ezopt->accept);
+		}
+		ezopt->accept = csc_extname_filter_open(s);
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_DURATION)) != NULL) {
+		SETDURMOD(ezopt->flags, id_lookup_id(id_duration, s));
+	}
+	if ((s = smm_config_read(config, NULL, CFG_KEY_PROF_SIMPLE)) != NULL) {
+		ezopt_profile_setup(ezopt, s);
+	}
+	return 0;
+}
+
 void ezopt_review(EZOPT *ezopt)
 {
 	/* foolproof the right transparent setting */
@@ -216,6 +331,7 @@ void ezopt_review(EZOPT *ezopt)
 		}
 	}*/
 }
+
 
 int ezthumb(char *filename, EZOPT *ezopt)
 {
@@ -367,6 +483,130 @@ int ezthumb_break(EZOPT *ezopt)
 	return EZ_ERR_NONE;
 }
 
+int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block)
+{
+	int	rc;
+
+	if ((ezopt == NULL) || (ezopt->notify == NULL)) {
+		return ezdefault(ezopt, event, param, opt, block);
+	}
+
+	rc = ezopt->notify(ezopt, event, param, opt, block);
+	if (rc == EN_EVENT_PASSTHROUGH) {
+		return ezdefault(ezopt, event, param, opt, block);
+	}
+	return rc;
+}
+
+int ezopt_store_config(EZOPT *ezopt, void *config)
+{
+	char	buf[64], *s;
+	long	val;
+
+	val = (long) ezopt->grid_col;
+	smm_config_write_long(config, NULL, CFG_KEY_GRID_COLUMN, val);
+	val = (long) ezopt->grid_row;
+	smm_config_write_long(config, NULL, CFG_KEY_GRID_ROW, val);
+	val = (long) ezopt->canvas_width;
+	smm_config_write_long(config, NULL, CFG_KEY_CANVAS_WIDTH, val);
+	val = (long) ezopt->tm_step;
+	smm_config_write_long(config, NULL, CFG_KEY_TIME_STEP, val);
+	val = (long) ezopt->grid_gap_w;
+	smm_config_write_long(config, NULL, CFG_KEY_GRID_GAP_WID, val);
+	val = (long) ezopt->grid_gap_h;
+	smm_config_write_long(config, NULL, CFG_KEY_GRID_GAP_HEI, val);
+	val = (long) ezopt->grid_rim_w;
+	smm_config_write_long(config, NULL, CFG_KEY_CANVAS_RIM_WID, val);
+	val = (long) ezopt->grid_rim_h;
+	smm_config_write_long(config, NULL, CFG_KEY_CANVAS_RIM_HEI, val);
+
+	meta_export_color(ezopt->edge_color, buf, sizeof(buf));
+	smm_config_write(config, NULL, CFG_KEY_COLOR_EDGE, buf);
+	meta_export_color(ezopt->shadow_color, buf, sizeof(buf));
+	smm_config_write(config, NULL, CFG_KEY_COLOR_SHADOW, buf);
+	meta_export_color(ezopt->canvas_color, buf, sizeof(buf));
+	smm_config_write(config, NULL, CFG_KEY_COLOR_CANVAS, buf);
+
+	val = (long) ezopt->edge_width;
+	smm_config_write_long(config, NULL, CFG_KEY_EDGE_WIDTH, val);
+	val = (long) ezopt->shadow_width;
+	smm_config_write_long(config, NULL, CFG_KEY_SHADOW_WIDTH, val);
+	val = (long) ezopt->tn_width;
+	smm_config_write_long(config, NULL, CFG_KEY_ZOOM_WIDTH, val);
+	val = (long) ezopt->tn_height;
+	smm_config_write_long(config, NULL, CFG_KEY_ZOOM_HEIGHT, val);
+	val = (long) ezopt->tn_facto;
+	smm_config_write_long(config, NULL, CFG_KEY_ZOOM_RATIO, val);
+
+	if (ezopt->mi_font) {
+		smm_config_write(config, NULL, 
+				CFG_KEY_INFO_FONT, ezopt->mi_font);
+	}
+	val = (long) ezopt->mi_size;
+	smm_config_write_long(config, NULL, CFG_KEY_INFO_SIZE, val);
+	meta_export_color(ezopt->mi_color, buf, sizeof(buf));
+	smm_config_write(config, NULL, CFG_KEY_INFO_COLOR, buf);
+	val = (long) ezopt->mi_shadow;
+	smm_config_write_long(config, NULL, CFG_KEY_INFO_SHADOW, val);
+
+	smm_config_write(config, NULL, CFG_KEY_INFO_LAYOUT, 
+		id_lookup(id_layout, ezopt->mi_position & EZ_POS_MASK));
+	smm_config_write(config, NULL, CFG_KEY_INFO_STATUS,
+		id_lookup(id_layout, ezopt->st_position & EZ_POS_MASK));
+
+	val = (long) ezopt->ins_size;
+	smm_config_write_long(config, NULL, CFG_KEY_INSET_SIZE, val);
+	meta_export_color(ezopt->ins_color, buf, sizeof(buf));
+	smm_config_write(config, NULL, CFG_KEY_INSET_COLOR, buf);
+	val = (long) ezopt->ins_shadow;
+	smm_config_write_long(config, NULL, CFG_KEY_INSET_SHADOW, val);
+	smm_config_write(config, NULL, CFG_KEY_INSET_LAYOUT,
+		id_lookup(id_layout, ezopt->ins_position & EZ_POS_MASK));
+
+	if (ezopt->img_quality) {
+		sprintf(buf, "%s@%d", ezopt->img_format, ezopt->img_quality);
+	} else {
+		strcpy(buf, ezopt->img_format);
+	}
+	smm_config_write(config, NULL, CFG_KEY_FILE_FORMAT, buf);
+
+	if (ezopt->flags & EZOP_TRANSPARENT) {
+		smm_config_write(config, NULL, CFG_KEY_TRANSPARENCY, "Yes");
+	}
+	if (ezopt->suffix[0]) {
+		smm_config_write(config, NULL, 
+				CFG_KEY_FILE_SUFFIX, ezopt->suffix);
+	}
+	if (ezopt->background) {
+		smm_config_write(config, NULL, 
+				CFG_KEY_BG_PICTURE, ezopt->background);
+	}
+	smm_config_write(config, NULL, CFG_KEY_BG_LAYOUT,
+		id_lookup(id_layout, ezopt->bg_position & EZ_POS_MASK));
+	smm_config_write(config, NULL, CFG_KEY_BG_QUALITY,
+		id_lookup(id_layout, ezopt->bg_position & ~EZ_POS_MASK));
+	
+	if (ezopt->accept) {
+		s = csc_extname_filter_export_alloc(ezopt->accept);
+		if (s != NULL) {
+			smm_config_write(config, NULL, 
+					CFG_KEY_SUFFIX_FILTER, s);
+			smm_free(s);
+		}
+	}
+	smm_config_write(config, NULL, CFG_KEY_DURATION,
+			id_lookup(id_duration, GETDURMOD(ezopt->flags)));
+
+	if ((s = ezopt_profile_export_alloc(ezopt)) != NULL) {
+		smm_config_write(config, NULL, CFG_KEY_PROF_SIMPLE, s);
+		smm_free(s);
+	}
+	return 0;
+}
+
+/****************************************************************************
+ * Internal Functions
+ ***************************************************************************/
 static int video_snapping(EZVID *vidx, EZIMG *image)
 {
 	int	rc = 0;
@@ -3614,21 +3854,6 @@ static char *ezopt_name_build(char *path, char *fname, char *buf, char *sfx)
 /****************************************************************************
  * Message/Notification functions
  ****************************************************************************/
-int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block)
-{
-	int	rc;
-
-	if ((ezopt == NULL) || (ezopt->notify == NULL)) {
-		return ezdefault(ezopt, event, param, opt, block);
-	}
-
-	rc = ezopt->notify(ezopt, event, param, opt, block);
-	if (rc == EN_EVENT_PASSTHROUGH) {
-		return ezdefault(ezopt, event, param, opt, block);
-	}
-	return rc;
-}
-
 static int ezdefault(EZOPT *ezopt, int event, long param, long opt, void *block)
 {
 	struct	ezntf	*myntf;

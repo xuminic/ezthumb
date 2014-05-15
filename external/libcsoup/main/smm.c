@@ -66,7 +66,8 @@ static int do_smm_config(char *path)
 	char	*val;
 	long	vlong;
 
-	if ((root = smm_config_open(0, TEST_PATH, TEST_FILE)) == NULL) {
+	root = smm_config_open(0, SMM_CFGMODE_RWC, TEST_PATH, TEST_FILE);
+	if (root == NULL) {
 		slogc(tstdbg, SLINFO, "Failed\n");
 		return -1;
 	}

@@ -40,17 +40,9 @@
 
 #define CFG_KEY_WIN_WIDTH	"window_width"
 #define CFG_KEY_WIN_HEIGHT	"window_height"
-#define CFG_KEY_PROF_SIMPLE	"simple_profile"
 #define CFG_KEY_DIRECTORY	"last_directory"
 #define CFG_KEY_GRID		"grid_define"
-#define CFG_KEY_GRID_COLUMN	"grid_column"
-#define CFG_KEY_GRID_ROW	"grid_row"
 #define CFG_KEY_ZOOM		"zoom_define"
-#define CFG_KEY_ZOOM_RATIO	"zoom_ratio"
-#define CFG_KEY_ZOOM_WIDTH	"zoom_width"
-#define CFG_KEY_ZOOM_HEIGHT	"zoom_height"
-#define CFG_KEY_CANVAS_WIDTH	"canvas_width"
-#define CFG_KEY_TIME_STEP	"time_step"
 #define CFG_KEY_DURATION	"duration_mode"
 #define CFG_KEY_FILE_FORMAT	"file_format"
 #define CFG_KEY_TRANSPARENCY	"transparency"
@@ -64,11 +56,6 @@
 #define CFG_PIC_ZOOM_RATIO	"Zoom by Ratio"		/* Zoom 50% */
 #define CFG_PIC_ZOOM_DEFINE	"Zoom by Size"		/* Zoom 320x240 */
 #define CFG_PIC_ZOOM_SCREEN	"Zoom by Canvas"	/* Res 1024 */
-#define CFG_PIC_AUTO		"Auto"			/* Grid/Zoom Auto */
-
-#define CFG_PIC_DFM_HEAD	"File Head"
-#define CFG_PIC_DFM_SCAN	"Full Scan"
-#define CFG_PIC_DFM_FAST	"Fast Scan"
 
 #define CFG_PIC_FMT_JPEG	"Jpeg"
 #define CFG_PIC_FMT_PNG		"Png"

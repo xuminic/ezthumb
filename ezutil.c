@@ -84,39 +84,54 @@ int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size)
 	return 0;
 }
 
-char *ezopt_profile_export_alloc(EZOPT *ezopt)
+int ezopt_profile_export(EZOPT *ezopt, char *buf, int blen)
 {
 	EZPROF	*p;
-	char	*buf, tmp[64];
-	int	n = 0;
+	char	tmp[80];
+	int	idx, len;
 
-	for (p = ezopt->pro_grid; p; p = p->next, n++);
-	for (p = ezopt->pro_size; p; p = p->next, n++);
-	if ((buf = smm_alloc(n * 64)) == NULL) {
-		return NULL;
-	}
-	buf[0] = 0;
-
+	idx = 0;
 	for (p = ezopt->pro_grid; p; p = p->next) {
 		ezopt_profile_sprint(p, tmp, sizeof(tmp));
-		if (buf[0] == 0) {
-			strcpy(buf, tmp);
-		} else {
-			strcat(buf, ":");
-			strcat(buf, tmp);
+		strcat(tmp, ":");
+
+		len = strlen(tmp);
+		if (buf && ((idx + len) < blen)) {
+			strcpy(buf + idx, tmp);
 		}
+		idx += len;
 	}
 	for (p = ezopt->pro_size; p; p = p->next) {
 		ezopt_profile_sprint(p, tmp, sizeof(tmp));
-		if (buf[0] == 0) {
-			strcpy(buf, tmp);
-		} else {
-			strcat(buf, ":");
-			strcat(buf, tmp);
+		strcat(tmp, ":");
+
+		len = strlen(tmp);
+		if (buf && ((idx + len) < blen)) {
+			strcpy(buf + idx, tmp);
+		}
+		idx += len;
+	}
+	/* remove the last delimiter */
+	if (idx) {
+		idx--;
+		if (buf) {
+			buf[idx] = 0;
 		}
 	}
 	//slogz("ezopt_profile_export: %s\n", buf);
-	return buf;
+	return idx;
+}
+
+char *ezopt_profile_export_alloc(EZOPT *ezopt)
+{
+	char	*s;
+	int	len;
+
+	len = ezopt_profile_export(ezopt, NULL, 0) + 4;
+	if ((s = smm_alloc(len)) != NULL) {
+		ezopt_profile_export(ezopt, s, len);
+	}
+	return s;
 }
 
 int ezopt_profile_disable(EZOPT *ezopt, int prof)
@@ -483,7 +498,7 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
 }
 
 /****************************************************************************
- * Utility Functions
+ * Data transform Functions
  ****************************************************************************/
 
 char *meta_filesize(int64_t size, char *buffer)
@@ -557,21 +572,51 @@ int meta_image_format(char *input, char *fmt, int flen)
 	return quality;
 }
 
-
-/****************************************************************************
- * Support Functions
- ****************************************************************************/
-
-int ezm_strarr_index(char *strarr[], char *elem)
+int meta_make_color(char *s, EZBYTE *color)
 {
-	int	i;
+	unsigned	rc;
 
-	for (i = 0; strarr[i]; i++) {
-		if (!strcmp(strarr[i], elem)) {
-			return i;
-		}
+	rc = (unsigned) strtol(s, NULL, 16);
+	if (color) {
+		color[0] = (unsigned char)((rc >> 16) & 0xff);
+		color[1] = (unsigned char)((rc >> 8) & 0xff);
+		color[2] = (unsigned char)(rc & 0xff);
+		color[3] = (unsigned char)((rc >> 24) & 0xff);
 	}
-	return -1;
+	return (int)rc;
 }
 
+int meta_export_color(EZBYTE *color, char *buf, int blen)
+{
+	char	tmp[16];
+	int	rc, len;
+
+	rc = (color[3] << 24) | (color[0] << 16) | (color[1] << 8) | color[2];
+	len = sprintf(tmp, "%x", (unsigned) rc);
+	if (buf && (blen > len)) {
+		strcpy(buf, tmp);
+	}
+	return len;
+}
+
+char *meta_make_fontdir(char *s)
+{
+	char	*p;
+
+	/* review whether the fontconfig pattern like "times:bold:italic"
+	 * was specified. The fontconfig pattern could be used directly.
+	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
+	if (csc_cmp_file_extname(s, "ttf") && 
+			csc_cmp_file_extname(s, "ttc")) {
+		gdFTUseFontConfig(1);
+		return csc_strcpy_alloc(s, 0);
+	}
+	/* the fontconfig pattern like "times:bold:italic" shouldn't be messed
+	 * with network path like "smb://sdfaadf/abc */
+	if (((p = strchr(s, ':')) != NULL) && isalnum(p[1])) {
+		gdFTUseFontConfig(1);
+		return csc_strcpy_alloc(s, 0);
+	}
+	return smm_fontpath(s, NULL);
+}
 

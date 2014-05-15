@@ -117,11 +117,11 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	/* setup the simple profile */
 	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_PROF_SIMPLE))) {
 		ezopt_profile_setup(ezopt, p);
-	} else {
-		p = ezopt_profile_export_alloc(ezopt);
+		smm_free(p);
+	} else if ((p = ezopt_profile_export_alloc(ezopt)) != NULL) {
 		ezgui_cfg_write(gui->config, CFG_KEY_PROF_SIMPLE, p);
+		smm_free(p);
 	}
-	smm_free(p);
 
 	/* setup the grid profile */
 	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID)) == NULL) {

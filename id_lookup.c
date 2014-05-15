@@ -26,12 +26,12 @@ char *id_lookup(struct idtbl *table, int id)
 	static	char	def[32];
 	int	i;
 
-	for (i = 0; table[i].id; i++) {
-		if (id == table[i].no) {
-			return table[i].id;
+	for (i = 0; table[i].s; i++) {
+		if (id == table[i].id) {
+			return table[i].s;
 		}
 	}
-	sprintf(def, "[%d]", id);
+	sprintf(def, "[%d]", id);	/* unknown ID */
 	return def;
 }
 
@@ -41,18 +41,31 @@ char *id_lookup_tail(struct idtbl *table, int id)
 	char	*tail;
 	int	i;
 
-	for (i = 0; table[i].id; i++) {
-		if (id == table[i].no) {
-			if ((tail = strrchr(table[i].id, '_')) == NULL) {
-				return table[i].id;
+	for (i = 0; table[i].s; i++) {
+		if (id == table[i].id) {
+			if ((tail = strrchr(table[i].s, '_')) == NULL) {
+				return table[i].s;
 			} else {
 				return tail+1;
 			}
 		}
 	}
-	sprintf(def, "[%d]", id);
+	sprintf(def, "[%d]", id);	/* unknown ID */
 	return def;
 }
+
+int id_lookup_id(struct idtbl *table, char *s)
+{
+	int	i;
+
+	for (i = 0; table[i].s; i++) {
+		if (!strcasecmp(s, table[i].s)) {
+			return table[i].id;
+		}
+	}
+	return 0;
+}
+
 
 #if 0
 /* help to generate the array of ffmpeg IDs */
@@ -83,6 +96,32 @@ int main()
 }
 #endif
 
+struct	idtbl	id_layout[] = {
+	{ EZ_POS_LEFTTOP,      CFG_PIC_POS_LFETTOP },
+	{ EZ_POS_LEFTCENTER,   CFG_PIC_POS_LEFTCENTR },
+	{ EZ_POS_LEFTBOTTOM,   CFG_PIC_POS_LEFTBOTTOM },
+	{ EZ_POS_MIDTOP,       CFG_PIC_POS_MIDTOP },
+	{ EZ_POS_MIDCENTER,    CFG_PIC_POS_MIDCENTR },
+	{ EZ_POS_MIDBOTTOM,    CFG_PIC_POS_MIDBOTTOM },
+	{ EZ_POS_RIGHTTOP,     CFG_PIC_POS_RIGHTTOP },
+	{ EZ_POS_RIGHTCENTER,  CFG_PIC_POS_RIGHTCENTR },
+	{ EZ_POS_RIGHTBOTTOM,  CFG_PIC_POS_RIGHTBOTTOM },
+	{ EZ_POS_TILE,         CFG_PIC_POS_TILES },
+	{ EZ_POS_STRETCH,      CFG_PIC_QUA_STRETCH },
+	{ EZ_POS_ENLARGE_X,    CFG_PIC_QUA_ENLARGE_WID },
+	{ EZ_POS_ENLARGE_Y,    CFG_PIC_QUA_ENLARGE_HEI },
+	{ EZ_POS_STRETCH_X,    CFG_PIC_QUA_STRE_WID },
+	{ EZ_POS_STRETCH_Y,    CFG_PIC_QUA_STRE_HEI },
+	{ 0, NULL }
+};
+
+struct	idtbl	id_duration[] = {
+	{ EZOP_DUR_QSCAN, CFG_PIC_DFM_FAST },
+	{ EZOP_DUR_FSCAN, CFG_PIC_DFM_SCAN },
+	{ EZOP_DUR_HEAD,  CFG_PIC_DFM_HEAD },
+	{ EZOP_DUR_AUTO,  CFG_PIC_AUTO },
+	{ 0, NULL }
+};
 
 struct	idtbl	id_codec[] = {
 	{ CODEC_ID_NONE, "CODEC_ID_NONE" },

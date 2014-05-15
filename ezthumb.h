@@ -243,6 +243,63 @@
 #define EZTIME	int64_t
 
 
+#define CFG_KEY_GRID_COLUMN	"grid_column"
+#define CFG_KEY_GRID_ROW	"grid_row"
+#define CFG_KEY_CANVAS_WIDTH	"canvas_width"
+#define CFG_KEY_TIME_STEP	"time_step"
+#define CFG_KEY_GRID_GAP_WID	"grid_gap_width"
+#define CFG_KEY_GRID_GAP_HEI	"grid_gap_height"
+#define CFG_KEY_CANVAS_RIM_WID	"canvas_rim_width"
+#define CFG_KEY_CANVAS_RIM_HEI	"canvas_rim_height"
+#define CFG_KEY_COLOR_EDGE	"thumbnail_edge_color"
+#define CFG_KEY_COLOR_SHADOW	"thumbnail_shadow_color"
+#define CFG_KEY_COLOR_CANVAS	"thumbnail_canvas_color"
+#define CFG_KEY_EDGE_WIDTH	"thumbnail_edge_width"
+#define CFG_KEY_SHADOW_WIDTH	"thumbnail_shadow_width"
+#define CFG_KEY_ZOOM_WIDTH	"zoom_width"
+#define CFG_KEY_ZOOM_HEIGHT	"zoom_height"
+#define CFG_KEY_ZOOM_RATIO	"zoom_ratio"
+#define CFG_KEY_INFO_FONT	"media_info_font"
+#define CFG_KEY_INFO_SIZE	"media_info_size"
+#define CFG_KEY_INFO_COLOR	"media_info_color"
+#define CFG_KEY_INFO_SHADOW	"media_info_shadow_size"
+#define CFG_KEY_INFO_LAYOUT	"media_info_layout"
+#define CFG_KEY_INFO_STATUS	"media_info_status"
+#define CFG_KEY_INSET_SIZE	"thumbnail_inset_size"
+#define CFG_KEY_INSET_COLOR	"thumbnail_inset_color"
+#define CFG_KEY_INSET_SHADOW	"thumbnail_inset_shadow_size"
+#define CFG_KEY_INSET_LAYOUT 	"thumbnail_inset_layout"
+#define CFG_KEY_FILE_FORMAT	"file_format"
+#define CFG_KEY_TRANSPARENCY	"transparency"
+#define CFG_KEY_FILE_SUFFIX	"thumbnail_suffix"
+#define CFG_KEY_BG_PICTURE	"backgroup_picture"
+#define CFG_KEY_BG_LAYOUT	"backgroup_layout"
+#define CFG_KEY_BG_QUALITY	"backgroup_quality"
+#define CFG_KEY_SUFFIX_FILTER	"accepted_file"
+#define CFG_KEY_DURATION	"duration_mode"
+#define CFG_KEY_PROF_SIMPLE	"simple_profile"
+
+#define CFG_PIC_POS_LFETTOP	"left top"
+#define CFG_PIC_POS_LEFTCENTR	"left centre"
+#define CFG_PIC_POS_LEFTBOTTOM	"left bottom"
+#define CFG_PIC_POS_MIDTOP	"middle top"
+#define CFG_PIC_POS_MIDCENTR	"middle centre"
+#define CFG_PIC_POS_MIDBOTTOM	"middle bottom"
+#define CFG_PIC_POS_RIGHTTOP	"right top"
+#define CFG_PIC_POS_RIGHTCENTR 	"right centre"
+#define CFG_PIC_POS_RIGHTBOTTOM	"right bottom"
+#define CFG_PIC_POS_TILES	"tile"
+#define CFG_PIC_QUA_STRETCH	"stretch to canvas"
+#define CFG_PIC_QUA_ENLARGE_WID	"enlarge by width"
+#define CFG_PIC_QUA_ENLARGE_HEI	"enlarge by height"
+#define CFG_PIC_QUA_STRE_WID	"stretch by width"
+#define CFG_PIC_QUA_STRE_HEI	"stretch by height"
+
+#define CFG_PIC_DFM_HEAD	"File Head"
+#define CFG_PIC_DFM_SCAN	"Full Scan"
+#define CFG_PIC_DFM_FAST	"Fast Scan"
+#define CFG_PIC_AUTO		"Auto"
+
 
 /* FORMAT: WEIGHT + flag + X + sep + Y + sep + Z
  *
@@ -544,16 +601,19 @@ typedef	void (*F_HOOK)(F_BRK, void*, void*);
 
 /* ezthumb.c */
 void ezopt_init(EZOPT *ezopt, char *profile);
+int ezopt_load_config(EZOPT *ezopt, void *config);
 void ezopt_review(EZOPT *opt);
 int ezthumb(char *filename, EZOPT *ezopt);
 int ezthumb_bind(char **filename, int fnum, EZOPT *ezopt);
 int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout);
 int ezthumb_break(EZOPT *ezopt);
 int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block);
+int ezopt_store_config(EZOPT *ezopt, void *config);
 
 /* ezutil.c */
 int ezopt_profile_setup(EZOPT *opt, char *s);
 int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size);
+int ezopt_profile_export(EZOPT *ezopt, char *buf, int blen);
 char *ezopt_profile_export_alloc(EZOPT *ezopt);
 int ezopt_profile_disable(EZOPT *ezopt, int prof);
 int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
@@ -562,8 +622,9 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
 char *meta_filesize(int64_t size, char *buffer);
 char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int meta_image_format(char *input, char *fmt, int flen);
-int ezm_strarr_index(char *strarr[], char *elem);
-
+int meta_make_color(char *s, EZBYTE *color);
+int meta_export_color(EZBYTE *color, char *buf, int blen);
+char *meta_make_fontdir(char *s);
 
 #endif	/* _EZTHUMB_H_ */
 

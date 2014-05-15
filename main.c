@@ -36,7 +36,6 @@
 #define CMD_UNKNOWN	0
 #define CMD_HELP	1
 #define CMD_VERSION	2
-#define CMD_VERSIMPL	3
 #define CMD_ACCURATE	4
 #define CMD_BKGROUND	5
 #define CMD_OTF		6
@@ -55,7 +54,6 @@
 #define CMD_TIME_END	21
 #define CMD_TRANSPRT	22
 #define CMD_VID_IDX	23
-#define CMD_PRO_TEST	24
 
 #define CMD_B_IND	'b'
 #define CMD_C_OLOR	'c'
@@ -86,15 +84,15 @@ static	struct	cliopt	clist[] = {
 	{ CMD_B_IND, "bind",
 		0, "binding multiple video sources" },
 	{ CMD_C_OLOR, "colour",
-		2, "the colour setting (MI:TM:BG)(RRGGBB)" },
+		1, "the colour setting (MI:TM:BG)(RRGGBB)" },
 	{ CMD_D_URING, "during",  
-		2, "the duration finding mode (auto)(head|fast|scan)" },
+		1, "the duration finding mode (auto)(head|fast|scan)" },
 	{ CMD_F_ONT, "font",
-		2, "the TrueType font name with the full path" },
+		1, "the TrueType font name with the full path" },
 	{ CMD_F_ONTSZ, "fontsize",
-		2, "the size setting of the font" },
+		1, "the size setting of the font" },
 	{ CMD_G_RID, "grid", 
-		2, "the thumbnail grid in the canvas." },
+		1, "the thumbnail grid in the canvas." },
 #ifndef	CFG_GUI_OFF
 	{ CMD_G_UI, "gui",
 		0, "enable the graphic user interface" },
@@ -104,17 +102,17 @@ static	struct	cliopt	clist[] = {
 	{ CMD_I_NSIDE, "inside",
 		0, "display the detail information of videos" },
 	{ CMD_FOR_M_AT, "format",
-		2, "the output format (jpg@85)" },
+		1, "the output format (jpg@85)" },
 	{ CMD_O_UTPUT, "outdir",  
-		2, "the directory for storing output images" },
+		1, "the directory for storing output images" },
 	{ CMD_P_ROCESS, "process", 
 		1, "the process method (skim|scan|2pass|safe|key[@N])"},
 	{ CMD_P_ROFILE, "profile", 
-		2, "specify the profile string" },
+		1, "specify the profile string" },
 	{ CMD_R_ECURS, "recursive", 
 		0, "process files and directories recursively" },
 	{ CMD_S_IZE, "ssize",
-		2, "the size of each screen shots (WxH|RR%)" },
+		1, "the size of each screen shots (WxH|RR%)" },
 	{ CMD_T_IMES, "timestep",
 		1, "the time step between each shots in ms" }, 
 	{ CMD_V_ERBOSE, "verbose", 
@@ -122,13 +120,13 @@ static	struct	cliopt	clist[] = {
 	{ CMD_W_IDTH, "width",
 		1, "the whole width of the thumbnail canvas" },
 	{ CMD_SUFFI_X, "suffix",  
-		2, "the suffix of output filename (_thumb)" },
+		1, "the suffix of output filename (_thumb)" },
 	{ CMD_ACCURATE, "accurate", 
 		0, "take accurate shots including P-frames" },
 	{ CMD_BKGROUND, "background", 
-		2, "the background picture" },
+		1, "the background picture" },
 	{ CMD_OTF, "decode-otf", 
-		2, "*decoding on the fly mode for scan process" },
+		1, "*decoding on the fly mode for scan process" },
 	{ CMD_DEPTH, "depth",   
 		1, "most levels of directories recursively (FF:0)" },
 	{ CMD_EDGE, "edge",
@@ -140,22 +138,22 @@ static	struct	cliopt	clist[] = {
 	{ CMD_GAP_MARG, "gap-margin", 
 		1, "the margin in the canvas (8)" },
 	{ CMD_OPT_INFO, "opt-info", 
-		2, "the media infomation (lt)(on|off|mt|rt)" },
+		1, "the media infomation (lt)(on|off|mt|rt)" },
 	{ CMD_OPT_TIME, "opt-time", 
-		2, "the timestamp inside the screen shots (rt)(lt|mt|lb}|mb|rb)" },
+		1, "the timestamp inside the screen shots (rt)(lt|mt|lb}|mb|rb)" },
 	{ CMD_OPT_FFR, "opt-ffr",  
-		2, "start from the first frame (off)" },
+		1, "start from the first frame (off)" },
 	{ CMD_OPT_LFR, "opt-lfr",  
-		2, "end at the last frame (off)" },
+		1, "end at the last frame (off)" },
 	{ CMD_OVERRIDE, "override", 
-		2, "override existed thumbnails (copy)"},
+		1, "override existed thumbnails (copy)"},
 	{ CMD_POS_BG, "pos-bg",
-		2, "the position of the background image (mc)" },
+		1, "the position of the background image (mc)" },
 	{ 0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
 	{ CMD_TIME_FROM, "time-from",
-		2, "the time in video where begins shooting (HH:MM:SS/NN%)" },
+		1, "the time in video where begins shooting (HH:MM:SS/NN%)" },
 	{ CMD_TIME_END, "time-end", 
-		2, "the time in video where ends shooting (HH:MM:SS/NN%)" },
+		1, "the time in video where ends shooting (HH:MM:SS/NN%)" },
 	{ CMD_TRANSPRT, "transparent", 
 		0, "generate the transparent background" },
 	{ CMD_VID_IDX, "vindex",
@@ -164,10 +162,6 @@ static	struct	cliopt	clist[] = {
 		0, "*Display the help message" },
 	{ CMD_VERSION, "version", 
 		0, "*Display the version message" },
-	{ CMD_VERSIMPL, "vernum",
-		0, "*Display the version number" },
-	{ CMD_PRO_TEST, "protest",  
-		2, "*testing the profile (@length, +width)" },
 	{ 0, NULL, 0, NULL }
 };
 
@@ -199,6 +193,7 @@ static	EZOPT	sysopt;
 static int command_line_parser(int argc, char **argv, EZOPT *opt);
 static int signal_handler(int sig);
 static int main_close(EZOPT *opt);
+static int dbeug_online(int argc, char **argv);
 static int msg_info(void *option, char *path, int type, void *info);
 static int msg_shot(void *option, char *path, int type, void *info);
 static int env_init(EZOPT *ezopt);
@@ -207,7 +202,6 @@ static int para_get_time_point(char *s);
 static int para_get_position(char *s);
 static int para_make_postition(char *s);
 static int para_get_color(EZOPT *opt, char *s);
-static char *para_get_fontdir(char *s);
 static int para_get_fontsize(EZOPT *opt, char *s);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
 static int event_list(void *vobj, int event, long param, long opt, void *);
@@ -217,7 +211,7 @@ static int runtime_profile_test(EZOPT *opt, char *cmd);
 static void linefeed_count(int n, int mod, char *con, char *coff);
 static void print_profile_shots(EZOPT *opt, int min);
 static void print_profile_width(EZOPT *opt, int vidw);
-
+static int load_default_config(EZOPT *opt);
 
 
 
@@ -227,7 +221,8 @@ int main(int argc, char **argv)
 
 	smm_init(EZDBG_NONE);			/* initialize the libsmm */
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
-	env_init(&sysopt);
+	load_default_config(&sysopt);	/* load configures from files */
+	env_init(&sysopt);		/* load configures from environment */
 
 #ifndef	CFG_GUI_OFF
 	if (command_line_parser(argc, argv, NULL) == 'G') {
@@ -254,7 +249,8 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_PARAM;
 		break;
 	case CMD_HELP:		/* help */
-		csc_cli_print(clist, NULL);
+		//csc_cli_print(clist, NULL);
+		dbeug_online(argc - optind, argv + optind);
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_VERSION:	/* version */
@@ -263,14 +259,6 @@ int main(int argc, char **argv)
 #ifndef	CFG_GUI_OFF
 		ezgui_version();
 #endif
-		todo = EZ_ERR_EOP;
-		break;
-	case CMD_VERSIMPL:	/* simple version */
-		slogz("%s\n", EZTHUMB_VERSION);
-		todo = EZ_ERR_EOP;
-		break;
-	case CMD_PRO_TEST:	/* test the profile */
-		runtime_profile_test(&sysopt, (void*)sysopt.pro_grid);
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_P_ROFILE:	/* print the internal profile table */
@@ -372,12 +360,10 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 
 	todo = CMD_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
-	optind = 1;			/* reset the getopt() function */
 	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
 		switch (c) {
 		case CMD_HELP:
 		case CMD_VERSION:
-		case CMD_VERSIMPL:
 			todo = c;
 			goto break_parse;	/* break the analysis */
 
@@ -385,7 +371,10 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			opt->flags |= EZOP_P_FRAME;
 			break;
 		case CMD_BKGROUND:
-			opt->background = optarg;
+			if (opt->background) {
+				smm_free(opt->background);
+			}
+			opt->background = csc_strcpy_alloc(optarg, 0);
 			break;
 		case CMD_GAP_SHOT:	
 			/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
@@ -505,11 +494,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				opt->vs_user = strtol(optarg, NULL, 0);
 			}
 			break;
-		case CMD_PRO_TEST:
-			todo = c;
-			/* borrow this pointer because it won't be used ever*/
-			opt->pro_grid = (void*) optarg;
-			goto break_parse;	/* break the analysis */
 
 		case CMD_OVERRIDE:
 			if (!strcmp(optarg, "on")) {
@@ -595,7 +579,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				smm_free(opt->mi_font);
 			}
 			opt->mi_font = opt->ins_font = 
-					para_get_fontdir(optarg);
+					meta_make_fontdir(optarg);
 			break;
 		case CMD_F_ONTSZ:	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
@@ -679,7 +663,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if ((c >= 0) && (c < PROFLIST)) {
 				ezopt_profile_setup(opt, sysprof[c]);
 			} else {	/* wrong profile index */
-				todo = c;
+				todo = CMD_P_ROFILE;
 				goto break_parse;	/* break the analysis */
 			}
 			break;
@@ -813,6 +797,45 @@ static int main_close(EZOPT *opt)
 	if (opt->mi_font) {
 		smm_free(opt->mi_font);
 		opt->mi_font = NULL;
+	}
+	if (opt->background) {
+		smm_free(opt->background);
+		opt->background = NULL;
+	}
+	return 0;
+}
+
+static int dbeug_online(int argc, char **argv)
+{
+	char	*s;
+
+	if (argc <= 0) {
+		csc_cli_print(clist, NULL);
+		return 0;
+	}
+
+	if (!strcmp(*argv, "pro-test")) {	
+		/* test the profile (@length, +width) */
+		runtime_profile_test(&sysopt, argv[1]);
+	} else if (!strcmp(*argv, "pro-export")) {
+		s = ezopt_profile_export_alloc(&sysopt);
+		if (s) {
+			slogz("%s\n", s);
+			smm_free(s);
+		}
+	} else if (!strcmp(*argv, "filter")) {
+		s = csc_extname_filter_export_alloc(sysopt.accept);
+		if (s) {
+			slogz("%s\n", s);
+			smm_free(s);
+		}
+	} else if (!strcmp(*argv, "config")) {
+		s = smm_config_open(SMM_CFGROOT_CURRENT, SMM_CFGMODE_RWC, 
+				NULL, "ezthumb_sample.rc");
+		if (s) {
+			ezopt_store_config(&sysopt, s);
+			smm_config_close(s);
+		}
 	}
 	return 0;
 }
@@ -1017,7 +1040,6 @@ static int para_make_postition(char *s)
 
 static int para_get_color(EZOPT *opt, char *s)
 {
-	unsigned long	rc;
 	char	*rp, *tmp, *argvs[3];
 
 	if ((tmp = csc_strcpy_alloc(s, 0)) == NULL) {
@@ -1026,61 +1048,21 @@ static int para_get_color(EZOPT *opt, char *s)
 	csc_fixtoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 
 	rp = argvs[0];
-	if (rp && *rp) {
-		if (!isxdigit(*rp)) {
-			smm_free(tmp);
-			return EZ_ERR_PARAM;
-		}
-		rc = strtoul(rp, NULL, 16);
-		opt->mi_color[0] = (unsigned char)((rc >> 16) & 0xff);
-		opt->mi_color[1] = (unsigned char)((rc >> 8) & 0xff);
-		opt->mi_color[2] = (unsigned char)(rc & 0xff);
+	if (rp && *rp && isxdigit(*rp)) {
+		meta_make_color(rp, opt->mi_color);
 	}
+
 	rp = argvs[1];
-	if (rp && *rp) {
-		if (!isxdigit(*rp)) {
-			smm_free(tmp);
-			return EZ_ERR_PARAM;
-		}
-		rc = strtoul(rp, NULL, 16);
-		opt->ins_color[0] = (unsigned char)((rc >> 16) & 0xff);
-		opt->ins_color[1] = (unsigned char)((rc >> 8) & 0xff);
-		opt->ins_color[2] = (unsigned char)(rc & 0xff);
+	if (rp && *rp && isxdigit(*rp)) {
+		meta_make_color(rp, opt->ins_color);
 	}
+
 	rp = argvs[2];
-	if (rp && *rp) {
-		if (!isxdigit(*rp)) {
-			smm_free(tmp);
-			return EZ_ERR_PARAM;
-		}
-		rc = strtoul(rp, NULL, 16);
-		opt->canvas_color[0] = (unsigned char)((rc >> 16) & 0xff);
-		opt->canvas_color[1] = (unsigned char)((rc >> 8) & 0xff);
-		opt->canvas_color[2] = (unsigned char)(rc & 0xff);
+	if (rp && *rp && isxdigit(*rp)) {
+		meta_make_color(rp, opt->canvas_color);
 	}
 	smm_free(tmp);
 	return EZ_ERR_NONE;
-}
-
-static char *para_get_fontdir(char *s)
-{
-	char	*p;
-
-	/* review whether the fontconfig pattern like "times:bold:italic"
-	 * was specified. The fontconfig pattern could be used directly.
-	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
-	if (csc_cmp_file_extname(s, "ttf") && 
-			csc_cmp_file_extname(s, "ttc")) {
-		gdFTUseFontConfig(1);
-		return csc_strcpy_alloc(s, 0);
-	}
-	/* the fontconfig pattern like "times:bold:italic" shouldn't be messed
-	 * with network path like "smb://sdfaadf/abc */
-	if (((p = strchr(s, ':')) != NULL) && isalnum(p[1])) {
-		gdFTUseFontConfig(1);
-		return csc_strcpy_alloc(s, 0);
-	}
-	return smm_fontpath(s, NULL);
 }
 
 static int para_get_fontsize(EZOPT *opt, char *s)
@@ -1198,18 +1180,19 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 
 	ezopt_profile_dump(opt, "Grid: ", "Size: ");
 
-	switch (*cmd) {
-	case '@':
-		val = (int)strtol(cmd + 1, 0, 10);
-		print_profile_shots(opt, val);
-		slosz("\n");
-		return 0;
-
-	case '+':
-		val = (int)strtol(cmd + 1, 0, 10);
-		print_profile_width(opt, val);
-		slosz("\n");
-		return 0;
+	if (cmd) {
+		switch (*cmd) {
+		case '@':
+			val = (int)strtol(cmd + 1, 0, 10);
+			print_profile_shots(opt, val);
+			slosz("\n");
+			return 0;
+		case '+':
+			val = (int)strtol(cmd + 1, 0, 10);
+			print_profile_width(opt, val);
+			slosz("\n");
+			return 0;
+		}
 	}
 
 	slosz("Reference of Video Length:\n");
@@ -1263,4 +1246,25 @@ static void print_profile_width(EZOPT *opt, int vidw)
 	can = ezopt_profile_zooming(opt, vidw, &wid, &hei, &fac);
 	slogz("[%4d]=[%4d %4d %3d %4d]", vidw, wid, hei, fac, can);
 }
+
+static int load_default_config(EZOPT *opt)
+{
+	void	*config;
+
+	config = smm_config_open(SMM_CFGROOT_SYSTEM, SMM_CFGMODE_RDONLY, 
+			"FunSight", "ezthumbrc");
+	if (config) {
+		ezopt_load_config(opt, config);
+		smm_config_close(config);
+	}
+
+	config = smm_config_open(SMM_CFGROOT_USER, SMM_CFGMODE_RDONLY,
+			"FunSight", "ezthumbrc");
+	if (config) {
+		ezopt_load_config(opt, config);
+		smm_config_close(config);
+	}
+	return 0;
+}
+
 
