@@ -31,7 +31,10 @@ int smm_mkdir(char *path)
 {
 	TCHAR	*wpath;
 
-	if ((wpath = smm_mbstowcs(path)) == NULL) {
+	if (path == NULL) {
+		return smm_errno_update(SMM_ERR_NONE);
+	}
+	if ((wpath = smm_mbstowcs_alloc(path)) == NULL) {
 		return smm_errno_update(SMM_ERR_NONE_READ);
 	}
 	if (CreateDirectory(wpath, NULL)) {
@@ -54,6 +57,9 @@ int smm_mkdir(char *path)
 int smm_mkdir(char *path)
 {
 	//printf("%s\n", path);
+	if (path == NULL) {
+		return smm_errno_update(SMM_ERR_NONE);
+	}
 	if (mkdir(path, 0755) == 0) {
 		return smm_errno_update(SMM_ERR_NONE);
 	}
@@ -69,6 +75,9 @@ int smm_mkpath(char *path)
 	char	*pco, *p, store;
 	int	rc;
 
+	if (path == NULL) {
+		return smm_errno_update(SMM_ERR_NONE);
+	}
 	if ((pco = csc_strcpy_alloc(csc_strbody(path, NULL), 4)) == NULL) {
 		return SMM_ERR_LOWMEM;
 	}

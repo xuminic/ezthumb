@@ -25,12 +25,15 @@
 #include "libcsoup.h"
 
 #ifdef  CFG_WIN32_API
-void *smm_mbstowcs(char *mbs)
+void *smm_mbstowcs_alloc(char *mbs)
 {
 	TCHAR	*buf;
 	int	len;
 
 	smm_errno_update(SMM_ERR_NONE);
+	if (mbs == NULL) {
+		return NULL;
+	}
 	len = MultiByteToWideChar(smm_codepage(), 0, mbs, -1, NULL, 0);
 	if (len <= 0) {
 		smm_errno_update(SMM_ERR_LENGTH);
@@ -48,12 +51,15 @@ void *smm_mbstowcs(char *mbs)
 #ifdef  CFG_UNIX_API
 #include <errno.h>
 
-void *smm_mbstowcs(char *mbs)
+void *smm_mbstowcs_alloc(char *mbs)
 {
 	wchar_t	*buf;
 	int	len;
 
 	smm_errno_update(SMM_ERR_NONE);
+	if (mbs == NULL) {
+		return NULL;
+	}
 	if ((len = mbstowcs(NULL, mbs, 0)) == 0) {
 		smm_errno_update(SMM_ERR_LENGTH);
 		return NULL;

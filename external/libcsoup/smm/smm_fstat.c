@@ -31,7 +31,10 @@ int smm_fstat(char *fname)
 	DWORD	fattr;
 
 	smm_errno_update(SMM_ERR_NONE);
-	if ((wpath = smm_mbstowcs(fname)) == NULL) {
+	if (fname == NULL) {
+		return SMM_FSTAT_ERROR;
+	}
+	if ((wpath = smm_mbstowcs_alloc(fname)) == NULL) {
 		smm_errno_update(SMM_ERR_NONE_READ);
 		return SMM_FSTAT_ERROR;
 	}
@@ -67,10 +70,14 @@ int smm_fstat(char *fname)
 	struct	stat	fs;
 
 	smm_errno_update(SMM_ERR_NONE);
+	if (fname == NULL) {
+		return SMM_FSTAT_ERROR;
+	}
 	if (stat(fname, &fs) < 0)  {
 		smm_errno_update(SMM_ERR_STAT);	/* failed < 0 */
 		return SMM_FSTAT_ERROR;
 	}
+	
 	if (S_ISREG(fs.st_mode)) {
 		return SMM_FSTAT_REGULAR;
 	}

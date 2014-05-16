@@ -250,9 +250,17 @@ int csc_cfg_save(void *cfg)
 		if ((mkey = CFGF_GETOBJ(mp)) == NULL) {
 			break;
 		}
-		csc_cfg_write_next_line(fp, mkey);
+		if (CFGF_TYPE_GET(mkey) != CFGF_TYPE_MAIN) {
+			csc_cfg_write_next_line(fp, mkey);
+		}
+	}
 
+	for (mp = root->anchor; mp; mp = csc_cdl_next(root->anchor, mp)) {
+		if ((mkey = CFGF_GETOBJ(mp)) == NULL) {
+			break;
+		}
 		if (CFGF_TYPE_GET(mkey) == CFGF_TYPE_MAIN) {
+			csc_cfg_write_next_line(fp, mkey);
 			for (sp = mkey->anchor; sp != NULL; 
 					sp = csc_cdl_next(mkey->anchor, sp)) {
 				csc_cfg_write_next_line(fp, CFGF_GETOBJ(sp));
@@ -374,7 +382,7 @@ int csc_cfg_write(void *cfg, char *mkey, char *skey, char *value)
 	KEYCB	*mcb, *scb, *ncb, *root;
 	int	olen, nlen;
 
-	if (value == NULL) {
+	if ((value == NULL) || (skey == NULL)) {
 		return SMM_ERR_NULL;
 	}
 	if ((root = CFGF_GETOBJ(cfg)) == NULL) {

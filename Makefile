@@ -122,7 +122,9 @@ ezthumb.pdf: ezthumb.1
 $(IUPLIB)/libiup.a:
 	make -C $(IUP) do_all
 
-$(CSOUP)/libcsoup.a:
+$(CSOUP)/libcsoup.a: csoup
+
+csoup:
 	make -C $(CSOUP) all
 
 objdir:

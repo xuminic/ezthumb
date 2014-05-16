@@ -31,7 +31,10 @@ long long smm_filesize(char *fname)
 	DWORD	sizeh, sizel;
 	HANDLE	fhdl;
 
-	if ((wpath = smm_mbstowcs(fname)) == NULL) {
+	if (fname == NULL) {
+		return -1;
+	}
+	if ((wpath = smm_mbstowcs_alloc(fname)) == NULL) {
 		return -1;
 	}
 
@@ -70,6 +73,9 @@ long long smm_filesize(char *fname)
 {
 	struct	stat	fs;
 
+	if (fname == NULL) {
+		return -1;
+	}
 	if (stat(fname, &fs) < 0)  {
 		smm_errno_update(SMM_ERR_STAT);
 		return -1;	/* failed < 0 */

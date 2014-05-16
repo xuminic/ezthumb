@@ -75,8 +75,9 @@ static int do_smm_config(char *path)
 	smm_config_write(root, "[main]", "World", "This is a world key");
 	smm_config_write_long(root, "[main]", "Width", (long)1024);
 
-	val = smm_config_read(root, "[main]", "World");
+	val = smm_config_read_alloc(root, "[main]", "World");
 	puts(val);
+	smm_free(val);
 	smm_config_read_long(root, "[main]", "Width", &vlong);
 	printf("%ld\n", vlong);
 	smm_config_close(root);

@@ -29,7 +29,10 @@ int smm_chdir(char *path)
 {
 	TCHAR	*wpath;
 
-	if ((wpath = smm_mbstowcs(path)) == NULL) {
+	if (path == NULL) {
+		return smm_errno_update(SMM_ERR_NONE);
+	}
+	if ((wpath = smm_mbstowcs_alloc(path)) == NULL) {
 		return smm_errno_update(SMM_ERR_NONE_READ);
 	}
 
@@ -48,6 +51,9 @@ int smm_chdir(char *path)
 
 int smm_chdir(char *path)
 {
+	if (path == NULL) {
+		return smm_errno_update(SMM_ERR_NONE);
+	}
 	if (chdir(path) < 0) {
 		return smm_errno_update(SMM_ERR_CHDIR);
 	}

@@ -33,20 +33,17 @@
 #include "ezthumb.h"
 
 
-#define	CFG_SUBPATH	"ezthumb"
-#define CFG_FILENAME	"ezthumb.conf"
-
-#define CFG_GRP_MAIN	"main"
-
 #define CFG_KEY_WIN_WIDTH	"window_width"
 #define CFG_KEY_WIN_HEIGHT	"window_height"
+#define CFG_KEY_WINDOWSTATE	"window_state"
 #define CFG_KEY_DIRECTORY	"last_directory"
 #define CFG_KEY_GRID		"grid_define"
 #define CFG_KEY_ZOOM		"zoom_define"
 #define CFG_KEY_DURATION	"duration_mode"
 #define CFG_KEY_FILE_FORMAT	"file_format"
 #define CFG_KEY_TRANSPARENCY	"transparency"
-#define CFG_KEY_WINDOWSTATE	"window_state"
+#define CFG_KEY_JPG_QUALITY	"jpeg_quality"
+#define CFG_KEY_GIF_FRATE	"gif_anim_delay"
 
 #define	CFG_PIC_GRID_DIM	"Column and Row"	/* Grid 4x4 */
 #define CFG_PIC_GRID_STEP	"Column and Step"	/* Grid 4 Step 15 */
@@ -64,7 +61,14 @@
 
 #define EZGUI_MAGIC		(('E'<<24) | ('Z'<<16) | ('U'<<8) | 'I')
 
+
+
 #if CFG_GUI_GTK
+
+#define	CFG_SUBPATH	"ezthumb"
+#define CFG_FILENAME	"ezthumb.conf"
+#define CFG_GRP_MAIN	"main"
+
 typedef	struct		{
 	char		*fname;		/* the path of the configure file */
 	GKeyFile	*ckey;		/* key entry of the configure file */
@@ -139,6 +143,7 @@ typedef	struct		{
 	unsigned	magic;		/* "EZUI" */
 	EZOPT		*sysopt;	/* system parameters */
 	char		inst_id[64];	/* instant identity */
+	void		*config;
 
 	/* Main Page: work place */
 	Ihandle		*list_fname;	/* the list control of file names */
@@ -163,7 +168,6 @@ typedef	struct		{
 	/* Main Page: dialog of Open File */
 	Ihandle		*dlg_main;	/* the main dialog itself */
 	Ihandle		*dlg_open;	/* dialog of Open File */
-	char		*cur_dir;	/* current directory */
 
 	/* Setup Page: the two main buttons in the bottom */
 	Ihandle		*butt_setup_apply;

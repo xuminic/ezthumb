@@ -33,12 +33,10 @@ struct	FTINF	{
 
 
 #ifdef	CFG_WIN32_API
-#define PATHSEP	'\\'
 static	char	*def_font_dir[] = {
 	NULL
 };
 #else
-#define PATHSEP	'/'
 static	char	*def_font_dir[] = {
 	"/usr/share/fonts",
 	NULL
@@ -46,8 +44,8 @@ static	char	*def_font_dir[] = {
 #endif
 
 static int findfont(void *option, char *path, int type, void *info);
-char *find_sep(char *path);
-char *find_rsep(char *path);
+static char *find_sep(char *path);
+static char *find_rsep(char *path);
 
 char *smm_fontpath(char *ftname, char **userdir)
 {
@@ -59,6 +57,10 @@ char *smm_fontpath(char *ftname, char **userdir)
 #else
 	char	*bpath;
 #endif
+
+	if (ftname == NULL) {
+		return NULL;
+	}
 
 	/* absolute path */
 	if (find_sep(ftname)) {
@@ -95,7 +97,7 @@ char *smm_fontpath(char *ftname, char **userdir)
 #ifdef	CFG_WIN32_API
 	/* search Windows system font */
 	if (GetWindowsDirectory(wpbuf, MAX_PATH)) {
-		if ((home = smm_wcstombs(wpbuf)) == NULL) {
+		if ((home = smm_wcstombs_allow(wpbuf)) == NULL) {
 			return NULL;
 		}
 		if (realloc(home, strlen(home) + 16) == NULL) {
@@ -148,7 +150,6 @@ char *smm_fontpath(char *ftname, char **userdir)
 static int findfont(void *option, char *path, int type, void *info)
 {
 	struct	FTINF	*ftinfo = option;
-	char	tmp[4];
 
 	(void)info;		/* stop the gcc warning */
 	switch (type) {
@@ -167,9 +168,7 @@ static int findfont(void *option, char *path, int type, void *info)
 		if (ftinfo->ftname == NULL) {
 			break;
 		}
-		tmp[0] = PATHSEP;
-		tmp[1] = 0;
-		strcat(ftinfo->ftname, tmp);
+		strcat(ftinfo->ftname, SMM_DEF_DELIM);
 		strcat(ftinfo->ftname, path);
 		//slogz("Found %s\n", ftinfo->ftname);
 		return SMM_NTF_PATH_EOP;
@@ -184,12 +183,10 @@ static int findfont(void *option, char *path, int type, void *info)
 	return SMM_NTF_PATH_NONE;
 }
 
-
-#ifdef	CFG_WIN32_API
-char *find_sep(char *path)
+static char *find_sep(char *path)
 {
 	while (*path) {
-		if ((*path == '/') || (*path == '\\')) {
+		if (csc_isdelim(SMM_PATH_DELIM, *path)) {
 			return path;
 		}
 		path++;
@@ -197,25 +194,16 @@ char *find_sep(char *path)
 	return NULL;
 }
 
-char *find_rsep(char *path)
+static char *find_rsep(char *path)
 {
 	int	i;
 
 	for (i = strlen(path) - 1; i >= 0; i--) {
-		if ((path[i] == '/') || (path[i] == '\\')) {
+		if (csc_isdelim(SMM_PATH_DELIM, path[i])) {
 			return &path[i];
 		}
 	}
 	return NULL;
 }
-#else
-char *find_sep(char *path)
-{
-	return strchr(path, '/');
-}
 
-char *find_rsep(char *path)
-{
-	return strrchr(path, '/');
-}
-#endif
+

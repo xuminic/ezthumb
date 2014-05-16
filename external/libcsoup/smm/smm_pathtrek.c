@@ -43,6 +43,10 @@ int smm_pathtrek(char *path, int flags, F_DIR msg, void *option)
 	void	*cwid;
 	int	rc;
 
+	if (path == NULL) {
+		return 0;
+	}
+
 	memset(&sdir, 0, sizeof(sdir));
 	sdir.message = msg;
 	if (sdir.message == NULL) {
@@ -112,7 +116,7 @@ static int wpath_enter(struct smmdir *sdir, TCHAR *wpath)
 		return SMM_NTF_PATH_NOACC;	 /* maybe permission denied */
 	case PATH_STAT_REGULAR:
 		sdir->stat_files++;
-		fname = smm_wcstombs(wpath);
+		fname = smm_wcstombs_alloc(wpath);
 		rc = sdir->message(sdir->option, fname, 
 				SMM_MSG_PATH_EXEC, sdir);
 		smm_free(fname);
@@ -127,7 +131,7 @@ static int wpath_enter(struct smmdir *sdir, TCHAR *wpath)
 
 	/* check the depth of subdirectories */
 	if ((sdir->depth > 0) && (sdir->depnow >= sdir->depth)) {
-		fname = smm_wcstombs(wpath);
+		fname = smm_wcstombs_alloc(wpath);
 		sdir->message(sdir->option, fname, SMM_MSG_PATH_FLOOR, sdir);
 		smm_free(fname);
 		return SMM_NTF_PATH_DEPTH;
@@ -139,7 +143,7 @@ static int wpath_enter(struct smmdir *sdir, TCHAR *wpath)
 	
 	sdir->depnow++;
 	sdir->stat_dirs++;
-	fname = smm_wcstombs(wpath);
+	fname = smm_wcstombs_alloc(wpath);
 	rc = sdir->message(sdir->option, fname, SMM_MSG_PATH_ENTER, sdir);
 	smm_free(fname);
 	return rc;
@@ -151,7 +155,7 @@ static int wpath_leave(struct smmdir *sdir, TCHAR *wpath)
 
 	SetCurrentDirectory(TEXT(".."));
 
-	fname = smm_wcstombs(wpath);
+	fname = smm_wcstombs_alloc(wpath);
 	sdir->message(sdir->option, fname, SMM_MSG_PATH_LEAVE, sdir);
 	smm_free(fname);
 	sdir->depnow--;
@@ -171,7 +175,7 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	if (ffdh == INVALID_HANDLE_VALUE) {
-		fname = smm_wcstombs(wpath);
+		fname = smm_wcstombs_alloc(wpath);
 		sdir->message(sdir->option, fname, SMM_MSG_PATH_BREAK, NULL);
 		smm_free(fname);
 		wpath_leave(sdir, wpath);
@@ -189,7 +193,7 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 			break;
 		case PATH_STAT_REGULAR:
 			sdir->stat_files++;
-			fname = smm_wcstombs(ffdata.cFileName);
+			fname = smm_wcstombs_alloc(ffdata.cFileName);
 			rc = sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_EXEC, sdir);
 			smm_free(fname);
@@ -198,7 +202,7 @@ static int win_path_recur_fifo(struct smmdir *sdir, TCHAR *wpath)
 		if (rc == SMM_NTF_PATH_EOP) {
 			break;
 		} else if (rc != SMM_NTF_PATH_NONE) {
-			fname = smm_wcstombs(ffdata.cFileName);
+			fname = smm_wcstombs_alloc(ffdata.cFileName);
 			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_BREAK, &rc);
 			smm_free(fname);
@@ -224,7 +228,7 @@ static int win_path_recur_first(struct smmdir *sdir, TCHAR *wpath)
 
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	if (ffdh == INVALID_HANDLE_VALUE) {
-		fname = smm_wcstombs(wpath);
+		fname = smm_wcstombs_alloc(wpath);
 		sdir->message(sdir->option, fname, SMM_MSG_PATH_BREAK, NULL);
 		smm_free(fname);
 		wpath_leave(sdir, wpath);
@@ -241,7 +245,7 @@ static int win_path_recur_first(struct smmdir *sdir, TCHAR *wpath)
 			wpath_leave(sdir, wpath);
 			return rc;
 		} else if (rc != SMM_NTF_PATH_NONE) {
-			fname = smm_wcstombs(ffdata.cFileName);
+			fname = smm_wcstombs_alloc(ffdata.cFileName);
 			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_BREAK, &rc);
 			smm_free(fname);
@@ -258,7 +262,7 @@ static int win_path_recur_first(struct smmdir *sdir, TCHAR *wpath)
 		}
 		
 		sdir->stat_files++;
-		fname = smm_wcstombs(ffdata.cFileName);
+		fname = smm_wcstombs_alloc(ffdata.cFileName);
 		rc = sdir->message(sdir->option, fname,
 				SMM_MSG_PATH_EXEC, sdir);
 		smm_free(fname);
@@ -286,7 +290,7 @@ static int win_path_recur_last(struct smmdir *sdir, TCHAR *wpath)
 
 	ffdh = FindFirstFile(TEXT("*"), &ffdata);
 	if (ffdh == INVALID_HANDLE_VALUE) {
-		fname = smm_wcstombs(wpath);
+		fname = smm_wcstombs_alloc(wpath);
 		sdir->message(sdir->option, fname, SMM_MSG_PATH_BREAK, NULL);
 		smm_free(fname);
 		wpath_leave(sdir, wpath);
@@ -299,7 +303,7 @@ static int win_path_recur_last(struct smmdir *sdir, TCHAR *wpath)
 		}
 	
 		sdir->stat_files++;
-		fname = smm_wcstombs(ffdata.cFileName);
+		fname = smm_wcstombs_alloc(ffdata.cFileName);
 		rc = sdir->message(sdir->option, fname,
 				SMM_MSG_PATH_EXEC, sdir);
 		smm_free(fname);
@@ -321,7 +325,7 @@ static int win_path_recur_last(struct smmdir *sdir, TCHAR *wpath)
 		if (rc == SMM_NTF_PATH_EOP) {
 			break;
 		} else if (rc != SMM_NTF_PATH_NONE) {
-			fname = smm_wcstombs(ffdata.cFileName);
+			fname = smm_wcstombs_alloc(ffdata.cFileName);
 			sdir->message(sdir->option, fname,
 					SMM_MSG_PATH_BREAK, &rc);
 			smm_free(fname);
@@ -339,7 +343,7 @@ static int path_recur_fifo(struct smmdir *sdir, char *path)
 	TCHAR	*wpath;
 	int	rc;
 
-	if ((wpath = smm_mbstowcs(path)) == NULL) {
+	if ((wpath = smm_mbstowcs_alloc(path)) == NULL) {
 		return SMM_NTF_PATH_CHARSET;
 	}
 	rc = win_path_recur_fifo(sdir, wpath);
@@ -352,7 +356,7 @@ static int path_recur_first(struct smmdir *sdir, char *path)
 	TCHAR	*wpath;
 	int	rc;
 
-	if ((wpath = smm_mbstowcs(path)) == NULL) {
+	if ((wpath = smm_mbstowcs_alloc(path)) == NULL) {
 		return SMM_NTF_PATH_CHARSET;
 	}
 	rc = win_path_recur_first(sdir, wpath);
@@ -365,7 +369,7 @@ static int path_recur_last(struct smmdir *sdir, char *path)
 	TCHAR	*wpath;
 	int	rc;
 
-	if ((wpath = smm_mbstowcs(path)) == NULL) {
+	if ((wpath = smm_mbstowcs_alloc(path)) == NULL) {
 		return SMM_NTF_PATH_CHARSET;
 	}
 	rc = win_path_recur_last(sdir, wpath);

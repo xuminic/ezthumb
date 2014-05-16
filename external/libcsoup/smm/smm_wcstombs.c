@@ -25,12 +25,15 @@
 #include "libcsoup.h"
 
 #ifdef  CFG_WIN32_API
-char *smm_wcstombs(void *wcs)
+char *smm_wcstombs_alloc(void *wcs)
 {
 	char	*buf;
 	int	len;
 
 	smm_errno_update(SMM_ERR_NONE);
+	if (wcs == NULL) {
+		return NULL;
+	}
 	len = WideCharToMultiByte(smm_codepage(), 
 			0, wcs, -1, NULL, 0, NULL, NULL);
 	if (len <= 0) {
@@ -49,12 +52,15 @@ char *smm_wcstombs(void *wcs)
 #ifdef  CFG_UNIX_API
 #include <errno.h>
 
-char *smm_wcstombs(void *wcs)
+char *smm_wcstombs_alloc(void *wcs)
 {
 	char	*buf;
 	int	len;
 
 	smm_errno_update(SMM_ERR_NONE);
+	if (wcs == NULL) {
+		return NULL;
+	}
 	if ((len = wcstombs(NULL, wcs, 0)) == 0) {
 		smm_errno_update(SMM_ERR_LENGTH);
 		return NULL;

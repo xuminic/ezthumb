@@ -57,7 +57,7 @@ int smm_cwd_pop(void *cwid)
 
 	fd.u_poi = cwid;
 
-	if (fd.u_int < 0) {
+	if (fd.u_int <= 0) {
 		return smm_errno_update(SMM_ERR_NONE);
 	}
 

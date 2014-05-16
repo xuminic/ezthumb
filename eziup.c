@@ -28,8 +28,10 @@
 #include "ezthumb.h"
 #include "ezgui.h"
 #include "ezicon.h"
+#include "id_lookup.h"
 
 #define EZGUI_INST	"GUIEXT"
+#define EZGUI_MAINKEY	"[GUI]"
 
 static	char	*list_grid[] = {
 	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP,
@@ -97,12 +99,15 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
 static Ihandle *xui_text_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext);
 static Ihandle *xui_button(char *prompt, Icallback ntf);
-static int string_array_indexer(char *strarr[], char *elem);
+static int index_of_strings(char *strarr[], char *elem);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
 	EZGUI	*gui;
+	char	*s;
+	int	rc;
+	long	vall;
 
 	IupOpen(argcs, argvs);
 
@@ -121,30 +126,95 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	gui->sysopt = ezopt;
 	sprintf(gui->inst_id, "EZTHUMB_%p", gui);
 
+	/* load configure from file, or create the file */
+	gui->config = smm_config_open(SMM_CFGROOT_DESKTOP, SMM_CFGMODE_RWC,
+			"FunSight", "ezthumb.conf");
+	if (gui->config) {
+		ezopt_load_config(ezopt, gui->config);
+	}
+
 	/* bind the notification function to GUI mode */
 	gui->sysopt->notify = ezgui_notificate;
 
-	/* the index of profile of grid and zoom parameters */
-	gui->grid_idx = string_array_indexer(list_grid, CFG_PIC_GRID_STEP);
-	gui->zoom_idx = string_array_indexer(list_zoom, CFG_PIC_ZOOM_DEFINE);
+	/* find the index of drop down lists: the grid drop down */
+	s = smm_config_read_alloc(gui->config, EZGUI_MAINKEY, CFG_KEY_GRID);
+	if (s) {
+		gui->grid_idx = index_of_strings(list_grid, s);
+		smm_free(s);
+	} else {
+		gui->grid_idx = index_of_strings(list_grid, CFG_PIC_AUTO);
+		smm_config_write(gui->config, 
+				EZGUI_MAINKEY, CFG_KEY_GRID, CFG_PIC_AUTO);
+	}
 
-	gui->dfm_idx = string_array_indexer(list_duration, CFG_PIC_AUTO);
-	gui->fmt_idx = string_array_indexer(list_format, CFG_PIC_FMT_JPEG);
+	/* find the index of drop down lists: the zoom drop down */
+	s = smm_config_read_alloc(gui->config, EZGUI_MAINKEY, CFG_KEY_ZOOM);
+	if (s) {
+		gui->zoom_idx = index_of_strings(list_zoom, s);
+		smm_free(s);
+	} else {
+		gui->zoom_idx = index_of_strings(list_zoom, CFG_PIC_AUTO);
+		smm_config_write(gui->config,
+				EZGUI_MAINKEY, CFG_KEY_ZOOM, CFG_PIC_AUTO);
+	}
 
+	/* find the index of drop down lists: the duration drop down */
+	s = smm_config_read_alloc(gui->config, EZGUI_MAINKEY, CFG_KEY_DURATION);
+	if (s) {
+		gui->dfm_idx = index_of_strings(list_duration, s);
+		smm_free(s);
+	} else {
+		gui->dfm_idx = index_of_strings(list_duration, CFG_PIC_AUTO);
+		smm_config_write(gui->config,
+				EZGUI_MAINKEY, CFG_KEY_DURATION, CFG_PIC_AUTO);
+	}
+
+	/* find the index of drop down lists: the file format drop down */
+	s = smm_config_read_alloc(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT);
+	if (s) {
+		gui->fmt_idx = index_of_strings(list_format, s);
+		smm_free(s);
+	} else {
+		gui->fmt_idx = index_of_strings(list_format, CFG_PIC_FMT_JPEG);
+		smm_config_write(gui->config,
+				EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT, CFG_PIC_FMT_JPEG);
+	}
+
+	/* find the extension name filter of files */
+	s = smm_config_read_alloc(gui->config, NULL, CFG_KEY_SUFFIX_FILTER);
+	if (s) {
+		gui->filefilter = ezgui_make_filters(s);
+		smm_free(s);
+	} else {
+		gui->filefilter = ezgui_make_filters(EZ_DEF_FILTER);
+		smm_config_write(gui->config, 
+				NULL, CFG_KEY_SUFFIX_FILTER, EZ_DEF_FILTER);
+	}
+	
 	/* seperate the image quality and frame rate */
 	gui->tmp_jpg_qf  = 85;
 	gui->tmp_gifa_fr = 1000;
-	if (!strcmp(gui->sysopt->img_format, "jpg") || 
+	rc = smm_config_read_long(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_JPG_QUALITY, &vall);
+	if (rc == SMM_ERR_NONE) {
+		gui->tmp_jpg_qf = (int) vall;
+	} else if (!strcmp(gui->sysopt->img_format, "jpg") || 
 			!strcmp(gui->sysopt->img_format, "jpeg")) {
 		gui->tmp_jpg_qf  = gui->sysopt->img_quality;
+	}
+	rc = smm_config_read_long(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_GIF_FRATE, &vall);
+	if (rc == SMM_ERR_NONE) {
+		gui->tmp_gifa_fr = (int) vall;
 	} else if (!strcmp(gui->sysopt->img_format, "gif") && 
 			gui->sysopt->img_quality) {
 		gui->tmp_gifa_fr = gui->sysopt->img_quality;
 	}
 
-	gui->filefilter = ezgui_make_filters(EZ_DEF_FILTER);
+	/* reset the chain list of list control */
 	gui->list_cache = NULL;
-	//printf("%s\n", gui->filefilter);
+	//smm_config_flush(gui->config);
+	csc_cfg_save(gui->config);
 	return gui;
 }
 
@@ -189,10 +259,10 @@ int ezgui_close(EZGUI *gui)
 		if (gui->filefilter) {
 			smm_free(gui->filefilter);
 		}
-		if (gui->cur_dir) {
-			smm_free(gui->cur_dir);
-		}
 		csc_cdl_destroy(&gui->list_cache);
+		if (gui->config) {
+			smm_config_close(gui->config);
+		}
 		smm_free(gui);
 	}
 	return 0;
@@ -503,11 +573,12 @@ static int ezgui_event_main_add(Ihandle *ih)
 		gui = ezgui_get_global(ih);
 	}
 	
-	/* Introducing the 'cur_dir' to store the recent visited diretory
-	 * because the file open dialog can not go to the last directory 
-	 * in gtk */
-	if (gui->cur_dir) {
-		IupSetAttribute(gui->dlg_open, "DIRECTORY", gui->cur_dir);
+	/* Store the recent visited diretory so it can be used next time.
+	 * The file open dialog can not go to the last directory in gtk */
+	path = smm_config_read_alloc(gui->config, EZGUI_MAINKEY, CFG_KEY_DIRECTORY);
+	if (path) {
+		IupSetAttribute(gui->dlg_open, "DIRECTORY", path);
+		smm_free(path);
 	}
 	IupPopup(gui->dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
 
@@ -520,7 +591,7 @@ static int ezgui_event_main_add(Ihandle *ih)
 	 * Last  DIRECTORY: /home/xum1/dwhelper/
 	 * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
 	 * 			lan_ke_er.flv|Powered_by_Discuz.flv|
-	 * Last  DIRECTORY: /home/xum1/dwhelper0 *///FIXME: BUG?
+	 * Last  DIRECTORY: /home/xum1/dwhelper0 */
 	/*printf("Open File VALUE: %s\n", 
 			IupGetAttribute(gui->dlg_open, "VALUE"));
 	printf("Last  DIRECTORY: %s\n", 
@@ -538,21 +609,23 @@ static int ezgui_event_main_add(Ihandle *ih)
 	}
 	ezgui_show_progress(gui, 0, amnt);
 
-	/* store the current path first */
-	path = IupGetAttribute(gui->dlg_open, "DIRECTORY");
-	if (gui->cur_dir == NULL) {
-		gui->cur_dir = csc_strcpy_alloc(path, 4);
-	} else {
-		smm_free(gui->cur_dir);
-		gui->cur_dir = csc_strcpy_alloc(path, 4);
+	/* store the current directory. note that the tailing '/' or '0' 
+	 * need to be cut out first.
+	 * Is the tailing '0' a bug of IUP? */
+	path = csc_strcpy_alloc(
+			IupGetAttribute(gui->dlg_open, "DIRECTORY"), 4);
+	i = strlen(path) - 1;
+	if ((path[i] == '/') || (path[i] == '\\') || (path[i] == '0')) {
+		path[i] = 0;
 	}
-	/* cut out the tailing '/' or '0' */
-	gui->cur_dir[strlen(gui->cur_dir)-1] = 0;	
+	smm_config_write(gui->config, EZGUI_MAINKEY, CFG_KEY_DIRECTORY, path);
+	smm_free(path);
 
 	/* process the single file list */
 	if (amnt == 1) {
 		ezgui_page_main_file_append(gui, flist);
 		ezgui_show_progress(gui, amnt, amnt);
+		smm_free(flist);
 		return IUP_DEFAULT;
 	}
 
@@ -1008,14 +1081,26 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 	opt = gui->sysopt;
 
 	gui->grid_idx = xui_list_get_idx(gui->prof_grid);
+	smm_config_write(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_GRID, list_grid[gui->grid_idx]);
 	gui->zoom_idx = xui_list_get_idx(gui->prof_zoom);
+	smm_config_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_ZOOM, list_zoom[gui->zoom_idx]);
 	gui->dfm_idx  = xui_list_get_idx(gui->dfm_list);
+	smm_config_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_DURATION, list_duration[gui->dfm_idx]);
 	gui->fmt_idx  = xui_list_get_idx(gui->fmt_list);
+	smm_config_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_FILE_FORMAT, list_format[gui->fmt_idx]);
 
 	gui->tmp_jpg_qf = (int) strtol(
 			IupGetAttribute(gui->fmt_jpg_qf, "VALUE"), NULL, 10);
+	smm_config_write_long(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_JPG_QUALITY, (long) gui->tmp_jpg_qf);
 	gui->tmp_gifa_fr = (int) strtol(
 			IupGetAttribute(gui->fmt_gif_fr, "VALUE"), NULL, 10);
+	smm_config_write_long(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_GIF_FRATE, (long) gui->tmp_jpg_qf);
 
 	val = IupGetAttribute(gui->fmt_transp, "VALUE");
 	if (!strcmp(val, "ON")) {
@@ -1023,6 +1108,8 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 	} else {
 		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
 	}
+	smm_config_write(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_TRANSPARENCY, val);
 	
 	/*
 	printf("SETUP: Grid=%d Zoom=%d Dur=%d Fmt=%d JPG=%d GIFA=%d Tra=%s\n",
@@ -1128,6 +1215,24 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 	      	
 	IupSetInt(gui->entry_zbox_grid, "VALUEPOS", gui->grid_idx);
 	IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", gui->zoom_idx);
+
+	/* save all related parameters into the configure file */
+	smm_config_write_long(gui->config, NULL, CFG_KEY_GRID_COLUMN, 
+			(long) opt->grid_col);
+	smm_config_write_long(gui->config, NULL, CFG_KEY_GRID_ROW, 
+			(long) opt->grid_row);
+	smm_config_write_long(gui->config, NULL, CFG_KEY_TIME_STEP, 
+			(long) opt->tm_step);
+	smm_config_write_long(gui->config, NULL, CFG_KEY_ZOOM_RATIO, 
+			(long) opt->tn_facto);
+	smm_config_write_long(gui->config, NULL, CFG_KEY_ZOOM_WIDTH, 
+			(long) opt->tn_width);
+	smm_config_write_long(gui->config, NULL, CFG_KEY_ZOOM_HEIGHT, 
+			(long) opt->tn_height);
+	smm_config_write_long(gui->config, NULL, CFG_KEY_CANVAS_WIDTH, 
+			(long) opt->canvas_width);
+	smm_config_write(gui->config, NULL, CFG_KEY_DURATION,
+			id_lookup(id_duration, GETDURMOD(opt->flags)));
 	return IUP_DEFAULT;
 }
 
@@ -1263,7 +1368,7 @@ static Ihandle *xui_button(char *prompt, Icallback ntf)
 }
 
 
-static int string_array_indexer(char *strarr[], char *elem)
+static int index_of_strings(char *strarr[], char *elem)
 {
 	int	i;
 
