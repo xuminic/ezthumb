@@ -29,11 +29,14 @@
 #define TESTINPUT	"myconfig.test"
 #define TESTOUTPUT	"myconfig.out"
 
-static	char	*testconf = "\
+static	char	testconf[] = "\
 window_width=4096\n\
 grid_column=690\n\
 zoom_height=how do i know\n\
 last_directory=/home/xuxx/zvtest\n\
+empty_key=#this is an empty key\n\
+this_is_a_partial_key\n\
+=another partial key\n\
 \n\
 [main]\n\
 timestamp=Mon Apr 28 16:42:30 2014\n\
@@ -64,50 +67,99 @@ canvas_width=0\n\
 duration_mode=12288\n\
 file_format=jpg@85\n\
 transparency=no\n\
-last_directory=/HOME/XUM1/vMACHINE/sHARED/EZVTEST\n\
+last_directory=/HOME/XUM1/vMACHINE/sHARED/EZVTEST\n\n\
 ";
+
+
+static char *mytimestamp(int mode)
+{
+	static	char	tmbuf[128];
+	time_t	tmtick;
+
+	time(&tmtick);
+	if (mode == 0) {
+		sprintf(tmbuf, "%u", (unsigned) tmtick);
+	} else {
+		strcpy(tmbuf, ctime(&tmtick));
+		tmbuf[strlen(tmbuf)-1] = 0;
+	}
+	return tmbuf;
+}
 
 
 static int config_open_rdonly(void)
 {
-	void	*root;
+	KEYCB	*root;
 
-	if ((root = csc_cfg_open(TESTPATH, TESTINPUT, 1)) == NULL) {
+	if ((root = csc_cfg_open(SMM_CFGROOT_CURRENT, TESTPATH, TESTINPUT, 
+			CSC_CFG_READ)) == NULL) {
 		slogz("can't open\n");
 		return -1;
 	}
-	csc_cfg_dump(root, NULL);
+	csc_cfg_dump(root);
 	if (csc_cfg_save(root) == SMM_ERR_NONE) {
 		slogz("FATAL: should be read only\n");
-		csc_cfg_abort(root);
+		csc_cfg_free(root);
 		return -2;
 	}
 
-	csc_cfg_saveas(root, TESTPATH, TESTOUTPUT);
-	csc_cfg_abort(root);
+	csc_cfg_saveas(root, SMM_CFGROOT_CURRENT, TESTPATH, TESTOUTPUT);
+	csc_cfg_free(root);
+	return 0;
+}
+
+
+static int config_open_with_directory(void)
+{
+	KEYCB	*cfg;
+	char	*config = "\
+[main/dev/holiday]\n\
+[main/dev]\n\
+[/hardware/driver///howsit]\n\
+[/usr/andy]\n\
+key=value\n\
+[/usr/boy]\n";
+
+	if ((cfg = csc_cfg_open(SMM_CFGROOT_MEMPOOL, config, 
+					NULL, CSC_CFG_READ)) == NULL) {
+		slogz("Weird\n");
+		return -1;
+	}
+	
+	csc_cfg_write(cfg, "main/dev/usb", "camara", "xxooxxoo");
+	csc_cfg_write(cfg, NULL, "myprofile", "n/a");
+	csc_cfg_write(cfg, "", "wtf", "beam");
+	csc_cfg_write(cfg, "/hardware/driver///howsit", "good", "day");
+	csc_cfg_dump(cfg);
+
+	csc_cfg_write_bin(cfg, "/usr/bin", "simple", cfg, sizeof(KEYCB));
+	csc_cfg_write_block(cfg, "/usr/block", config, strlen(config));
+
+	csc_cfg_saveas(cfg, SMM_CFGROOT_MEMPOOL, NULL, NULL);
+	csc_cfg_close(cfg);
 	return 0;
 }
 
 static int config_key_test(void)
 {
-	void	*root;
+	KEYCB	*root;
 	int	i, n;
-	char	*val, *key;
-	char	nkey[64], mkey[64];
-	time_t	tmtick;
+	long	lv;
+	char	*val, *key, nkey[64], mkey[64];
 	char	*rdlist[][2] = {
-		{ "[hello]", "grid_column" },
-		{ "[hello]", "grid_column=4" },
-		{ "[hello]", "window_width" },
-		{ "[main]", "window_width" },
-		{ "[main]", "simple_profile" },
-		{ "[what]", "zoom_height" },
-		{ "[print]", "last_directory" },
+		{ "hello", "grid_column" },
+		{ "hello", "grid_column=4" },
+		{ "hello", "window_width" },
+		{ "main", "window_width" },
+		{ "main", "simple_profile" },
+		{ "what", "zoom_height" },
+		{ "print", "last_directory" },
 		{ NULL, "window_width" },
 		{ NULL, NULL }
 	};
 
-	if ((root = csc_cfg_open(TESTPATH, TESTINPUT, 0)) == NULL) {
+	if ((root = csc_cfg_open(SMM_CFGROOT_CURRENT, TESTPATH, TESTINPUT, 
+					CSC_CFG_RWC)) == NULL) {
 		slogz("Weird!\n");
 		return -1;
 	}
@@ -123,7 +175,7 @@ static int config_key_test(void)
 		}
 	}
 
-	if ((val = csc_cfg_read_first(root, "[what]", &key)) != NULL) {
+	if ((val = csc_cfg_read_first(root, "what", &key)) != NULL) {
 		slogz("READ [what]: %s = %s\n", key, val);
 		while ((val = csc_cfg_read_next(root, &key)) != NULL) {
 			slogz("READ [what]: %s = %s\n", key, val);
@@ -131,19 +183,18 @@ static int config_key_test(void)
 	}
 
 	/* read an integer */
-	csc_cfg_read_long(root, rdlist[2][0], rdlist[2][1], (long*)&i);
-	slogz("READLONG %s: %s = %d\n", rdlist[2][0], rdlist[2][1], i);
+	csc_cfg_read_long(root, rdlist[2][0], rdlist[2][1], &lv);
+	slogz("READLONG %s: %s = %ld\n", rdlist[2][0], rdlist[2][1], lv);
 
 	/* write a new main key */
-	time(&tmtick);
-	sprintf(mkey, "[%u]", (unsigned) tmtick);
+	strcpy(mkey, mytimestamp(0));
 	sprintf(nkey, "timestamp");
-	csc_cfg_write(root, mkey, nkey, ctime(&tmtick));
+	csc_cfg_write(root, mkey, nkey, mytimestamp(1));
 	slogz("WRITENEW %s: %s = %s\n", mkey, nkey, 
 			csc_cfg_read(root, mkey, nkey));
 
 	/* write to the root key */
-	csc_cfg_write(root, NULL, nkey, ctime(&tmtick));
+	csc_cfg_write(root, NULL, nkey, mytimestamp(1));
 	slogz("WRITEROOT: %s = %s\n", nkey, csc_cfg_read(root, NULL, nkey));
 
 	/* write something longer than orignal */
@@ -174,9 +225,9 @@ static int config_key_test(void)
 		free(val);
 	}
 
-	csc_cfg_write_bin(root, "[what]", "Binary", root, 48);
-	val = csc_cfg_copy_bin(root, "[what]", "Binary", &n);
-	slogz("BINARY %s: %s = (%d) ", "[what]", "Binary", n);
+	csc_cfg_write_bin(root, "what", "Binary", root, 48);
+	val = csc_cfg_copy_bin(root, "what", "Binary", &n);
+	slogz("BINARY %s: %s = (%d) ", "what", "Binary", n);
 	if (val) {
 		for (i = 0; i < n; i++) {
 			slogz("%02x ", (unsigned char)val[i]);
@@ -185,38 +236,38 @@ static int config_key_test(void)
 	}
 	slogz("\n");
 
-	csc_cfg_close(root);
+	slogz("%x\n", csc_cfg_close(root));
 	return 0;
 }
 
 
 int config_block_test(char *fname)
 {
-	char	*fbuf, *kbuf, key[128];
+	KEYCB	*root;
+	char	*fbuf, *kbuf;
 	int	i, klen;
 	long	flen = 0;
-	void	*root;
 
 	if ((fbuf = csc_file_load(fname, NULL, &flen)) == NULL) {
 		return -1;
 	}
-	if ((root = csc_cfg_open(TESTPATH, TESTINPUT, 0)) == NULL) {
+	if ((root = csc_cfg_open(SMM_CFGROOT_CURRENT, TESTPATH, TESTINPUT, 
+					CSC_CFG_RWC)) == NULL) {
 		free(fbuf);
 		return -3;
 	}
-	sprintf(key, "[%s]", fname);
-	csc_cfg_write_block(root, key, fbuf, (int)flen);
+	csc_cfg_write_block(root, fname, fbuf, (int)flen);
 	
-	kbuf = csc_cfg_copy_block(root, key, &klen);
+	kbuf = csc_cfg_copy_block(root, fname, &klen);
 	if (klen != (int)flen) {
-		slogz("BLOCK %s: %d != %ld\n", key, klen, flen);
+		slogz("BLOCK [%s]: %d != %ld\n", fname, klen, flen);
 	} else if (memcmp(fbuf, kbuf, klen)) {
 		for (i = 0; i < klen; i++) {
 			if (fbuf[i] != kbuf[i]) {
 				break;
 			}
 		}
-		slogz("BLOCK %s: %d at %x %x\n", key, i, fbuf[i], kbuf[i]);
+		slogz("BLOCK [%s]: %d at %x %x\n", fname, i, fbuf[i], kbuf[i]);
 	}
 	csc_cfg_close(root);
 	
@@ -224,6 +275,49 @@ int config_block_test(char *fname)
 	free(fbuf);
 	return 0;
 }
+
+
+int config_registry_test(char *syspath, char *path, char *fname)
+{
+	KEYCB	*root;
+	char	*buf, *p;
+	int	sysp, len;
+
+	if (!strcmp(syspath, "DESKTOP")) {
+		sysp = SMM_CFGROOT_DESKTOP;
+	} else if (!strcmp(syspath, "USER")) {
+		sysp = SMM_CFGROOT_USER;
+	} else if (!strcmp(syspath, "SYSTEM")) {
+		sysp = SMM_CFGROOT_SYSTEM;
+	} else if (!strcmp(syspath, "CURRENT")) {
+		sysp = SMM_CFGROOT_CURRENT;
+	} else {
+		slogz("Unknown system path - %s\n", syspath);
+		return -1;
+	}
+		
+	/* open HKEY_CURRENT_USER\\SOFTWARE\\7-Zip */
+	if ((root = csc_cfg_open(sysp, path, fname, CSC_CFG_READ)) == NULL) {
+		slogz("Can't open\n");
+		return -1;
+	}
+
+	len = smm_config_path(sysp, path, fname, NULL, 0);
+	if ((buf = smm_alloc(len)) != NULL) {
+		smm_config_path(sysp, path, fname, buf, len);
+		slogz("# File System Path: %s\n", buf);
+		buf += strlen(buf) + 1;
+		p  = buf + strlen(buf) + 1;
+		slogz("# Registry Path:    %s\\%s\n", p, buf);
+		smm_free(buf);
+	}
+	
+	csc_cfg_saveas(root, SMM_CFGROOT_MEMPOOL, NULL, NULL);
+	csc_cfg_close(root);
+	return 0;
+}
+
+
 
 int config_create_new(void)
 {
@@ -235,7 +329,8 @@ int config_create_new(void)
 	strcat(path, SMM_DEF_DELIM);
 	strcat(path, TESTINPUT);
 
-	csc_file_store(path, 1, testconf, sizeof(testconf));
+	smm_mkpath(TESTPATH);
+	csc_file_store(path, 1, testconf, strlen(testconf));
 	free(path);
 	return 0;
 }
@@ -244,15 +339,18 @@ static	struct	cliopt	clist[] = {
 	{   0, NULL,        0, "OPTIONS:" },
 	{ 'h', "help",      0, "This help" },
 	{ 'o', "open-read", 0, "Open the configure file in read-only mode" },
+	{ 'r', "registry",  1, "dump the registry" },
 	{ 'k', "key-test",  0, "Test the key and value pairs" },
 	{ 'b', "block",     1, "Test the block in the configure file" },
 	{ 'c', "create",    0, "Create a new configure file" },
+	{ 'm', "memtest",   0, "Test memory configure" },
 	{ 0, NULL, 0, NULL }
 };
 
 int config_main(void *rtime, int argc, char **argv)
 {
 	int	c;
+	char	*sdir = NULL;
 
 	if (argc < 2) {
 		csc_cli_print(clist, NULL);
@@ -269,6 +367,9 @@ int config_main(void *rtime, int argc, char **argv)
 		case 'o':
 			config_open_rdonly();
 			break;
+		case 'r':
+			sdir = csc_cli_qopt_optarg(rtime);
+			break;
 		case 'k':
 			config_key_test();
 			break;
@@ -277,6 +378,9 @@ int config_main(void *rtime, int argc, char **argv)
 			break;
 		case 'c':
 			config_create_new();
+			break;
+		case 'm':
+			config_open_with_directory();
 			break;
 		default:
 			if (csc_cli_qopt_optopt(rtime) == ':') {
@@ -288,6 +392,17 @@ int config_main(void *rtime, int argc, char **argv)
 			break;
 		}
 	}
+
+	if (sdir) {
+		c = csc_cli_qopt_optind(rtime);
+		//printf("options: %d %d %s\n", c, argc, argv[c]);
+		if (c + 1 == argc) {
+			config_registry_test(sdir, NULL, argv[c]);
+		} else if (c + 1 < argc) {
+			config_registry_test(sdir, argv[c+1], argv[c]);
+		}
+	}
+
 	csc_cli_qopt_close(rtime);
 	return 0;
 }

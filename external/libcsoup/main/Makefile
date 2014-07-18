@@ -4,10 +4,13 @@ AR      = ar
 CP      = cp
 RM      = rm -f
 
+ifndef	CFLAGS
+CFLAGS	= -Wall -Wextra
+endif
 CFLAGS	+= -I..
 
-SRCS	= main.c fixtoken.c smm.c memdump.c slog.c crc.c fontpath.c config.c \
-	  csc_cdll_main.c csc_cli.c
+SRCS	= main.c fixtoken.c memdump.c slog.c crc.c fontpath.c config.c \
+	  csc_cdll.c csc_cli.c smm.c
 
 TARGET	= csoup
 
@@ -19,7 +22,7 @@ $(TARGET): $(SRCS) main_define.h
 	$(CC) $(CFLAGS) -L.. -o $@ $(SRCS) -lcsoup
 
 main_define.h: mkclicmd
-	grep "extern.*struct.*clicmd" *.c|cut -d: -f2 |tr -d '\r' > $@
+	grep "extern.*struct.*clicmd" $(SRCS) | cut -d: -f2 |tr -d '\r' > $@
 	mkclicmd $@
 
 mkclicmd: mkclicmd.c

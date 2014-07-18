@@ -10,7 +10,7 @@ MANDIR	= /usr/local/man/man1
 
 # Options: CFG_WIN32_API, CFG_UNIX_API
 SYSAPI	= 
-DEBUG	= -g -DDEBUG
+DEBUG	= -g -DDEBUG -DCFG_CDLL_SAFE -DUNICODE -D_UNICODE
 DEFINES = 
 
 export	CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(SYSAPI) 

@@ -28,7 +28,7 @@
 #include "csc_cli_private.h"
 
 
-static inline void store_char(char *buf, int idx, int blen, int ch)
+static void store_char(char *buf, int idx, int blen, int ch)
 {
 	if (buf && (idx < (blen - 1))) {
 		buf[idx] = (char) ch;

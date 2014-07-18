@@ -807,6 +807,7 @@ static int main_close(EZOPT *opt)
 
 static int dbeug_online(int argc, char **argv)
 {
+	KEYCB	*kcb;
 	char	*s;
 
 	if (argc <= 0) {
@@ -830,11 +831,14 @@ static int dbeug_online(int argc, char **argv)
 			smm_free(s);
 		}
 	} else if (!strcmp(*argv, "config")) {
-		s = smm_config_open(SMM_CFGROOT_CURRENT, SMM_CFGMODE_RWC, 
-				NULL, "ezthumb_sample.rc");
-		if (s) {
-			ezopt_store_config(&sysopt, s);
-			smm_config_close(s);
+		kcb = csc_cfg_open(SMM_CFGROOT_CURRENT, 
+				NULL, "ezthumb_sample.rc", CSC_CFG_RWC);
+		if (kcb) {
+			int	items;
+			ezopt_store_config(&sysopt, kcb);
+			s = csc_cfg_status(kcb, &items);
+			slogz("Read %d configures: %s\n", items, s);
+			csc_cfg_close(kcb);
 		}
 	}
 	return 0;
@@ -1249,20 +1253,30 @@ static void print_profile_width(EZOPT *opt, int vidw)
 
 static int load_default_config(EZOPT *opt)
 {
-	void	*config;
+	KEYCB	*config;
+	int	items;
+	char	*path;
 
-	config = smm_config_open(SMM_CFGROOT_SYSTEM, SMM_CFGMODE_RDONLY, 
-			"FunSight", "ezthumbrc");
+	config = csc_cfg_open(SMM_CFGROOT_SYSTEM,
+			"FunSight", "ezthumbrc", CSC_CFG_READ);
 	if (config) {
 		ezopt_load_config(opt, config);
-		smm_config_close(config);
+		if (EZOP_DEBUG(opt->flags) >= EZDBG_INFO) {
+			path = csc_cfg_status(config, &items);
+			slogz("Read %d configures: %s\n", items, path);
+		}
+		csc_cfg_close(config);
 	}
 
-	config = smm_config_open(SMM_CFGROOT_USER, SMM_CFGMODE_RDONLY,
-			"FunSight", "ezthumbrc");
+	config = csc_cfg_open(SMM_CFGROOT_USER,
+			"FunSight", "ezthumbrc", CSC_CFG_READ);
 	if (config) {
 		ezopt_load_config(opt, config);
-		smm_config_close(config);
+		if (EZOP_DEBUG(opt->flags) >= EZDBG_INFO) {
+			path = csc_cfg_status(config, &items);
+			slogz("Read %d configures: %s\n", items, path);
+		}
+		csc_cfg_close(config);
 	}
 	return 0;
 }

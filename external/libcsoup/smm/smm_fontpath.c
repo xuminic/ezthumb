@@ -45,7 +45,7 @@ static	char	*def_font_dir[] = {
 
 static int findfont(void *option, char *path, int type, void *info);
 static char *find_sep(char *path);
-static char *find_rsep(char *path);
+//static char *find_rsep(char *path);
 
 char *smm_fontpath(char *ftname, char **userdir)
 {
@@ -97,7 +97,7 @@ char *smm_fontpath(char *ftname, char **userdir)
 #ifdef	CFG_WIN32_API
 	/* search Windows system font */
 	if (GetWindowsDirectory(wpbuf, MAX_PATH)) {
-		if ((home = smm_wcstombs_allow(wpbuf)) == NULL) {
+		if ((home = smm_wcstombs_alloc(wpbuf)) == NULL) {
 			return NULL;
 		}
 		if (realloc(home, strlen(home) + 16) == NULL) {
@@ -194,6 +194,7 @@ static char *find_sep(char *path)
 	return NULL;
 }
 
+/*
 static char *find_rsep(char *path)
 {
 	int	i;
@@ -205,5 +206,5 @@ static char *find_rsep(char *path)
 	}
 	return NULL;
 }
-
+*/
 

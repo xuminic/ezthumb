@@ -1,3 +1,34 @@
+20140717: 0.7.6:
+	* csc_cfg_saveas(): update rext->items while saving
+	Note that csc_cfg_status() is limited functioned to debug only.
+
+20140717: 0.7.5
+	* smm_config_open(): fixed a bug that created the wrong directory.
+
+20140716: 0.7.4
+	* csc_config.c/smm_config.c: added supportive functions to display 
+	the attribution of the configure files/devices.
+
+20140716: 0.7.3
+	* csc_cdll.c: hide the details of the CSCLNK structure so the	
+	CFG_CDLL_SAFE conditional compiling macro won't mess around other
+	modules. The drawback is all CSCLNK type nodes must be allocated
+	by csc_cdl_alloc().
+
+20140715: 0.7.2
+	* csc_config.c: added csc_cfg_kcb_free() instead of the smm_free() to
+	free the root KEYCB. Otherwise coredumped at csc_cfg_open().
+
+20140711: 0.7.1
+	* csc_config.c: added csc_cfg_read_int() and csc_cfg_write_int().
+
+20140707: 0.7.0
+	Rewrote the configure management module to concentrate in the 
+	csc_config interface. Win32 registry supported.
+
+	* smm_config.c: rewrote to be the underlayer of csc_config.c.
+	* csc_config.c: using smm_config.c as its I/O interface.
+
 20140516: 0.6.4
 	* smm_config.c: Renamed smm_config_read() to smm_config_read_alloc()
 	to reflect its allocation nature. 

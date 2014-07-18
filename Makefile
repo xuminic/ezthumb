@@ -151,6 +151,12 @@ cleanall: clean
 	make -C $(IUP) clean
 	make -C $(CSOUP) clean
 
+quickclean:
+	make -C $(CSOUP) clean
+	$(RM) $(TGTGUI) $(TGTCON)
+
+link: quickclean all
+
 ifeq	($(SYSTOOL),unix)
 release: rel_source
 else

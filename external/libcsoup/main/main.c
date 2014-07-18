@@ -33,13 +33,15 @@ int main(int argc, char **argv)
 	tstdbg = slog_open(SLINFO);
 	smm_init(0);
 
-	if (argc > 1) {
-		csc_cli_cmd_run(cmdlist, NULL, --argc, ++argv);
-	} else {
+	if (argc < 2) {
 		slogc(tstdbg, SLINFO, "Usage: csoup COMMAND [args ...]\n");
 		csc_cli_cmd_print(cmdlist, NULL);
+	} else if (csc_cli_cmd_run(cmdlist, NULL, --argc, ++argv) == 
+			CSC_CLI_UNCMD) {
+		slogc(tstdbg, SLINFO, "%s: command not found.\n", *argv);
 	}
 	slog_close(tstdbg);
+
 	return -1;
 }
 

@@ -237,7 +237,8 @@
 #define EZ_PTS_CLEAR		1
 #define EZ_PTS_MAX		16
 
-#define EZ_DEF_FILTER	"avi,flv,mkv,mov,mp4,mpg,mpeg,rm,rmvb,ts,vob,wmv"
+#define EZ_DEF_FILTER	"avi,flv,mkv,mov,mp4,mpg,mpeg,rm,rmvb,ts,vob,wmv,"\
+			"mpe,mpv,m1v,m2v,mod,mp2,mpa,mpv2,mp2v,asf,asx,wm,wmx"
 
 #define EZBYTE	unsigned char
 #define EZTIME	int64_t

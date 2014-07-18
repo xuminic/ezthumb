@@ -83,14 +83,15 @@ int csc_extname_filter_match(void *efft, char *fname)
 int csc_extname_filter_export(void *efft, char *buf, int blen)
 {
 	CSEFF	*flt = efft;
-	int	i, idx;
+	int	i, idx, ftlen;
 
 	for (i = idx = 0; flt->filter[i]; i++) {
-		if (buf && (idx + strlen(flt->filter[i]) + 1 < blen)) {
+		ftlen = (int) strlen(flt->filter[i]) + 1;
+		if (buf && (idx + ftlen < blen)) {
 			strcpy(buf + idx, flt->filter[i]);
 			strcat(buf + idx, ",");
 		}
-		idx += strlen(flt->filter[i]) + 1;
+		idx += ftlen;
 	}
 	if (idx) {
 		idx--;

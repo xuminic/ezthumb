@@ -59,34 +59,162 @@ static int do_smm_chdir(char *path)
 #define TEST_PATH	"My/Com/pany"
 #endif
 #define TEST_FILE	"MyProduct"
+static int	syspath[] = { SMM_CFGROOT_DESKTOP, SMM_CFGROOT_USER, 
+		SMM_CFGROOT_SYSTEM, SMM_CFGROOT_CURRENT };
+
+extern int csc_cfg_kcb_fillup(KEYCB *kp);
 
 static int do_smm_config(char *path)
 {
-	void	*root;
-	char	*val;
-	long	vlong;
+	struct	KeyDev	*root, *save, *sfd;
+	int	i;
+	char	sbuf[256];
+	char    *config = "\
+[main/dev/holiday]\n\
+[main/dev]\n\
+[/hardware/driver///howsit]\n\
+[/usr/andy]\n\
+key   =   v alue  #  hello\n\
+[/usr/boy]\n\
+[MyBlock]=BINARY:132	##REG_BINARY\n\
+010000000400000001000000040000000100000008010000070000000100000064000000\n\
+0800000001000000640000000C0000000100000064000000350000000100000064000000\n\
+1900000001000000640000001A0000000100000064000000360000000100000064000000\n\
+1F0000000100000064000000200000000100000064000000\n\
+[usr/Columns/7-Zip.7z]=BINARY:144	##REG_BINARY\n\
+010000000000000001000000040000000100000031010000070000000100000064000000\n\
+0800000001000000640000000C0000000100000064000000090000000100000064000000\n\
+1300000001000000640000000F0000000100000064000000160000000100000064000000\n\
+1B00000001000000640000001F0000000100000064000000200000000100000064000000\n\
+";
+	KEYCB	*kbuf;
 
-	root = smm_config_open(0, SMM_CFGMODE_RWC, TEST_PATH, TEST_FILE);
-	if (root == NULL) {
-		slogc(tstdbg, SLINFO, "Failed\n");
-		return -1;
+	slogz("\n[SMMCONFIG] Default Path Test:\n"); 
+	for (i = 0; i < (int)(sizeof(syspath)/sizeof(int)); i++) {
+		root = smm_config_open(syspath[i], TEST_PATH, 
+				TEST_FILE, 0xdeadbeef);
+		if (root) {
+			smm_config_dump(root);
+			smm_config_close(root);
+		}
 	}
-	smm_config_write(root, NULL, "Hello", "This is a hello key");
-	smm_config_write(root, "[main]", "World", "This is a world key");
-	smm_config_write_long(root, "[main]", "Width", (long)1024);
-
-	val = smm_config_read_alloc(root, "[main]", "World");
-	puts(val);
-	smm_free(val);
-	smm_config_read_long(root, "[main]", "Width", &vlong);
-	printf("%ld\n", vlong);
+	slogz("\n[SMMCONFIG] Open memory for read:\n");
+	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
+	if (root) {
+		smm_config_dump(root);
+		smm_config_close(root);
+	}
+	slogz("\n[SMMCONFIG] Open memory for read/write:\n");
+	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, 
+			NULL, sizeof(config));
+	if (root) {
+		smm_config_dump(root);
+		smm_config_close(root);
+	}
+	slogz("\n[SMMCONFIG] Open memory for R/W/C:\n");
+	/* the CSC_CFG_RWC will be ignored because 'path' is NULL */
+	root = smm_config_open(SMM_CFGROOT_MEMPOOL, NULL, NULL, CSC_CFG_RWC);
+	if (root) {
+		smm_config_dump(root);
+		smm_config_close(root);
+	}
+	slogz("\n[SMMCONFIG] Dump memory configure:\n");
+	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
+	while ((kbuf = smm_config_read_alloc(root)) != NULL) {
+		//slogz("READ: %s", kbuf->pool);
+		if (CFGF_TYPE_GET(kbuf->flags) == CFGF_TYPE_UNKWN) {
+			csc_cfg_kcb_fillup(kbuf);
+		}
+		smm_config_write(root, kbuf);
+		smm_free(kbuf);
+	}
 	smm_config_close(root);
 
-	if (!strcmp(path, "del")) {
-		smm_config_delete(0, TEST_PATH, TEST_FILE);
+	slogz("\n[SMMCONFIG] Save memory configure to memory and [%s]\n",
+			TEST_FILE);
+	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
+	save = smm_config_open(SMM_CFGROOT_MEMPOOL, sbuf, NULL, sizeof(sbuf));
+	sfd = smm_config_open(SMM_CFGROOT_CURRENT, NULL, 
+			TEST_FILE, CSC_CFG_RWC);
+	while ((kbuf = smm_config_read_alloc(root)) != NULL) {
+		if (kbuf->key == NULL) {
+			csc_cfg_kcb_fillup(kbuf);
+		}
+		smm_config_write(save, kbuf);
+		smm_config_write(sfd, kbuf);
+		smm_free(kbuf);
 	}
+	smm_config_close(sfd);
+	smm_config_close(save);
+	smm_config_close(root);
+	slogz("\n[SMMCONFIG] In Memory (overflowed):\n%s\n", sbuf);
+
+	slogz("\n[SMMCONFIG] Dump/Copy/Append %s in "
+			"HKEY_CURRENT_USER\\SOFTWARE\\ or .config\n", path);
+	/* open HKEY_CURRENT_USER\\SOFTWARE\\7-Zip */
+	root = smm_config_open(SMM_CFGROOT_DESKTOP, NULL, path, CSC_CFG_READ);
+	if (root == NULL) {
+		slogz("[SMMCONFIG] Can not find %s\n", path);
+		return -1;
+	}
+	sprintf(sbuf, "%s.copy", path);
+	save = smm_config_open(SMM_CFGROOT_DESKTOP, NULL, sbuf, CSC_CFG_RWC);
+	if (save == NULL) {
+		slogz("[SMMCONFIG] Failed to create %s\n", sbuf);
+		smm_config_close(root);
+		return -2;
+	}
+	while ((kbuf = smm_config_read_alloc(root)) != NULL) {
+		csc_cfg_dump_kcb(kbuf);
+		smm_config_write(save, kbuf);
+		smm_free(kbuf);
+	}
+	smm_config_close(root);
+
+	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
+	while ((kbuf = smm_config_read_alloc(root)) != NULL) {
+		if (CFGF_TYPE_GET(kbuf->flags) == CFGF_TYPE_UNKWN) {
+			csc_cfg_kcb_fillup(kbuf);
+		}
+		csc_cfg_dump_kcb(kbuf);
+		smm_config_write(save, kbuf);
+		smm_free(kbuf);
+	}
+	smm_config_close(root);
+	smm_config_close(save);
 	return 0;
 }
+
+static int do_smm_config_dump(char *path)
+{
+	struct	KeyDev	*root, *output;
+	int	sysidx;
+	KEYCB	*kbuf;
+
+	sysidx = 0;
+	if (isdigit(*path)) {
+		sysidx = *path - '0';
+		path++;
+	}
+
+	root = smm_config_open(syspath[sysidx], NULL, path, CSC_CFG_READ);
+	if (root == NULL) {
+		slogz("[SMMCONFIG] Can not find %s\n", path);
+		return -1;
+	}
+	output = smm_config_open(SMM_CFGROOT_MEMPOOL, NULL, NULL, 0);
+	while ((kbuf = smm_config_read_alloc(root)) != NULL) {
+		if (CFGF_TYPE_GET(kbuf->flags) == CFGF_TYPE_UNKWN) {
+			csc_cfg_kcb_fillup(kbuf);
+		}
+		smm_config_write(output, kbuf);
+		smm_free(kbuf);
+	}
+	smm_config_close(output);
+	smm_config_close(root);
+	return 0;
+}
+
 
 static int do_smm_mkpath(char *path)
 {
@@ -216,6 +344,7 @@ static	struct	cliopt	clist[] = {
 	{   0, NULL,      0, "OPTIONS:" },
 	{ 'c', NULL,      1, "change current working directory" },
 	{ 'f', NULL,	  1, "configure file process" },
+	{ 'F', NULL,	  1, "dump configure file" },
 	{ 'm', NULL,	  1, "make directory" },
 	{ 'p', NULL,      1, "push/pop current working directory" },
 	{ 'r', NULL,      1, "process directory recurrsively" },
@@ -275,6 +404,9 @@ int smm_main(void *rtime, int argc, char **argv)
 			break;
 		case 'f':
 			do_smm_config(optarg);
+			break;
+		case 'F':
+			do_smm_config_dump(optarg);
 			break;
 		case 'm':
 			do_smm_mkpath(optarg);

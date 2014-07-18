@@ -7,13 +7,17 @@
 int main(int argc, char **argv)
 {
 	FILE	*fp;
-	char	buf[256], *argvs[8];
+	char	buf[256], *argvs[8], *payload;
 	int	rc;
 	CSCLNK	*anchor, *node;
 
 	if (argc < 2) {
 		printf("Usage: %s extern_list_head_file\n", argv[0]);
 		return 0;
+	}
+	if (csc_cdl_setup(NULL, NULL, NULL, NULL, 0) != sizeof(CSCLNK)) {
+		printf("Wrong compiling option of this program!\n");
+		return -1;
 	}
 
 	if ((fp = fopen(argv[1], "r+")) == NULL) {
@@ -31,23 +35,26 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		node = csc_cdl_alloc_tail(&anchor, strlen(argvs[3])+8);
+		node = csc_cdl_list_alloc_tail(&anchor, strlen(argvs[3])+8);
 		if (node == NULL) {
 			break;
 		}
-		strcpy(node->payload, argvs[3]);
-		if (node->payload[strlen(node->payload)-1] == ';') {
-			node->payload[strlen(node->payload)-1] = 0;
-		}
+		payload = (char*)&node[1];
+		strcpy(payload, argvs[3]);
+		rc = strlen(payload) - 1;
+		if (payload[rc] == ';') {
+			payload[rc] = 0;
+		}	
 	}
 
 	fprintf(fp, "\nstruct	clicmd	*cmdlist[] = {\n");
 	for (node = anchor; node; node = csc_cdl_next(anchor, node)) {
-		fprintf(fp, "	&%s,\n", node->payload);
+		payload = (char*)&node[1];
+		fprintf(fp, "	&%s,\n", payload);
 	}
 	fprintf(fp, "	NULL\n};\n\n");
 
-	csc_cdl_destroy(&anchor);
+	csc_cdl_list_destroy(&anchor);
 	fclose(fp);
 	return 0;
 }

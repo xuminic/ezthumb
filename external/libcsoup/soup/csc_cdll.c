@@ -27,6 +27,113 @@
 
 #include "libcsoup.h"
 
+#define CSC_CDLL_MAGIC          (('D'<<24) | ('L'<<16))
+#define CSC_CDLL_BACKGUARD      0xdeadbeef
+
+#define CSC_CDLL_HEAD           -1
+#define CSC_CDLL_TAIL           -2
+
+struct	_CSCLNK {
+	struct	_CSCLNK	*next;
+	struct	_CSCLNK	*prev;
+	void	*refp;
+#ifdef	CFG_CDLL_SAFE
+	/** Size of the CSCLNK structure and the payload.
+	 * but it doesn't include the padding magic */
+	unsigned	size;
+	/** The combine of CSC_CDLL_MAGIC in higher 16-bit and a CRC16 in 
+	 * lower 16 bit of the CSCLNK structure while the majesty had been 
+	 * set to the CSC_CDLL_MAGIC. */
+	unsigned	majesty;
+#endif
+	/** Payload starts here ... */
+};
+
+#ifdef	CFG_CDLL_SAFE
+char	*csc_cdl_version_string = "csc_cdl_version-1.0-verified";
+#else
+char	*csc_cdl_version_string = "csc_cdl_version-1.0";
+#endif
+
+#ifdef	CFG_CDLL_SAFE
+static int csc_cdl_checksum(CSCLNK *node)
+{
+	unsigned short	crc;
+
+	node->majesty = CSC_CDLL_MAGIC;
+	crc = csc_crc16(0, node, sizeof(CSCLNK));
+	node->majesty |= crc;
+	/*slogz("csc_cdl_checksum: %p:%d (+%p:-%p) R:%p S:%d M:%x\n", 
+			node, sizeof(CSCLNK), node->next, node->prev, 
+			node->refp, node->size, node->majesty);*/
+	return (int) node->majesty;
+}
+
+static int csc_cdl_verify(CSCLNK *node)
+{
+	CSCLNK	tmp;
+	int	*ptr;
+
+	if (node == NULL) {
+		return 0;
+	}
+	tmp = *node;
+	csc_cdl_checksum(&tmp);
+
+	if (tmp.majesty != node->majesty) {
+		slogz("csc_cdl_verify: broken at %p (+%p:-%p) S:%d M:%x\n", 
+				node, node->next, node->prev, node->size, 
+				node->majesty);
+		return 0;
+	}
+
+	/* verify the back guard */
+	ptr = (int*) (((char*)node) + node->size);
+	if (*ptr != (int) CSC_CDLL_BACKGUARD) {
+		slogz("csc_cdl_verify: backguard violated %p (+%p:-%p) %x\n",
+				node, node->next, node->prev, *ptr);
+		return 0;
+	}
+	return 1;
+}
+#endif	/* CFG_CDLL_SAFE */
+
+
+/*!\brief Allocate a CSCLNK node
+   
+   The csc_cdl_alloc() function returns a CSCLNK structure with the
+   payload of the specified size. In CFG_CDLL_SAFE it will be padded by 
+   the guarding words.
+
+   \param[in]   size The size of the payload.
+
+   \return  A pointer to the CSCLNK structure of specified size if succeed,
+   or NULL if failed.
+*/
+#ifdef	CFG_CDLL_SAFE
+CSCLNK *csc_cdl_alloc(int size)
+{
+	CSCLNK	*node;
+	int	*ptr;
+
+	size += sizeof(CSCLNK);
+	size = (size + 3) / 4 * 4;
+	if ((node = smm_alloc(size + sizeof(int))) != NULL) {
+		node->size = size;
+		ptr = (int*) (((char*)node) + node->size);
+		*ptr = CSC_CDLL_BACKGUARD;
+	}
+	return node;
+}
+#else
+CSCLNK *csc_cdl_alloc(int size)
+{
+	size += sizeof(CSCLNK);
+	size = (size + 3) / 4 * 4;
+	return smm_alloc(size);
+}
+#endif	/* CFG_CDLL_SAFE */
+
 
 /*!\brief Insert a node after the reference node.
 
@@ -36,14 +143,33 @@
 
    \param[in]  refn The reference node where to insert after.
    \param[in]  node The node for insertion.
-   \return     void
+   \return     0 if succeed, or -1 if failed.
+
+   \remark In CFG_CDLL_SAFE mode, it could return -1 if the reference node
+   had been damaged.
 */
-void csc_cdl_insert_after(CSCLNK *refn, CSCLNK *node)
+int csc_cdl_insert_after(CSCLNK *refn, CSCLNK *node)
 {
-	refn->next->prev = node;
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(refn)) {
+		return -1;
+	}
+#endif
 	node->next = refn->next;
-	refn->next = node;
 	node->prev = refn;
+#ifdef	CFG_CDLL_SAFE
+	csc_cdl_checksum(node);
+#endif
+
+	refn->next->prev = node;
+#ifdef	CFG_CDLL_SAFE
+	csc_cdl_checksum(refn->next);
+#endif
+	refn->next = node;
+#ifdef	CFG_CDLL_SAFE
+	csc_cdl_checksum(refn);
+#endif
+	return 0;
 }
 
 /*!\brief  Insert the node into the head of the list.
@@ -62,8 +188,11 @@ CSCLNK *csc_cdl_insert_head(CSCLNK *anchor, CSCLNK *node)
 {
 	if (anchor == NULL) {
 		node->prev = node->next = node;
-	} else {
-		csc_cdl_insert_after(anchor->prev, node);
+#ifdef	CFG_CDLL_SAFE
+		csc_cdl_checksum(node);
+#endif
+	} else if (csc_cdl_insert_after(anchor->prev, node) < 0) {
+		return NULL;
 	}
 	return node;	/* return the new anchor */
 }
@@ -86,8 +215,11 @@ CSCLNK *csc_cdl_insert_tail(CSCLNK *anchor, CSCLNK *node)
 {
 	if (anchor == NULL) {
 		anchor = node->prev = node->next = node;
-	} else {
-		csc_cdl_insert_after(anchor->prev, node);
+#ifdef	CFG_CDLL_SAFE
+		csc_cdl_checksum(node);
+#endif
+	} else if (csc_cdl_insert_after(anchor->prev, node) < 0) {
+		return NULL;
 	}
 	return anchor;
 }
@@ -111,8 +243,27 @@ CSCLNK *csc_cdl_insert_tail(CSCLNK *anchor, CSCLNK *node)
 */
 CSCLNK *csc_cdl_remove(CSCLNK *anchor, CSCLNK *node)
 {
+#ifdef	CFG_CDLL_SAFE	/* double check the validility of the list */
+	CSCLNK	*cur;
+
+	if (!csc_cdl_verify(anchor)) {
+		return NULL;
+	}
+	for (cur = anchor; cur; cur = csc_cdl_next(anchor, cur)) {
+		if (cur == node) {
+			break;
+		}
+	}
+	if (cur == NULL) {
+		return NULL;	/* node in the wrong list */
+	}
+#endif
 	node->prev->next = node->next;
 	node->next->prev = node->prev;
+#ifdef	CFG_CDLL_SAFE
+	csc_cdl_checksum(node->prev);
+	csc_cdl_checksum(node->next);
+#endif
 	if (anchor == node) {
 		anchor = node->next;
 	}
@@ -141,9 +292,17 @@ CSCLNK *csc_cdl_remove(CSCLNK *anchor, CSCLNK *node)
 */
 CSCLNK *csc_cdl_next(CSCLNK *anchor, CSCLNK *node)
 {
+	if (node == NULL) {
+		return anchor;
+	}
 	if (node->next == anchor) {
 		return NULL;
 	}
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(node->next)) {
+		return NULL;
+	}
+#endif
 	return node->next;
 }
 
@@ -173,13 +332,21 @@ CSCLNK *csc_cdl_search(CSCLNK *anchor, CSCLNK *last,
 {
 	CSCLNK	*node;
 
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(anchor)) {
+		return NULL;
+	}
+	if (last && !csc_cdl_verify(last)) {
+		return NULL;
+	}
+#endif
 	if (last == NULL) {
 		last = anchor;
 	} else {
 		last = csc_cdl_next(anchor, last);
 	}
 	for (node = last; node; node = csc_cdl_next(anchor, node)) {
-		if (!compare((void*)node->payload, refload)) {
+		if (!compare((void*)&node[1], refload)) {
 			return node;
 		}
 	}
@@ -198,21 +365,113 @@ CSCLNK *csc_cdl_search(CSCLNK *anchor, CSCLNK *last,
 */
 CSCLNK *csc_cdl_goto(CSCLNK *anchor, int idx)
 {
-	CSCLNK	*node;
-	int	i = 0;
+	CSCLNK	*n;
+	int	i;
 
-	for (node = anchor; node; node = csc_cdl_next(anchor, node)) {
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(anchor)) {
+		return NULL;
+	}
+#endif
+	for (i = 0, n = anchor; n; n = csc_cdl_next(anchor, n), i++) {
 		if (idx == i) {
-			return node;
+			return n;
 		}
-		i++;
 	}
 	return NULL;
 }
 
+/*!\brief The index of a node in the list.
+   
+   The csc_cdl_index() function returns the index of a member in the list. 
+   The index starts from 0. If the member can not be found, it returns -1.
+   If the 'node' were set to NULL, it will return the length of the list.
+
+   \param[in] anchor  The anchor pointer which points to the head of the list.
+   \param[in] node    The node for searching the index. It can be NULL.
+
+   \return  The index of node in the list, or -1 if failed.
+   \remark  This function can validate the list if built with CFG_CDLL_SAFE.
+*/
+int csc_cdl_index(CSCLNK *anchor, CSCLNK *node)
+{
+	CSCLNK	*n;
+	int	i = 0;
+
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(anchor)) {
+		return 0;
+	}
+#endif
+	for (i = 0, n = anchor; n; n = csc_cdl_next(anchor, n), i++) {
+		if (n == node) {
+			return i;
+		}
+	}
+	if (node == NULL) {
+		return i;
+	}
+	return -1;
+}
+
+
+/*!\brief Setup a node.
+   
+   The csc_cdl_setup() function fills in the CSCLNK structure. 
+
+   \param[in] node  The points to the node.
+   \param[in] prev  The pointer to the previous node.
+   \param[in] next  The pointer to the next node.
+   \param[in] rp    The pointer to the reference frame.
+   \param[in] size  The size of the node.
+
+   \return  The size of the CSCLNK structure. In CFG_CDLL_SAFE, it would 
+   return the size field in the CSCLNK structure. Otherwise or node is NULL, 
+   it returns the size of CSCLNK structure.
+
+   \remark  This function can used to verify the build mode of the library.
+*/
+int csc_cdl_setup(CSCLNK *node, void *prev, void *next, void *rp, int size)
+{
+	if (node == NULL) {
+		return sizeof(CSCLNK);
+	}
+
+	node->prev = prev;
+	node->next = next;
+	node->refp = rp;
+#ifdef	CFG_CDLL_SAFE
+	node->size = size;
+	csc_cdl_checksum(node);
+#else
+	size = sizeof(CSCLNK);
+#endif
+	return size;
+}
+
+
+/*!\brief Return the payload of a node.
+   
+   The csc_cdl_payload() function safely return the payload of a node.
+   
+   \param[in] node  The points to the node.
+
+   \return  The pointer to the payload in the CSCLNK structure. 
+*/
+void *csc_cdl_payload(CSCLNK *node)
+{
+	if (node) {
+		return &node[1];
+	}
+	return NULL;
+}
+
+/****************************************************************************
+ * An application of the basic csc_cdl_* functions
+ ***************************************************************************/
 /*!\brief Allocate a node and insert it to the head of the list.
 
-   The csc_cdl_alloc_head() function create a brand new node by allocating
+   The csc_cdl_list_alloc_head() function create a brand new node by allocating
    a piece of memory with the payload size of 'size'. The node will be 
    inserted into the head of the list.
 
@@ -227,20 +486,25 @@ CSCLNK *csc_cdl_goto(CSCLNK *anchor, int idx)
                    actually allocated size would plus the structure size 
 		   of CSCLNK.
 */
-CSCLNK *csc_cdl_alloc_head(CSCLNK **anchor, int size)
+CSCLNK *csc_cdl_list_alloc_head(CSCLNK **anchor, int size)
 {
 	CSCLNK	*node;
 
-	if ((node = smm_alloc(sizeof(CSCLNK)+size)) == NULL) {
-		return NULL;
+	if ((node = csc_cdl_alloc(size)) != NULL) {
+		*anchor = csc_cdl_insert_head(*anchor, node);
+#ifdef	CFG_CDLL_SAFE
+		if (*anchor == NULL) {
+			smm_free(node);
+			node = NULL;
+		}
+#endif
 	}
-	*anchor = csc_cdl_insert_head(*anchor, node);
 	return node;
 }
 
 /*!\brief Allocate a node and append it to the end of the list.
 
-   The csc_cdl_alloc_tail() function create a brand new node by allocating
+   The csc_cdl_list_alloc_tail() function create a brand new node by allocating
    a piece of memory with the payload size of 'size'. The node will be 
    appended to the end of the list. 
 
@@ -255,16 +519,83 @@ CSCLNK *csc_cdl_alloc_head(CSCLNK **anchor, int size)
                    actually allocated size would plus the structure size 
 		   of CSCLNK.
 */
-CSCLNK *csc_cdl_alloc_tail(CSCLNK **anchor, int size)
+CSCLNK *csc_cdl_list_alloc_tail(CSCLNK **anchor, int size)
 {
 	CSCLNK	*node;
 
-	if ((node = smm_alloc(sizeof(CSCLNK)+size)) == NULL) {
-		return NULL;
+	if ((node = csc_cdl_alloc(size)) != NULL) {
+		*anchor = csc_cdl_insert_tail(*anchor, node);
+#ifdef	CFG_CDLL_SAFE
+		if (*anchor == NULL) {
+			smm_free(node);
+			node = NULL;
+		}
+#endif
 	}
-	*anchor = csc_cdl_insert_tail(*anchor, node);
 	return node;
 }
+
+/*!\brief Insert a node into the specified position.
+
+   The csc_cdl_list_insert() funciton insert a node into the specified 
+   position in the list by 'idx'. If 'idx' is 0, it is inserted in the head
+   of the list. If 'idx' is less than 0, it will be inserted in the tail of
+   the list. Otherwise it will be inserted after the 'idx'-th node.
+
+   \param[in,out]  anchor The pointer of the anchor pointer which points to
+                          the head of the list.
+   \param[in]      node   The inserting node.
+   \param[in]      idx    The index in the list where the node goes after.
+   			  If 'idx' < 0, see CSC_CDLL_HEAD and CSC_CDLL_TAIL
+
+   \return         0 if succeed, or -1 if fail.
+   \remark         The anchor pointer could be changed in the call.
+*/
+int csc_cdl_list_insert(CSCLNK **anchor, CSCLNK *node, int idx)
+{
+	CSCLNK	*n;
+	int	i;
+
+	if ((idx == CSC_CDLL_HEAD) || (*anchor == NULL)) {
+		*anchor = csc_cdl_insert_head(*anchor, node);
+#ifdef	CFG_CDLL_SAFE
+		return *anchor ? 0 : -1;
+#else
+		return 0;
+#endif
+	}
+	if (idx < 0) {	/* CSC_CDLL_TAIL */
+		*anchor = csc_cdl_insert_tail(*anchor, node);
+#ifdef	CFG_CDLL_SAFE
+		return *anchor ? 0 : -1;
+#else
+		return 0;
+#endif
+	}
+
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(*anchor)) {
+		return -1;
+	}
+#endif
+	for (i = 0, n = *anchor; n; n = csc_cdl_next(*anchor, n), i++) {
+		if (i == idx) {
+			return csc_cdl_insert_after(n, node);
+		}
+	}
+	return -1;		
+}
+
+int csc_cdl_list_insert_head(CSCLNK **anchor, CSCLNK *node)
+{
+	return csc_cdl_list_insert(anchor, node, CSC_CDLL_HEAD);
+}
+
+int csc_cdl_list_insert_tail(CSCLNK **anchor, CSCLNK *node)
+{
+	return csc_cdl_list_insert(anchor, node, CSC_CDLL_TAIL);
+}
+
 
 /*!\brief Remove the specified node from the list and free its memory.
 
@@ -272,14 +603,25 @@ CSCLNK *csc_cdl_alloc_tail(CSCLNK **anchor, int size)
                    the head of the list.
    \param[in]      node The node going to be freed.
 
-   \return         always 0.
+   \return         The pointer to the next node in the list, or NULL if there
+                   is no more node left.
    \remark         The anchor pointer could be changed in the call.
 */
-int csc_cdl_free(CSCLNK **anchor, CSCLNK *node)
+CSCLNK *csc_cdl_list_free(CSCLNK **anchor, CSCLNK *node)
 {
+	CSCLNK	*next;
+
+#ifdef	CFG_CDLL_SAFE
+	if (!csc_cdl_verify(node)) {
+		return NULL;
+	}
+#endif
+	if ((next = node->next) == node) {
+		next = NULL;	/* node is the last member in the queue */
+	}
 	*anchor = csc_cdl_remove(*anchor, node);
 	smm_free(node);
-	return 0;
+	return next;
 }
 
 /*!\brief Destroy a whole list and free all its members.
@@ -287,22 +629,46 @@ int csc_cdl_free(CSCLNK **anchor, CSCLNK *node)
    \param[in,out]  anchor The pointer of the anchor pointer which points to 
                    the head of the list.
 
-   \return         always 0.
+   \return         0 if succeed, or -1 if failed.
    \remark         The anchor pointer will be reset to NULL.
-   \remark         The list should be built by calling csc_cdl_alloc_head()
-                   or csc_cdl_alloc_tail().
+   \remark         The list should be built by calling csc_cdl_list_alloc_head()
+                   or csc_cdl_list_alloc_tail().
 */
-int csc_cdl_destroy(CSCLNK **anchor)
+int csc_cdl_list_destroy(CSCLNK **anchor)
 {
-	CSCLNK	*cur, *node;
+	CSCLNK	*node;
 
-	node = *anchor; 
-	while (node != NULL) {
-		cur = node;
-		node = csc_cdl_next(*anchor, node);
-		smm_free(cur);
+	for (node = *anchor; node; node = csc_cdl_list_free(anchor, node)) {
+#ifdef	CFG_CDLL_SAFE
+		if (!csc_cdl_verify(node)) {
+			return -1;
+		}
+#endif
 	}
 	*anchor = NULL;
 	return 0;
+}
+
+/*!\brief Check the heath of the list
+
+   \param[in,out]  anchor The pointer of the anchor pointer which points to 
+                   the head of the list.
+
+   \return         the number of nodes in the list, or -1 if failed.
+*/
+int csc_cdl_list_state(CSCLNK **anchor)
+{
+	CSCLNK	*node;
+	int	i = 0;
+
+	for (node = *anchor; node; node = csc_cdl_next(*anchor, node)) {
+#ifdef	CFG_CDLL_SAFE
+		if (!csc_cdl_verify(node)) {
+			return -1;
+		}
+#endif
+		i++;
+	}
+	return i;
 }
 
