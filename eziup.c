@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+
 #include "iup.h"
 #include "libcsoup.h"
 #include "ezthumb.h"
@@ -162,8 +164,8 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 		gui->dfm_idx = index_of_strings(list_duration, s);
 	} else {
 		gui->dfm_idx = index_of_strings(list_duration, CFG_PIC_AUTO);
-		csc_cfg_write(gui->config,
-				EZGUI_MAINKEY, CFG_KEY_DURATION, CFG_PIC_AUTO);
+		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_DURATION, CFG_PIC_AUTO);
 	}
 
 	/* find the index of drop down lists: the file format drop down */
@@ -172,8 +174,8 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 		gui->fmt_idx = index_of_strings(list_format, s);
 	} else {
 		gui->fmt_idx = index_of_strings(list_format, CFG_PIC_FMT_JPEG);
-		csc_cfg_write(gui->config,
-				EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT, CFG_PIC_FMT_JPEG);
+		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_FILE_FORMAT, CFG_PIC_FMT_JPEG);
 	}
 
 	/* find the extension name filter of files */
@@ -1380,7 +1382,7 @@ static int config_dump(void *config, char *prompt)
 	int	item;
 
 	path = csc_cfg_status(config, &item);
-	slogz("%s: %d items in %s\n", prompt, item, path);
+	EDB_SHOW(("%s: %d items in %s\n", prompt, item, path));
 	return 0;
 }
 

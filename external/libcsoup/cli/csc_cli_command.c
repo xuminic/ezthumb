@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 #include "csc_cli_private.h"
 
 
@@ -87,7 +88,7 @@ int csc_cli_cmd_print(struct clicmd **cmdtbl, int (*show)(char *))
 		if (show) {
 			show(sbuf);
 		} else {
-			slogz("%s", sbuf);
+			CDB_SHOW(("%s", sbuf));
 		}
 	}
 	return 0;

@@ -78,7 +78,8 @@ OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/eziup.o
 endif
 OBJCON	= $(OBJDIR)/main_con.o
 
-OBJS	= $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o  $(OBJDIR)/id_lookup.o
+OBJS	= $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o  $(OBJDIR)/id_lookup.o \
+	  $(OBJDIR)/ezthumb_debug.o
 
 
 RELDATE	= $(shell date  +%Y%m%d)

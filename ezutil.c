@@ -23,6 +23,8 @@
 #include <string.h>
 #include <math.h>
 
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
+
 #include "libcsoup.h"
 #include "ezthumb.h"
 
@@ -70,17 +72,17 @@ int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size)
 	EZPROF	*node;
 	char	tmp[64];
 
-	slogz("%s", pmt_grid);		/* "Grid: " */
+	EDB_SHOW(("%s", pmt_grid));		/* "Grid: " */
 	for (node = opt->pro_grid; node != NULL; node = node->next) {
-		slogz("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
+		EDB_SHOW(("%s ",ezopt_profile_sprint(node, tmp, sizeof(tmp))));
 	}
-	slogz("\n");
+	EDB_SHOW(("\n"));
 
-	slogz("%s", pmt_size);		/* "Size: " */
+	EDB_SHOW(("%s", pmt_size));		/* "Size: " */
 	for (node = opt->pro_size; node != NULL; node = node->next) {
-		slogz("%s ", ezopt_profile_sprint(node, tmp, sizeof(tmp)));
+		EDB_SHOW(("%s ",ezopt_profile_sprint(node, tmp, sizeof(tmp))));
 	}
-	slogz("\n");
+	EDB_SHOW(("\n"));
 	return 0;
 }
 
@@ -118,7 +120,7 @@ int ezopt_profile_export(EZOPT *ezopt, char *buf, int blen)
 			buf[idx] = 0;
 		}
 	}
-	//slogz("ezopt_profile_export: %s\n", buf);
+	EDB_DEBUG(("ezopt_profile_export: %s\n", buf));
 	return idx;
 }
 
@@ -173,14 +175,15 @@ int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row)
 		if (row) {
 			*row = node->y;
 		}
-		//slogz("ezopt_profile_sampling: %d x %d\n", node->x, node->y);
+		EDB_DEBUG(("ezopt_profile_sampling: %d x %d\n", 
+					node->x, node->y));
 		return 0;	/* returned the matrix */
 
 	case 'l':
 	case 'L':
 		snap = (int)(log(vidsec / 60 + node->x) / log(node->lbase)) 
 			- node->y;
-		//slogz("ezopt_profile_sampling: %d+\n", snap);
+		EDB_DEBUG(("ezopt_profile_sampling: %d+\n", snap));
 		return snap;	/* need more info to decide the matrix */
 	}
 	return -2;	/* no effective profile found */
@@ -216,7 +219,7 @@ int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row)
 		}
 		break;
 	}
-	//slogz("ezopt_profile_sampled: %d\n", bs);
+	EDB_DEBUG(("ezopt_profile_sampled: %d\n", bs));
 	return bs;
 }
 
@@ -269,7 +272,8 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
 		}
 		/* quantized the zoom ratio to base-2 exponential 1,2,4,8.. */
 		neari = 1 << (int)(log(ratio) / log(2) + 0.5);
-		//slogz("ez.._zooming: ratio=%f quant=%d\n", ratio, neari);
+		EDB_DEBUG(("ezopt_profile_zooming: ratio=%f quant=%d\n", 
+					ratio, neari));
 		/* checking the error between the reference width and the 
 		 * zoomed width. The error should be less than 20% */
 		ratio = abs(neari * node->y - vw) / (float) node->y;
@@ -474,7 +478,7 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
 		return root;	/* do nothing */
 	}
 
-	//slogz("ezopt_profile_insert: %d\n", leaf->weight);
+	EDB_DEBUG(("ezopt_profile_insert: %d\n", leaf->weight));
 	if (root == NULL) {
 		return leaf;
 	}

@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 static	char	*argpool[] = {
 	"The quick brown fox jumps over the lazy dog",
@@ -54,11 +55,11 @@ static int make_arguments(void)
 	int	i, k, argc;
 
 	for (i = 0; argpool[i]; i++) {
-		slogz("INPUT: %s\n", argpool[i]);
+		CDB_SHOW(("INPUT: %s\n", argpool[i]));
 		s = csc_strcpy_alloc(argpool[i], 0);
 		argc = csc_cli_mkargv(s, argv, 32);
 		for (k = 0; k < argc; k++) {
-			slogz("[%2d]: %s\n", k, argv[k]);
+			CDB_SHOW(("[%2d]: %s\n", k, argv[k]));
 		}
 		free(s);
 	}
@@ -86,7 +87,7 @@ static int generate_options(struct cliopt *clist)
 	int	i;
 
 	csc_cli_make_list(clist, oplst, sizeof(oplst));
-	slogz("OPTS: \"%s\"\n", oplst);
+	CDB_SHOW(("OPTS: \"%s\"\n", oplst));
 
 	csc_cli_make_table(clist, optbl, 64);
 	for (i = 0; optbl[i].name; i++) {
@@ -96,8 +97,8 @@ static int generate_options(struct cliopt *clist)
 			sprintf(tmp, "\\%d", optbl[i].val);
 		}
 		csc_strfill(tmp, 4, ' ');
-		slogz("[%2d]: %s %d %s\n", i, tmp, 
-				optbl[i].has_arg, optbl[i].name);
+		CDB_SHOW(("[%2d]: %s %d %s\n", i, tmp, 
+				optbl[i].has_arg, optbl[i].name));
 	}
 	return 0;
 }
@@ -129,16 +130,16 @@ int csc_cli_main(void *rtime, int argc, char **argv)
 			generate_options(mixed_list);
 			break;
 		case '1':
-			slogz("One ARG: %s\n", optarg);
+			CDB_SHOW(("One ARG: %s\n", optarg));
 			break;
 		case 'o':
-			slogz("Optional ARG: %s\n", optarg);
+			CDB_SHOW(("Optional ARG: %s\n", optarg));
 			break;
 		case 2:
 			csc_cli_print(mixed_list, NULL);
 			break;
 		default:
-			slogz("Unknown: %c %c\n", c, optopt);
+			CDB_SHOW(("Unknown: %c %c\n", c, optopt));
 			break;
 		}
 	}
@@ -173,25 +174,25 @@ int csc_cli_main2(void *rtime, int argc, char **argv)
 			generate_options(mixed_list);
 			break;
 		case '1':
-			slogz("One ARG: %s\n", csc_cli_qopt_optarg(argp));
+			CDB_SHOW(("One ARG: %s\n", csc_cli_qopt_optarg(argp)));
 			break;
 		case 'o':
-			slogz("Optional ARG: %s\n", 
-					csc_cli_qopt_optarg(argp));
+			CDB_SHOW(("Optional ARG: %s\n", 
+					csc_cli_qopt_optarg(argp)));
 			break;
 		case 2:
 			csc_cli_print(mixed_list, NULL);
 			break;
 		default:
-			slogz("Unknown: %c %c\n", 
-					c, csc_cli_qopt_optopt(argp));
+			CDB_SHOW(("Unknown: %c %c\n", 
+					c, csc_cli_qopt_optopt(argp)));
 			break;
 		}
 	}
 	c = csc_cli_qopt_optind(argp);
 	csc_cli_qopt_close(argp);
 
-	slogz("REST: %d %s\n", c, argv[c]);
+	CDB_SHOW(("REST: %d %s\n", c, argv[c]));
 	return 0;
 }
 

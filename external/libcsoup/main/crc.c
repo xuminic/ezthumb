@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 static	char	testbuf[2048];
 
@@ -43,30 +44,30 @@ int crc_main(void *rtime, int argc, char **argv)
 	c16 = csc_crc16(0, testbuf, sizeof(testbuf));
 	cci = csc_crc_ccitt(0, testbuf, sizeof(testbuf));
 	c8  = csc_crc8(0, testbuf, sizeof(testbuf));
-	slog(SLINFO, "RUN1: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
-			c32, c16, cci, c8);
+	CDB_SHOW(("RUN1: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
+			c32, c16, cci, c8));
 
 	c32 = csc_crc32(c32, testbuf, sizeof(testbuf));
 	c16 = csc_crc16(c16, testbuf, sizeof(testbuf));
 	cci = csc_crc_ccitt(cci, testbuf, sizeof(testbuf));
 	c8  = csc_crc8(c8, testbuf, sizeof(testbuf));
-	slog(SLINFO, "RUN2: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
-			c32, c16, cci, c8);
+	CDB_SHOW(("RUN2: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
+			c32, c16, cci, c8));
 
 	c32 = csc_crc32(0, testbuf, sizeof(testbuf));
 	c16 = csc_crc16(0, testbuf, sizeof(testbuf));
 	cci = csc_crc_ccitt(0, testbuf, sizeof(testbuf));
 	c8  = csc_crc8(0, testbuf, sizeof(testbuf));
-	slog(SLINFO, "RUN3: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
-			c32, c16, cci, c8);
+	CDB_SHOW(("RUN3: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
+			c32, c16, cci, c8));
 
 	testbuf[128]++;
 	c32 = csc_crc32(0, testbuf, sizeof(testbuf));
 	c16 = csc_crc16(0, testbuf, sizeof(testbuf));
 	cci = csc_crc_ccitt(0, testbuf, sizeof(testbuf));
 	c8  = csc_crc8(0, testbuf, sizeof(testbuf));
-	slog(SLINFO, "RUN4: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
-			c32, c16, cci, c8);
+	CDB_SHOW(("RUN4: CRC32=%X  CRC16=%X  CRC-CCITT=%X  CRC8=%X\n", 
+			c32, c16, cci, c8));
 	return 0;
 }
 

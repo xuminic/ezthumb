@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 #include "csc_cli_private.h"
 
 #define CLI_FIXED_ARGS		"ARGS"
@@ -163,7 +164,7 @@ int csc_cli_print(struct cliopt *optbl, int (*show)(char *))
 			if (show) {
 				show(sbuf);
 			} else {
-				slogz("%s", sbuf);
+				CDB_SHOW(("%s", sbuf));
 			}
 		}
 		optbl++;

@@ -59,7 +59,9 @@
 #include <string.h>
 #include <stdarg.h>
 
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 #define	CFGF_BLOCK_WID		36
 #define CFGF_BLOCK_MAGIC	"BINARY:"
@@ -105,7 +107,7 @@ static KEYCB *CFGF_GETOBJ(CSCLNK *self)
 			(CFGF_TYPE_GET(kcb->flags) < CFGF_TYPE_NULL)) {
 		return kcb;
 	}
-	slogz("CFGF_GETOBJ: unknown object\n");
+	CDB_ERROR(("CFGF_GETOBJ: unknown object\n"));
 	return NULL;
 }
 
@@ -164,8 +166,8 @@ KEYCB *csc_cfg_open(int sysdir, char *path, char *filename, int mode)
 	}
 	smm_config_close(cfgd);
 	csc_cfg_access_setup(root, root, NULL);	/* reset the directory key */
-	/*slogz("csc_cfg_open: read %d items from %s\n", 
-			rext->items, rext->fulldir);*/
+	CDB_DEBUG(("csc_cfg_open: read %d items from %s\n", 
+			rext->items, rext->fulldir));
 	return root;
 }
 
@@ -238,8 +240,8 @@ int csc_cfg_saveas(KEYCB *cfg, int sysdir, char *path, char *filename)
 	}
 
 	rext->items = csc_cfg_save_links(cfgd, cfg->anchor);
-	//slogz("csc_cfg_saveas: write %d items to %s\n", 
-	//		rext->items, rext->fulldir);
+	CDB_DEBUG(("csc_cfg_saveas: write %d items to %s\n", 
+			rext->items, rext->fulldir));
 
 	smm_config_close(cfgd);
 	cfg->update = 0;	/* reset the update counter */
@@ -663,24 +665,24 @@ int csc_cfg_dump_kcb(KEYCB *kp)
 {
 	switch (CFGF_TYPE_GET(kp->flags)) {
 	case CFGF_TYPE_COMM:
-		slogz("COMM_%d: %s\n", kp->update, kp->comment);
+		CDB_SHOW(("COMM_%d: %s\n", kp->update, kp->comment));
 		break;
 	case CFGF_TYPE_DIR:
 		if (csc_cfg_block_size(kp) >= 0) {
-			slogz("BLCK_%d: [%s] = %s %s\n", kp->update,
-					kp->key, kp->value, kp->comment);
+			CDB_SHOW(("BLCK_%d: [%s] = %s %s\n", kp->update,
+					kp->key, kp->value, kp->comment));
 		} else if (kp->value) {
-			slogz("MAIN_%d: [%s] = %s %s\n", kp->update, 
-					kp->key, kp->value, kp->comment);
+			CDB_SHOW(("MAIN_%d: [%s] = %s %s\n", kp->update, 
+					kp->key, kp->value, kp->comment));
 		} else {
-			slogz("MAIN_%d: [%s] %s\n", kp->update, 
-					kp->key, kp->comment);
+			CDB_SHOW(("MAIN_%d: [%s] %s\n", kp->update, 
+					kp->key, kp->comment));
 		}
 		break;
 	case CFGF_TYPE_KEY:
 		if (kp->comment == NULL) {
-			slogz("KEYP_%d: %s = %s %s\n", kp->update, 
-					kp->key, kp->value, kp->comment);
+			CDB_SHOW(("KEYP_%d: %s = %s %s\n", kp->update, 
+					kp->key, kp->value, kp->comment));
 		} else if (!csc_strcmp_list(kp->comment, "##REG_BINARY",
 					"##REG_NONE", "##REG_UNKNOWN", NULL)) {
 			char	buf[80];
@@ -688,26 +690,26 @@ int csc_cfg_dump_kcb(KEYCB *kp)
 			csc_memdump_line(kp->value, 
 				kp->vsize < 8 ? kp->vsize : 8,
 				CFGF_SHOW_CONTENT, buf, 80);
-			slogz("KEYP_%d: %s = (%d)%s %s\n", kp->update,
-					kp->key, kp->vsize, buf, kp->comment);
+			CDB_SHOW(("KEYP_%d: %s = (%d)%s %s\n", kp->update,
+					kp->key, kp->vsize, buf, kp->comment));
 		} else {
-			slogz("KEYP_%d: %s = %s %s\n", kp->update,
-					kp->key, kp->value, kp->comment);
+			CDB_SHOW(("KEYP_%d: %s = %s %s\n", kp->update,
+					kp->key, kp->value, kp->comment));
 		}
 		break;
 	case CFGF_TYPE_PART:
-		slogz("PART_%d: %s %s %s\n", kp->update,
-				kp->key, kp->value, kp->comment);
+		CDB_SHOW(("PART_%d: %s %s %s\n", kp->update,
+				kp->key, kp->value, kp->comment));
 		break;
 	case CFGF_TYPE_VALUE:
-		slogz("VALU_%d: %s %s %s\n", kp->update,
-				kp->key, kp->value, kp->comment);
+		CDB_SHOW(("VALU_%d: %s %s %s\n", kp->update,
+				kp->key, kp->value, kp->comment));
 		break;
 	case CFGF_TYPE_ROOT:
-		slogz("ROOT: %s/%s\n", kp->key, kp->value);
+		CDB_SHOW(("ROOT: %s/%s\n", kp->key, kp->value));
 		break;
 	default:
-		slogz("BOOM!\n");
+		CDB_SHOW(("BOOM!\n"));
 		return 0;
 	}
 	return 0;
@@ -1290,7 +1292,7 @@ static char *csc_cfg_format_directory(char *dkey)
 		}
 	}
 	*dbuf++ = 0;
-	//slogz("csc_cfg_format_directory: %s\n", drtn);
+	CDB_PROG(("csc_cfg_format_directory: %s\n", drtn));
 	return drtn;
 }
 

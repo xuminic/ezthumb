@@ -23,25 +23,27 @@
 #include <string.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 #include "main_define.h"
 
-SMMDBG	*tstdbg = NULL;
-
 int main(int argc, char **argv)
 {
-	tstdbg = slog_open(SLINFO);
-	smm_init(0);
+	SMMDBG	*dbgc;
+
+	dbgc = slog_csoup_open(NULL, NULL);
+	smm_init();
 
 	if (argc < 2) {
-		slogc(tstdbg, SLINFO, "Usage: csoup COMMAND [args ...]\n");
+		slogs(dbgc, SLOG_LVL_SHOWOFF, 
+				"Usage: csoup COMMAND [args ...]\n");
 		csc_cli_cmd_print(cmdlist, NULL);
 	} else if (csc_cli_cmd_run(cmdlist, NULL, --argc, ++argv) == 
 			CSC_CLI_UNCMD) {
-		slogc(tstdbg, SLINFO, "%s: command not found.\n", *argv);
+		slogf(dbgc, SLOG_LVL_SHOWOFF, 
+				"%s: command not found.\n", *argv);
 	}
-	slog_close(tstdbg);
-
+	slog_csoup_close();
 	return -1;
 }
 

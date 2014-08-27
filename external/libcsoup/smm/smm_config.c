@@ -25,7 +25,10 @@
 #include <unistd.h>
 #include <errno.h>
 
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
+
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 
 /* How to find out the input/output device.
@@ -418,52 +421,52 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 
 void smm_config_dump(struct KeyDev *cfgd)
 {
-	slogz("Device:    Read from ");
+	CDB_SHOW(("Device:    Read from "));
 #ifdef	CFG_WIN32_API
 	if (cfgd->hRootKey) {
-		slogz("Registry");
+		CDB_SHOW(("Registry"));
 	} else
 #endif
 	if (cfgd->fp) {
-		slogz("%s", cfgd->fname);
+		CDB_SHOW(("%s", cfgd->fname));
 	} else if (cfgd->fname == NULL) {
 		if (cfgd->fpath) {
-			slogz("%p", cfgd->fpath);
+			CDB_SHOW(("%p", cfgd->fpath));
 		} else {
-			slogz("stdin");
+			CDB_SHOW(("stdin"));
 		}
 	} else {
-		slogz("*%s", cfgd->fname);
+		CDB_SHOW(("*%s", cfgd->fname));
 	}
-	slogz(". Write to ");
+	CDB_SHOW((". Write to "));
 #ifdef	CFG_WIN32_API
 	if (cfgd->hRootKey) {
-		slogz("(Registry)");
+		CDB_SHOW(("(Registry)"));
 	}
 #endif
 	if (cfgd->fp) {
-		slogz("(%s)", cfgd->fname);
+		CDB_SHOW(("(%s)", cfgd->fname));
 	}
 	if (cfgd->fname == NULL) {
 		if (cfgd->fpath == NULL) {
-			slogz("(*stdout)");
+			CDB_SHOW(("(*stdout)"));
 		} else if (cfgd->mode) {
-			slogz("(%p+%d)", cfgd->fpath, cfgd->mode);
+			CDB_SHOW(("(%p+%d)", cfgd->fpath, cfgd->mode));
 		} else {
-			slogz("(stdout)");
+			CDB_SHOW(("(stdout)"));
 		}
 	} else {
-		slogz("(*%s)", cfgd->fname);
+		CDB_SHOW(("(*%s)", cfgd->fname));
 	}
-	slogz("\n");
+	CDB_SHOW(("\n"));
 
 	if (!cfgd->fname && cfgd->fpath) {
-		slogz("Memory:    %p %p\n", cfgd->fpath, cfgd->kpath);
+		CDB_SHOW(("Memory:    %p %p\n", cfgd->fpath, cfgd->kpath));
 	} else {
-		slogz("Full Path: %s\n", cfgd->fpath);
-		slogz("Reg Path:  %s\n", cfgd->kpath);
+		CDB_SHOW(("Full Path: %s\n", cfgd->fpath));
+		CDB_SHOW(("Reg Path:  %s\n", cfgd->kpath));
 	}
-	slogz("\n");
+	CDB_SHOW(("\n"));
 }
 
 
@@ -508,11 +511,9 @@ static struct KeyDev *smm_config_alloc(int sysdir, char *path, char *fname)
 	}
 
 	/* check point */
-	/*
-	slogz("smm_config_alloc::fpath = %s\n", cfgd->fpath);
-	slogz("smm_config_alloc::kpath = %s\n", cfgd->kpath);
-	slogz("smm_config_alloc::fname = %s\n", cfgd->fname);
-	*/
+	CDB_INFO(("smm_config_alloc::fpath = %s\n", cfgd->fpath));
+	CDB_INFO(("smm_config_alloc::kpath = %s\n", cfgd->kpath));
+	CDB_INFO(("smm_config_alloc::fname = %s\n", cfgd->fname));
 	return cfgd;
 }
 
@@ -741,7 +742,7 @@ static int smc_reg_open(struct KeyDev *cfgd, int mode)
 	strcat(mkey, "\\");
 	strcat(mkey, cfgd->fname);
 
-	//slogz("smc_reg_open: %s\n", mkey);
+	CDB_INFO(("smc_reg_open: %s\n", mkey));
 	if ((wkey = smm_mbstowcs_alloc(mkey)) == NULL) {
 		smm_free(mkey);
 		return SMM_ERR_LOWMEM;
@@ -783,9 +784,9 @@ static int smc_reg_open(struct KeyDev *cfgd, int mode)
 static KEYCB *smc_reg_read(struct KeyDev *cfgd)
 {
 	while (!smc_reg_eof(cfgd)) {
-		/*slogz("smc_reg_read: %d I(%d/%u) V(%d/%u)\n", 
+		CDB_FUNC(("smc_reg_read: %d I(%d/%u) V(%d/%u)\n", 
 				cfgd->idx, RREF(cfgd).i_key, RREF(cfgd).n_keys,
-				RREF(cfgd).i_val, RREF(cfgd).n_vals);*/
+				RREF(cfgd).i_val, RREF(cfgd).n_vals));
 		if (RREF(cfgd).i_val < (int)RREF(cfgd).n_vals) {
 			return smc_reg_key_alloc(cfgd, RREF(cfgd).i_val++);
 		}

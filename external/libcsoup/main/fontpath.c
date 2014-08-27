@@ -23,6 +23,7 @@
 #include <stdlib.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 int fontpath_main(void *rtime, int argc, char **argv)
 {
@@ -33,16 +34,16 @@ int fontpath_main(void *rtime, int argc, char **argv)
 
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "-h") || !strcmp(*argv, "--help")) {
-			slogz("fontpath [font_name]\n");
+			CDB_SHOW(("fontpath [font_name]\n"));
 			return 0;
 		} else {
-			slogz("Unknown option. [%s]\n", *argv);
+			CDB_SHOW(("Unknown option. [%s]\n", *argv));
 			return -1;
 		}
 	}
 	if (argc > 0) {
 		fdir = smm_fontpath(*argv, argv+1);
-		slogz("%s\n", fdir);
+		CDB_SHOW(("%s\n", fdir));
 		free(fdir);
 	}
 	return 0;

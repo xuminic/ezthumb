@@ -22,121 +22,98 @@
 #include <string.h>
 #include <unistd.h>
 
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_SLOG, SLOG_LVL_INFO)
+
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
-extern SMMDBG  *tstdbg;
-FILE	*fp;
-
-static int my_stdout(int flush, char *buf, int len)
-{
-	if (fp == NULL) {
-		return 0;
-	}
-	if (buf) {
-		len = fwrite(buf, len, 1, fp);
-	}
-	if (flush) {
-		fflush(fp);
-	}
-	return len;
-}
 
 int slog_main(void *rtime, int argc, char **argv)
 {
-	int	i, level, control;
+	SMMDBG  *tstdbg, localdbgc;
+	int	i;
 
 	/* stop the compiler complaining */
 	(void) rtime; (void) argc; (void) argv;
 
-	slogc(tstdbg, SLINFO, "## slog can be used before initialized\n");
-	level = SLSHOW;
-	slog(level, "%d: this is a test before initialing\n", level);
-	level = SLFUNC;
-	slog(level, "%d: this is a test before initialing\n", level);
+	CDB_SHOW(("Testing slog can be used without control block\n"));
+	slogs(NULL, SLOG_LVL_ERROR, "OK: Error\n");
+	slogs(NULL, SLOG_LVL_FUNC, "OK: Func\n");
 
-	slogc(tstdbg, SLINFO, "## once opened the slog, it prints by debug level\n");
-	control = SLINFO;
-	slog_open(control);
+	CDB_SHOW(("Testing slog can NOT be used with uninitialized control block\n"));
+	slogs(&localdbgc, SLOG_LVL_ERROR, "FAILED\n");
+
+	tstdbg = slog_initialize(&localdbgc, SLOG_MODUL_ALL(SLOG_LVL_DEBUG));
+	//tstdbg->cword = SLOG_MODUL_ALL(tstdbg->cword);
+	CDB_SHOW(("Testing slog by a control block (%x)\n", tstdbg->cword));
 	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, control);
+		slogf(tstdbg, i, "%d/%d: debug level test\n", i, SLOG_LVL_DEBUG);
 	}
 
-	control = SLFUNC;
-	slogc(tstdbg, SLINFO, "## change debug level to %d\n", control);
-	slog_level_write(NULL, control);
+	tstdbg->cword = SLOG_LEVEL_GET(tstdbg->cword) | CSOUP_MOD_SLOG | 
+		CSOUP_MOD_CLI | CSOUP_MOD_CONFIG;
+	CDB_SHOW(("Testing slog by module (%x)\n", tstdbg->cword));
 	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, control);
+		slogf(tstdbg, SLOG_MODUL_ENUM(i) | i,
+				"%d/%x: debug level test\n", i, SLOG_MODUL_ENUM(i) | i);//SLOG_LVL_DEBUG);
 	}
 
-#if 1
-	slogc(tstdbg, SLINFO, "## unbuffered mode test\n");
-	level = SLSHOW;
-	slog(level, "%d: buffered ", level);
-	for (i = 0; i < 4; i++) {
-		slog(level, ".");
-		smm_sleep(1, 0);
-	}
-	slog(level, "\n");
-
-	level = SLSHOW | SLOG_FLUSH;
-	slog(level, "%d: unbuffered ", level);
-	for (i = 0; i < 4; i++) {
-		slog(level, ".");
-		smm_sleep(1, 0);
-	}
-	slog(level, "\n");
-#endif
-
-	slogc(tstdbg, SLINFO, "## slog binded to stdout by default. now bind to stderr\n");
-	slog_bind_stderr(NULL, NULL);
-	level = SLINFO;
-	slog_level_write(NULL, level);
-	slog(level, "%d/%d: debug level test\n", level, slog_level_read(NULL));	
-
-	slogc(tstdbg, SLINFO, "## unbinded the stdout\n");
-	slog_unbind_stdout(NULL);
-	slog(level, "%d/%d: debug level test\n", level, slog_level_read(NULL));	
-
-	slogc(tstdbg, SLINFO, "## unbinded the stderr then save everything to file\n");
-	slog_unbind_stderr(NULL);
-	slog_bind_file(NULL, "logfile", 0);
+	tstdbg->cword = SLOG_LEVEL_SET(tstdbg->cword, SLOG_LVL_FUNC);
+	CDB_SHOW(("Raising the debug level (%x)\n", tstdbg->cword));
 	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, slog_level_read(NULL));
-	}
-
-	slogc(tstdbg, SLINFO, "## unbinded the file and rebind the stdout\n");
-	slog_unbind_file(NULL);
-	slog_bind_stdout(NULL, NULL);
-	for (i = 8; i >= 0; i--) {
-		slog(i, "%d/%d: debug level test\n", i, slog_level_read(NULL));
-	}
-
-	slogc(tstdbg, SLINFO, "## bind both file and the stdout\n");
-	slog_bind_file(NULL, "logfile", 1);
-	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, slog_level_read(NULL));
-	}
-
-	slogc(tstdbg, SLINFO, "## unbind file and rebind stdout to file logfile2\n");
-	slog_unbind_file(NULL);
-	slog_bind_stdout(NULL, my_stdout);
-	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, slog_level_read(NULL));
-	}
-	slogc(tstdbg, SLINFO, "## then open logfile2\n");
-	fp = fopen("logfile2", "w");
-	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, slog_level_read(NULL));
-	}
-	fclose(fp);	/* must close it first before unbind it */
-	slogc(tstdbg, SLINFO, "## recover the default stdout\n");
-	slog_bind_stdout(NULL, (F_STD) -1);
-	for (i = 0; i < 8; i++) {
-		slog(i, "%d/%d: debug level test\n", i, slog_level_read(NULL));
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i), 
+				"%d: debug level test\n", i);
 	}
 	
+	CDB_SHOW(("Binding logfile\n"));
+	slog_bind_file(tstdbg, "logfile");
+	for (i = 0; i < 8; i++) {
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i), 
+				"%d: debug level test\n", i);
+	}
 
-	slog_close(NULL);
+	CDB_SHOW(("UnBind the stdout\n"));
+	slog_bind_stdio(tstdbg, NULL);
+	tstdbg->cword = SLOG_LEVEL_SET(tstdbg->cword, SLOG_LVL_DEBUG);
+	for (i = 0; i < 8; i++) {
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i),
+				"%d: debug level test\n", i);
+	}
+
+	CDB_SHOW(("Unbind the logfile\n"));
+	slog_bind_file(tstdbg, NULL);
+	for (i = 0; i < 8; i++) {
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i),
+				"%d: debug level test\n", i);
+	}
+	
+	CDB_SHOW(("Bind to stderr\n"));
+	slog_bind_stdio(tstdbg, stderr);
+	for (i = 0; i < 8; i++) {
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i),
+				"%d: debug level test\n", i);
+	}
+
+	CDB_ERROR(("Internal: ERROR\n"));
+	CDB_WARN(("Internal: Warning\n"));
+	CDB_INFO(("Internal: INFO\n"));
+	CDB_DEBUG(("Internal: DEBUG\n"));
+	CDB_PROG(("Internal: PROG\n"));
+	CDB_MODL(("Internal: MODule\n"));
+	CDB_FUNC(("Internal: function\n"));
+
+#ifdef	CFG_SLOG_SOCKET
+	CDB_SHOW(("Socket test: connecting to 6666\n"));
+	slog_bind_tcp(tstdbg, 6666);
+	while (1) {
+		for (i = 0; i < 8; i++) {
+			slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i),
+					"%d: debug test\n", i);
+			smm_sleep(1,0);
+		}
+	}
+#endif
+	slog_shutdown(tstdbg);
 	return 0;
 }
 

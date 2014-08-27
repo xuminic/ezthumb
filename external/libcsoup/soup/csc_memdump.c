@@ -21,7 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 
 #define CSC_MEMDUMP_TYPE_SIGNED(f)	\
@@ -235,7 +237,7 @@ int csc_memdump(void *mem, int msize, int column, int flags)
 	while (msize) {
 		len = csize < msize ? csize : msize;
 		csc_memdump_line(mp, len, flags, buf, bsize);
-		slogz("%s\n", buf);
+		CDB_SHOW(("%s\n", buf));
 
 		msize -= len;
 		if (flags & CSC_MEMDUMP_REVERSE) {

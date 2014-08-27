@@ -26,6 +26,7 @@
 */
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 #define CSC_CDLL_MAGIC          (('D'<<24) | ('L'<<16))
 #define CSC_CDLL_BACKGUARD      0xdeadbeef
@@ -63,9 +64,9 @@ static int csc_cdl_checksum(CSCLNK *node)
 	node->majesty = CSC_CDLL_MAGIC;
 	crc = csc_crc16(0, node, sizeof(CSCLNK));
 	node->majesty |= crc;
-	/*slogz("csc_cdl_checksum: %p:%d (+%p:-%p) R:%p S:%d M:%x\n", 
+	CDB_FUNC(("csc_cdl_checksum: %p:%d (+%p:-%p) R:%p S:%d M:%x\n", 
 			node, sizeof(CSCLNK), node->next, node->prev, 
-			node->refp, node->size, node->majesty);*/
+			node->refp, node->size, node->majesty));
 	return (int) node->majesty;
 }
 
@@ -81,17 +82,17 @@ static int csc_cdl_verify(CSCLNK *node)
 	csc_cdl_checksum(&tmp);
 
 	if (tmp.majesty != node->majesty) {
-		slogz("csc_cdl_verify: broken at %p (+%p:-%p) S:%d M:%x\n", 
-				node, node->next, node->prev, node->size, 
-				node->majesty);
+		CDB_ERROR(("csc_cdl_verify: broken at %p (+%p:-%p) "
+				"S:%d M:%x\n", node, node->next, 
+				node->prev, node->size, node->majesty));
 		return 0;
 	}
 
 	/* verify the back guard */
 	ptr = (int*) (((char*)node) + node->size);
 	if (*ptr != (int) CSC_CDLL_BACKGUARD) {
-		slogz("csc_cdl_verify: backguard violated %p (+%p:-%p) %x\n",
-				node, node->next, node->prev, *ptr);
+		CDB_ERROR(("csc_cdl_verify: backguard violated %p (+%p:-%p) "
+				"%x\n", node, node->next, node->prev, *ptr));
 		return 0;
 	}
 	return 1;

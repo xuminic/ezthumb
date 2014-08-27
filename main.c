@@ -25,11 +25,11 @@
 #include <signal.h>
 #include <math.h>
 
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
 #include "ezthumb.h"
 #ifndef	CFG_GUI_OFF
 #include "ezgui.h"
 #endif
-
 
 #define CMD_ERROR	-2
 #define CMD_UNSET	-1
@@ -74,8 +74,6 @@
 #define CMD_V_ERBOSE	'v'
 #define CMD_W_IDTH	'w'
 #define CMD_SUFFI_X	'x'
-
-
 
 
 static	struct	cliopt	clist[] = {
@@ -193,7 +191,7 @@ static	EZOPT	sysopt;
 static int command_line_parser(int argc, char **argv, EZOPT *opt);
 static int signal_handler(int sig);
 static int main_close(EZOPT *opt);
-static int dbeug_online(int argc, char **argv);
+static int debug_online(int argc, char **argv);
 static int msg_info(void *option, char *path, int type, void *info);
 static int msg_shot(void *option, char *path, int type, void *info);
 static int env_init(EZOPT *ezopt);
@@ -219,7 +217,7 @@ int main(int argc, char **argv)
 {
 	int	i, todo;
 
-	smm_init(EZDBG_NONE);			/* initialize the libsmm */
+	smm_init();			/* initialize the libsmm */
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
@@ -232,7 +230,7 @@ int main(int argc, char **argv)
 #endif
 
 	todo = command_line_parser(argc, argv, &sysopt);
-	//return slogz("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc);
+	EDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
 	
 	/* review the command option structure to make sure there is no
 	 * controdicted options */
@@ -245,16 +243,16 @@ int main(int argc, char **argv)
 
 	switch (todo) {
 	case CMD_ERROR:
-		slos(EZDBG_WARNING, "Invalid parameters.\n");
+		printf("Invalid parameters.\n");
 		todo = EZ_ERR_PARAM;
 		break;
 	case CMD_HELP:		/* help */
 		//csc_cli_print(clist, NULL);
-		dbeug_online(argc - optind, argv + optind);
+		debug_online(argc - optind, argv + optind);
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_VERSION:	/* version */
-		slosz(version);
+		printf(version);
 		version_ffmpeg();
 #ifndef	CFG_GUI_OFF
 		ezgui_version();
@@ -263,7 +261,7 @@ int main(int argc, char **argv)
 		break;
 	case CMD_P_ROFILE:	/* print the internal profile table */
 		for (i = 0; i < PROFLIST; i++) {
-			slogz("%2d: %s\n", i, sysprof[i]);
+			printf("%2d: %s\n", i, sysprof[i]);
 		}
 		todo = EZ_ERR_EOP;
 		break;
@@ -292,7 +290,7 @@ int main(int argc, char **argv)
 			break;
 		}
 		/* inject the progress report functions */
-		if (EZOP_DEBUG(sysopt.flags) <= EZDBG_BRIEF) {
+		if (EZOP_DEBUG(sysopt.flags) <= SLOG_LVL_DEBUG) {
 			sysopt.notify = event_cb;
 		}
 		todo = ezthumb_bind(argv + optind, argc - optind, &sysopt);
@@ -310,7 +308,7 @@ int main(int argc, char **argv)
 		break;
 	default:
 		/* inject the progress report functions */
-		if (EZOP_DEBUG(sysopt.flags) <= EZDBG_BRIEF) {
+		if (EZOP_DEBUG(sysopt.flags) <= SLOG_LVL_DEBUG) {
 			sysopt.notify = event_cb;
 		}
 		if ((sysopt.flags & EZOP_RECURSIVE) == 0) {
@@ -702,21 +700,21 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_V_ERBOSE:
 			if (!strcmp(optarg, "none")) {
-				c = EZDBG_NONE;
+				c = SLOG_LVL_SHOWOFF;
 			} else if (!strcmp(optarg, "warning")) {
-				c = EZDBG_WARNING;
+				c = SLOG_LVL_ERROR;
 			} else if (!strcmp(optarg, "info")) {
-				c = EZDBG_INFO;
+				c = SLOG_LVL_WARNING;
 			} else if (!strcmp(optarg, "brief")) {
-				c = EZDBG_BRIEF;
+				c = SLOG_LVL_INFO;
 			} else if (!strcmp(optarg, "iframe")) {
-				c = EZDBG_IFRAME;
+				c = SLOG_LVL_DEBUG;
 			} else if (!strcmp(optarg, "packet")) {
-				c = EZDBG_PACKET;
+				c = SLOG_LVL_PROGRAM;
 			} else if (!strcmp(optarg, "verbose")) {
-				c = EZDBG_VERBS;
+				c = SLOG_LVL_MODULE;
 			} else if (!strcmp(optarg, "ffmpeg")) {
-				c = EZDBG_FFM;
+				c = SLOG_LVL_FUNC;
 			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
 			} else {
@@ -724,7 +722,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				goto break_parse;	/* break the analysis */
 			}
 			EZOP_DEBUG_MAKE(opt->flags, c);
-			slog_control_word_write(NULL, c);
 			break;
 		case CMD_W_IDTH:
 			if (!isdigit(*optarg)) {
@@ -771,7 +768,7 @@ break_parse:
 
 static int signal_handler(int sig)
 {
-	slog(SLFUNC, "Signal %d\n", sig);
+	EDB_WARN(("Signal %d\n", sig));
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
 	smm_destroy();
@@ -805,7 +802,7 @@ static int main_close(EZOPT *opt)
 	return 0;
 }
 
-static int dbeug_online(int argc, char **argv)
+static int debug_online(int argc, char **argv)
 {
 	KEYCB	*kcb;
 	char	*s;
@@ -821,13 +818,13 @@ static int dbeug_online(int argc, char **argv)
 	} else if (!strcmp(*argv, "pro-export")) {
 		s = ezopt_profile_export_alloc(&sysopt);
 		if (s) {
-			slogz("%s\n", s);
+			printf("%s\n", s);
 			smm_free(s);
 		}
 	} else if (!strcmp(*argv, "filter")) {
 		s = csc_extname_filter_export_alloc(sysopt.accept);
 		if (s) {
-			slogz("%s\n", s);
+			printf("%s\n", s);
 			smm_free(s);
 		}
 	} else if (!strcmp(*argv, "config")) {
@@ -837,7 +834,7 @@ static int dbeug_online(int argc, char **argv)
 			int	items;
 			ezopt_store_config(&sysopt, kcb);
 			s = csc_cfg_status(kcb, &items);
-			slogz("Read %d configures: %s\n", items, s);
+			printf("Read %d configures: %s\n", items, s);
 			csc_cfg_close(kcb);
 		}
 	}
@@ -848,9 +845,11 @@ static int msg_info(void *option, char *path, int type, void *info)
 {
 	EZOPT	*ezopt = option;
 
+	(void) info;	/* stop the gcc warning */
+
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		slogz("Entering %s:\n", path);
+		EDB_SHOW(("Entering %s:\n", path));
 		break;
 	case SMM_MSG_PATH_EXEC:
 		if (csc_extname_filter_match(ezopt->accept, path)) {
@@ -858,13 +857,12 @@ static int msg_info(void *option, char *path, int type, void *info)
 		}
 		break;
 	case SMM_MSG_PATH_BREAK:
-		slog(SLWARN, "Failed to process %s\n", path);
+		EDB_WARN(("Failed to process %s\n", path));
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		slogz("Leaving %s\n", path);
+		EDB_SHOW(("Leaving %s\n", path));
 		break;
 	}
-	(void) info;	/* stop the gcc warning */
 	return SMM_NTF_PATH_NONE;
 }
 
@@ -872,24 +870,25 @@ static int msg_shot(void *option, char *path, int type, void *info)
 {
 	EZOPT	*ezopt = option;
 
+	(void) info;	/* stop the gcc warning */
+
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		slogz("Entering %s:\n", path);
+		EDB_SHOW(("Entering %s:\n", path));
 		break;
 	case SMM_MSG_PATH_EXEC:
 		if (csc_extname_filter_match(ezopt->accept, path)) {
-			//slogz("+++ %s\n", path);
+			EDB_FUNC(("EZTHUMB %s\n", path));
 			ezthumb(path, option);
 		}
 		break;
 	case SMM_MSG_PATH_BREAK:
-		slog(SLWARN, "Failed to process %s\n", path);
+		EDB_WARN(("Failed to process %s\n", path));
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		slogz("Leaving %s\n", path);
+		EDB_SHOW(("Leaving %s\n", path));
 		break;
 	}
-	(void) info;	/* stop the gcc warning */
 	return SMM_NTF_PATH_NONE;
 }
 
@@ -908,10 +907,14 @@ static int env_init(EZOPT *ezopt)
 
 	len = csc_ziptoken(vcmd, arg, 128, " ");
 
-	/*for (num = 0; num <= len; num++) {
-		slogz("%d: %s\n", num, arg[num]);
-	}*/
-
+#ifdef	DEBUG
+	{
+		int	i;
+		for (i = 0; i <= len; i++) {
+			EDB_DEBUG(("%d: %s\n", i, arg[i]));
+		}
+	}
+#endif
 	command_line_parser(len, arg, ezopt);
 	smm_free(vcmd);
 	return 0;
@@ -952,8 +955,7 @@ static int para_get_time_point(char *s)
 	argcs = csc_ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
-		slos(EZDBG_WARNING, 
-			"Incorrect time format. Try HH:MM:SS or NN%.\n");
+		printf("Incorrect time format. Try HH:MM:SS or NN%%.\n");
 		break;
 	case 1:
 		val = strtol(argvs[0], NULL, 0);
@@ -1113,32 +1115,29 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 		return EN_EVENT_PASSTHROUGH;
 	
 	case EN_PROC_BINDING:
-		slog(EZDBG_SHOW, "\b\b\b\b\b+     ");
+		EDB_SHOW(("\b\b\b\b\b+     "));
 		break;
 
 	case EN_PROC_CURRENT:
 		if (param == 0) {	/* for key frame saving only */
-			slog(EZDBG_SHOW, ".");
+			EDB_SHOW(("."));
 			break;
 		}
 
 		expect = opt * 100 / param / 2;
 		if (dotted >= expect) {
-			slog(EZDBG_SHOW, "\b\b\b\b%3ld%%", 
-					opt * 100 / param);
+			EDB_SHOW(("\b\b\b\b%3ld%%", opt * 100 / param));
 		} else while (dotted < expect) {
-			slog(EZDBG_SHOW, "\b\b\b\b\b. %3ld%%", 
-					opt * 100 / param);
+			EDB_SHOW(("\b\b\b\b\b. %3ld%%", opt * 100 / param));
 			dotted++;
 		}
 		break;
 
 	case EN_PROC_END:
 		if (param == 0) {       /* for key frame saving only */
-			slog(EZDBG_SHOW, "\b\b\b\b100%% done\n");
+			EDB_SHOW(("\b\b\b\b100%% done\n"));
 		} else {
-			slog(EZDBG_SHOW, "\b\b\b\b%ldx%ld done\n", 
-					param, opt);
+			EDB_SHOW(("\b\b\b\b%ldx%ld done\n", param, opt));
 		}
 		break;
 
@@ -1163,13 +1162,13 @@ static int event_list(void *vobj, int event, long param, long opt, void *block)
 
 static void version_ffmpeg(void)
 {
-	slogz("FFMPEG: libavcodec %d.%d.%d; ", LIBAVCODEC_VERSION_MAJOR,
+	printf("FFMPEG: libavcodec %d.%d.%d; ", LIBAVCODEC_VERSION_MAJOR,
 			LIBAVCODEC_VERSION_MINOR, LIBAVCODEC_VERSION_MICRO);
-	slogz("libavformat %d.%d.%d; ", LIBAVFORMAT_VERSION_MAJOR, 
+	printf("libavformat %d.%d.%d; ", LIBAVFORMAT_VERSION_MAJOR, 
 			LIBAVFORMAT_VERSION_MINOR, LIBAVFORMAT_VERSION_MICRO);
-	slogz("libavutil %d.%d.%d; ", LIBAVUTIL_VERSION_MAJOR, 
+	printf("libavutil %d.%d.%d; ", LIBAVUTIL_VERSION_MAJOR, 
 			LIBAVUTIL_VERSION_MINOR, LIBAVUTIL_VERSION_MICRO);
-	slogz("libswscale %d.%d.%d\n", LIBSWSCALE_VERSION_MAJOR, 
+	printf("libswscale %d.%d.%d\n", LIBSWSCALE_VERSION_MAJOR, 
 			LIBSWSCALE_VERSION_MINOR, LIBSWSCALE_VERSION_MICRO);
 }
 
@@ -1189,17 +1188,17 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 		case '@':
 			val = (int)strtol(cmd + 1, 0, 10);
 			print_profile_shots(opt, val);
-			slosz("\n");
+			printf("\n");
 			return 0;
 		case '+':
 			val = (int)strtol(cmd + 1, 0, 10);
 			print_profile_width(opt, val);
-			slosz("\n");
+			printf("\n");
 			return 0;
 		}
 	}
 
-	slosz("Reference of Video Length:\n");
+	printf("Reference of Video Length:\n");
 	for (i = 0; i < 18; i++) {
 		if (i < 10) {
 			val = (i+1)*10;
@@ -1211,7 +1210,7 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 	}
 	linefeed_count(i, 3, "", "\n\n");
 
-	slosz("Reference of Width:\n");
+	printf("Reference of Width:\n");
 	for (i = 0; i < (int)(sizeof(stdres)/sizeof(int)); i++) {
 		print_profile_width(opt, stdres[i]);
 		linefeed_count(i, 3, "\n", "    ");
@@ -1223,9 +1222,9 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 static void linefeed_count(int n, int mod, char *con, char *coff)
 {
 	if ((n % mod) == (mod - 1)) {
-		slogz("%s", con);
+		printf("%s", con);
 	} else {
-		slogz("%s", coff);
+		printf("%s", coff);
 	}
 }
 
@@ -1238,7 +1237,7 @@ static void print_profile_shots(EZOPT *opt, int min)
 	if (fac > 0) {
 		ezopt_profile_sampled(opt, 640, fac, &wid, &hei);
 	}
-	slogz("[%4d]=[%4d %4d %3d %4d]", min, wid, hei, fac, 
+	printf("[%4d]=[%4d %4d %3d %4d]", min, wid, hei, fac, 
 			wid * hei > 0 ? min * 60 / (wid * hei) : 0);
 }
 
@@ -1248,7 +1247,7 @@ static void print_profile_width(EZOPT *opt, int vidw)
 
 	wid = hei = fac = 0;
 	can = ezopt_profile_zooming(opt, vidw, &wid, &hei, &fac);
-	slogz("[%4d]=[%4d %4d %3d %4d]", vidw, wid, hei, fac, can);
+	printf("[%4d]=[%4d %4d %3d %4d]", vidw, wid, hei, fac, can);
 }
 
 static int load_default_config(EZOPT *opt)
@@ -1261,9 +1260,9 @@ static int load_default_config(EZOPT *opt)
 			"FunSight", "ezthumbrc", CSC_CFG_READ);
 	if (config) {
 		ezopt_load_config(opt, config);
-		if (EZOP_DEBUG(opt->flags) >= EZDBG_INFO) {
+		if (EZOP_DEBUG(opt->flags) >= SLOG_LVL_INFO) {
 			path = csc_cfg_status(config, &items);
-			slogz("Read %d configures: %s\n", items, path);
+			EDB_INFO(("Read %d configures: %s\n", items, path));
 		}
 		csc_cfg_close(config);
 	}
@@ -1272,9 +1271,9 @@ static int load_default_config(EZOPT *opt)
 			"FunSight", "ezthumbrc", CSC_CFG_READ);
 	if (config) {
 		ezopt_load_config(opt, config);
-		if (EZOP_DEBUG(opt->flags) >= EZDBG_INFO) {
+		if (EZOP_DEBUG(opt->flags) >= SLOG_LVL_INFO) {
 			path = csc_cfg_status(config, &items);
-			slogz("Read %d configures: %s\n", items, path);
+			EDB_INFO(("Read %d configures: %s\n", items, path));
 		}
 		csc_cfg_close(config);
 	}

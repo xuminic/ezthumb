@@ -26,9 +26,8 @@
 int	smm_error_no;
 
 
-int smm_init(int logcw)
+int smm_init(void)
 {
-	slog_def_open(logcw);
 	smm_error_no = SMM_ERR_NONE;
 	smm_codepage_reset();
 	return SMM_ERR_NONE;
@@ -37,7 +36,6 @@ int smm_init(int logcw)
 int smm_destroy(void)
 {
 	smm_error_no = 0;
-	slog_def_close();
 	return 0;
 }
 

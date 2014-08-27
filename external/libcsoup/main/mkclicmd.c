@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 int main(int argc, char **argv)
 {
@@ -14,10 +15,6 @@ int main(int argc, char **argv)
 	if (argc < 2) {
 		printf("Usage: %s extern_list_head_file\n", argv[0]);
 		return 0;
-	}
-	if (csc_cdl_setup(NULL, NULL, NULL, NULL, 0) != sizeof(CSCLNK)) {
-		printf("Wrong compiling option of this program!\n");
-		return -1;
 	}
 
 	if ((fp = fopen(argv[1], "r+")) == NULL) {
@@ -39,7 +36,7 @@ int main(int argc, char **argv)
 		if (node == NULL) {
 			break;
 		}
-		payload = (char*)&node[1];
+		payload = csc_cdl_payload(node);
 		strcpy(payload, argvs[3]);
 		rc = strlen(payload) - 1;
 		if (payload[rc] == ';') {
@@ -49,7 +46,7 @@ int main(int argc, char **argv)
 
 	fprintf(fp, "\nstruct	clicmd	*cmdlist[] = {\n");
 	for (node = anchor; node; node = csc_cdl_next(anchor, node)) {
-		payload = (char*)&node[1];
+		payload = csc_cdl_payload(node);
 		fprintf(fp, "	&%s,\n", payload);
 	}
 	fprintf(fp, "	NULL\n};\n\n");

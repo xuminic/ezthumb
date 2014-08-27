@@ -25,6 +25,7 @@
 #include "libswscale/swscale.h"
 #include "gd.h"
 #include "libcsoup.h"
+#include "ezthumb_debug.h"
 
 #define EZTHUMB_VERSION		"3.2.0"
 

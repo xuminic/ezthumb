@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+
 #define CFG_GUI_GTK	1
 #include "ezgui.h"
 #include "ezicon.h"
@@ -210,11 +212,11 @@ void ezgui_version(void)
 {
 	char	*path;
 
-	slogz("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION, 
-			GTK_MINOR_VERSION, GTK_MICRO_VERSION);
+	EDB_SHOW(("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION, 
+			GTK_MINOR_VERSION, GTK_MICRO_VERSION));
 	path = g_build_filename(g_get_user_config_dir(),
 			CFG_SUBPATH, CFG_FILENAME, NULL);
-	slogz("Profile: %s\n", path);
+	EDB_SHOW(("Profile: %s\n", path));
 	g_free(path);
 }
 
@@ -404,7 +406,7 @@ static int ezgui_create_window(EZGUI *gui)
 static void ezgui_signal_win_state(EZGUI *gui, GdkEvent *event, 
 		GtkWidget *widget)
 {
-	//slogz("Envent %d\n", event->type);
+	EDB_PROG(("[WSTAT] %d\n", event->type));
 	(void) widget;		 /* stop the gcc warning */
 	if (event->type == GDK_WINDOW_STATE) {
 		gui->gw_win_state = event->window_state.new_window_state;
@@ -421,8 +423,8 @@ static void ezgui_signal_resize(EZGUI *gui, GdkRectangle *rect,
 		return;
 	}
 
-	//slogz("X=%d Y=%d Width=%d Height=%d\n",
-	//		rect->x, rect->y, rect->width, rect->height);
+	EDB_PROG(("[RESIZE] X=%d Y=%d Width=%d Height=%d\n",
+			rect->x, rect->y, rect->width, rect->height));
 	gui->w_width  = rect->width;
 	gui->w_height = rect->height;
 }
@@ -469,7 +471,8 @@ static GtkWidget *ezgui_page_main_create(EZGUI *gui)
 	return vbox;
 }
 
-/* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)(DC I-Frame)
+/* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)
+ * 		(DC I-Frame)
  * Zoom: (Zoom Auto)(Zoom 50%)(Zoom 320x240)(Res 1024) */
 static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
 {
@@ -537,7 +540,8 @@ static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
 				gtk_label_new("  Zoom"), gui->entry_zoom_wid,
 				gtk_label_new("x"), gui->entry_zoom_hei, NULL);
 	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
-		val = gui->sysopt->canvas_width ? gui->sysopt->canvas_width : 1280;
+		val = gui->sysopt->canvas_width ? 
+				gui->sysopt->canvas_width : 1280;
 		gui->entry_width = ezgui_entry_box(val, 5);
 		ezgui_pack_forward(hbox, gtk_label_new("  Res"), 
 				gui->entry_width, NULL);
@@ -658,9 +662,11 @@ static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui)
 	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
 
 	/* setup the model */
-	liststore = gtk_list_store_new(EZUI_COL_MAX, G_TYPE_STRING, G_TYPE_STRING,
-			G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), GTK_TREE_MODEL(liststore));
+	liststore = gtk_list_store_new(EZUI_COL_MAX, G_TYPE_STRING, 
+			G_TYPE_STRING, G_TYPE_STRING, 
+			G_TYPE_STRING, G_TYPE_INT);
+	gtk_tree_view_set_model(GTK_TREE_VIEW(view), 
+			GTK_TREE_MODEL(liststore));
 
 	/* setup the tree selection */
 	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
@@ -750,17 +756,18 @@ static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
 		} while (gtk_tree_model_iter_next(ezadd->app_model, &row));
 	}
 
-	/*slogz("ezgui_page_main_listview_append: %s\n", s);
-	{
+	if (EZOP_DEBUG(gui->sysopt->flags) >= SLOG_LVL_PROGRAM) {
 		unsigned char *p;
+
+		EDB_SHOW(("ezgui_page_main_listview_append: %s\n", s));
 		if ((p = strstr(s, "\\User\\")) != NULL) {
 			p += 6;
 			while (*p != '\\') {
-				slogz("%d ", *p++);
+				EDB_SHOW(("%d ", *p++));
 			}
 		}
-		slogz("\n");
-	}*/
+		EDB_SHOW(("\n"));
+	}
 	/* 20120903 Bugfix: set the codepage to utf-8 before calling
 	 * ezthumb core. In Win32 version, the ezthumb core uses the 
 	 * default codepage to process file name. However the GTK converted
@@ -843,7 +850,8 @@ static void ezgui_signal_file_choose(EZGUI *gui)
 	chooser = GTK_FILE_CHOOSER(dialog);
 
 	gtk_file_chooser_set_select_multiple(chooser, TRUE);
-	if ((dir = ezgui_cfg_read_alloc(gui->config, CFG_KEY_DIRECTORY)) != NULL) {
+	dir = ezgui_cfg_read_alloc(gui->config, CFG_KEY_DIRECTORY);
+	if (dir != NULL) {
 		gtk_file_chooser_set_current_folder(chooser, dir);
 		g_free(dir);
 	}
@@ -945,7 +953,8 @@ static void ezgui_signal_select_change(EZGUI *gui, GtkTreeSelection *tsel)
 }
 
 #if 0
-static void ezgui_signal_select_undo(GtkWidget *view, GdkEvent *event, EZGUI *gui)
+static void ezgui_signal_select_undo(GtkWidget *view, 
+		GdkEvent *event, EZGUI *gui)
 {
 	GtkTreeSelection	*tsel;
 
@@ -1018,7 +1027,8 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 	gui->prof_zoom = ezgui_combo(gui, prof_list_zoom,
 			G_CALLBACK(ezgui_signal_setup_sensible));
 
-	table_fill(table, ezgui_setup_label("<b>Profile Selection:</b>"), 0, 0, 5);
+	table_fill(table, 
+		ezgui_setup_label("<b>Profile Selection:</b>"), 0, 0, 5);
 	table_insert(table, ezgui_setup_idname("Grid Setting:"), 1, 1);
 	table_insert(table, gui->prof_grid, 2, 1);
 	table_insert(table, ezgui_setup_idname("Zoom Setting:"), 3, 1);
@@ -1074,7 +1084,8 @@ static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
 	return vbox_page;
 }
 
-static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int row)
+static int ezgui_page_setup_output_format(EZGUI *gui, 
+		GtkWidget *table, int row)
 {
 	GtkWidget	*hbox_gifa;
 
@@ -1200,14 +1211,18 @@ static int ezgui_signal_setup_reset(EZGUI *gui)
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
 	
 	if (!strcmp(gui->sysopt->img_format, "jpg")) {
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_jpg), TRUE);
+		gtk_toggle_button_set_active(
+				GTK_TOGGLE_BUTTON(gui->off_jpg), TRUE);
 	} else if (!strcmp(gui->sysopt->img_format, "png")) {
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
+		gtk_toggle_button_set_active(
+				GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
 	} else if (!strcmp(gui->sysopt->img_format, "gif")) {
 		if (gui->sysopt->img_quality == 0) {
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_gif), TRUE);
+			gtk_toggle_button_set_active(
+				GTK_TOGGLE_BUTTON(gui->off_gif), TRUE);
 		} else {
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_gifa), TRUE);
+			gtk_toggle_button_set_active(
+				GTK_TOGGLE_BUTTON(gui->off_gifa), TRUE);
 		}
 	}
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_transp), 
@@ -1229,14 +1244,14 @@ static int ezgui_signal_setup_update(EZGUI *gui)
 		rc += ezgui_cfg_write(gui->config, CFG_KEY_GRID, pic);
 		g_free(pic);
 	}
-	//slogz("ezgui_signal_setup_update: grid %d\n", rc);
+	EDB_PROG(("ezgui_signal_setup_update: grid %d\n", rc));
 
 	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_zoom));
 	if (pic) {
 		rc += ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, pic);
 		g_free(pic);
 	}
-	//slogz("ezgui_signal_setup_update: zoom %d\n", rc);
+	EDB_PROG(("ezgui_signal_setup_update: zoom %d\n", rc));
 
 	if (rc) {
 		gtk_widget_destroy(gui->prof_group);
@@ -1247,7 +1262,8 @@ static int ezgui_signal_setup_update(EZGUI *gui)
 
 	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->dfm_head))) {
 		SETDURMOD(gui->sysopt->flags, EZOP_DUR_HEAD);
-	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->dfm_fast))) {
+	} else if (gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(gui->dfm_fast))) {
 		SETDURMOD(gui->sysopt->flags, EZOP_DUR_QSCAN);
 	} else {
 		SETDURMOD(gui->sysopt->flags, EZOP_DUR_FSCAN);
@@ -1271,16 +1287,19 @@ static int ezgui_signal_setup_update(EZGUI *gui)
 		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
 		gtk_toggle_button_set_active(
 				GTK_TOGGLE_BUTTON(gui->off_transp), FALSE);
-	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gif))) {
+	} else if (gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(gui->off_gif))) {
 		strcpy(gui->sysopt->img_format, "gif");
 		gui->sysopt->img_quality = 0;
-	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_gifa))) {
+	} else if (gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(gui->off_gifa))) {
 		if (gui->tmp_gifa_fr && (gui->tmp_gifa_fr < 15)) {
 			gui->tmp_gifa_fr = 1000;
 		}
 		strcpy(gui->sysopt->img_format, "gif");
 		gui->sysopt->img_quality = gui->tmp_gifa_fr;
-	} else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_png))) {
+	} else if (gtk_toggle_button_get_active(
+				GTK_TOGGLE_BUTTON(gui->off_png))) {
 		strcpy(gui->sysopt->img_format, "png");
 		gui->sysopt->img_quality = 0;
 	}
@@ -1441,7 +1460,7 @@ static int ezgui_cfg_flush(EZCFG *cfg)
 		return 0;
 	}
 
-	slog(EZDBG_INFO, "ezgui_cfg_flush: %d\n", cfg->mcount);
+	EDB_INFO(("ezgui_cfg_flush: %d\n", cfg->mcount));
 	
 	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
 
@@ -1635,8 +1654,10 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 	EZOPT	*ezopt = gui->sysopt;
 	char	*p, tmp[32];
 
-	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_FILE_FORMAT)) != NULL) {
-		ezopt->img_quality = meta_image_format(p, ezopt->img_format, 8);
+	p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_FILE_FORMAT);
+	if (p != NULL) {
+		ezopt->img_quality = meta_image_format(p, 
+				ezopt->img_format, 8);
 		smm_free(p);
 	} else if (rwcfg == EZUI_FMR_RDWR) {
 		sprintf(tmp, "%s@%d", ezopt->img_format, ezopt->img_quality);
@@ -1653,7 +1674,8 @@ static int ezgui_format_reset(EZGUI *gui, int rwcfg)
 		}
 	}
 
-	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_TRANSPARENCY)) != NULL) {
+	p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_TRANSPARENCY);
+	if (p != NULL) {
 		if (!strcmp(p, "yes")) {
 			ezopt->flags |= EZOP_TRANSPARENT;
 		} else {

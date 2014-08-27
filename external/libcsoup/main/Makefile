@@ -9,6 +9,10 @@ CFLAGS	= -Wall -Wextra
 endif
 CFLAGS	+= -I..
 
+ifdef	SLOG_SOCKET
+EXLIBS	= -lpthread
+endif
+
 SRCS	= main.c fixtoken.c memdump.c slog.c crc.c fontpath.c config.c \
 	  csc_cdll.c csc_cli.c smm.c
 
@@ -19,7 +23,7 @@ TARGET	= csoup
 all: $(TARGET)
 
 $(TARGET): $(SRCS) main_define.h
-	$(CC) $(CFLAGS) -L.. -o $@ $(SRCS) -lcsoup
+	$(CC) $(CFLAGS) -L.. -o $@ $(SRCS) -lcsoup $(EXLIBS)
 
 main_define.h: mkclicmd
 	grep "extern.*struct.*clicmd" $(SRCS) | cut -d: -f2 |tr -d '\r' > $@

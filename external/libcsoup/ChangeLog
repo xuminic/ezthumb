@@ -1,3 +1,12 @@
+
+20140815: 0.8.1
+	* Makefile: disable the slog-to-socket by macro SLOG_SOCKET
+	because it's not used currently.
+
+20140815: 0.8.0
+	* slog: revised the slog module and redefined some functions.
+	TODO: port the slog socket to winapi
+
 20140717: 0.7.6:
 	* csc_cfg_saveas(): update rext->items while saving
 	Note that csc_cfg_status() is limited functioned to debug only.

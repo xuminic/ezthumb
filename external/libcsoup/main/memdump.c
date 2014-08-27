@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
+#include "csoup_internal.h"
 
 int memdump_main(void *rtime, int argc, char **argv)
 {
@@ -51,9 +52,9 @@ int memdump_main(void *rtime, int argc, char **argv)
 
 	for (i = 0; i < (int)(sizeof(flags)/sizeof(int)); i++) {
 		len = csc_memdump_line(user, 16, flags[i], buf, sizeof(buf));
-		slogz("%s\n", buf);
+		CDB_SHOW(("%s\n", buf));
 		if (len != (int)strlen(buf)) {
-			slogz("BOOM!\n");
+			CDB_SHOW(("BOOM!\n"));
 			break;
 		}
 	}
@@ -62,19 +63,19 @@ int memdump_main(void *rtime, int argc, char **argv)
 	csc_memdump_line(user + sizeof(user), 16, 
 			CSC_MEMDUMP_BIT_32 | CSC_MEMDUMP_REVERSE, 
 			buf, sizeof(buf));
-	slogz("%s\n", buf);
+	CDB_SHOW(("%s\n", buf));
 
 	/* length test */
-	slogz("SIZE=%d\n", csc_memdump_line(user + sizeof(user), 16, 
-			CSC_MEMDUMP_BIT_32 | CSC_MEMDUMP_REVERSE, NULL, 0));
+	CDB_SHOW(("SIZE=%d\n", csc_memdump_line(user + sizeof(user), 16, 
+			CSC_MEMDUMP_BIT_32 | CSC_MEMDUMP_REVERSE, NULL, 0)));
 
 	csc_memdump(user, sizeof(user), 16, 0);
 	csc_memdump(user, sizeof(user), 4, CSC_MEMDUMP_BIT_32 | 
 			CSC_MEMDUMP_NO_GLYPH | CSC_MEMDUMP_NO_ADDR | CSC_MEMDUMP_NO_SPACE);
 	csc_memdump(user + sizeof(user), sizeof(user), 16, CSC_MEMDUMP_REVERSE);
-	slogz("Sizeof: int=%ld long=%ld short=%ld longlong=%ld float=%d double=%d\n",
+	CDB_SHOW(("Sizeof: int=%ld long=%ld short=%ld longlong=%ld float=%d double=%d\n",
 			sizeof(int), sizeof(long), sizeof(short), 
-			sizeof(long long), sizeof(float), sizeof(double));
+			sizeof(long long), sizeof(float), sizeof(double)));
 	return 0;
 }
 
