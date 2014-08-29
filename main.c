@@ -699,21 +699,21 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			//}
 			break;
 		case CMD_V_ERBOSE:
-			if (!strcmp(optarg, "none")) {
+			if (!strcmp(optarg, "show")) {
 				c = SLOG_LVL_SHOWOFF;
-			} else if (!strcmp(optarg, "warning")) {
+			} else if (!strcmp(optarg, "error")) {
 				c = SLOG_LVL_ERROR;
-			} else if (!strcmp(optarg, "info")) {
+			} else if (!strcmp(optarg, "warning")) {
 				c = SLOG_LVL_WARNING;
-			} else if (!strcmp(optarg, "brief")) {
+			} else if (!strcmp(optarg, "info")) {
 				c = SLOG_LVL_INFO;
-			} else if (!strcmp(optarg, "iframe")) {
+			} else if (!strcmp(optarg, "debug")) {
 				c = SLOG_LVL_DEBUG;
-			} else if (!strcmp(optarg, "packet")) {
+			} else if (!strcmp(optarg, "program")) {
 				c = SLOG_LVL_PROGRAM;
-			} else if (!strcmp(optarg, "verbose")) {
+			} else if (!strcmp(optarg, "module")) {
 				c = SLOG_LVL_MODULE;
-			} else if (!strcmp(optarg, "ffmpeg")) {
+			} else if (!strcmp(optarg, "function")) {
 				c = SLOG_LVL_FUNC;
 			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
@@ -722,6 +722,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				goto break_parse;	/* break the analysis */
 			}
 			EZOP_DEBUG_MAKE(opt->flags, c);
+			ezthumb_slog_setcw(c);
 			break;
 		case CMD_W_IDTH:
 			if (!isdigit(*optarg)) {

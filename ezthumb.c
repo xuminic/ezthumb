@@ -3906,22 +3906,22 @@ static int ezdefault(EZOPT *ezopt, int event,
 	switch (event) {
 	case EZ_ERR_LOWMEM:
 		EDB_ERROR(("%s: low memory [%ld]\n", (char*) block, param));
-		break;
+		return event;
 	case EZ_ERR_FORMAT:
 		EDB_ERROR(("%s: unknown format.\n", (char*) block));
-		break;
+		return event;
 	case EZ_ERR_STREAM:
 		EDB_ERROR(("%s: no stream info found.\n", (char*) block));
-		break;
+		return event;
 	case EZ_ERR_VIDEOSTREAM:
 		EDB_ERROR(("%s: no video stream found.\n", (char*) block));
-		break;
+		return event;
 	case EZ_ERR_CODEC_FAIL:
 		EDB_ERROR(("Could not open codec! %ld\n", param));
-		break;
+		return event;
 	case EZ_ERR_FILE:
 		EDB_ERROR(("%s: file not found.\n", (char*) block));
-		break;
+		return event;
 	}
 
 	if (ezopt == NULL) {

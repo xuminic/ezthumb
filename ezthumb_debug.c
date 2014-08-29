@@ -55,6 +55,13 @@ int ezthumb_slog_close(void)
 	return slog_shutdown(&ezthumb_debug_control);
 }
 
+int ezthumb_slog_setcw(int cw)
+{
+	ezthumb_debug_control.cword = 
+		SLOG_LEVEL_SET(ezthumb_debug_control.cword, cw);
+	return ezthumb_debug_control.cword;
+}
+
 int ezthumb_slog_puts(SMMDBG *dbgc, int setcw, int cw, char *buf)
 {
 	if (!slog_validate(dbgc, setcw, cw)) {
@@ -86,8 +93,7 @@ static char *ezthumb_slog_prefix(void *self, int cw)
 	if (dbgc->option & SLOG_OPT_TMSTAMP) {
 		time(&sec);
 		lctm = localtime(&sec);
-		sprintf(buffer, "[%d%02d%02d-%02d%02d%02d]", 
-				lctm->tm_year + 1900, 
+		sprintf(buffer, "[%02d%02d%02d%02d%02d]", 
 				lctm->tm_mon, lctm->tm_mday,
 				lctm->tm_hour, lctm->tm_min, lctm->tm_sec);
 	}

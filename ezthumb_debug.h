@@ -37,6 +37,7 @@ extern	SMMDBG	ezthumb_debug_control;
 
 SMMDBG *ezthumb_slog_open(FILE *stdio, char *fname);
 int ezthumb_slog_close(void);
+int ezthumb_slog_setcw(int cw);
 int ezthumb_slog_puts(SMMDBG *dbgc, int setcw, int cw, char *buf);
 char *ezthumb_slog_format(char *fmt, ...);
 
