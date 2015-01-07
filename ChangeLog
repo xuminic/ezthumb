@@ -1,3 +1,6 @@
+20140830: Version 3.2.1
+	* libcsoup: updated to 0.8.1. Ezthumb applies the new debug scheme.
+
 20140512: Pre Version 3.2.0
 	* external: integrated external source codes into ezthumb to make
 	them consistent and easy to maintain.
