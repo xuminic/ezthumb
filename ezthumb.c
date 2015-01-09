@@ -1075,6 +1075,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 
 	smm_time_get_epoch(&vidx->tmark);	/* get current time stamp */
 	video_timing(vidx, EZ_PTS_RESET);	/* clear progress timestamp*/
+	eznotify(ezopt, EN_OPEN_BEGIN, 0, 0, NULL);
 
 	/* On second thought, the FFMPEG log is better to be enabled while 
 	 * loading codecs so we would've known if the video files buggy */
@@ -1095,6 +1096,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	if ((rc = video_open(vidx)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
 		smm_free(vidx);
+		eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
 		return NULL;
 	}
 
@@ -1131,6 +1133,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
+		eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
 		return NULL;
 	}
 
@@ -1153,10 +1156,18 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	/* 20110301: the still images are acceptable by the ffmpeg library
 	 * so it would be wiser to avoid the still image stream, which duration
 	 * is only several milliseconds. FIXME if this assumption is wrong */
-	if (video_duration(vidx) < 500) {
+	if (ezopt->pre_dura == 0) {
+		video_duration(vidx);
+	} else {
+		vidx->duration = ezopt->pre_dura;
+		vidx->seekable = ezopt->pre_seek;
+		vidx->bitrates = ezopt->pre_br;
+	}
+	if (vidx->duration < 500) {
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
+		eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
 		return NULL;
 	}
 
@@ -1166,6 +1177,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	uperror(errcode, EZ_ERR_NONE);
 
 	video_close(vidx);	/* do not rewinding, reopen it instead */
+	eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
 	return vidx;
 }
 
@@ -1266,6 +1278,7 @@ static int video_open(EZVID *vidx)
 		return EZ_ERR_FORMAT;
 	}
 	video_timing(vidx, EZ_PTS_MOPEN);
+	eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 
 	/* 20120814 Implemented a media type filter to block the unwanted
 	 * media files like jpg, mp3, etc */
@@ -1331,6 +1344,7 @@ static int video_open(EZVID *vidx)
 	}
 
 	video_timing(vidx, EZ_PTS_COPEN);
+	eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 
 	//dump_format_context(vidx->formatx);
 	return EZ_ERR_NONE;
@@ -1774,7 +1788,6 @@ static EZTIME video_duration(EZVID *vidx)
 	int	ref_err, shots, key_num;
 
 	video_timing(vidx, EZ_PTS_CLEAR);
-	eznotify(vidx->sysopt, EN_DURA_BEGIN, 0, 0, vidx);
 
 	/* find the duration in the header */
 	vidx->seekable = ENX_SEEK_UNKNOWN;
@@ -1879,7 +1892,6 @@ static EZTIME video_duration(EZVID *vidx)
 	}
 	vidx->bitrates = (int)(vidx->filesize * 8000 / vidx->duration);
 
-	eznotify(vidx->sysopt, EN_DURA_END, 0, 0, vidx);
 	eznotify(vidx->sysopt, EN_DURATION, 0,
 			smm_time_diff(&vidx->tmark), vidx);
 	EDB_PROG(("video_duration: %lld S:%d BR:%d (%d ms)\n", 
@@ -1908,7 +1920,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 		if ((rdts /= 2) == 0) {
 			break;
 		}
-		eznotify(vidx->sysopt, EN_DURA_CURRENT, 0, 0, vidx);
+		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, vidx);
 		video_seeking(vidx, base + rdts);
 		/* 20130915 In the second Sjako test, I found av_read_frame() 
 		 * always return a packet right after an av_seek, even it's
@@ -1936,7 +1948,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 	while (video_load_packet(vidx, &packet) > 0) {
 		recent = packet.dts;
 		av_free_packet(&packet);
-		eznotify(vidx->sysopt, EN_DURA_CURRENT, 0, 0, vidx);
+		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, vidx);
 	}
 	if ((recent -= vidx->dts_offset) <= 0) {
 		EDB_PROG(("video_duration_quickscan: failed\n"));
@@ -1975,6 +1987,7 @@ static int video_seek_challenge(EZVID *vidx)
 		dts_first = cur_dts;
 		pos_first = packet.pos;
 		av_free_packet(&packet);
+		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 		if ((dts_first > dts_target) && (vidx->keycount > 10)) {
 			break;
 		}
@@ -2005,6 +2018,7 @@ static int video_seek_challenge(EZVID *vidx)
 			dts_first = cur_dts;
 			pos_first = packet.pos;
 			av_free_packet(&packet);
+			eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 			if (dts_first > dts_target) {
 				break;
 			}
@@ -2054,6 +2068,7 @@ static int video_seek_challenge(EZVID *vidx)
 	errmin  = 10000;
 	for (i = 0; i < EZ_DSCP_N_STEP; i++) {
 		next_dts += dts_target;
+		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 		/* 20130725 changed the calculating method by enlarge
 		 * the dts span to restraint the error quicker */
 		//if ((dts_span = next_dts - cur_dts) == 0) {
@@ -2119,6 +2134,7 @@ static int video_seek_challenge(EZVID *vidx)
 		if ((next_dts -= dts_target) < 0) {
 			next_dts = 0;
 		}
+		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 		//if ((dts_span = cur_dts - next_dts) == 0) {
 		if ((dts_span = dts_second - next_dts) == 0) {
 			break;
@@ -2197,7 +2213,7 @@ static int64_t video_statistics(EZVID *vidx)
 			mestat[i].dts_last = packet.dts;
 		}
 		av_free_packet(&packet);
-		eznotify(vidx->sysopt, EN_DURA_CURRENT, 0, 0, vidx);
+		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, vidx);
 	}
 	myntf.varg1 = mestat;
 	myntf.varg2 = vidx;

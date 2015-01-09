@@ -217,6 +217,9 @@ typedef	struct	{
 	char	vidlen[16];
 	char	resolv[16];
 	char	progr[8];
+	EZTIME	duration;
+	int	seekable;
+	int	bitrates;
 	char	*showing;
 	char	fname[1];
 } EZMEDIA;

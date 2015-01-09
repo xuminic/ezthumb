@@ -514,6 +514,9 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 
 	strcpy(minfo->fname, fname);
 	minfo->showing = minfo->fname + strlen(minfo->fname) + 1;
+	minfo->duration = vobj.duration;
+	minfo->seekable = vobj.seekable;
+	minfo->bitrates = vobj.bitrates;
 
 	meta_timestamp(vobj.duration, 0, minfo->vidlen);
 	meta_filesize(vobj.filesize, minfo->fsize);
@@ -585,17 +588,31 @@ static int ezgui_list_refresh(EZGUI *gui, int usize)
 static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 {
 	EZGUI	*gui = (EZGUI *) ih;
+	EZMEDIA	*minfo = NULL;
+	CSCLNK	*node;
 
 	if (gui->magic != EZGUI_MAGIC) {
 		gui = ezgui_get_global(ih);
 	}
 
-	//printf("Action %s: %p %d\n", text, ih, item);
+	printf("Action %s: %p %d\n", text, ih, item);
 	gui->list_idx = item;	/* store the current index */
+
+	node = csc_cdl_goto(gui->list_cache, item - 1);
+	if (node) {
+		minfo = (EZMEDIA*) csc_cdl_payload(node);
+		gui->sysopt->pre_dura = minfo->duration;
+		gui->sysopt->pre_seek = minfo->seekable;
+		gui->sysopt->pre_br = minfo->bitrates;
+	}
 	
 	smm_codepage_set(65001);
 	ezthumb(text, gui->sysopt);
 	smm_codepage_reset();
+
+	gui->sysopt->pre_dura = 0;
+	gui->sysopt->pre_seek = 0;
+	gui->sysopt->pre_br = 0;
 	return IUP_DEFAULT;
 }
 
@@ -878,12 +895,12 @@ static int ezgui_show_duration(EZGUI *gui, int state)
 	static	SMM_TIME	last;
 	static	int		zpos;
 
-	if (state == EN_DURA_BEGIN) {
+	if (state == EN_OPEN_BEGIN) {
 		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
 		smm_time_get_epoch(&last);
 		IupSetInt(gui->prog_wait, "VALUE", 0);
 		IupSetInt(gui->ps_zbox, "VALUEPOS", 2);	/* show progress */
-	} else if (state == EN_DURA_END) {
+	} else if (state == EN_OPEN_END) {
 		IupSetInt(gui->ps_zbox, "VALUEPOS", zpos);
 	} else if (smm_time_diff(&last) > 50) {
 		/* update the progress bar per 50ms */
@@ -926,9 +943,9 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 		}
 		ezgui_show_progress(gui, param, param);
 		break;
-	case EN_DURA_BEGIN:
-	case EN_DURA_CURRENT:
-	case EN_DURA_END:
+	case EN_OPEN_BEGIN:
+	case EN_OPEN_GOING:
+	case EN_OPEN_END:
 		ezgui_show_duration(gui, eid);
 		break;
 	default:

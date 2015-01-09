@@ -74,9 +74,9 @@
 #define EN_FRAME_EXCEPTION	1026
 #define EN_EVENT_PASSTHROUGH	1027
 #define EN_SKIP_EXIST		1028
-#define EN_DURA_BEGIN		1030	/* start to check the duration */
-#define EN_DURA_CURRENT		1031	/* checking duration in progress */
-#define EN_DURA_END		1032	/* end of the checking */
+#define EN_OPEN_BEGIN		1030	/* start to check the duration */
+#define EN_OPEN_GOING		1031	/* checking duration in progress */
+#define EN_OPEN_END		1032	/* end of the checking */
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -406,6 +406,9 @@ typedef	struct	{
 
 	int	time_from;	/* from where to take shots (ms) */
 	int	time_to;	/* to where the process end (ms) */
+	EZTIME	pre_dura;	/* preset duration in ms */
+	int	pre_seek;	/* preset seek flag */
+	int	pre_br;		/* preset bitrate */
 
 	int	vs_user;	/* specify the stream index */
 	int	key_ripno;	/* specify the number when ripping keyframes*/
