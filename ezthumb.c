@@ -82,6 +82,7 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int video_seeking(EZVID *vidx, int64_t dts);
+static int video_display_ar(AVStream *stream, AVRational *dar);
 static char *video_media_video(AVStream *stream, char *buffer);
 static char *video_media_audio(AVStream *stream, char *buffer);
 static char *video_media_subtitle(AVStream *stream, char *buffer);
@@ -1135,7 +1136,8 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	 * unwanted files. For example, in guidev branch, the ezthumb.o
 	 * was treated as a 3 seconds long MP3 file. Thus I set another
 	 * filter to check the media's resolution. */
-	if (!vidx->vstream->codec->width || !vidx->vstream->codec->height) {
+	//if (!vidx->vstream->codec->width || !vidx->vstream->codec->height) {
+	if (!vidx->codecx->width || !vidx->codecx->height) {
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
@@ -1149,14 +1151,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	vidx->streams  = vidx->formatx->nb_streams;
 
 	/* 20120720 Apply the AR correction */
-	/* calculate the original video height by AR correction */
-	vidx->ar_height = vidx->codecx->height;
-	if (vidx->codecx->sample_aspect_ratio.num &&
-			vidx->codecx->sample_aspect_ratio.den) {
-		vidx->ar_height = vidx->codecx->height *
-			vidx->codecx->sample_aspect_ratio.den /
-			vidx->codecx->sample_aspect_ratio.num;
-	}
+	vidx->ar_height = video_display_ar(vidx->vstream, NULL);
 
 	/* find out the clip duration in millisecond */
 	/* 20110301: the still images are acceptable by the ffmpeg library
@@ -1403,8 +1398,14 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 
 
 	/* allocate the swscale structure for scaling the screen image */
-	vidx->swsctx = sws_getContext(vidx->codecx->width, 
+	/*vidx->swsctx = sws_getContext(vidx->codecx->width, 
 			vidx->codecx->height, vidx->codecx->pix_fmt, 
+			image->dst_width, image->dst_height,
+			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);*/
+	vidx->swsctx = sws_getContext(vidx->width, 
+			vidx->height > vidx->ar_height ? 
+					vidx->height : vidx->ar_height,
+			vidx->codecx->pix_fmt, 
 			image->dst_width, image->dst_height,
 			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
 	if (vidx->swsctx == NULL) {
@@ -2175,7 +2176,7 @@ static int video_seek_challenge(EZVID *vidx)
 static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 {
 	return sws_scale(vidx->swsctx, (const uint8_t * const *)frame->data,
-			frame->linesize, 0, vidx->codecx->height, 
+			frame->linesize, 0, vidx->height, /*vidx->codecx->height, */
 			vidx->swsframe->data, vidx->swsframe->linesize);
 }
 
@@ -2621,9 +2622,40 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 	return 0;
 }
 
+/* FIXME: It's quite confusing that FFMPEG stores sample aspect ratio
+ * randomly. Sometimes it stores in the stream structure, somtimes
+ * in the stream->codec */
+static int video_display_ar(AVStream *stream, AVRational *dar)
+{
+	AVRational	*sar, tmp;
+	int		ar_height;
+
+	sar = &stream->sample_aspect_ratio;
+	if (!sar->num || !sar->den) {
+		sar = &stream->codec->sample_aspect_ratio;
+	}
+	if (dar == NULL) {
+		dar = &tmp;
+	}
+
+	/* convert the sample aspect ratio to display aspect ratio */
+	av_reduce(&dar->num, &dar->den, stream->codec->width * sar->num,
+			stream->codec->height * sar->den, 1024 * 1024);
+
+	/* calculate the display video height by DAR correction */
+	ar_height = stream->codec->height;
+	if (dar->num && dar->den) {
+		ar_height = stream->codec->width * dar->den / dar->num;
+	}
+	/*printf("SAR=%d:%d DAR=%d:%d Height=%d\n", 
+			sar->num, sar->den, dar->num, dar->den, ar_height);*/
+	return ar_height;
+}
+
 static char *video_media_video(AVStream *stream, char *buffer)
 {
 	AVCodec	*xcodec;
+	AVRational	dar;
 	char	tmp[128];
 
 	xcodec = avcodec_find_decoder(stream->codec->codec_id);
@@ -2635,10 +2667,10 @@ static char *video_media_video(AVStream *stream, char *buffer)
 
 	sprintf(tmp, ": %dx%d ", stream->codec->width, stream->codec->height);
 	strcat(buffer, tmp);
-	if (stream->codec->sample_aspect_ratio.num) {
-		sprintf(tmp, "AR %d:%d ", 
-				stream->codec->sample_aspect_ratio.num,
-				stream->codec->sample_aspect_ratio.den);
+
+	video_display_ar(stream, &dar);
+	if (dar.num && dar.den) {
+		sprintf(tmp, "DAR %d:%d ", dar.num, dar.den);
 		strcat(buffer, tmp);
 	}
 
@@ -4278,7 +4310,7 @@ static int dump_stream_common(AVStream *stream, int sidx)
 static int dump_video_context(AVCodecContext *codec)
 {
 	EDB_SHOW(("  Video Codec : %s; %dx%d+%d; Time Base: %d/%d; "
-				"BR=%d BF=%d; AR: %d/%d%s\n",
+				"BR=%d BF=%d; AR: %d/%d\n",
 			id_lookup(id_pix_fmt, codec->pix_fmt),
 			codec->width, codec->height, 
 			codec->frame_number, 
@@ -4286,8 +4318,7 @@ static int dump_video_context(AVCodecContext *codec)
 			codec->bit_rate, 
 			codec->has_b_frames,
 			codec->sample_aspect_ratio.num,
-			codec->sample_aspect_ratio.den,
-			(0==codec->sample_aspect_ratio.num) ? "(-)" : "(+)"));
+			codec->sample_aspect_ratio.den));
 	return 0;
 }
 

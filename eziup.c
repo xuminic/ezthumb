@@ -327,6 +327,7 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	EZGUI	*gui = ezgui_get_global(ih);
 	int	csize;
 
+	(void)height;
 	/*printf("size %dx%d\n", width, height);
 	xui_get_size(ezgui_get_global(ih)->list_fname, "RASTERSIZE", NULL);
 	xui_get_size(ezgui_get_global(ih)->list_fname, "CHARSIZE", NULL);
@@ -389,12 +390,13 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 
 	/* grouping with the work area, a group of lists inside a scroll box */
-	gui->sbox_lists = IupScrollBox(ezgui_page_main_workarea(gui));
+	sbox = IupScrollBox(ezgui_page_main_workarea(gui));
+	//gui->sbox_lists = IupScrollBox(ezgui_page_main_workarea(gui));
 	//IupSetAttribute(gui->sbox_lists, "SCROLLBAR", "VERTICAL");
 	//IupSetCallback(gui->sbox_lists, "SCROLL_CB", 
 	//		(Icallback) ezgui_event_main_scroll);
 
-	vbox = IupVbox(gui->sbox_lists, hbox, NULL);
+	vbox = IupVbox(sbox, hbox, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
@@ -591,11 +593,12 @@ static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 	EZMEDIA	*minfo = NULL;
 	CSCLNK	*node;
 
+	(void)text;
 	if (gui->magic != EZGUI_MAGIC) {
 		gui = ezgui_get_global(ih);
 	}
 
-	printf("Action %s: %p %d\n", text, ih, item);
+	//printf("Action %s: %p %d\n", text, ih, item);
 	gui->list_idx = item;	/* store the current index */
 
 	node = csc_cdl_goto(gui->list_cache, item - 1);
@@ -604,15 +607,15 @@ static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 		gui->sysopt->pre_dura = minfo->duration;
 		gui->sysopt->pre_seek = minfo->seekable;
 		gui->sysopt->pre_br = minfo->bitrates;
-	}
 	
-	smm_codepage_set(65001);
-	ezthumb(text, gui->sysopt);
-	smm_codepage_reset();
+		smm_codepage_set(65001);
+		ezthumb(minfo->fname, gui->sysopt);
+		smm_codepage_reset();
 
-	gui->sysopt->pre_dura = 0;
-	gui->sysopt->pre_seek = 0;
-	gui->sysopt->pre_br = 0;
+		gui->sysopt->pre_dura = 0;
+		gui->sysopt->pre_seek = 0;
+		gui->sysopt->pre_br = 0;
+	}
 	return IUP_DEFAULT;
 }
 
