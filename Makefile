@@ -31,10 +31,11 @@ RM	= rm -f
 
 IUPLIB	= $(IUP)/lib/mingw4
 EXTDIR	= ./libmingw
+EXTLIB	= $(CSOUP)/libcsoup.a
 GUILIB	+= $(WINCON) -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
 SYSINC	= -I$(EXTDIR)/ffmpeg/include -I$(EXTDIR)/include
-LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib
+LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib -L$(CSOUP)
 SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL #For linking static libgd 
 endif
 
@@ -105,7 +106,7 @@ $(OBJDIR)/%.o: %.c
 
 all: objdir $(EXTLIB) $(TARGET)
 
-$(TGTGUI): $(OBJGUI) $(OBJS)
+$(TGTGUI): $(OBJGUI) $(OBJS) 
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) $(GUILIB)
 
 $(TGTCON): $(OBJCON) $(OBJS)
