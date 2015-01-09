@@ -842,7 +842,7 @@ static void iListGetNaturalItemsSize(Ihandle *ih, int *w, int *h)
     iupdrvListAddItemSpace(ih, h);  /* this independs from spacing */
 
     //*h += 2*ih->data->spacing;  /* this will be multiplied by the number of lines */
-    /* 20140505 AX: Temporary solution to go around the IupList too short issue */
+    /* 20140505 A.Xuming: Temporary solution to go around the IupList too short issue */
     *h += 2*ih->data->spacing + 1;  /* this will be multiplied by the number of lines */
     *w += 2*ih->data->spacing;  /* include also horizontal spacing */
 

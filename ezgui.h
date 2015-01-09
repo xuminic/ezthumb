@@ -151,12 +151,14 @@ typedef	struct		{
 	Ihandle		*list_length;	/* the list control of media length */
 	Ihandle		*list_resolv;	/* the list control of resolution */
 	Ihandle		*list_prog;	/* the list control of progress */
+	Ihandle		*sbox_lists;	/* the scrollbox of list controls */
 	int		list_idx;	/* current active item start from 1 */
 	int 		list_count;	/* total items in the list */
 	CSCLNK		*list_cache;
 
 	/* Main Page: Progress Bar and Buttons */
-	Ihandle		*prog_bar;
+	Ihandle		*prog_bar;	/* progress bar of current file */
+	Ihandle		*prog_wait;	/* progress when waiting */
 	Ihandle		*stat_bar;
 	Ihandle		*ps_zbox;
 	Ihandle		*button_del;	/* the delete button on main page */
@@ -215,6 +217,10 @@ typedef	struct	{
 	char	vidlen[16];
 	char	resolv[16];
 	char	progr[8];
+	EZTIME	duration;
+	int	seekable;
+	int	bitrates;
+	char	*showing;
 	char	fname[1];
 } EZMEDIA;
 

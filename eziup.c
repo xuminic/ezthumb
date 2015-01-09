@@ -58,12 +58,16 @@ static	char	*list_format[] = {
 
 static int ezgui_create_window(EZGUI *gui);
 static EZGUI *ezgui_get_global(Ihandle *any);
+static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
 
 static Ihandle *ezgui_page_main(EZGUI *gui);
 static int ezgui_page_main_reset(EZGUI *gui);
 static Ihandle *ezgui_page_main_workarea(EZGUI *gui);
 static Ihandle *ezgui_page_main_button(EZGUI *gui);
 static void *ezgui_page_main_file_append(EZGUI *gui, char *fname);
+static int ezgui_list_entry(EZGUI *gui, int usize, int n, EZMEDIA *minfo);
+static int ezgui_list_temporary(EZGUI *gui, int usize, int n, char *fname);
+static int ezgui_list_refresh(EZGUI *gui, int usize);
 static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text);
 static int ezgui_event_main_dropfiles(Ihandle *ih, 
 		const char* filename, int num, int x, int y);
@@ -97,6 +101,7 @@ static Ihandle *xui_label(char *label, char *size, char *font);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
 static int xui_list_get_idx(Ihandle *ih);
 static int xui_text_get_number(Ihandle *ih);
+static int xui_get_size(Ihandle *ih, char *attr, int *height);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
 static Ihandle *xui_text_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext);
@@ -280,7 +285,6 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetAttribute(gui->dlg_open, "MULTIPLEFILES", "YES");
 	IupSetAttribute(gui->dlg_open, "EXTFILTER", gui->filefilter);
 
-
 	tabs = IupTabs(ezgui_page_main(gui), 
 			ezgui_page_setup(gui), IupVbox(IupFill(), NULL), NULL);
 	IupSetAttribute(tabs, "TABTITLE0", "Generate");
@@ -298,6 +302,8 @@ static int ezgui_create_window(EZGUI *gui)
 	/* bind the GUI structure into the current dialog so it can be accessed
 	 * in its sub-controls */
 	IupSetAttribute(gui->dlg_main, EZGUI_INST, (char*) gui);
+	IupSetCallback(gui->dlg_main, "RESIZE_CB",
+			(Icallback) ezgui_event_window_resize);
 	IupShow(gui->dlg_main);
 
 	ezgui_page_setup_reset(gui);
@@ -316,6 +322,36 @@ static EZGUI *ezgui_get_global(Ihandle *any)
 	return NULL;
 }
 
+static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
+{
+	EZGUI	*gui = ezgui_get_global(ih);
+	int	csize;
+
+	/*printf("size %dx%d\n", width, height);
+	xui_get_size(ezgui_get_global(ih)->list_fname, "RASTERSIZE", NULL);
+	xui_get_size(ezgui_get_global(ih)->list_fname, "CHARSIZE", NULL);
+	xui_get_size(ezgui_get_global(ih)->list_fname, "SIZE", NULL);*/
+
+	/* find the client size of the list control of file names */
+	width -= 360;	/* this magic number is the sum-up lenght of 
+			   filesize/videolength/resolution/progress */
+	/* convert it to the user size */
+	csize = xui_get_size(gui->list_fname, "CHARSIZE", NULL);
+	xui_get_size(gui->list_fname, "SIZE", NULL);
+	width = width / csize * 4;
+	
+	/* this magic number was defined by the default size of the 
+	 * list control of file names */
+	if (width < 159) {
+		width = 159;
+	}
+	//printf("usersize = %d\n", width);
+
+	ezgui_list_refresh(gui, width);
+	return 0;
+}
+
+
 
 /****************************************************************************
  * Page Main 
@@ -324,19 +360,27 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 {
 	Ihandle	*vbox, *hbox, *sbox;
 
-	/* the unique progress bar */
+	/* the progress bar of the current processing file */
 	gui->prog_bar = IupProgressBar();
 	IupSetAttribute(gui->prog_bar, "EXPAND", "HORIZONTAL");
 	IupSetAttribute(gui->prog_bar, "DASHED", "YES");
 	IupSetAttribute(gui->prog_bar, "SIZE", "x10");
 
+	/* the progress bar of the task list */
+	gui->prog_wait = IupProgressBar();
+	IupSetAttribute(gui->prog_wait, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(gui->prog_wait, "DASHED", "YES");
+	IupSetAttribute(gui->prog_wait, "SIZE", "x10");
+	IupSetAttribute(gui->prog_wait, "MARQUEE", "YES");
+
 	/* the status bar */
 	gui->stat_bar = IupLabel("");
 	IupSetAttribute(gui->stat_bar, "EXPAND", "HORIZONTAL");
 
-	/* status bar and progress bar share the same conner. normally it
+	/* status bar and progress bars share the same conner. normally it
 	 * display the status until in the running mode */
-	gui->ps_zbox = IupZbox(gui->stat_bar, gui->prog_bar, NULL);
+	gui->ps_zbox = IupZbox(gui->stat_bar, gui->prog_bar, 
+			gui->prog_wait, NULL);
 	IupSetAttribute(gui->ps_zbox, "ALIGNMENT", "ACENTER");
 
 	/* progres bar and buttons are in the same bottom line */
@@ -345,9 +389,12 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 
 	/* grouping with the work area, a group of lists inside a scroll box */
-	sbox = IupScrollBox(ezgui_page_main_workarea(gui));
+	gui->sbox_lists = IupScrollBox(ezgui_page_main_workarea(gui));
+	//IupSetAttribute(gui->sbox_lists, "SCROLLBAR", "VERTICAL");
+	//IupSetCallback(gui->sbox_lists, "SCROLL_CB", 
+	//		(Icallback) ezgui_event_main_scroll);
 
-	vbox = IupVbox(sbox, hbox, NULL);
+	vbox = IupVbox(gui->sbox_lists, hbox, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
@@ -433,7 +480,12 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 	EZVID	vobj;
 	EZMEDIA	*minfo;
 	CSCLNK	*node;
-	int	len;
+	int	len, usize, lnext;
+
+	/* preset the filename to make it look better */
+	lnext = gui->list_count + 1;
+	usize = xui_get_size(gui->list_fname, "SIZE", NULL);
+	ezgui_list_temporary(gui, usize, lnext, fname);
 
 	/* 20120903 Bugfix: set the codepage to utf-8 before calling
 	 * ezthumb core. In Win32 version, the ezthumb core uses the 
@@ -445,12 +497,14 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 	if (ezinfo(fname, gui->sysopt, &vobj) != EZ_ERR_NONE) {
 		smm_codepage_reset();
 		/* FIXME: disaster control */
+		IupSetAttributeId(gui->list_fname,  "", lnext, "");
 		return NULL;
 	}
 	smm_codepage_reset();
 
-	len = strlen(fname) + sizeof(EZMEDIA) + 4;
+	len = strlen(fname) * 2 + sizeof(EZMEDIA) + 8;
 	if ((node = csc_cdl_list_alloc_tail(&gui->list_cache, len)) == NULL) {
+		IupSetAttributeId(gui->list_fname,  "", lnext, "");
 		return NULL;
 	}
 	minfo = (EZMEDIA *) csc_cdl_payload(node);
@@ -459,42 +513,106 @@ static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
 	IupSetAttribute(gui->button_run, "ACTIVE", "YES");
 
 	strcpy(minfo->fname, fname);
+	minfo->showing = minfo->fname + strlen(minfo->fname) + 1;
+	minfo->duration = vobj.duration;
+	minfo->seekable = vobj.seekable;
+	minfo->bitrates = vobj.bitrates;
+
 	meta_timestamp(vobj.duration, 0, minfo->vidlen);
 	meta_filesize(vobj.filesize, minfo->fsize);
 	sprintf(minfo->resolv, "%dx%d", vobj.width, vobj.height);
 	sprintf(minfo->progr, "0%%");
 
+	//IupSetAttributeId(gui->list_fname,  "", lnext, minfo->fname);
+	ezgui_list_entry(gui, usize, lnext, minfo);
+	IupSetAttributeId(gui->list_size,   "", lnext, minfo->fsize);
+	IupSetAttributeId(gui->list_length, "", lnext, minfo->vidlen);
+	IupSetAttributeId(gui->list_resolv, "", lnext, minfo->resolv);
+	IupSetAttributeId(gui->list_prog,   "", lnext, minfo->progr);
+
 	/* increase the list index first because the IUP list control
 	 * starts from 1 */
 	gui->list_count++;
 
-	IupSetAttributeId(gui->list_fname,  "", gui->list_count, minfo->fname);
-	IupSetAttributeId(gui->list_size,   "", gui->list_count, minfo->fsize);
-	IupSetAttributeId(gui->list_length, "", gui->list_count, minfo->vidlen);
-	IupSetAttributeId(gui->list_resolv, "", gui->list_count, minfo->resolv);
-	IupSetAttributeId(gui->list_prog,   "", gui->list_count, minfo->progr);
-
 	IupFlush();
-	//if (gui->dlg_main) {
-	//	IupRedraw(gui->dlg_main, 1);
-	//}
+	/*if (gui->dlg_main) {
+		IupRedraw(gui->dlg_main, 1);
+	}*/
+
 	return minfo;
+}
+
+static int ezgui_list_entry(EZGUI *gui, int usize, int n, EZMEDIA *minfo)
+{
+	int	len;
+
+	usize = usize / 4 - 3;
+	len = strlen(minfo->fname);
+
+	if (len < usize) {
+		strcpy(minfo->showing, minfo->fname);
+	} else {
+		strcpy(minfo->showing, "... ");
+		strcat(minfo->showing, &minfo->fname[len - usize + 4]);
+	}
+
+	IupSetAttributeId(gui->list_fname, "",  n, minfo->showing);
+	return 0;
+}
+
+static int ezgui_list_temporary(EZGUI *gui, int usize, int n, char *fname)
+{
+	int	len;
+
+	usize = usize / 4 - 3;
+	len = strlen(fname);
+	if (len > usize) {
+		fname += len - usize + 3;
+	}
+	IupSetAttributeId(gui->list_fname, "",  n, fname);
+	return 0;
+}
+
+static int ezgui_list_refresh(EZGUI *gui, int usize)
+{
+	CSCLNK	*node;
+	int	i;
+
+	for (i = 1, node = gui->list_cache; node; 
+			i++, node = csc_cdl_next(gui->list_cache, node)) {
+		ezgui_list_entry(gui, usize, i, (EZMEDIA*) csc_cdl_payload(node));
+	}
+	return 0;
 }
 
 static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 {
 	EZGUI	*gui = (EZGUI *) ih;
+	EZMEDIA	*minfo = NULL;
+	CSCLNK	*node;
 
 	if (gui->magic != EZGUI_MAGIC) {
 		gui = ezgui_get_global(ih);
 	}
 
-	//printf("Action %s: %p %d\n", text, ih, item);
+	printf("Action %s: %p %d\n", text, ih, item);
 	gui->list_idx = item;	/* store the current index */
+
+	node = csc_cdl_goto(gui->list_cache, item - 1);
+	if (node) {
+		minfo = (EZMEDIA*) csc_cdl_payload(node);
+		gui->sysopt->pre_dura = minfo->duration;
+		gui->sysopt->pre_seek = minfo->seekable;
+		gui->sysopt->pre_br = minfo->bitrates;
+	}
 	
 	smm_codepage_set(65001);
 	ezthumb(text, gui->sysopt);
 	smm_codepage_reset();
+
+	gui->sysopt->pre_dura = 0;
+	gui->sysopt->pre_seek = 0;
+	gui->sysopt->pre_br = 0;
 	return IUP_DEFAULT;
 }
 
@@ -751,19 +869,45 @@ static int ezgui_remove_item(EZGUI *gui, int idx)
 
 static int ezgui_show_progress(EZGUI *gui, int cur, int range)
 {
+	static	int	zpos;
+
 	if (cur == 0) {		/* begin to display progress */
+		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
 		IupSetInt(gui->prog_bar, "MIN", 0);
-		IupSetInt(gui->prog_bar, "MAX", range);
+		//IupSetInt(gui->prog_bar, "MAX", range);
+		IupSetInt(gui->prog_bar, "VALUE", 0);
 		IupSetInt(gui->ps_zbox, "VALUEPOS", 1);	/* show progress */
-		IupFlush();
 	} else if (cur == range) {	/* end of display */
 		IupSetInt(gui->prog_bar, "VALUE", range);
-		smm_sleep(0, 500000);
-		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 		IupFlush();
+		//smm_sleep(0, 500000);
+		IupSetInt(gui->ps_zbox, "VALUEPOS", zpos);
 	} else if (cur < range) {
+		IupSetInt(gui->prog_bar, "MAX", range);
 		IupSetInt(gui->prog_bar, "VALUE", cur);
 	}
+	IupFlush();
+	return 0;
+}
+
+static int ezgui_show_duration(EZGUI *gui, int state)
+{
+	static	SMM_TIME	last;
+	static	int		zpos;
+
+	if (state == EN_OPEN_BEGIN) {
+		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
+		smm_time_get_epoch(&last);
+		IupSetInt(gui->prog_wait, "VALUE", 0);
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 2);	/* show progress */
+	} else if (state == EN_OPEN_END) {
+		IupSetInt(gui->ps_zbox, "VALUEPOS", zpos);
+	} else if (smm_time_diff(&last) > 50) {
+		/* update the progress bar per 50ms */
+		smm_time_get_epoch(&last);
+		IupSetInt(gui->prog_wait, "VALUE", 1);
+	}
+	IupFlush();
 	return 0;
 }
 
@@ -777,9 +921,7 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 	(void)b;
 	switch (eid) {
 	case EN_PROC_BEGIN:
-		IupSetInt(gui->prog_bar, "MIN", 0);
-		IupSetInt(gui->prog_bar, "VALUE", 0);
-		IupSetInt(gui->ps_zbox, "VALUEPOS", 1);	/* show progress */
+		ezgui_show_progress(gui, 0, 0);	/* show/reset progress bar */
 		break;
 	case EN_PROC_CURRENT:
 		node = csc_cdl_goto(gui->list_cache, gui->list_idx - 1);
@@ -789,8 +931,7 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 			IupSetAttributeId(gui->list_prog, "", 
 					gui->list_idx, minfo->progr);
 		}
-		IupSetInt(gui->prog_bar, "MAX", param);
-		IupSetInt(gui->prog_bar, "VALUE", opt);
+		ezgui_show_progress(gui, opt, param);
 		break;
 	case EN_PROC_END:
 		node = csc_cdl_goto(gui->list_cache, gui->list_idx - 1);
@@ -800,14 +941,16 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 			IupSetAttributeId(gui->list_prog, "", 
 					gui->list_idx, minfo->progr);
 		}
-		IupSetInt(gui->prog_bar, "VALUE", param);
-		smm_sleep(0, 500000);
-		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
+		ezgui_show_progress(gui, param, param);
+		break;
+	case EN_OPEN_BEGIN:
+	case EN_OPEN_GOING:
+	case EN_OPEN_END:
+		ezgui_show_duration(gui, eid);
 		break;
 	default:
 		return EN_EVENT_PASSTHROUGH;
 	}
-	IupFlush();
 	return eid;
 }
 
@@ -1293,6 +1436,26 @@ static int xui_list_get_idx(Ihandle *ih)
 static int xui_text_get_number(Ihandle *ih)
 {
 	return (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 0);
+}
+
+static int xui_get_size(Ihandle *ih, char *attr, int *height)
+{
+	char	*ssize;
+	int	width;
+
+	if ((ssize = IupGetAttribute(ih, attr)) == NULL) {
+		return -1;
+	}
+	//printf("xui_get_size: %s = %s\n", attr, ssize);
+
+	width = (int) strtol(ssize, NULL, 10);
+
+	if ((ssize = strchr(ssize, 'x')) != NULL) {
+		if (height) {
+			*height = (int) strtol(++ssize, NULL, 10);
+		}
+	}
+	return width;
 }
 
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
