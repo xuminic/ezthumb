@@ -18,6 +18,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+/* Deprecated function tracker:
+    avcodec_alloc_frame(): LIBAVCODEC_VERSION_INT == AV_VERSION_INT(53, 10, 0)
+    avcodec_alloc_frame(): LIBAVCODEC_VERSION_INT == AV_VERSION_INT(53, 35, 0)
+    av_frame_alloc():
+
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1359,7 +1365,7 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 	int	size;
 
 	/* allocate a reusable video frame structure */
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
 	if ((vidx->fgroup[0].frame = av_frame_alloc()) == NULL) {
 #else
 	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
@@ -1367,7 +1373,7 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
 	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
 #else
 	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
@@ -1395,7 +1401,7 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
 	if ((vidx->swsframe = av_frame_alloc()) == NULL) {
 #else
 	if ((vidx->swsframe = avcodec_alloc_frame()) == NULL) {
@@ -1428,7 +1434,7 @@ static int video_disconnect(EZVID *vidx)
 		vidx->swsbuffer = NULL;
 	}
 	if (vidx->swsframe) {
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
 		av_frame_free(vidx->swsframe);
 #else
 		av_free(vidx->swsframe);
@@ -1440,7 +1446,7 @@ static int video_disconnect(EZVID *vidx)
 		vidx->swsctx = NULL;
 	}
 	if (vidx->fgroup[1].frame) {
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
 		av_frame_free(vidx->fgroup[1].frame);
 #else
 		av_free(vidx->fgroup[1].frame);
@@ -1448,7 +1454,7 @@ static int video_disconnect(EZVID *vidx)
 		vidx->fgroup[1].frame = NULL;
 	}
 	if (vidx->fgroup[0].frame) {
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
 		av_frame_free(vidx->fgroup[0].frame);
 #else
 		av_free(vidx->fgroup[0].frame);
