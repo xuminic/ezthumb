@@ -1774,6 +1774,7 @@ static EZTIME video_duration(EZVID *vidx)
 	int	ref_err, shots, key_num;
 
 	video_timing(vidx, EZ_PTS_CLEAR);
+	eznotify(vidx->sysopt, EN_DURA_BEGIN, 0, 0, vidx);
 
 	/* find the duration in the header */
 	vidx->seekable = ENX_SEEK_UNKNOWN;
@@ -1878,6 +1879,7 @@ static EZTIME video_duration(EZVID *vidx)
 	}
 	vidx->bitrates = (int)(vidx->filesize * 8000 / vidx->duration);
 
+	eznotify(vidx->sysopt, EN_DURA_END, 0, 0, vidx);
 	eznotify(vidx->sysopt, EN_DURATION, 0,
 			smm_time_diff(&vidx->tmark), vidx);
 	EDB_PROG(("video_duration: %lld S:%d BR:%d (%d ms)\n", 
@@ -1906,6 +1908,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 		if ((rdts /= 2) == 0) {
 			break;
 		}
+		eznotify(vidx->sysopt, EN_DURA_CURRENT, 0, 0, vidx);
 		video_seeking(vidx, base + rdts);
 		/* 20130915 In the second Sjako test, I found av_read_frame() 
 		 * always return a packet right after an av_seek, even it's
@@ -1933,6 +1936,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 	while (video_load_packet(vidx, &packet) > 0) {
 		recent = packet.dts;
 		av_free_packet(&packet);
+		eznotify(vidx->sysopt, EN_DURA_CURRENT, 0, 0, vidx);
 	}
 	if ((recent -= vidx->dts_offset) <= 0) {
 		EDB_PROG(("video_duration_quickscan: failed\n"));
@@ -2193,6 +2197,7 @@ static int64_t video_statistics(EZVID *vidx)
 			mestat[i].dts_last = packet.dts;
 		}
 		av_free_packet(&packet);
+		eznotify(vidx->sysopt, EN_DURA_CURRENT, 0, 0, vidx);
 	}
 	myntf.varg1 = mestat;
 	myntf.varg2 = vidx;

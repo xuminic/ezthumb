@@ -19,7 +19,7 @@ SRCS	= main.c fixtoken.c memdump.c slog.c crc.c fontpath.c config.c \
 TARGET	= csoup
 
 
-.PHONY: all clean $(TARGET)
+.PHONY: all clean
 all: $(TARGET)
 
 $(TARGET): $(SRCS) main_define.h
@@ -27,7 +27,7 @@ $(TARGET): $(SRCS) main_define.h
 
 main_define.h: mkclicmd
 	grep "extern.*struct.*clicmd" $(SRCS) | cut -d: -f2 |tr -d '\r' > $@
-	mkclicmd $@
+	./mkclicmd $@
 
 mkclicmd: mkclicmd.c
 	$(CC) $(CFLAGS) -L.. -o $@ $< -lcsoup
