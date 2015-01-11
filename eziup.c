@@ -328,8 +328,8 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	int	csize;
 
 	(void)height;
-	/*printf("size %dx%d\n", width, height);
-	xui_get_size(ezgui_get_global(ih)->list_fname, "RASTERSIZE", NULL);
+	
+	/*xui_get_size(ezgui_get_global(ih)->list_fname, "RASTERSIZE", NULL);
 	xui_get_size(ezgui_get_global(ih)->list_fname, "CHARSIZE", NULL);
 	xui_get_size(ezgui_get_global(ih)->list_fname, "SIZE", NULL);*/
 
@@ -346,8 +346,7 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	if (width < 159) {
 		width = 159;
 	}
-	//printf("usersize = %d\n", width);
-
+	EDB_MODL(("EVT_RESIZE: %dx%d usersize = %d\n", width, height, width));
 	ezgui_list_refresh(gui, width);
 	return 0;
 }
@@ -598,7 +597,7 @@ static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
 		gui = ezgui_get_global(ih);
 	}
 
-	//printf("Action %s: %p %d\n", text, ih, item);
+	EDB_DEBUG(("EVT_Action %d: %p %s\n", item, ih, text));
 	gui->list_idx = item;	/* store the current index */
 
 	node = csc_cdl_goto(gui->list_cache, item - 1);
@@ -628,7 +627,8 @@ static int ezgui_event_main_dropfiles(Ihandle *ih,
 		gui = ezgui_get_global(ih);
 	}
 
-	printf("dropfiles: fname=%s number=%d %dx%d\n", filename, num, x, y);
+	EDB_DEBUG(("EVT_Dropfiles: fname=%s number=%d %dx%d\n",
+				filename, num, x, y));
 	ezgui_page_main_file_append(gui, (char*) filename);
 	return IUP_DEFAULT;
 }
@@ -642,8 +642,9 @@ static int ezgui_event_main_multi_select(Ihandle *ih, char *value)
 		gui = ezgui_get_global(ih);
 	}
 
-	//printf("multi_select: %s\n", value);
-	//printf("value=%s\n", IupGetAttribute(gui->list_fname, "VALUE"));
+	EDB_DEBUG(("EVT_Multi_select: %s\n", value));
+	EDB_DEBUG(("List value=%s\n", 
+				IupGetAttribute(gui->list_fname, "VALUE")));
 	
 	/* the parameter 'value' is useless. grab list myself */
 	value = IupGetAttribute(gui->list_fname, "VALUE");
@@ -668,7 +669,8 @@ static int ezgui_event_main_moused(Ihandle *ih,
 		gui = ezgui_get_global(ih);
 	}
 
-	//printf("mouse: %d %d %dx%d %s\n", button, pressed, x, y, status);
+	EDB_MODL(("EVT_Mouse: %d %d %dx%d %s\n", 
+				button, pressed, x, y, status));
 	if (pressed) {	/* only act when button is released */
 		return IUP_DEFAULT;
 	}
@@ -709,10 +711,10 @@ static int ezgui_event_main_add(Ihandle *ih)
 	 * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
 	 * 			lan_ke_er.flv|Powered_by_Discuz.flv|
 	 * Last  DIRECTORY: /home/xum1/dwhelper0 */
-	/*printf("Open File VALUE: %s\n", 
-			IupGetAttribute(gui->dlg_open, "VALUE"));
-	printf("Last  DIRECTORY: %s\n", 
-			IupGetAttribute(gui->dlg_open, "DIRECTORY"));*/
+	EDB_DEBUG(("Open File VALUE: %s\n", 
+			IupGetAttribute(gui->dlg_open, "VALUE")));
+	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
+			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
 	/* duplicate the path and filename list */
 	flist = csc_strcpy_alloc(IupGetAttribute(gui->dlg_open, "VALUE"), 16);
 	/* find out how many files is in */
@@ -779,9 +781,9 @@ static int ezgui_event_main_remove(Ihandle *ih)
 		gui = ezgui_get_global(ih);
 	}
 
-	//printf("value=%s\n", IupGetAttribute(gui->list_fname, "VALUE"));
 	while (1) {
 		value = IupGetAttribute(gui->list_fname, "VALUE");
+		EDB_PROG(("EVT_Remove: %s\n", value));
 		for (i = 0; value[i]; i++) {
 			if (value[i] == '+') {
 				ezgui_remove_item(gui, i+1);
@@ -855,7 +857,7 @@ static int ezgui_remove_item(EZGUI *gui, int idx)
 	char	*fname;
 
 	fname = IupGetAttributeId(gui->list_fname, "",  idx);
-	printf("Remove %s\n", fname);
+	EDB_INFO(("Removing: %s\n", fname));
 
 	IupSetInt(gui->list_fname, "REMOVEITEM", idx);
 	IupSetInt(gui->list_size, "REMOVEITEM", idx);
@@ -1253,11 +1255,11 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 	}
 	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY, val);
 	
-	/*
-	printf("SETUP: Grid=%d Zoom=%d Dur=%d Fmt=%d JPG=%d GIFA=%d Tra=%s\n",
+	EDB_DEBUG(("EVT_SETUP: Grid=%d Zoom=%d Dur=%d Fmt=%d JPG=%d "
+				"GIFA=%d Tra=%s\n",
 			gui->grid_idx, gui->zoom_idx, gui->dfm_idx, 
-			gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr, val);
-	*/
+			gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr, val));
+
 	/* FIXME: not quite readible */
 	switch (gui->grid_idx) {
 	case 0:

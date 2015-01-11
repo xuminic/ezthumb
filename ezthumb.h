@@ -555,6 +555,7 @@ typedef	struct	_EzVid	{
 	EZFRM		fgroup[2];
 	int		fnow;
 	unsigned	fdec;
+	int		fkey;		/* keyframe started flag */
 
 	/*** runtime variables in each session */
 	SMM_TIME	tmark;		/* the beginning timestamp */

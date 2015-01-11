@@ -30,8 +30,8 @@
 #include <inttypes.h>
 #include <sys/time.h>
 
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
 
 #include "ezthumb.h"
 #include "id_lookup.h"
@@ -1571,6 +1571,7 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 	if (dts < 0) {
 		packet->dts = lastdts;
 	}
+	vidx->fkey = 0;	/* reset the key frame decoding flag */
 	return dts;
 }
 
@@ -1588,6 +1589,11 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 			break;	/* successfully located the keyframe */
 		}
 
+		vidx->fkey = 0;	/* reset the key frame decoding flag */
+
+		/* FIXME: possibly failure when decoding on the fly
+		 * sometimes a decoded frame could turn to a P-frame even 
+		 * it came from a packet marked as I-frame. */
 		if (vidx->ses_flags & EZOP_DECODE_OTF) {
 			video_decode_next(vidx, packet);
 		} else {
@@ -2248,17 +2254,16 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 	if (vidx->dur_all) {		/* binding mode */
 		vpos -= vidx->dur_off;
 		/* 20130808 FIXME: if vpos < 0, it must be caused by the lag 
-		 * of the index; the previous index failed to mae thumbnail
+		 * of the index; the previous index failed to make thumbnail
 		 * in the previous clip so it was carried up to the current 
 		 * clip. the workaround is to top up the time step to make
 		 * it positive, which would produce samesome screenshots */
 		while (vpos < 0) {
 			vpos += image->time_step;
 		}
-		/*
-		printf("video_snap_point: ID=%d POS=%lld DUR=%lld OFF=%lld\n",
-				index, vpos, vidx->duration, vidx->dur_off);
-		*/
+		EDB_PROG(("video_snap_point: "
+					"ID=%d POS=%lld DUR=%lld OFF=%lld\n",
+				index, vpos, vidx->duration, vidx->dur_off));
 		if (vpos > vidx->duration) {
 			return -1;	/* outside this clip */
 		}
@@ -2464,7 +2469,11 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	int64_t	tmp;
 	int	ffin = 1;
 
-	ezfrm = video_frame_next(vidx);
+	if (vidx->fkey == 0) {
+		ezfrm = &vidx->fgroup[vidx->fnow];
+	} else {
+		ezfrm = video_frame_next(vidx);
+	}
 	ezfrm->rf_dts  = video_packet_timestamp(packet);
 	ezfrm->rf_pos  = packet->pos;
 	ezfrm->rf_size = 0;
@@ -2489,6 +2498,13 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 				0, ffin, ezfrm->frame);
 		av_free_packet(packet);
 		vidx->fdec++;
+#ifdef	FF_I_TYPE
+		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
+#else
+		if (vidx->fgroup[vidx->fnow].frame->pict_type == AV_PICTURE_TYPE_I) {
+#endif
+			vidx->fkey = 1;
+		}
 		return ezfrm->rf_dts;	/* succeeded */
 
 	} while (video_load_packet(vidx, packet) >= 0);
@@ -2516,6 +2532,26 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	return dts;
 }
 
+static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
+{
+	int64_t	dts;
+
+	do {
+		if ((dts = video_decode_next(vidx, packet)) < 0) {
+			break;
+		}
+#ifdef	FF_I_TYPE
+		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
+#else
+		if (vidx->fgroup[vidx->fnow].frame->pict_type == AV_PICTURE_TYPE_I) {
+#endif
+		
+			return dts;
+		}
+	} while (video_load_packet(vidx, packet) >= 0);
+	return dts;
+}
+
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	if (video_load_packet(vidx, packet) < 0) {
@@ -2529,8 +2565,10 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	int64_t	dts = -1;
 
 	do {
+		dump_packet(packet);
 		if (packet->dts >= dtsto) {	/* overread */
-			return video_decode_next(vidx, packet);
+			//return video_decode_next(vidx, packet);
+			return video_decode_keyframe(vidx, packet);
 		}
 		/* if the distance of current key frame to the snap point is 
 		 * less than 2 average-key-frame-distance, ezthumb will start
@@ -2647,8 +2685,8 @@ static int video_display_ar(AVStream *stream, AVRational *dar)
 	if (dar->num && dar->den) {
 		ar_height = stream->codec->width * dar->den / dar->num;
 	}
-	/*printf("SAR=%d:%d DAR=%d:%d Height=%d\n", 
-			sar->num, sar->den, dar->num, dar->den, ar_height);*/
+	EDB_PROG(("video_display_ar: SAR=%d:%d DAR=%d:%d Height=%d\n", 
+			sar->num, sar->den, dar->num, dar->den, ar_height));
 	return ar_height;
 }
 
@@ -4361,12 +4399,12 @@ static int dump_packet(AVPacket *p)
 
 static int dump_frame(AVFrame *frame, int got_pic)
 {
-	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, REF:%d, I:%d, Type:%s\n", 
+	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, DTS:%lld, I:%d, Type:%s\n", 
 			got_pic == 0 ? "Partial" : "Complet", 
 			frame->key_frame, 
 			frame->coded_picture_number, 
 			frame->display_picture_number,
-			0, //frame->reference, depreciated
+			(long long) frame->pkt_dts,
 			frame->interlaced_frame,
 			id_lookup(id_pict_type, frame->pict_type)));
 	return 0;
