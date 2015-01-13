@@ -202,6 +202,7 @@ static int para_make_postition(char *s);
 static int para_get_color(EZOPT *opt, char *s);
 static int para_get_fontsize(EZOPT *opt, char *s);
 static int event_cb(void *vobj, int event, long param, long opt, void *block);
+static int event_verbose(void *vobj, int event, long param, long opt, void *);
 static int event_list(void *vobj, int event, long param, long opt, void *);
 static void version_ffmpeg(void);
 
@@ -292,6 +293,8 @@ int main(int argc, char **argv)
 		/* inject the progress report functions */
 		if (EZOP_DEBUG(sysopt.flags) <= SLOG_LVL_DEBUG) {
 			sysopt.notify = event_cb;
+		} else {
+			sysopt.notify = event_verbose;
 		}
 		todo = ezthumb_bind(argv + optind, argc - optind, &sysopt);
 		break;
@@ -308,8 +311,10 @@ int main(int argc, char **argv)
 		break;
 	default:
 		/* inject the progress report functions */
-		if (EZOP_DEBUG(sysopt.flags) <= SLOG_LVL_DEBUG) {
+		if (EZOP_DEBUG(sysopt.flags) < SLOG_LVL_DEBUG) {
 			sysopt.notify = event_cb;
+		} else {
+			sysopt.notify = event_verbose;
 		}
 		if ((sysopt.flags & EZOP_RECURSIVE) == 0) {
 			for (i = optind; i < argc; i++) {
@@ -1103,7 +1108,8 @@ static int para_get_fontsize(EZOPT *opt, char *s)
 	return EZ_ERR_NONE;
 }
 
-static int event_cb(void *vobj, int event, long param, long opt, void *block)
+static int event_cb(void *vobj, int event, 
+		long param, long opt, void *block)
 {
 	int	expect;
 	static	int	dotted;
@@ -1133,7 +1139,6 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 			dotted++;
 		}
 		break;
-
 	case EN_PROC_END:
 		if (param == 0) {       /* for key frame saving only */
 			EDB_SHOW(("\b\b\b\b100%% done\n"));
@@ -1148,8 +1153,33 @@ static int event_cb(void *vobj, int event, long param, long opt, void *block)
 	return event;
 }
 
+static int event_verbose(void *vobj, int event, 
+		long param, long opt, void *block)
+{
+	EZOPT	*ezopt = vobj;
+	void	*ftmp;
 
-static int event_list(void *vobj, int event, long param, long opt, void *block)
+	switch (event) {
+	case EN_PROC_BEGIN:
+		ftmp = (void*) ezopt->notify;
+		ezopt->notify = NULL;
+		eznotify(ezopt, event, param, opt, block);
+		ezopt->notify = ftmp;
+		EDB_SHOW(("\n"));
+		break;
+	case EN_PROC_BINDING:
+		EDB_SHOW(("Binding next.\n"));
+		break;
+	case EN_PROC_CURRENT:
+		break;
+	default:
+		return EN_EVENT_PASSTHROUGH;
+	}
+	return event;
+}
+
+static int event_list(void *vobj, int event, 
+		long param, long opt, void *block)
 {
 	(void) vobj;		/* stop the gcc warning */
 	(void) param;		/* stop the gcc warning */

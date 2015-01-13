@@ -31,7 +31,7 @@
 #include <sys/time.h>
 
 //#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
 
 #include "ezthumb.h"
 #include "id_lookup.h"
@@ -4399,12 +4399,12 @@ static int dump_packet(AVPacket *p)
 
 static int dump_frame(AVFrame *frame, int got_pic)
 {
-	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, DTS:%lld, I:%d, Type:%s\n", 
+	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, PTS:%lld, I:%d, Type:%s\n", 
 			got_pic == 0 ? "Partial" : "Complet", 
 			frame->key_frame, 
 			frame->coded_picture_number, 
 			frame->display_picture_number,
-			(long long) frame->pkt_dts,
+			(long long) frame->pts,
 			frame->interlaced_frame,
 			id_lookup(id_pict_type, frame->pict_type)));
 	return 0;

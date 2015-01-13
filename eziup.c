@@ -623,6 +623,8 @@ static int ezgui_event_main_dropfiles(Ihandle *ih,
 {
 	EZGUI	*gui = (EZGUI *) ih;
 
+	(void)num; (void)x; (void)y;
+
 	if (gui->magic != EZGUI_MAGIC) {
 		gui = ezgui_get_global(ih);
 	}
