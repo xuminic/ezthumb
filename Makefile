@@ -105,13 +105,13 @@ $(OBJDIR)/%.o: %.c
 
 .PHONY: objs
 
-all: objdir ezconfig.h $(EXTLIB) $(TARGET)
+all: objdir $(EXTLIB) $(TARGET)
 
-$(TGTGUI): $(OBJGUI) $(OBJS) 
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) $(GUILIB)
+$(TGTGUI): ezconfig.h $(OBJGUI) $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJGUI) $(OBJS) $(LIBS) $(GUILIB)
 
-$(TGTCON): $(OBJCON) $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS)
+$(TGTCON): ezconfig.h $(OBJCON) $(OBJS)
+	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJCON) $(OBJS) $(LIBS)
 
 $(OBJDIR)/main_con.o: main.c
 	$(CC) $(CFLAGS) -DCFG_GUI_OFF -c -o $@ $<
@@ -136,7 +136,7 @@ objdir:
 ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
 
-ezconfig.h: clean
+ezconfig.h: conftest.c
 	./mkconfig.sh > ezconfig.h
 
 $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc

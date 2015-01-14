@@ -18,12 +18,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-/* Deprecated function tracker:
-    avcodec_alloc_frame(): LIBAVCODEC_VERSION_INT == AV_VERSION_INT(53, 10, 0)
-    avcodec_alloc_frame(): LIBAVCODEC_VERSION_INT == AV_VERSION_INT(53, 35, 0)
-    av_frame_alloc():
-
- */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2517,11 +2511,8 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 				0, ffin, ezfrm->frame);
 		av_free_packet(packet);
 		vidx->fdec++;
-#ifdef	FF_I_TYPE
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
-#else
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == AV_PICTURE_TYPE_I) {
-#endif
+
+		if (ezfrm->frame->key_frame) {
 			vidx->fkey = 1;
 		}
 		return ezfrm->rf_dts;	/* succeeded */
@@ -2559,12 +2550,7 @@ static int64_t video_decode_keyframe(EZVID *vidx, AVPacket *packet)
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
-#ifdef	FF_I_TYPE
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == FF_I_TYPE) {
-#else
-		if (vidx->fgroup[vidx->fnow].frame->pict_type == AV_PICTURE_TYPE_I) {
-#endif
-		
+		if (vidx->fgroup[vidx->fnow].frame->key_frame) {
 			return dts;
 		}
 	} while (video_load_packet(vidx, packet) >= 0);
@@ -4425,12 +4411,11 @@ static int dump_packet(AVPacket *p)
 
 static int dump_frame(AVFrame *frame, int got_pic)
 {
-	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, PTS:%lld, I:%d, Type:%s\n", 
+	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, I:%d, Type:%s\n", 
 			got_pic == 0 ? "Partial" : "Complet", 
 			frame->key_frame, 
 			frame->coded_picture_number, 
 			frame->display_picture_number,
-			(long long) frame->pts,
 			frame->interlaced_frame,
 			id_lookup(id_pict_type, frame->pict_type)));
 	return 0;
