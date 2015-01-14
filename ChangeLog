@@ -1,3 +1,8 @@
+20150114:
+	I've sicked in searching and reviewing ffmpeg versions to decide
+	the proper APIs so using a small script file to detect them.
+	* mkconfig.sh: test the ffmpeg APIs then output a configure header
+	* conftest.c: support file to test the ffmpeg APIs
 
 20150109: Version 3.2.2
 	* eziup.c: Improved UI display.
