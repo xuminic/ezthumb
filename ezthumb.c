@@ -33,6 +33,7 @@
 //#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
 //#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
 
+#include "ezconfig.h"
 #include "ezthumb.h"
 #include "id_lookup.h"
 
@@ -1118,16 +1119,18 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	 * this is a foolproof procedure */
 	/* the file_size field will be depreciated soon */
 #if	0
-#if	LIBAVFORMAT_VERSION_INT < (53<<16)
+#ifdef	HAVE_AVFORMATCONTEXT_FILE_SIZE
 	if (vidx->filesize < vidx->formatx->file_size) {
 		vidx->filesize = vidx->formatx->file_size;
 	}
-#else
+#elif	defined(HAVE_AVFORMATCONTEXT_PB)
 	if (vidx->formatx->pb) {
 		if (vidx->filesize < avio_size(vidx->formatx->pb)) {
 			vidx->filesize = avio_size(vidx->formatx->pb);
 		}
 	}
+#else
+#error	NO file_size or pb field found in AVFormatContext!
 #endif
 #endif
 	eznotify(ezopt, EN_FILE_OPEN, 0, 0, vidx);
@@ -1268,12 +1271,14 @@ static int video_open(EZVID *vidx)
 	 * my archlinux 64-bit box by 52.110.0 */
 	/* 20120613: What a surprise that avformat_open_input() do support
 	 * utf-8 in native MSWindows */
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+#ifdef	HAVE_AVFORMAT_OPEN_INPUT
 	if (avformat_open_input(&vidx->formatx, vidx->filename, 
 				NULL, NULL) != 0) {
-#else
+#elif	defined(HAVE_AV_OPEN_INPUT_FILE)
 	if (av_open_input_file(&vidx->formatx, vidx->filename, 
 				NULL, 0, NULL) < 0) {
+#else
+#error	No avformat_open_input() or av_open_input_file() defined!
 #endif
 		eznotify(NULL, EZ_ERR_FORMAT, 0, 0, vidx->filename);
 		return EZ_ERR_FORMAT;
@@ -1295,10 +1300,12 @@ static int video_open(EZVID *vidx)
 	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
 	//vidx->formatx->flags |= AVFMT_FLAG_IGNIDX | AVFMT_TS_DISCONT ;
 
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(53, 3, 0))
+#ifdef	HAVE_AVFORMAT_FIND_STREAM_INFO
 	if (avformat_find_stream_info(vidx->formatx, NULL) < 0) {
-#else
+#elif	defined(HAVE_AV_FIND_STREAM_INFO)
 	if (av_find_stream_info(vidx->formatx) < 0) {
+#else
+#error	No avformat_find_stream_info() or av_find_stream_info() defined
 #endif
 		eznotify(NULL, EZ_ERR_STREAM, 0, 0, vidx->filename);
 		video_close(vidx);
@@ -1325,10 +1332,12 @@ static int video_open(EZVID *vidx)
 	/* open the codec */
 	vidx->vstream->discard = AVDISCARD_ALL;
 	codec = avcodec_find_decoder(vidx->codecx->codec_id);
-#if	(LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(53, 6, 0))
+#ifdef	HAVE_AVCODEC_OPEN2
 	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
-#else
+#elif	defined(HAVE_AVCODEC_OPEN)
 	if (avcodec_open(vidx->codecx, codec) < 0) {
+#else
+#error	None of avcodec_open2() or avcodec_open() defined!
 #endif
 		eznotify(vidx->sysopt, EZ_ERR_CODEC_FAIL, 
 				vidx->codecx->codec_id, 0, vidx->codecx);
@@ -1359,10 +1368,12 @@ static int video_close(EZVID *vidx)
 		vidx->codecx = NULL;
 	}
 	if (vidx->formatx) {
-#if	(LIBAVFORMAT_VERSION_INT > AV_VERSION_INT(53, 10, 0))
+#ifdef	HAVE_AVFORMAT_OPEN_INPUT
 		avformat_close_input(&vidx->formatx);
-#else
+#elif	defined(HAVE_AV_OPEN_INPUT_FILE)
 		av_close_input_file(vidx->formatx);
+#else
+#error	None of avformat_close_input() or av_close_input_file() defined!
 #endif
 		vidx->formatx = NULL;
 	}
@@ -1374,21 +1385,27 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 	int	size;
 
 	/* allocate a reusable video frame structure */
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
+#ifdef	HAVE_AV_FRAME_ALLOC
 	if ((vidx->fgroup[0].frame = av_frame_alloc()) == NULL) {
-#else
+#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
 	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
+#else
+#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
 #endif
-		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
+				0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
+#ifdef	HAVE_AV_FRAME_ALLOC
 	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
-#else
+#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
 	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
+#else
+#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
 #endif
 		video_disconnect(vidx);
-		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 0, 0, vidx->filename);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
+				0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
 
@@ -1416,10 +1433,12 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
+#ifdef	HAVE_AV_FRAME_ALLOC
 	if ((vidx->swsframe = av_frame_alloc()) == NULL) {
-#else
+#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
 	if ((vidx->swsframe = avcodec_alloc_frame()) == NULL) {
+#else
+#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
 #endif
 		video_disconnect(vidx);
 		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
@@ -1449,7 +1468,7 @@ static int video_disconnect(EZVID *vidx)
 		vidx->swsbuffer = NULL;
 	}
 	if (vidx->swsframe) {
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
+#ifdef	HAVE_AV_FRAME_ALLOC
 		av_frame_free(vidx->swsframe);
 #else
 		av_free(vidx->swsframe);
@@ -1461,7 +1480,7 @@ static int video_disconnect(EZVID *vidx)
 		vidx->swsctx = NULL;
 	}
 	if (vidx->fgroup[1].frame) {
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
+#ifdef	HAVE_AV_FRAME_ALLOC
 		av_frame_free(vidx->fgroup[1].frame);
 #else
 		av_free(vidx->fgroup[1].frame);
@@ -1469,7 +1488,7 @@ static int video_disconnect(EZVID *vidx)
 		vidx->fgroup[1].frame = NULL;
 	}
 	if (vidx->fgroup[0].frame) {
-#if	(LIBAVCODEC_VERSION_INT > AV_VERSION_INT(53, 35, 0))
+#ifdef	HAVE_AV_FRAME_ALLOC
 		av_frame_free(vidx->fgroup[0].frame);
 #else
 		av_free(vidx->fgroup[0].frame);
@@ -1487,7 +1506,7 @@ static int video_find_main_stream(EZVID *vidx)
 	AVStream	*stream;
 	int		i, n;
 
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
+#ifdef	HAVE_AV_FIND_BEST_STREAM
 	int	wanted_stream[AVMEDIA_TYPE_NB] = {
 			[AVMEDIA_TYPE_AUDIO]=-1,
 			[AVMEDIA_TYPE_VIDEO]=-1,
@@ -1534,7 +1553,7 @@ static int video_find_main_stream(EZVID *vidx)
 		}
 	}
 	
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 91, 0))
+#ifdef	HAVE_AV_FIND_BEST_STREAM
 	n = av_find_best_stream(vidx->formatx, AVMEDIA_TYPE_VIDEO,
 			wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
 #else
@@ -2763,7 +2782,7 @@ static char *video_stream_language(AVStream *stream)
 	static	char	*nolan[] = { "(none)", "(unknown)" };
 	char	*lanstr = NULL;
 
-#ifdef	AVUTIL_DICT_H
+#ifdef	HAVE_AV_DICT_GET
 	if (stream->metadata) {
 		AVDictionaryEntry	*lang;
 		lang = av_dict_get(stream->metadata, "language", NULL, 0);
@@ -2771,7 +2790,7 @@ static char *video_stream_language(AVStream *stream)
 			lanstr = lang->value;
 		}
 	}
-#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+#elif	defined(HAVE_AV_METADATA_GET)
 	if (stream->metadata) {
 		AVMetadataTag	*lang = NULL;
 		lang = av_metadata_get(stream->metadata, "language", NULL, 0);
@@ -4034,10 +4053,12 @@ static int ezdefault(EZOPT *ezopt, int event,
 			 * disabling the av_log */
 			i = av_log_get_level();
 			av_log_set_level(AV_LOG_INFO);
-#if	(LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(52, 110, 0))
+#ifdef	HAVE_AV_DUMP_FORMAT
 			av_dump_format(vidx->formatx, 0, vidx->filename, 0);
-#else
+#elif	defined(HAVE_DUMP_FORMAT)
 			dump_format(vidx->formatx, 0, vidx->filename, 0);
+#else
+#error	None of av_dump_format() or dump_format() defined!
 #endif
 			av_log_set_level(i);
 		}
@@ -4303,17 +4324,22 @@ static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx)
 
 static int dump_format_context(AVFormatContext *format)
 {
-#if	LIBAVFORMAT_VERSION_INT < (53<<16)
+#ifdef	HAVE_AVFORMATCONTEXT_FILE_SIZE
 	EDB_SHOW(("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) format->file_size,
 			format->bit_rate));
-#else
+#elif	defined(HAVE_AVFORMATCONTEXT_PB)
 	EDB_SHOW(("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) avio_size(format->pb),
+			format->bit_rate));
+#else
+	EDB_SHOW(("  Format: %s(%s), Size: unknown, Bitrate: %u\n",
+			format->iformat->long_name,
+			format->iformat->name,
 			format->bit_rate));
 #endif
 	EDB_SHOW(("  Streams: %d, Start time: %lld, Duration: %lld\n",
@@ -4430,9 +4456,9 @@ static int dump_metadata(void *dict)
 {
 	struct	Metadata	{
 		int	count;
-#ifdef	AVUTIL_DICT_H
+#ifdef	HAVE_AV_DICT_GET
 		AVDictionaryEntry	*elems;
-#elif (LIBAVFORMAT_VERSION_MINOR > 44) || (LIBAVFORMAT_VERSION_MAJOR > 52)
+#elif	defined(HAVE_AV_METADATA_GET)
 		AVMetadataTag		*elems;
 #else
 #error Too old version of FFMPEG

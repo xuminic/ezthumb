@@ -22,8 +22,6 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <math.h>
 
 #define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
 #include "ezthumb.h"

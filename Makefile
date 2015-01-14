@@ -66,6 +66,7 @@ DEBUG	= -g -DDEBUG
 DEFINES = -D_FILE_OFFSET_BITS=64
 INCDIR	= -I$(CSOUP) -I$(IUP)/include $(SYSINC)
 CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(INCDIR) $(SYSFLAG) 
+CONTEST = NONE
 
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
@@ -104,7 +105,7 @@ $(OBJDIR)/%.o: %.c
 
 .PHONY: objs
 
-all: objdir $(EXTLIB) $(TARGET)
+all: objdir ezconfig.h $(EXTLIB) $(TARGET)
 
 $(TGTGUI): $(OBJGUI) $(OBJS) 
 	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $^ $(LIBS) $(GUILIB)
@@ -135,6 +136,9 @@ objdir:
 ezicon.h: SMirC-thumbsup.svg
 	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
 
+ezconfig.h: clean
+	./mkconfig.sh > ezconfig.h
+
 $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
@@ -145,9 +149,13 @@ install: all
 debug: all
 	$(CP) $(TARGET) ~/bin
 
+conftest: conftest.c
+	$(CC) $(CFLAGS) $(LIBDIR) -D$(CONTEST) -o $@ $< $(LIBS)
+
 clean:
 	$(RM) -f $(OBJDIR)/*
 	$(RM) $(TGTGUI) $(TGTCON)
+	$(RM) -f conftest conftest.log ezconfig.h
 
 cleanall: clean
 	make -C $(IUP) clean
