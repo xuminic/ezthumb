@@ -880,7 +880,7 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			 * The workaround is the option to decode the
 			 * next frame instead of searching an i-frame. */
 			VSSLOG("[OR]", dts, dts_snap);
-			// dts = video_decode_keyframe(vidx, &packet);
+			//dts = video_decode_keyframe(vidx, &packet);
 			//dts = video_decode_next(vidx, &packet);
 			dts = video_decode_valided(vidx, &packet);
 		} else if (GETACCUR(vidx->ses_flags)) {
@@ -988,8 +988,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			}
 			/* discard the current packet */
 			if (vidx->ses_flags & EZOP_DECODE_OTF) {
-				//video_decode_next(vidx, &packet);
-				video_decode_valided(vidx, &packet);
+				video_decode_next(vidx, &packet);
 			} else {
 				av_free_packet(&packet);
 			}
@@ -1614,8 +1613,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 		 * sometimes a decoded frame could turn to a P-frame even 
 		 * it came from a packet marked as I-frame. */
 		if (vidx->ses_flags & EZOP_DECODE_OTF) {
-			//video_decode_next(vidx, packet);
-			video_decode_valided(vidx, packet);
+			video_decode_next(vidx, packet);
 		} else {
 			av_free_packet(packet);
 		}
@@ -2548,7 +2546,8 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	int64_t	dts;
 
 	do {
-		if ((dts = video_decode_next(vidx, packet)) < 0) {
+		//if ((dts = video_decode_next(vidx, packet)) < 0) {
+		if ((dts = video_decode_valided(vidx, packet)) < 0) {
 			break;
 		}
 		if (dts >= dtsto) {
@@ -2600,7 +2599,7 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	int64_t	dts = -1;
 
 	do {
-		dump_packet(packet);
+		//dump_packet(packet);
 		if (packet->dts >= dtsto) {	/* overread */
 			//return video_decode_next(vidx, packet);
 			return video_decode_valided(vidx, packet);
@@ -2614,10 +2613,10 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		}
 
 		/* working on OTF mode as default */
-		if ((vidx->ses_flags & EZOP_DECODE_OTF) == 0) {
+		if (vidx->ses_flags & EZOP_DECODE_OTF) {
+			video_decode_next(vidx, packet);
+		} else {
 			av_free_packet(packet);
-		} else if ((dts = video_decode_valided(vidx, packet)) < 0) {
-			break;
 		}
 	} while (video_keyframe_next(vidx, packet) >= 0);
 	return dts;

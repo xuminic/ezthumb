@@ -62,7 +62,8 @@ int main(void)
 #endif
 #ifdef	TEST_AVFORMATCONTEXT_PB
 	{
-		AVFormatContext format.pb = 0;
+		AVFormatContext format;
+		format.pb = NULL;
 	}
 #endif
 	return 0;
