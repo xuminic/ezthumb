@@ -1,3 +1,9 @@
+
+20150115: Version 3.2.3
+	* ezthumb.c: use video_decode_valided() instead of video_decode_next()
+	in most cases. The video_decode_next() still have a chance to decode
+	damaged picture while I-Packet turned out to be P-Frame.
+
 20150114:
 	I've sicked in searching and reviewing ffmpeg versions to decide
 	the proper APIs so using a small script file to detect them.
