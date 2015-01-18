@@ -1082,7 +1082,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 
 	smm_time_get_epoch(&vidx->tmark);	/* get current time stamp */
 	video_timing(vidx, EZ_PTS_RESET);	/* clear progress timestamp*/
-	eznotify(ezopt, EN_OPEN_BEGIN, 0, 0, NULL);
+	eznotify(ezopt, EN_OPEN_BEGIN, 0, 0, vidx);
 
 	/* On second thought, the FFMPEG log is better to be enabled while 
 	 * loading codecs so we would've known if the video files buggy */
@@ -1103,7 +1103,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	if ((rc = video_open(vidx)) != EZ_ERR_NONE) {
 		uperror(errcode, rc);
 		smm_free(vidx);
-		eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
+		eznotify(ezopt, EN_OPEN_END, rc, 0, NULL);
 		return NULL;
 	}
 
@@ -1143,7 +1143,7 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
-		eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
+		eznotify(ezopt, EN_OPEN_END, EZ_ERR_VIDEOSTREAM, 0, NULL);
 		return NULL;
 	}
 
@@ -1170,17 +1170,17 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
 		video_free(vidx);
-		eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
+		eznotify(ezopt, EN_OPEN_END, EZ_ERR_VIDEOSTREAM, 0, NULL);
 		return NULL;
 	}
 
 	//dump_format_context(vidx->formatx);
+	eznotify(ezopt, EN_OPEN_END, 0, 0, vidx);
 	eznotify(vidx->sysopt, EN_MEDIA_OPEN, 0, 
 			smm_time_diff(&vidx->tmark), vidx);
 	uperror(errcode, EZ_ERR_NONE);
 
 	video_close(vidx);	/* do not rewinding, reopen it instead */
-	eznotify(ezopt, EN_OPEN_END, 0, 0, NULL);
 	return vidx;
 }
 
@@ -1625,7 +1625,7 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
 	/* note that ezthumb never reset the keygap */
-	EDB_PROG(("video_keyframe_credit: %lld\n", dts));
+	EDB_MODL(("video_keyframe_credit: %lld\n", dts));
 	if (dts < 0) {
 		/* save (top up) the recent session before reset */
 		vidx->keyalldts += vidx->keylast - vidx->keyfirst;
@@ -4146,6 +4146,20 @@ static int ezdefault(EZOPT *ezopt, int event,
 		}
 		strcat(buf, "\n");
 		EDB_SHOW((buf));
+		break;
+	case EN_OPEN_BEGIN:
+		vidx = block;
+		EDB_SHOW(("Looking %s ... ", vidx->filename));
+		break;
+	case EN_OPEN_END:
+		if ((vidx = block) != NULL) {
+			EDB_SHOW(("%dx%d %lld (ms)\n", vidx->width, 
+					vidx->height, vidx->duration));
+		} else if (param == EZ_ERR_VIDEOSTREAM) {
+			EDB_SHOW(("no media\n"));
+		} else {
+			EDB_SHOW(("skip\n"));
+		}
 		break;
 	case EN_STREAM_BROKEN:
 		break;

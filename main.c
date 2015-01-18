@@ -1158,6 +1158,9 @@ static int event_verbose(void *vobj, int event,
 	void	*ftmp;
 
 	switch (event) {
+	case EN_OPEN_BEGIN:
+	case EN_OPEN_END:
+		break;
 	case EN_PROC_BEGIN:
 		ftmp = (void*) ezopt->notify;
 		ezopt->notify = NULL;
@@ -1183,8 +1186,15 @@ static int event_list(void *vobj, int event,
 	(void) param;		/* stop the gcc warning */
 	(void) opt;		/* stop the gcc warning */
 	(void) block;		/* stop the gcc warning */
-	if (event >= 0) {
-		return EN_EVENT_PASSTHROUGH;
+
+	switch (event) {
+	case EN_OPEN_BEGIN:
+	case EN_OPEN_END:
+		break;
+	default:
+		if (event >= 0) {
+			return EN_EVENT_PASSTHROUGH;
+		}
 	}
 	return event;
 }

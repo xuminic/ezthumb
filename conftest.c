@@ -61,9 +61,11 @@ int main(void)
 	av_dump_format(NULL, 0, NULL, 0);
 #endif
 #ifdef	TEST_AVFORMATCONTEXT_PB
+	/* to simplify the life, this test includes avio_size() */
 	{
 		AVFormatContext format;
 		format.pb = NULL;
+		avio_size(NULL);
 	}
 #endif
 	return 0;
