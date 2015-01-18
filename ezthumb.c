@@ -2496,12 +2496,13 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	int	ffin = 1;
 
 	ezfrm = video_frame_next(vidx);
-	ezfrm->rf_dts  = video_packet_timestamp(packet);
+	//ezfrm->rf_dts  = video_packet_timestamp(packet);
 	ezfrm->rf_pos  = packet->pos;
 	ezfrm->rf_size = 0;
 	ezfrm->rf_pac  = 0;
 
 	do {
+		printf("EZFRM %d ", vidx->fnow); dump_packet(packet);
 		eznotify(vidx->sysopt, EN_PACKET_RECV, 0, 0, packet);
 		ezfrm->rf_size += packet->size;
 		ezfrm->rf_pac++;
@@ -2583,7 +2584,8 @@ static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet)
 			break;
 		}
 	}
-	return dts;
+	vidx->fgroup[vidx->fnow].rf_dts = -1;
+	return 0;
 }
 
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto)
@@ -2599,9 +2601,9 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	int64_t	dts = -1;
 
 	do {
-		//dump_packet(packet);
 		if (packet->dts >= dtsto) {	/* overread */
 			//return video_decode_next(vidx, packet);
+			puts("video_decode_valided");
 			return video_decode_valided(vidx, packet);
 		}
 		/* if the distance of current key frame to the snap point is 
@@ -2609,6 +2611,7 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		 * to decode every frames till the snap point */
 		if ((video_dts_ruler(vidx, packet->dts, dtsto) < 1) &&
 					GETACCUR(vidx->ses_flags)) {
+			puts("video_decode_to");
 			return video_decode_to(vidx, packet, dtsto);
 		}
 
