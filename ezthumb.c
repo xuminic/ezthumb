@@ -1447,7 +1447,7 @@ static int video_disconnect(EZVID *vidx)
 	}
 	if (vidx->swsframe) {
 #ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(vidx->swsframe);
+		av_frame_free(&vidx->swsframe);
 #else
 		av_free(vidx->swsframe);
 #endif
@@ -2409,7 +2409,7 @@ static int video_frame_alloc(EZVID *vidx)
 	}
 #ifdef	HAVE_AV_FRAME_ALLOC
 	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
-		av_frame_free(vidx->fgroup[0].frame);
+		av_frame_free(&vidx->fgroup[0].frame);
 #elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
 	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
 		av_free(vidx->fgroup[0].frame);
@@ -2429,7 +2429,7 @@ static int video_frame_free(EZVID *vidx)
 {
 	if (vidx->fgroup[1].frame) {
 #ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(vidx->fgroup[1].frame);
+		av_frame_free(&vidx->fgroup[1].frame);
 #else
 		av_free(vidx->fgroup[1].frame);
 #endif
@@ -2437,7 +2437,7 @@ static int video_frame_free(EZVID *vidx)
 	}
 	if (vidx->fgroup[0].frame) {
 #ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(vidx->fgroup[0].frame);
+		av_frame_free(&vidx->fgroup[0].frame);
 #else
 		av_free(vidx->fgroup[0].frame);
 #endif
