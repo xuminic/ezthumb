@@ -69,9 +69,12 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
 static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
-static EZFRM *video_frame_next(EZVID *vidx);
+static int video_frame_alloc(EZVID *vidx);
+static int video_frame_free(EZVID *vidx);
+static int video_frame_reset(EZVID *vidx);
+static int video_frame_update(EZVID *vidx, int keyflag);
+static EZFRM *video_frame_retrieve(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
-static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet);
@@ -134,7 +137,7 @@ static int dump_audio_context(AVCodecContext *codec);
 static int dump_subtitle_context(AVCodecContext *codec);
 static int dump_other_context(AVCodecContext *codec);
 static int dump_packet(AVPacket *p);
-static int dump_frame(AVFrame *frame, int got_pic);
+static int dump_frame(EZFRM *ezfrm, int got_pic);
 static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
 static int dump_metadata(void *dict);
 static int dump_duration(EZVID *vidx, int use_ms);
@@ -1383,35 +1386,11 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 {
 	int	size;
 
-	/* allocate a reusable video frame structure */
-#ifdef	HAVE_AV_FRAME_ALLOC
-	if ((vidx->fgroup[0].frame = av_frame_alloc()) == NULL) {
-#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
-	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
-#else
-#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
-#endif
+	if ((size = video_frame_alloc(vidx)) != EZ_ERR_NONE) {
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
 				0, 0, vidx->filename);
-		return EZ_ERR_LOWMEM;
+		return size;
 	}
-#ifdef	HAVE_AV_FRAME_ALLOC
-	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
-#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
-	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
-#else
-#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
-#endif
-		video_disconnect(vidx);
-		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
-				0, 0, vidx->filename);
-		return EZ_ERR_LOWMEM;
-	}
-
-	/* 20120723 Initialize the rf_dts to -1 to avoid the 
-	 * first-unavailable-frame issue */
-	vidx->fgroup[0].rf_dts = vidx->fgroup[1].rf_dts = -1;
-
 
 	/* allocate the swscale structure for scaling the screen image */
 	/*vidx->swsctx = sws_getContext(vidx->codecx->width, 
@@ -1478,22 +1457,7 @@ static int video_disconnect(EZVID *vidx)
 		sws_freeContext(vidx->swsctx);
 		vidx->swsctx = NULL;
 	}
-	if (vidx->fgroup[1].frame) {
-#ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(vidx->fgroup[1].frame);
-#else
-		av_free(vidx->fgroup[1].frame);
-#endif
-		vidx->fgroup[1].frame = NULL;
-	}
-	if (vidx->fgroup[0].frame) {
-#ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(vidx->fgroup[0].frame);
-#else
-		av_free(vidx->fgroup[0].frame);
-#endif
-		vidx->fgroup[0].frame = NULL;
-	}
+	video_frame_free(vidx);
 	return EZ_ERR_NONE;
 }
 
@@ -1589,7 +1553,8 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 	if (dts < 0) {
 		packet->dts = lastdts;
 	}
-	vidx->fkey = 0;	/* reset the key frame decoding flag */
+	/* reset the key frame decoding flag */
+	video_frame_reset(vidx);
 	return dts;
 }
 
@@ -1607,7 +1572,8 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 			break;	/* successfully located the keyframe */
 		}
 
-		vidx->fkey = 0;	/* reset the key frame decoding flag */
+		/* reset the key frame decoding flag */
+		video_frame_reset(vidx);
 
 		/* FIXME: possibly failure when decoding on the fly
 		 * sometimes a decoded frame could turn to a P-frame even 
@@ -2428,23 +2394,123 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 	return 0;
 }
 
-static EZFRM *video_frame_next(EZVID *vidx)
+
+static int video_frame_alloc(EZVID *vidx)
+{
+	/* allocate a reusable video frame structure */
+#ifdef	HAVE_AV_FRAME_ALLOC
+	if ((vidx->fgroup[0].frame = av_frame_alloc()) == NULL) {
+#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
+	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
+#else
+#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
+#endif
+		return EZ_ERR_LOWMEM;
+	}
+#ifdef	HAVE_AV_FRAME_ALLOC
+	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
+		av_frame_free(vidx->fgroup[0].frame);
+#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
+	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
+		av_free(vidx->fgroup[0].frame);
+#else
+#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
+#endif
+		return EZ_ERR_LOWMEM;
+	}
+
+	/* 20120723 Initialize the rf_dts to -1 to avoid the 
+	 * first-unavailable-frame issue */
+	vidx->fgroup[0].rf_dts = vidx->fgroup[1].rf_dts = -1;
+	return EZ_ERR_NONE;
+}
+
+static int video_frame_free(EZVID *vidx)
+{
+	if (vidx->fgroup[1].frame) {
+#ifdef	HAVE_AV_FRAME_ALLOC
+		av_frame_free(vidx->fgroup[1].frame);
+#else
+		av_free(vidx->fgroup[1].frame);
+#endif
+		vidx->fgroup[1].frame = NULL;
+	}
+	if (vidx->fgroup[0].frame) {
+#ifdef	HAVE_AV_FRAME_ALLOC
+		av_frame_free(vidx->fgroup[0].frame);
+#else
+		av_free(vidx->fgroup[0].frame);
+#endif
+		vidx->fgroup[0].frame = NULL;
+	}
+	return 0;
+}
+
+static int video_frame_reset(EZVID *vidx)
+{
+	vidx->fkey = 0;
+	return 0;
+}
+
+static int video_frame_update(EZVID *vidx, int keyflag)
 {
 	/* 20150108: keep reusing the current frame until a keyframe is 
 	 * successfully decoded. Otherwise the frame buffer may be stuffed
 	 * by broken P-Frames */
-	if ((vidx->fkey == 0) &&
-			(vidx->fgroup[vidx->fnow].frame->key_frame == 0)) {
-		return &vidx->fgroup[vidx->fnow];
+	if (keyflag) {
+		vidx->fkey = 1;
 	}
+	if (vidx->fkey) {
+		vidx->fnow++;
+		if (vidx->fnow > 1) {
+			vidx->fnow = 0;
+		}
+	}
+	return vidx->fnow;
+}
 
-	vidx->fnow++;
-	if (vidx->fnow > 1) {
-		vidx->fnow = 0;
-	}
+static EZFRM *video_frame_retrieve(EZVID *vidx)
+{
 	return &vidx->fgroup[vidx->fnow];
 }
 
+static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
+{
+	int64_t	c0, c1;
+	int	i = 0, n = 0;
+
+	if ((vidx->fgroup[0].rf_dts < 0) && (vidx->fgroup[1].rf_dts < 0)) {
+		return NULL;
+	} else if (vidx->fgroup[0].rf_dts < 0) {
+		i = 1;
+	} else if (vidx->fgroup[1].rf_dts < 0) {
+		i = 0;
+	} else if (refdts >= 0) {
+		c0 = refdts - vidx->fgroup[0].rf_dts;
+		c0 = (c0 < 0) ? - c0 : c0;
+		c1 = refdts - vidx->fgroup[1].rf_dts;
+		c1 = (c1 < 0) ? - c1 : c1;
+		if (c0 > c1) {
+			i = 1;
+		}
+		if (vidx->fgroup[i].rf_dts < vidx->fgroup[(i+1)%2].rf_dts) {
+			n = 1;
+		}
+	} else if (vidx->fgroup[0].rf_dts < vidx->fgroup[1].rf_dts) {
+		i = 1;
+	} else {
+		i = 0;
+	}
+
+	EDB_FUNC(("FRAME of %s: %lld in (%lld %lld)\n", 
+			(n == 0) ? "Current" : "Previous", 
+				vidx->fgroup[i].rf_dts,
+			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts));
+	return &vidx->fgroup[i];
+}
+
+
+/*
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 {
 	int64_t	dts;
@@ -2452,7 +2518,7 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 
 	if ((dts = video_best_dts(refdts, vidx->fgroup[0].rf_dts,
 			vidx->fgroup[1].rf_dts)) < 0) {
-		return NULL;	/* no proper frame */
+		return NULL;
 	} 
 	
 	i = 0;
@@ -2465,7 +2531,6 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts));
 	return &vidx->fgroup[i];
 }
-
 
 static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2)
 {
@@ -2488,51 +2553,43 @@ static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2)
 	}
 	return v2;
 }
-
+*/
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 {
 	EZFRM	*ezfrm;
 	int64_t	tmp;
-	int	ffin = 1;
+	int	got_pict = 1;
 
-	ezfrm = video_frame_next(vidx);
-	//ezfrm->rf_dts  = video_packet_timestamp(packet);
+	ezfrm = video_frame_retrieve(vidx);
 	ezfrm->rf_pos  = packet->pos;
 	ezfrm->rf_size = 0;
 	ezfrm->rf_pac  = 0;
 
 	do {
-		printf("EZFRM %d ", vidx->fnow); dump_packet(packet);
 		eznotify(vidx->sysopt, EN_PACKET_RECV, 0, 0, packet);
 		ezfrm->rf_size += packet->size;
 		ezfrm->rf_pac++;
 		
 		/* 20150115:according to the recent avcodec.h, the DTS of 
 		 * a frame should keep up with the received packets */
-		ezfrm->rf_dts  = video_packet_timestamp(packet);
-		avcodec_decode_video2(vidx->codecx, 
-				ezfrm->frame, &ffin, packet);
-		if (ffin == 0) {
-			/* the packet is not finished */
-			eznotify(vidx->sysopt, EN_FRAME_PARTIAL, 
-					0, ffin, ezfrm->frame);
-			av_free_packet(packet);
-			continue;
-		}
+		ezfrm->rf_dts = video_packet_timestamp(packet);
 
-		eznotify(vidx->sysopt, EN_FRAME_COMPLETE, 
-				0, ffin, ezfrm->frame);
+		avcodec_decode_video2(vidx->codecx, 
+				ezfrm->frame, &got_pict, packet);
+		
+		ezfrm->packet = packet;
+		ezfrm->frame->opaque = vidx;
+		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, got_pict, ezfrm);
 		av_free_packet(packet);
 
 		/* 20150108: If a I-Frame has been successfully decoded,
 		 * the following frames can be stored in the dual frame
 		 * buffer in turn. The following decoding is named as
 		 * frame group. The I-Frame is the beginner of the group */
-		if (ezfrm->frame->key_frame) {
-			vidx->fkey = 1;
+		if (got_pict) {
+			video_frame_update(vidx, ezfrm->frame->key_frame);
+			return ezfrm->rf_dts;	/* succeeded */
 		}
-		return ezfrm->rf_dts;	/* succeeded */
-
 	} while (video_load_packet(vidx, packet) >= 0);
 	/* 20130808 this function should never fail unless the last frame was 
 	 * broken in the end of stream. In that case it'll return the recent 
@@ -2580,11 +2637,13 @@ static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet)
 		if (vidx->fkey) {
 			return dts;
 		}
-		if (video_load_packet(vidx, packet) < 0) {
+		//if (video_load_packet(vidx, packet) < 0) {
+		if (video_keyframe_next(vidx, packet) < 0) {
 			break;
 		}
 	}
 	vidx->fgroup[vidx->fnow].rf_dts = -1;
+	printf("video_decode_valided: out of range\n");
 	return 0;
 }
 
@@ -2694,7 +2753,8 @@ static int video_seeking(EZVID *vidx, int64_t dts)
 			0, dts, INT64_MAX, AVSEEK_FLAG_BACKWARD);
 	avcodec_flush_buffers(vidx->codecx);
 	video_keyframe_credit(vidx, -1);
-	vidx->fkey = 0;	/* reset the key frame decoding flag */
+	/* reset the key frame decoding flag */
+	video_frame_reset(vidx);
 	return 0;
 }
 
@@ -4174,12 +4234,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 			dump_packet(block);
 		}
 		break;
-	case EN_FRAME_COMPLETE:
-		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_PROGRAM) {
-			dump_frame(block, opt);
-		}
-		break;
-	case EN_FRAME_PARTIAL:
+	case EN_FRAME_DONE:
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_PROGRAM) {
 			dump_frame(block, opt);
 		}
@@ -4281,7 +4336,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 	case EN_FRAME_EXCEPTION:
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_WARNING) {
 			EDB_WARN(("Discard Dodge I"));
-			dump_frame(block, 1);
+			//dump_frame(block, 1);
 		}
 		break;
 	case EN_SKIP_EXIST:
@@ -4456,15 +4511,32 @@ static int dump_packet(AVPacket *p)
 	return 0;
 }
 
-static int dump_frame(AVFrame *frame, int got_pic)
+static int dump_frame(EZFRM *ezfrm, int got_pic)
 {
-	EDB_SHOW(("Frame %s, KEY:%d, CPN:%d, DPN:%d, I:%d, Type:%s\n", 
-			got_pic == 0 ? "Partial" : "Complet", 
-			frame->key_frame, 
-			frame->coded_picture_number, 
-			frame->display_picture_number,
-			frame->interlaced_frame,
-			id_lookup(id_pict_type, frame->pict_type)));
+	EZVID	*vidx = ezfrm->frame->opaque;
+	int	i;
+
+	/*EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, I:%d, %s\n", 
+			got_pic == 0 ? "Decoding" : "Decoded ", 
+			ezfrm->frame->key_frame, 
+			ezfrm->frame->coded_picture_number, 
+			ezfrm->frame->display_picture_number,
+			ezfrm->frame->interlaced_frame,
+			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
+
+	i = 0;
+	if (vidx->fgroup[1].frame == ezfrm->frame) {
+		i = 1;
+	}
+	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, Q:%d %d, %s DTS:%" PRId64 ", PKey:%d F:%d A:%d\n", 
+			got_pic == 0 ? "Decoding" : "Decoded ", 
+			ezfrm->frame->key_frame, 
+			ezfrm->frame->coded_picture_number, 
+			ezfrm->frame->display_picture_number,
+			ezfrm->frame->quality, ezfrm->frame->reference,
+			id_lookup(id_pict_type, ezfrm->frame->pict_type),
+			ezfrm->packet->dts, ezfrm->packet->flags, 
+			i, vidx->fkey));
 	return 0;
 }
 
@@ -4473,12 +4545,22 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 	int64_t	dts;
 	char	timestamp[64];
 
+	int	i = 0;
+	if (vidx->fgroup[1].frame == ezfrm->frame) {
+		i = 1;
+	}
+
 	dts = ezfrm->rf_dts - vidx->dts_offset;
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
+	/*EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
 			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
-			id_lookup(id_pict_type, ezfrm->frame->pict_type)));
+			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
+	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s F:%d A:%d\n",
+			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
+			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
+			id_lookup(id_pict_type, ezfrm->frame->pict_type), 
+			i, vidx->fkey));
 	return 0;
 }
 

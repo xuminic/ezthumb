@@ -54,8 +54,7 @@
 #define EN_PROC_SAVED		1100
 #define EN_PROC_BINDING		1101
 #define EN_PACKET_RECV		1006	/* received an effective packet */
-#define EN_FRAME_COMPLETE	1007	/* decoded a complete frame */
-#define EN_FRAME_PARTIAL	1008	/* frame partially decoded */
+#define EN_FRAME_DONE		1007	/* decoded a frame */
 #define EN_FRAME_EFFECT		1009	/* received an effective frame */
 #define EN_SCAN_PACKET		1010	/* received a packet in scan mode */
 #define EN_SCAN_IFRAME		1011
@@ -505,10 +504,11 @@ typedef	struct	{
 
 typedef	struct		{
 	AVFrame		*frame;
-	int64_t		rf_dts;
-	int64_t		rf_pos;
-	int		rf_size;
-	int		rf_pac;
+	int64_t		rf_dts;		/* the DTS from the last packet */
+	int64_t		rf_pos;		/* the position of the last packet */
+	int		rf_size;	/* total size of packets */
+	int		rf_pac;		/* packets number of the frame */
+	AVPacket	*packet;	/* linked packet (debug only) */
 } EZFRM;
 
 
