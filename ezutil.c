@@ -20,9 +20,9 @@
 */
 #include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
 
@@ -338,7 +338,7 @@ static int ezopt_profile_append(EZOPT *ezopt, char *ps)
 		node->weight *= 60;	/* turn to seconds */
 		node->x = (int) strtol(argv[0], NULL, 10);
 		node->y = (int) strtol(argv[1], NULL, 10);
-		node->lbase = (float) strtof(argv[2], NULL);
+		node->lbase = strtod(argv[2], NULL);
 		ezopt->pro_grid = ezopt_profile_insert(ezopt->pro_grid, node);
 		break;
 
@@ -409,7 +409,7 @@ static char *ezopt_profile_sprint(EZPROF *node, char *buf, int blen)
 	case 'l':
 	case 'L':
 		sprintf(buf, "%dL%dx%dx%f", node->weight / 60, 
-				node->x, node->y, node->lbase);
+				node->x, node->y, (float) node->lbase);
 		break;
 
 	case 'w':
@@ -606,6 +606,7 @@ int meta_export_color(EZBYTE *color, char *buf, int blen)
 
 char *meta_make_fontdir(char *s)
 {
+#ifdef	HAVE_GD_USE_FONTCONFIG
 	char	*p;
 
 	/* review whether the fontconfig pattern like "times:bold:italic"
@@ -622,6 +623,7 @@ char *meta_make_fontdir(char *s)
 		gdFTUseFontConfig(1);
 		return csc_strcpy_alloc(s, 0);
 	}
+#endif	/* HAVE_GD_USE_FONTCONFIG */
 	return smm_fontpath(s, NULL);
 }
 

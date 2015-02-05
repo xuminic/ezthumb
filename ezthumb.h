@@ -331,7 +331,7 @@ typedef	struct	{
 	int	y;	/* grid y, or ratio of width, or fixed canvas, */
 			/* or relative width, or error of log() */
 
-	float	lbase;	/* the base of logarithm */
+	double	lbase;	/* the base of logarithm */
 } EZPROF;
 
 

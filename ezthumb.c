@@ -111,9 +111,11 @@ static int image_gdcanvas_strlen(EZIMG *image, int fsize, char *s);
 static int image_gdcanvas_puts(EZIMG *image, int fsize, int x, int y, 
 		int c, char *s);
 static int image_gdcanvas_background(EZIMG *image);
+#ifdef	HAVE_GD_IMAGE_GIFANIMATION
 static FILE *image_gif_anim_open(EZIMG *image, char *filename);
 static int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 static int image_gif_anim_close(EZIMG *image, FILE *fout);
+#endif
 static FILE *image_create_file(EZIMG *image, char *filename, int idx);
 static int image_cal_ratio(int ratio, int refsize);
 static EZTIME image_cal_time_range(int ratio, EZTIME reftime);
@@ -2268,11 +2270,15 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
 	image->gifx_fp = NULL;
+#ifdef	HAVE_GD_IMAGE_GIFANIMATION
 	if ((image->gifx_opt = image_cal_gif_animix(image->sysopt)) > 0) {
 		/* 20130627 using vidx->filename should be fine here because 
 		 * only the first clip would be processed by this function */
 		image->gifx_fp = image_gif_anim_open(image, vidx->filename);
 	}
+#else
+	image->gifx_opt = 0;
+#endif
 
 	eznotify(vidx->sysopt, EN_PROC_BEGIN, method, 0, vidx);
 	return 0;
@@ -2316,8 +2322,10 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	if (image->gdcanvas) {
 		image_gdcanvas_update(image, image->taken);
+#ifdef	HAVE_GD_IMAGE_GIFANIMATION
 	} else if (image->gifx_fp) {
 		image_gif_anim_add(image, image->gifx_fp, image->gifx_opt);
+#endif
 	} else {
 		image_gdframe_save(image, vidx->filename, image->taken);
 	}
@@ -2384,8 +2392,10 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 		} else {
 			image_gdcanvas_save(image, vidx->filename);
 		}
+#ifdef	HAVE_GD_IMAGE_GIFANIMATION
 	} else if (image->gifx_fp) {
 		image_gif_anim_close(image, image->gifx_fp);
+#endif
 	}
 
 	myntf.varg1 = vidx;
@@ -3819,6 +3829,7 @@ static int image_gdcanvas_background(EZIMG *image)
 	return 0;
 }
 
+#ifdef	HAVE_GD_IMAGE_GIFANIMATION
 static FILE *image_gif_anim_open(EZIMG *image, char *filename)
 {
 	gdImage	*imgif;
@@ -3870,6 +3881,7 @@ static int image_gif_anim_close(EZIMG *image, FILE *fout)
 	fclose(fout);
 	return 0;
 }
+#endif 	/* HAVE_GD_IMAGE_GIFANIMATION */
 
 static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 {

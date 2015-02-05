@@ -68,6 +68,12 @@ int main(void)
 		avio_size(NULL);
 	}
 #endif
+#ifdef	TEST_GD_IMAGE_GIFANIM
+	gdImageGifAnimBegin(NULL, NULL, 0, 0);
+#endif
+#ifdef	TEST_GD_USE_FONTCONFIG
+	gdFTUseFontConfig(1);
+#endif
 	return 0;
 }
 

@@ -72,6 +72,18 @@ else
 fi
 
 rm -f conftest
+make conftest CONTEST=TEST_GD_IMAGE_GIFANIM >> conftest.log 2>> conftest.log
+if test "$?" = "0"; then
+	echo "#define	HAVE_GD_IMAGE_GIFANIMATION	1"
+fi
+
+rm -f conftest
+make conftest CONTEST=TEST_GD_USE_FONTCONFIG >> conftest.log 2>> conftest.log
+if test "$?" = "0"; then
+	echo "#define	HAVE_GD_USE_FONTCONFIG		1"
+fi
+
+rm -f conftest
 echo ""
 echo "#endif"
 

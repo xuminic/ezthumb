@@ -10,7 +10,7 @@ endif
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF, CFG_GUI_GTK
 SYSGUI	= CFG_GUI_ON
 endif
-ifneq 	($(SYSGUI),CFG_GUI_GTK)
+ifeq 	($(SYSGUI),CFG_GUI_ON)
 GUILIB	= -liup
 endif
 
@@ -32,8 +32,10 @@ RM	= rm -f
 IUPLIB	= $(IUP)/lib/mingw4
 EXTDIR	= ./libmingw
 EXTLIB	= $(CSOUP)/libcsoup.a
+ifneq 	($(SYSGUI),CFG_GUI_OFF)
 GUILIB	+= $(WINCON) -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
+endif
 SYSINC	= -I$(EXTDIR)/ffmpeg/include -I$(EXTDIR)/include
 LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib -L$(CSOUP)
 SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL #For linking static libgd 
@@ -49,7 +51,9 @@ RM	= rm -f
 
 IUPLIB	= $(shell echo $(IUP)/lib/*)
 EXTLIB	= $(CSOUP)/libcsoup.a $(IUPLIB)/libiup.a
+ifneq 	($(SYSGUI),CFG_GUI_OFF)
 GUILIB	+= `pkg-config gtk+-2.0 --libs` -lX11
+endif
 SYSINC	= -I/usr/include/ffmpeg `pkg-config gtk+-2.0 --cflags`
 LIBDIR	= -L$(IUPLIB) -L$(CSOUP)
 SYSFLAG	= 
@@ -76,7 +80,11 @@ LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
 ifeq	($(SYSGUI),CFG_GUI_GTK)
 OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/ezgui.o
 else
+ifeq ($(SYSGUI),CFG_GUI_ON)
 OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/eziup.o
+else
+OBJGUI	= $(OBJDIR)/main_con.o
+endif
 endif
 OBJCON	= $(OBJDIR)/main_con.o
 
