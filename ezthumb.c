@@ -77,7 +77,7 @@ static EZFRM *video_frame_retrieve(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
-static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet);
+static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet, int64_t);
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int video_seeking(EZVID *vidx, int64_t dts);
@@ -799,7 +799,7 @@ static int video_snapshot_skim(EZVID *vidx, EZIMG *image)
 			/* overread the packets. Skim mode doesn't seek back
 			 * so ezthumb just decode the nearest one */
 			VSkLOG("[OR]", dts, dts_snap);
-			dts = video_decode_valided(vidx, &packet);
+			dts = video_decode_valided(vidx, &packet, dts_snap);
 		} else if (video_dts_ruler(vidx, dts, dts_snap) == INT_MAX) {
 			/* probably keyframe accredit system is not ready */
 			VSkLOG("[TR]", dts, dts_snap);
@@ -887,7 +887,7 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 			VSSLOG("[OR]", dts, dts_snap);
 			//dts = video_decode_keyframe(vidx, &packet);
 			//dts = video_decode_next(vidx, &packet);
-			dts = video_decode_valided(vidx, &packet);
+			dts = video_decode_valided(vidx, &packet, dts_snap);
 		} else if (GETACCUR(vidx->ses_flags)) {
 			/* if accurate mode is set and the current DTS
 			 * position is quite close to the snap point, 
@@ -897,7 +897,7 @@ static int video_snapshot_scan(EZVID *vidx, EZIMG *image)
 		} else {
 			VSSLOG("[IF]", dts, dts_snap);
 			//dts = video_decode_next(vidx, &packet);
-			dts = video_decode_valided(vidx, &packet);
+			dts = video_decode_valided(vidx, &packet, dts_snap);
 		}
 
 vs_scan_update:
@@ -988,7 +988,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			}
 			if (dts >= refdts[image->taken]) {
 				//dts = video_decode_next(vidx, &packet);
-				dts = video_decode_valided(vidx, &packet);
+				dts = video_decode_valided(vidx, &packet, dts_snap);
 				break;
 			}
 			/* discard the current packet */
@@ -1045,7 +1045,7 @@ static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 		/* use video_decode_next() instead of video_decode_keyframe()
 		 * because sometimes it's good for debugging doggy clips */
 		//if (video_decode_next(vidx, &packet) < 0) {
-		if (video_decode_valided(vidx, &packet) < 0) {
+		if (video_decode_valided(vidx, &packet, dts_snap) < 0) {
 			break;
 		}
 		if (dts >= dts_snap) {
@@ -2597,6 +2597,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		 * buffer in turn. The following decoding is named as
 		 * frame group. The I-Frame is the beginner of the group */
 		if (got_pict) {
+			//pts = ezfrm->frame->best_effort_timestamp;
 			video_frame_update(vidx, ezfrm->frame->key_frame);
 			return ezfrm->rf_dts;	/* succeeded */
 		}
@@ -2613,9 +2614,9 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
 
+	printf("video_decode_to: decode to %" PRId64 ".\n", dtsto);
 	do {
-		//if ((dts = video_decode_next(vidx, packet)) < 0) {
-		if ((dts = video_decode_valided(vidx, packet)) < 0) {
+		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
 		if (dts >= dtsto) {
@@ -2631,30 +2632,43 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
  * mark as i-frame would turn out to be a p-frame in decoding by ffmpeg.
  * Therefore ezthumb would keep decoding until an i-frame reached, sometimes
  * it took a quite long time. That's why we need the damage control here */
-static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet)
+static int64_t video_decode_valided(EZVID *vidx, 
+		AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
+	EZFRM	*ezfrm;
 	int	i;
 
+	printf("video_decode_valided: try to decode a valided frame\n");
 	/* the simplest damage control: decodes 16 frames at most */
-	for (i = 0; i < 16; i++) {
+	for (i = 0; ; i++) {
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
-		/*if (vidx->fgroup[vidx->fnow].frame->key_frame) {
-			return dts;
-		}*/
 		if (vidx->fkey) {
+			printf("video_decode_valided: %d tried\n", i);
 			return dts;
 		}
-		//if (video_load_packet(vidx, packet) < 0) {
-		if (video_keyframe_next(vidx, packet) < 0) {
+
+		/* 20150219: set the break point by the distance between last
+		   good frame and the current bad frame. There's no point to
+		   keep decoding while the distance of future frames are 
+		   longer than the good frame */
+		ezfrm = video_frame_best(vidx, dtsto);
+		if (video_frame_retrieve(vidx) != ezfrm) {
+			printf("video_decode_valided: out of range %lld\n", ezfrm->rf_dts);
+			return ezfrm->rf_dts;
+		}
+		
+		/* 20150219: using video_load_packet() instead of 
+		   video_keyframe_next() because in dodge encoded files
+		   (middle.avi) every frame can be decoded i-frame */
+		if (video_load_packet(vidx, packet) < 0) {
 			break;
 		}
 	}
-	vidx->fgroup[vidx->fnow].rf_dts = -1;
-	printf("video_decode_valided: out of range\n");
-	return 0;
+	video_frame_retrieve(vidx)->rf_dts = -1;
+	return -1;
 }
 
 static int64_t video_decode_load(EZVID *vidx, AVPacket *packet, int64_t dtsto)
@@ -2672,15 +2686,13 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 	do {
 		if (packet->dts >= dtsto) {	/* overread */
 			//return video_decode_next(vidx, packet);
-			puts("video_decode_valided");
-			return video_decode_valided(vidx, packet);
+			return video_decode_valided(vidx, packet, dtsto);
 		}
 		/* if the distance of current key frame to the snap point is 
 		 * less than 2 average-key-frame-distance, ezthumb will start
 		 * to decode every frames till the snap point */
 		if ((video_dts_ruler(vidx, packet->dts, dtsto) < 1) &&
 					GETACCUR(vidx->ses_flags)) {
-			puts("video_decode_to");
 			return video_decode_to(vidx, packet, dtsto);
 		}
 
@@ -4224,7 +4236,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 		break;
 	case EN_OPEN_BEGIN:
 		vidx = block;
-		EDB_SHOW(("Looking %s ... ", vidx->filename));
+		EDB_SHOW(("Triaging %s ... ", vidx->filename));
 		break;
 	case EN_OPEN_END:
 		if ((vidx = block) != NULL) {
@@ -4540,12 +4552,15 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 	if (vidx->fgroup[1].frame == ezfrm->frame) {
 		i = 1;
 	}
-	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, Q:%d %d, %s DTS:%" PRId64 ", PKey:%d F:%d A:%d\n", 
+	if (got_pic == 0) {
+		return 0;
+	}
+	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, PTS:%" PRId64 ", %s DTS:%" PRId64 ", PKey:%d F:%d A:%d\n", 
 			got_pic == 0 ? "Decoding" : "Decoded ", 
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
 			ezfrm->frame->display_picture_number,
-			ezfrm->frame->quality, ezfrm->frame->reference,
+			ezfrm->packet->dts,	//ezfrm->frame->best_effort_timestamp,
 			id_lookup(id_pict_type, ezfrm->frame->pict_type),
 			ezfrm->packet->dts, ezfrm->packet->flags, 
 			i, vidx->fkey));
