@@ -504,11 +504,12 @@ typedef	struct	{
 
 typedef	struct		{
 	AVFrame		*frame;
+	unsigned char	*rf_buffer;	/* the frame buffer */
 	int64_t		rf_dts;		/* the DTS from the last packet */
 	int64_t		rf_pos;		/* the position of the last packet */
 	int		rf_size;	/* total size of packets */
 	int		rf_pac;		/* packets number of the frame */
-	AVPacket	*packet;	/* linked packet (debug only) */
+	void		*context;	/* linked packet or sws context */
 } EZFRM;
 
 
@@ -547,12 +548,12 @@ typedef	struct	_EzVid	{
 
 	/*** video_connect() / video_disconnect() */
 	/* frame extracted and scaled from the video stream */
-	struct	
-	SwsContext	*swsctx;	/* scaler context */
-	AVFrame		*swsframe;	/* scaled frame */
-	uint8_t		*swsbuffer;	/* the buffer of the scaled */
+	EZFRM		*swsframe;	/* scaled frame */
+	EZFRM		vidframe;
+	EZFRM		picframe[2];
+
 	
-	EZFRM		fgroup[2];
+	EZFRM		*fgroup[2];
 	int		fnow;
 	int		fkey;		/* keyframe started flag */
 

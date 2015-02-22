@@ -69,8 +69,8 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
 static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
-static int video_frame_alloc(EZVID *vidx);
-static int video_frame_free(EZVID *vidx);
+static EZFRM *video_frame_alloc(int pixfmt, int width, int height);
+static int video_frame_free(EZFRM *ezfrm);
 static int video_frame_reset(EZVID *vidx);
 static int video_frame_update(EZVID *vidx, int keyflag);
 static EZFRM *video_frame_retrieve(EZVID *vidx);
@@ -98,7 +98,7 @@ static int image_free(EZIMG *image);
 static int image_user_profile(EZIMG *image, int src_width, int *col, int *row,
 		int *width, int *height, int *facto);
 static int image_font_test(EZIMG *image, char *filename);
-static int image_gdframe_update(EZIMG *image, AVFrame *swsframe);
+static int image_gdframe_update(EZIMG *image, AVFrame *frame);
 static int image_gdframe_timestamp(EZIMG *image, char *timestamp);
 static int image_gdframe_save(EZIMG *image, char *filename, int idx);
 static int image_gdframe_strlen(EZIMG *image, int fsize, char *s);
@@ -1386,80 +1386,68 @@ static int video_close(EZVID *vidx)
 
 static int video_connect(EZVID *vidx, EZIMG *image)
 {
-	int	size;
-
-	if ((size = video_frame_alloc(vidx)) != EZ_ERR_NONE) {
+	if ((vidx->fgroup[0] = video_frame_alloc(0, 0, 0)) == NULL) {
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
 				0, 0, vidx->filename);
-		return size;
+		return EZ_ERR_LOWMEM;
 	}
+
+	if ((vidx->fgroup[1] = video_frame_alloc(0, 0, 0)) == NULL) {
+		video_frame_free(vidx->fgroup[0]);
+		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
+				0, 0, vidx->filename);
+		return EZ_ERR_LOWMEM;
+	}
+
+	/* 20120723 Initialize the rf_dts to -1 to avoid the 
+	 * first-unavailable-frame issue */
+	vidx->fgroup[0]->rf_dts = vidx->fgroup[1]->rf_dts = -1;
 
 	/* allocate the swscale structure for scaling the screen image */
 	/*vidx->swsctx = sws_getContext(vidx->codecx->width, 
 			vidx->codecx->height, vidx->codecx->pix_fmt, 
 			image->dst_width, image->dst_height,
 			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);*/
-	vidx->swsctx = sws_getContext(vidx->width, 
+	/*vidx->swsctx = sws_getContext(vidx->width, 
 			vidx->height > vidx->ar_height ? 
 					vidx->height : vidx->ar_height,
 			vidx->codecx->pix_fmt, 
 			image->dst_width, image->dst_height,
-			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);
-	if (vidx->swsctx == NULL) {
-		video_disconnect(vidx);
-		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
-		return EZ_ERR_SWSCALE;
-	}
-
+			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);*/
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
-#ifdef	HAVE_AV_FRAME_ALLOC
-	if ((vidx->swsframe = av_frame_alloc()) == NULL) {
-#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
-	if ((vidx->swsframe = avcodec_alloc_frame()) == NULL) {
-#else
-#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
-#endif
-		video_disconnect(vidx);
-		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
-		return EZ_ERR_SWSCALE;
-	}
-
-	/* allocate the memory buffer for holding the pixel array of
-	 * RGB frame */
-	size = avpicture_get_size(image->dst_pixfmt, 
+	vidx->swsframe = video_frame_alloc(image->dst_pixfmt,
 			image->dst_width, image->dst_height);
-	if ((vidx->swsbuffer = av_malloc(size)) == NULL) {
+	if (vidx->swsframe) {
+		vidx->swsframe->context = sws_getContext(vidx->width, 
+				vidx->height, vidx->codecx->pix_fmt,
+				image->dst_width, image->dst_height, 
+				image->dst_pixfmt, 
+				SWS_BILINEAR, NULL, NULL, NULL);
+		if (vidx->swsframe->context == NULL) {
+			video_frame_free(vidx->swsframe);
+			vidx->swsframe = NULL;
+		}
+	}
+	if (vidx->swsframe == NULL) {
 		video_disconnect(vidx);
 		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
 		return EZ_ERR_SWSCALE;
 	}
-
-	/* link the RGB frame and the RBG pixel buffer */
-	avpicture_fill((AVPicture *) vidx->swsframe, vidx->swsbuffer, 
-		image->dst_pixfmt, image->dst_width, image->dst_height);
 	return EZ_ERR_NONE;
 }
 
 static int video_disconnect(EZVID *vidx)
 {
-	if (vidx->swsbuffer) {
-		av_free(vidx->swsbuffer);
-		vidx->swsbuffer = NULL;
-	}
 	if (vidx->swsframe) {
-#ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(&vidx->swsframe);
-#else
-		av_free(vidx->swsframe);
-#endif
+		if (vidx->swsframe->context) {
+			sws_freeContext(vidx->swsframe->context);
+		}
+		video_frame_free(vidx->swsframe);
 		vidx->swsframe = NULL;
 	}
-	if (vidx->swsctx) {
-		sws_freeContext(vidx->swsctx);
-		vidx->swsctx = NULL;
-	}
-	video_frame_free(vidx);
+	video_frame_free(vidx->fgroup[0]);
+	video_frame_free(vidx->fgroup[1]);
 	return EZ_ERR_NONE;
 }
 
@@ -2167,9 +2155,15 @@ static int video_seek_challenge(EZVID *vidx)
 
 static int video_frame_scale(EZVID *vidx, AVFrame *frame)
 {
-	return sws_scale(vidx->swsctx, (const uint8_t * const *)frame->data,
-			frame->linesize, 0, vidx->height, /*vidx->codecx->height, */
-			vidx->swsframe->data, vidx->swsframe->linesize);
+	/*av_picture_copy((AVPicture *)vidx->picframe, (AVPicture *) frame,
+			vidx->codecx->pix_fmt, vidx->width, vidx->height);
+	return sws_scale(vidx->swsctx, (const uint8_t * const *)vidx->picframe->data,
+			vidx->picframe->linesize, 0, vidx->height, 
+			vidx->swsframe->data, vidx->swsframe->linesize);*/
+	return sws_scale(vidx->swsframe->context, (const uint8_t * const *)frame->data,
+			frame->linesize, 0, vidx->height, 
+			vidx->swsframe->frame->data, 
+			vidx->swsframe->frame->linesize);
 }
 
 
@@ -2313,7 +2307,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	/* scale the frame into GD frame structure */
 	video_frame_scale(vidx, ezfrm->frame);
-	image_gdframe_update(image, vidx->swsframe);
+	image_gdframe_update(image, vidx->swsframe->frame);
 
 	/* write the timestamp into the shot */
 	if (image->sysopt->flags & EZOP_TIMEST) {
@@ -2404,56 +2398,67 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 	return 0;
 }
 
-
-static int video_frame_alloc(EZVID *vidx)
+static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 {
-	/* allocate a reusable video frame structure */
-#ifdef	HAVE_AV_FRAME_ALLOC
-	if ((vidx->fgroup[0].frame = av_frame_alloc()) == NULL) {
-#elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
-	if ((vidx->fgroup[0].frame = avcodec_alloc_frame()) == NULL) {
-#else
-#error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
-#endif
-		return EZ_ERR_LOWMEM;
+	EZFRM	*ezfrm;
+	int	fbsize;
+	
+	if ((ezfrm = smm_alloc(sizeof(EZFRM))) == NULL) {
+		return NULL;
 	}
+	
 #ifdef	HAVE_AV_FRAME_ALLOC
-	if ((vidx->fgroup[1].frame = av_frame_alloc()) == NULL) {
-		av_frame_free(&vidx->fgroup[0].frame);
+	ezfrm->frame = av_frame_alloc();
 #elif	defined(HAVE_AVCODEC_ALLOC_FRAME)
-	if ((vidx->fgroup[1].frame = avcodec_alloc_frame()) == NULL) {
-		av_free(vidx->fgroup[0].frame);
+	ezfrm->frame = avcodec_alloc_frame();
 #else
 #error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
 #endif
-		return EZ_ERR_LOWMEM;
+	if (ezfrm->frame == NULL) {
+		video_frame_free(ezfrm);
+		return NULL;
 	}
 
-	/* 20120723 Initialize the rf_dts to -1 to avoid the 
-	 * first-unavailable-frame issue */
-	vidx->fgroup[0].rf_dts = vidx->fgroup[1].rf_dts = -1;
-	return EZ_ERR_NONE;
+	if (width && height) {
+		/* allocate the memory buffer for holding the pixel array of
+		 * RGB frame */
+		fbsize = avpicture_get_size(pixfmt, width, height);
+		if ((ezfrm->rf_buffer = av_malloc(fbsize)) == NULL) {
+			video_frame_free(ezfrm);
+			return NULL;
+		}
+		/* link the RGB frame and the RBG pixel buffer */
+		avpicture_fill((AVPicture *) ezfrm->frame, ezfrm->rf_buffer,
+				pixfmt, width, height);
+	}
+	return ezfrm;
 }
 
-static int video_frame_free(EZVID *vidx)
+static int video_frame_free(EZFRM *ezfrm)
 {
-	if (vidx->fgroup[1].frame) {
-#ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(&vidx->fgroup[1].frame);
-#else
-		av_free(vidx->fgroup[1].frame);
-#endif
-		vidx->fgroup[1].frame = NULL;
+	unsigned char	*frmbuf;
+	
+	if (ezfrm == NULL) {
+		return 0;
 	}
-	if (vidx->fgroup[0].frame) {
-#ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(&vidx->fgroup[0].frame);
-#else
-		av_free(vidx->fgroup[0].frame);
-#endif
-		vidx->fgroup[0].frame = NULL;
+	
+	frmbuf = ezfrm->rf_buffer;
+	if (ezfrm->rf_buffer) {
+		av_free(ezfrm->rf_buffer);
 	}
-	return 0;
+	
+	if (ezfrm->frame) {
+		/* check if the frame buffer has already been freed */
+		if (ezfrm->frame->data[0] == frmbuf) {
+			ezfrm->frame->data[0] = NULL;
+		}
+#ifdef	HAVE_AV_FRAME_ALLOC
+		av_frame_free(ezfrm->frame);
+#else
+		av_free(ezfrm->frame);
+#endif
+	}
+	return smm_free(ezfrm);
 }
 
 static int video_frame_reset(EZVID *vidx)
@@ -2481,7 +2486,7 @@ static int video_frame_update(EZVID *vidx, int keyflag)
 
 static EZFRM *video_frame_retrieve(EZVID *vidx)
 {
-	return &vidx->fgroup[vidx->fnow];
+	return vidx->fgroup[vidx->fnow];
 }
 
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
@@ -2489,24 +2494,24 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 	int64_t	c0, c1;
 	int	i = 0, n = 0;
 
-	if ((vidx->fgroup[0].rf_dts < 0) && (vidx->fgroup[1].rf_dts < 0)) {
+	if ((vidx->fgroup[0]->rf_dts < 0) && (vidx->fgroup[1]->rf_dts < 0)) {
 		return NULL;
-	} else if (vidx->fgroup[0].rf_dts < 0) {
+	} else if (vidx->fgroup[0]->rf_dts < 0) {
 		i = 1;
-	} else if (vidx->fgroup[1].rf_dts < 0) {
+	} else if (vidx->fgroup[1]->rf_dts < 0) {
 		i = 0;
 	} else if (refdts >= 0) {
-		c0 = refdts - vidx->fgroup[0].rf_dts;
+		c0 = refdts - vidx->fgroup[0]->rf_dts;
 		c0 = (c0 < 0) ? - c0 : c0;
-		c1 = refdts - vidx->fgroup[1].rf_dts;
+		c1 = refdts - vidx->fgroup[1]->rf_dts;
 		c1 = (c1 < 0) ? - c1 : c1;
 		if (c0 > c1) {
 			i = 1;
 		}
-		if (vidx->fgroup[i].rf_dts < vidx->fgroup[(i+1)%2].rf_dts) {
+		if (vidx->fgroup[i]->rf_dts < vidx->fgroup[(i+1)%2]->rf_dts) {
 			n = 1;
 		}
-	} else if (vidx->fgroup[0].rf_dts < vidx->fgroup[1].rf_dts) {
+	} else if (vidx->fgroup[0]->rf_dts < vidx->fgroup[1]->rf_dts) {
 		i = 1;
 	} else {
 		i = 0;
@@ -2514,9 +2519,9 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 
 	EDB_FUNC(("FRAME of %s: %lld in (%lld %lld)\n", 
 			(n == 0) ? "Current" : "Previous", 
-				vidx->fgroup[i].rf_dts,
-			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts));
-	return &vidx->fgroup[i];
+				vidx->fgroup[i]->rf_dts,
+			vidx->fgroup[0]->rf_dts, vidx->fgroup[1]->rf_dts));
+	return vidx->fgroup[i];
 }
 
 
@@ -2587,7 +2592,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		avcodec_decode_video2(vidx->codecx, 
 				ezfrm->frame, &got_pict, packet);
 		
-		ezfrm->packet = packet;
+		ezfrm->context = packet;
 		ezfrm->frame->opaque = vidx;
 		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, got_pict, ezfrm);
 		av_free_packet(packet);
@@ -3430,12 +3435,12 @@ static int image_font_test(EZIMG *image, char *filename)
 
 /* This function is used to fill the GD image device with the content of 
  * the RGB frame buffer. It will flush the last image */
-static int image_gdframe_update(EZIMG *image, AVFrame *swsframe)
+static int image_gdframe_update(EZIMG *image, AVFrame *frame)
 {
 	unsigned char	*src;
 	int	x, y;
 
-	src = swsframe->data[0];
+	src = frame->data[0];
 	for (y = 0; y < image->dst_height; y++) {
 		for (x = 0; x < image->dst_width * 3; x += 3) {
 			gdImageSetPixel(image->gdframe, x / 3, y,
@@ -4538,6 +4543,7 @@ static int dump_packet(AVPacket *p)
 static int dump_frame(EZFRM *ezfrm, int got_pic)
 {
 	EZVID	*vidx = ezfrm->frame->opaque;
+	AVPacket	*packet = ezfrm->context;
 	int	i;
 
 	/*EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, I:%d, %s\n", 
@@ -4549,7 +4555,7 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
 
 	i = 0;
-	if (vidx->fgroup[1].frame == ezfrm->frame) {
+	if (vidx->fgroup[1]->frame == ezfrm->frame) {
 		i = 1;
 	}
 	if (got_pic == 0) {
@@ -4560,9 +4566,9 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
 			ezfrm->frame->display_picture_number,
-			ezfrm->packet->dts,	//ezfrm->frame->best_effort_timestamp,
+			packet->dts,	//ezfrm->frame->best_effort_timestamp,
 			id_lookup(id_pict_type, ezfrm->frame->pict_type),
-			ezfrm->packet->dts, ezfrm->packet->flags, 
+			packet->dts, packet->flags, 
 			i, vidx->fkey));
 	return 0;
 }
@@ -4573,7 +4579,7 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 	char	timestamp[64];
 
 	int	i = 0;
-	if (vidx->fgroup[1].frame == ezfrm->frame) {
+	if (vidx->fgroup[1]->frame == ezfrm->frame) {
 		i = 1;
 	}
 
