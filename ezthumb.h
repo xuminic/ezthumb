@@ -549,14 +549,10 @@ typedef	struct	_EzVid	{
 	/*** video_connect() / video_disconnect() */
 	/* frame extracted and scaled from the video stream */
 	EZFRM		*swsframe;	/* scaled frame */
-	EZFRM		vidframe;
-	EZFRM		picframe[2];
-
-	
-	EZFRM		*fgroup[2];
-	int		fnow;
+	EZFRM		*picframe;	/* store the recent good frame */
+	EZFRM		*vidframe;	/* the decoding frame */
 	int		fkey;		/* keyframe started flag */
-
+	
 	/*** runtime variables in each session */
 	SMM_TIME	tmark;		/* the beginning timestamp */
 	int		pts[EZ_PTS_MAX<<1]; /* progress timestamp array */

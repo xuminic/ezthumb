@@ -63,7 +63,6 @@ static EZTIME video_duration(EZVID *vidx);
 static EZTIME video_duration_quickscan(EZVID *vidx);
 static EZTIME video_duration_fullscan(EZVID *vidx);
 static int video_seek_challenge(EZVID *vidx);
-static int video_frame_scale(EZVID *vidx, AVFrame *frame);
 static int64_t video_statistics(EZVID *vidx);
 static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index);
 static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
@@ -72,8 +71,7 @@ static int video_snap_end(EZVID *vidx, EZIMG *image);
 static EZFRM *video_frame_alloc(int pixfmt, int width, int height);
 static int video_frame_free(EZFRM *ezfrm);
 static int video_frame_reset(EZVID *vidx);
-static int video_frame_update(EZVID *vidx, int keyflag);
-static EZFRM *video_frame_retrieve(EZVID *vidx);
+static int video_frame_update(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
@@ -994,6 +992,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 			/* discard the current packet */
 			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
+				video_frame_update(vidx);
 			} else {
 				av_free_packet(&packet);
 			}
@@ -1386,22 +1385,19 @@ static int video_close(EZVID *vidx)
 
 static int video_connect(EZVID *vidx, EZIMG *image)
 {
-	if ((vidx->fgroup[0] = video_frame_alloc(0, 0, 0)) == NULL) {
+	if ((vidx->picframe = video_frame_alloc(vidx->codecx->pix_fmt, 
+					vidx->width, vidx->height)) == NULL) {
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
 				0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
 
-	if ((vidx->fgroup[1] = video_frame_alloc(0, 0, 0)) == NULL) {
-		video_frame_free(vidx->fgroup[0]);
+	if ((vidx->vidframe = video_frame_alloc(0, 0, 0)) == NULL) {
+		video_frame_free(vidx->picframe);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
 				0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
-
-	/* 20120723 Initialize the rf_dts to -1 to avoid the 
-	 * first-unavailable-frame issue */
-	vidx->fgroup[0]->rf_dts = vidx->fgroup[1]->rf_dts = -1;
 
 	/* allocate the swscale structure for scaling the screen image */
 	/*vidx->swsctx = sws_getContext(vidx->codecx->width, 
@@ -1446,8 +1442,8 @@ static int video_disconnect(EZVID *vidx)
 		video_frame_free(vidx->swsframe);
 		vidx->swsframe = NULL;
 	}
-	video_frame_free(vidx->fgroup[0]);
-	video_frame_free(vidx->fgroup[1]);
+	video_frame_free(vidx->picframe);
+	video_frame_free(vidx->vidframe);
 	return EZ_ERR_NONE;
 }
 
@@ -1570,6 +1566,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 		 * it came from a packet marked as I-frame. */
 		if (vidx->ses_flags & EZOP_DECODE_OTF) {
 			video_decode_next(vidx, packet);
+			video_frame_update(vidx);
 		} else {
 			av_free_packet(packet);
 		}
@@ -2153,20 +2150,6 @@ static int video_seek_challenge(EZVID *vidx)
 	return ENX_SEEK_FREE;
 }
 
-static int video_frame_scale(EZVID *vidx, AVFrame *frame)
-{
-	/*av_picture_copy((AVPicture *)vidx->picframe, (AVPicture *) frame,
-			vidx->codecx->pix_fmt, vidx->width, vidx->height);
-	return sws_scale(vidx->swsctx, (const uint8_t * const *)vidx->picframe->data,
-			vidx->picframe->linesize, 0, vidx->height, 
-			vidx->swsframe->data, vidx->swsframe->linesize);*/
-	return sws_scale(vidx->swsframe->context, (const uint8_t * const *)frame->data,
-			frame->linesize, 0, vidx->height, 
-			vidx->swsframe->frame->data, 
-			vidx->swsframe->frame->linesize);
-}
-
-
 static int64_t video_statistics(EZVID *vidx)
 {
 	struct MeStat	mestat[EZ_ST_MAX_REC];	/* shoule be big enough */
@@ -2306,7 +2289,11 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	}
 
 	/* scale the frame into GD frame structure */
-	video_frame_scale(vidx, ezfrm->frame);
+	sws_scale(vidx->swsframe->context, 
+			(const uint8_t * const *) ezfrm->frame->data,
+			ezfrm->frame->linesize, 0, vidx->height, 
+			vidx->swsframe->frame->data, 
+			vidx->swsframe->frame->linesize);
 	image_gdframe_update(image, vidx->swsframe->frame);
 
 	/* write the timestamp into the shot */
@@ -2431,6 +2418,10 @@ static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 		avpicture_fill((AVPicture *) ezfrm->frame, ezfrm->rf_buffer,
 				pixfmt, width, height);
 	}
+	
+	/* 20120723 Initialize the rf_dts to -1 to avoid the 
+	 * first-unavailable-frame issue */
+	ezfrm->rf_dts = -1;
 	return ezfrm;
 }
 
@@ -2467,134 +2458,71 @@ static int video_frame_reset(EZVID *vidx)
 	return 0;
 }
 
-static int video_frame_update(EZVID *vidx, int keyflag)
+static int video_frame_update(EZVID *vidx)
 {
-	/* 20150108: keep reusing the current frame until a keyframe is 
+	AVPicture	tmpav;
+	
+	/* 20150223: only store the current frame until a keyframe is 
 	 * successfully decoded. Otherwise the frame buffer may be stuffed
 	 * by broken P-Frames */
-	if (keyflag) {
-		vidx->fkey = 1;
+	if (vidx->fkey == 0) {
+		return 0;
 	}
-	if (vidx->fkey) {
-		vidx->fnow++;
-		if (vidx->fnow > 1) {
-			vidx->fnow = 0;
-		}
-	}
-	return vidx->fnow;
-}
-
-static EZFRM *video_frame_retrieve(EZVID *vidx)
-{
-	return vidx->fgroup[vidx->fnow];
+	
+	memcpy(&tmpav, (AVPicture *) vidx->picframe->frame, sizeof(tmpav));
+	memcpy(vidx->picframe->frame, vidx->vidframe->frame, sizeof(AVFrame));
+	memcpy((AVPicture *) vidx->picframe->frame, &tmpav, sizeof(tmpav));
+	av_picture_copy((AVPicture *) vidx->picframe->frame, 
+			(AVPicture *) vidx->vidframe->frame, 
+			vidx->codecx->pix_fmt, vidx->width, vidx->height);
+	
+	vidx->picframe->rf_dts  = vidx->vidframe->rf_dts;
+	vidx->picframe->rf_pos  = vidx->vidframe->rf_pos;
+	vidx->picframe->rf_size = vidx->vidframe->rf_size;
+	vidx->picframe->rf_pac  = vidx->vidframe->rf_pac;
+	return vidx->fkey;
 }
 
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 {
-	int64_t	c0, c1;
-	int	i = 0, n = 0;
-
-	if ((vidx->fgroup[0]->rf_dts < 0) && (vidx->fgroup[1]->rf_dts < 0)) {
-		return NULL;
-	} else if (vidx->fgroup[0]->rf_dts < 0) {
-		i = 1;
-	} else if (vidx->fgroup[1]->rf_dts < 0) {
-		i = 0;
-	} else if (refdts >= 0) {
-		c0 = refdts - vidx->fgroup[0]->rf_dts;
-		c0 = (c0 < 0) ? - c0 : c0;
-		c1 = refdts - vidx->fgroup[1]->rf_dts;
-		c1 = (c1 < 0) ? - c1 : c1;
-		if (c0 > c1) {
-			i = 1;
-		}
-		if (vidx->fgroup[i]->rf_dts < vidx->fgroup[(i+1)%2]->rf_dts) {
-			n = 1;
-		}
-	} else if (vidx->fgroup[0]->rf_dts < vidx->fgroup[1]->rf_dts) {
-		i = 1;
-	} else {
-		i = 0;
+	if (vidx->picframe->rf_dts <= 0) {
+		return vidx->vidframe;
 	}
-
-	EDB_FUNC(("FRAME of %s: %lld in (%lld %lld)\n", 
-			(n == 0) ? "Current" : "Previous", 
-				vidx->fgroup[i]->rf_dts,
-			vidx->fgroup[0]->rf_dts, vidx->fgroup[1]->rf_dts));
-	return vidx->fgroup[i];
+	if (vidx->fkey == 0) {
+		return vidx->picframe;
+	}
+	if (compare_timestamp(refdts, vidx->picframe->rf_dts, 
+				vidx->vidframe->rf_dts) <= 0) {
+		return vidx->picframe;
+	}
+	return vidx->vidframe;
 }
 
-
-/*
-static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
-{
-	int64_t	dts;
-	int	i;
-
-	if ((dts = video_best_dts(refdts, vidx->fgroup[0].rf_dts,
-			vidx->fgroup[1].rf_dts)) < 0) {
-		return NULL;
-	} 
-	
-	i = 0;
-	if (dts == vidx->fgroup[1].rf_dts) {
-		i = 1;
-	}
-
-	EDB_FUNC(("FRAME of %s: %lld in (%lld %lld)\n", 
-			i == vidx->fnow ? "Current" : "Previous", dts,
-			vidx->fgroup[0].rf_dts, vidx->fgroup[1].rf_dts));
-	return &vidx->fgroup[i];
-}
-
-static int64_t video_best_dts(int64_t ref, int64_t v1, int64_t v2)
-{
-	int64_t	c1, c2;
-
-	if (v1 < 0) {
-		return v2;
-	}
-	if (v2 < 0) {
-		return v1;
-	}
-	if (ref < 0) {
-		return v1 > v2 ? v1 : v2;
-	}
-	
-	c1 = (ref > v1) ? ref - v1 : v1 - ref;
-	c2 = (ref > v2) ? ref - v2 : v2 - ref;
-	if (c1 < c2) {
-		return v1;
-	}
-	return v2;
-}
-*/
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 {
-	EZFRM	*ezfrm;
 	int64_t	tmp;
 	int	got_pict = 1;
 
-	ezfrm = video_frame_retrieve(vidx);
-	ezfrm->rf_pos  = packet->pos;
-	ezfrm->rf_size = 0;
-	ezfrm->rf_pac  = 0;
+	vidx->vidframe->rf_pos  = packet->pos;
+	vidx->vidframe->rf_size = 0;
+	vidx->vidframe->rf_pac  = 0;
 
 	do {
 		eznotify(vidx->sysopt, EN_PACKET_RECV, 0, 0, packet);
-		ezfrm->rf_size += packet->size;
-		ezfrm->rf_pac++;
+		vidx->vidframe->rf_size += packet->size;
+		vidx->vidframe->rf_pac++;
 		
 		/* 20150115:according to the recent avcodec.h, the DTS of 
 		 * a frame should keep up with the received packets */
-		ezfrm->rf_dts = video_packet_timestamp(packet);
+		vidx->vidframe->rf_dts = video_packet_timestamp(packet);
 
 		avcodec_decode_video2(vidx->codecx, 
-				ezfrm->frame, &got_pict, packet);
+				vidx->vidframe->frame, &got_pict, packet);
 		
-		ezfrm->context = packet;
-		ezfrm->frame->opaque = vidx;
-		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, got_pict, ezfrm);
+		vidx->vidframe->context = packet;
+		vidx->vidframe->frame->opaque = vidx;
+		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, 
+				got_pict, vidx->vidframe);
 		av_free_packet(packet);
 
 		/* 20150108: If a I-Frame has been successfully decoded,
@@ -2603,18 +2531,30 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		 * frame group. The I-Frame is the beginner of the group */
 		if (got_pict) {
 			//pts = ezfrm->frame->best_effort_timestamp;
-			video_frame_update(vidx, ezfrm->frame->key_frame);
-			return ezfrm->rf_dts;	/* succeeded */
+			if (vidx->vidframe->frame->key_frame) {
+				vidx->fkey = 1;
+			}
+			return vidx->vidframe->rf_dts;	/* succeeded */
 		}
 	} while (video_load_packet(vidx, packet) >= 0);
 	/* 20130808 this function should never fail unless the last frame was 
 	 * broken in the end of stream. In that case it'll return the recent 
 	 * DTS but mark it as failure in the frame buffer */
-	tmp = ezfrm->rf_dts;
-	ezfrm->rf_dts = -1;
+	tmp = vidx->vidframe->rf_dts;
+	vidx->vidframe->rf_dts = -1;
 	return tmp; 	/* this function never failed */
 }
 
+int compare_timestamp(int64_t anchor, int64_t head, int64_t tail)
+{
+	        if ((head -= anchor) < 0) {
+			                head = -head;
+					        }
+		        if ((tail -= anchor) < 0) {
+				                tail = -tail;
+						        }
+			        return (int)(head - tail); /* <0, close to head; >0 close to tail */
+}
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
@@ -2627,6 +2567,7 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		if (dts >= dtsto) {
 			return dts;
 		}
+		video_frame_update(vidx);
 	} while (video_load_packet(vidx, packet) >= 0);
 	/* 20130808 Return the closest frame */
 	return dts;
@@ -2659,10 +2600,12 @@ static int64_t video_decode_valided(EZVID *vidx,
 		   good frame and the current bad frame. There's no point to
 		   keep decoding while the distance of future frames are 
 		   longer than the good frame */
-		ezfrm = video_frame_best(vidx, dtsto);
-		if (video_frame_retrieve(vidx) != ezfrm) {
-			printf("video_decode_valided: out of range %lld\n", ezfrm->rf_dts);
-			return ezfrm->rf_dts;
+		if (compare_timestamp(dtsto, vidx->picframe->rf_dts, dts) <= 0) {
+		if ((vidx->picframe->rf_dts > 0) &&
+				((dtsto - vidx->picframe->rf_dts) < (dts - dtsto))) {
+			printf("video_decode_valided: out of range %lld\n", vidx->picframe->rf_dts);
+			vidx->vidframe->rf_dts = -1;
+			return vidx->picframe->rf_dts;
 		}
 		
 		/* 20150219: using video_load_packet() instead of 
@@ -2672,7 +2615,6 @@ static int64_t video_decode_valided(EZVID *vidx,
 			break;
 		}
 	}
-	video_frame_retrieve(vidx)->rf_dts = -1;
 	return -1;
 }
 
@@ -2704,6 +2646,7 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		/* working on OTF mode as default */
 		if (vidx->ses_flags & EZOP_DECODE_OTF) {
 			video_decode_next(vidx, packet);
+			video_frame_update(vidx);
 		} else {
 			av_free_packet(packet);
 		}
@@ -4544,7 +4487,6 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 {
 	EZVID	*vidx = ezfrm->frame->opaque;
 	AVPacket	*packet = ezfrm->context;
-	int	i;
 
 	/*EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, I:%d, %s\n", 
 			got_pic == 0 ? "Decoding" : "Decoded ", 
@@ -4554,14 +4496,10 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 			ezfrm->frame->interlaced_frame,
 			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
 
-	i = 0;
-	if (vidx->fgroup[1]->frame == ezfrm->frame) {
-		i = 1;
-	}
 	if (got_pic == 0) {
 		return 0;
 	}
-	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, PTS:%" PRId64 ", %s DTS:%" PRId64 ", PKey:%d F:%d A:%d\n", 
+	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, PTS:%" PRId64 ", %s DTS:%" PRId64 ", PKey:%d %s A:%d\n", 
 			got_pic == 0 ? "Decoding" : "Decoded ", 
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
@@ -4569,7 +4507,8 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 			packet->dts,	//ezfrm->frame->best_effort_timestamp,
 			id_lookup(id_pict_type, ezfrm->frame->pict_type),
 			packet->dts, packet->flags, 
-			i, vidx->fkey));
+			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
+			vidx->fkey));
 	return 0;
 }
 
@@ -4578,22 +4517,18 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 	int64_t	dts;
 	char	timestamp[64];
 
-	int	i = 0;
-	if (vidx->fgroup[1]->frame == ezfrm->frame) {
-		i = 1;
-	}
-
 	dts = ezfrm->rf_dts - vidx->dts_offset;
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
 	/*EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
 			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
-	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s F:%d A:%d\n",
+	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s %s A:%d\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
 			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type), 
-			i, vidx->fkey));
+			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
+			vidx->fkey));
 	return 0;
 }
 
