@@ -28,7 +28,7 @@
 #include "libcsoup.h"
 #include "ezthumb_debug.h"
 
-#define EZTHUMB_VERSION		"3.2.2"
+#define EZTHUMB_VERSION		"3.2.3"
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
@@ -505,6 +505,7 @@ typedef	struct	{
 typedef	struct		{
 	AVFrame		*frame;
 	unsigned char	*rf_buffer;	/* the frame buffer */
+	int		keyflag;	/* flag that i-frame received */
 	int64_t		rf_dts;		/* the DTS from the last packet */
 	int64_t		rf_pos;		/* the position of the last packet */
 	int		rf_size;	/* total size of packets */
@@ -551,7 +552,6 @@ typedef	struct	_EzVid	{
 	EZFRM		*swsframe;	/* scaled frame */
 	EZFRM		*picframe;	/* store the recent good frame */
 	EZFRM		*vidframe;	/* the decoding frame */
-	int		fkey;		/* keyframe started flag */
 	
 	/*** runtime variables in each session */
 	SMM_TIME	tmark;		/* the beginning timestamp */

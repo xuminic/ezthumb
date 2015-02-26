@@ -1043,8 +1043,8 @@ static int video_snapshot_safemode(EZVID *vidx, EZIMG *image)
 
 		/* use video_decode_next() instead of video_decode_keyframe()
 		 * because sometimes it's good for debugging doggy clips */
-		//if (video_decode_next(vidx, &packet) < 0) {
-		if (video_decode_valided(vidx, &packet, dts_snap) < 0) {
+		if (video_decode_next(vidx, &packet) < 0) {
+		//if (video_decode_valided(vidx, &packet, dts_snap) < 0) {
 			break;
 		}
 		if (dts >= dts_snap) {
@@ -2275,6 +2275,11 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	myntf.varg2 = ezfrm;
 	eznotify(vidx->sysopt, EN_FRAME_EFFECT, image->taken, 0, &myntf);
 
+	/* store the frame if it's newer than the cached one */
+	if (ezfrm == vidx->vidframe) {
+		video_frame_update(vidx);
+	}
+
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
 	dtms = ezfrm->rf_dts - vidx->dts_offset;
@@ -2454,7 +2459,9 @@ static int video_frame_free(EZFRM *ezfrm)
 
 static int video_frame_reset(EZVID *vidx)
 {
-	vidx->fkey = 0;
+	if (vidx->vidframe) {
+		vidx->vidframe->keyflag = 0;
+	}
 	return 0;
 }
 
@@ -2465,7 +2472,7 @@ static int video_frame_update(EZVID *vidx)
 	/* 20150223: only store the current frame until a keyframe is 
 	 * successfully decoded. Otherwise the frame buffer may be stuffed
 	 * by broken P-Frames */
-	if (vidx->fkey == 0) {
+	if (vidx->vidframe->keyflag == 0) {
 		return 0;
 	}
 	
@@ -2480,19 +2487,24 @@ static int video_frame_update(EZVID *vidx)
 	vidx->picframe->rf_pos  = vidx->vidframe->rf_pos;
 	vidx->picframe->rf_size = vidx->vidframe->rf_size;
 	vidx->picframe->rf_pac  = vidx->vidframe->rf_pac;
-	return vidx->fkey;
+	return 1;
 }
 
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 {
+	int64_t	picdiff, viddiff;
+	
 	if (vidx->picframe->rf_dts <= 0) {
 		return vidx->vidframe;
 	}
-	if (vidx->fkey == 0) {
-		return vidx->picframe;
+
+	if ((picdiff = vidx->picframe->rf_dts - refdts) < 0) {
+		picdiff = -picdiff;
 	}
-	if (compare_timestamp(refdts, vidx->picframe->rf_dts, 
-				vidx->vidframe->rf_dts) <= 0) {
+	if ((viddiff = vidx->vidframe->rf_dts - refdts) < 0) {
+		viddiff = -viddiff;
+	}
+	if (picdiff <= viddiff) {
 		return vidx->picframe;
 	}
 	return vidx->vidframe;
@@ -2520,7 +2532,6 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 				vidx->vidframe->frame, &got_pict, packet);
 		
 		vidx->vidframe->context = packet;
-		vidx->vidframe->frame->opaque = vidx;
 		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, 
 				got_pict, vidx->vidframe);
 		av_free_packet(packet);
@@ -2532,7 +2543,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		if (got_pict) {
 			//pts = ezfrm->frame->best_effort_timestamp;
 			if (vidx->vidframe->frame->key_frame) {
-				vidx->fkey = 1;
+				vidx->vidframe->keyflag = 1;
 			}
 			return vidx->vidframe->rf_dts;	/* succeeded */
 		}
@@ -2545,21 +2556,11 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 	return tmp; 	/* this function never failed */
 }
 
-int compare_timestamp(int64_t anchor, int64_t head, int64_t tail)
-{
-	        if ((head -= anchor) < 0) {
-			                head = -head;
-					        }
-		        if ((tail -= anchor) < 0) {
-				                tail = -tail;
-						        }
-			        return (int)(head - tail); /* <0, close to head; >0 close to tail */
-}
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
 
-	printf("video_decode_to: decode to %" PRId64 ".\n", dtsto);
+	//printf("video_decode_to: decode to %" PRId64 ".\n", dtsto);
 	do {
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
@@ -2582,17 +2583,14 @@ static int64_t video_decode_valided(EZVID *vidx,
 		AVPacket *packet, int64_t dtsto)
 {
 	int64_t	dts;
-	EZFRM	*ezfrm;
-	int	i;
 
-	printf("video_decode_valided: try to decode a valided frame\n");
+	//printf("video_decode_valided: try to decode a valided frame\n");
 	/* the simplest damage control: decodes 16 frames at most */
-	for (i = 0; ; i++) {
+	while (1) {
 		if ((dts = video_decode_next(vidx, packet)) < 0) {
 			break;
 		}
-		if (vidx->fkey) {
-			printf("video_decode_valided: %d tried\n", i);
+		if (vidx->vidframe->keyflag) {
 			return dts;
 		}
 
@@ -2600,18 +2598,15 @@ static int64_t video_decode_valided(EZVID *vidx,
 		   good frame and the current bad frame. There's no point to
 		   keep decoding while the distance of future frames are 
 		   longer than the good frame */
-		if (compare_timestamp(dtsto, vidx->picframe->rf_dts, dts) <= 0) {
-		if ((vidx->picframe->rf_dts > 0) &&
-				((dtsto - vidx->picframe->rf_dts) < (dts - dtsto))) {
-			printf("video_decode_valided: out of range %lld\n", vidx->picframe->rf_dts);
-			vidx->vidframe->rf_dts = -1;
+		if (video_frame_best(vidx, dtsto) == vidx->picframe) {
 			return vidx->picframe->rf_dts;
 		}
 		
 		/* 20150219: using video_load_packet() instead of 
 		   video_keyframe_next() because in dodge encoded files
 		   (middle.avi) every frame can be decoded i-frame */
-		if (video_load_packet(vidx, packet) < 0) {
+		/* 20150226: video_keyframe_next() is quicker */
+		if (video_keyframe_next(vidx, packet) < 0) {
 			break;
 		}
 	}
@@ -4485,7 +4480,6 @@ static int dump_packet(AVPacket *p)
 
 static int dump_frame(EZFRM *ezfrm, int got_pic)
 {
-	EZVID	*vidx = ezfrm->frame->opaque;
 	AVPacket	*packet = ezfrm->context;
 
 	/*EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, I:%d, %s\n", 
@@ -4499,16 +4493,13 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 	if (got_pic == 0) {
 		return 0;
 	}
-	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, PTS:%" PRId64 ", %s DTS:%" PRId64 ", PKey:%d %s A:%d\n", 
+	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, %s DTS:%" PRId64 ", PKey:%d  EKey:%d\n", 
 			got_pic == 0 ? "Decoding" : "Decoded ", 
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
 			ezfrm->frame->display_picture_number,
-			packet->dts,	//ezfrm->frame->best_effort_timestamp,
 			id_lookup(id_pict_type, ezfrm->frame->pict_type),
-			packet->dts, packet->flags, 
-			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
-			vidx->fkey));
+			packet->dts, packet->flags, ezfrm->keyflag));
 	return 0;
 }
 
@@ -4523,12 +4514,12 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
 			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
-	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s %s A:%d\n",
+	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s %s EKey:%d\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
 			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type), 
 			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
-			vidx->fkey));
+			vidx->vidframe->keyflag));
 	return 0;
 }
 

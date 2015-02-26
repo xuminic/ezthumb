@@ -1,4 +1,12 @@
 
+20150226: Version 3.2.3 Concept verified
+	* ezthumb.c: revoke the original double-decoding-frame plan.
+	The double-decoding-frame could not work because ffmpeg reuses the 
+	picture buffer even allocated more than one AVFrame structure.
+	The fix is allocating my own picture buffer. Once a proper frame
+	has been decoded, it will be moved into the picture buffer for
+	future reference.
+	
 20150115: Version 3.2.3
 	* ezthumb.c: use video_decode_valided() instead of video_decode_next()
 	in most cases. The video_decode_next() still have a chance to decode
