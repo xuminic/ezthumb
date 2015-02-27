@@ -1,0 +1,54 @@
+TODO List
+=========
+*) Test 3.2.3 core in different linux version
+*) PTS in higher ffmpeg
+*) GUI issue in CentOS5
+*) Update the GUI
+*) Integrating recent ffmpeg in Win32 version
+*) Windows installer
+*) More test cases for bind mode
+
+
+DO NOT FIX
+==========
+20150227: ezthumb -p scan --accurate middle.avi
+In '--accurate' mode, ezthumb would decode P/B frames between two I frames.
+Some dodge clips, like middle.avi which badly encoded the B frame, would cause
+ffmpeg messed around I frame unless keep decoding every frames. For example,
+while only decoding I frames by ezthumb -p scan middle.avi:
+
+Decoded , KEY:1, CPN:16, DPN:0, FF_I_TYPE DTS:2122, PKey:1  EKey:0
+Decoded , KEY:1, CPN:17, DPN:0, FF_I_TYPE DTS:2362, PKey:1  EKey:0
+[0127101225] video_snapshot_scan: [OR] 2602/2510
+Decoded , KEY:1, CPN:18, DPN:0, FF_I_TYPE DTS:2602, PKey:1  EKey:1
+Frame   1: Pos:6986090 Size:12708 PAC:1 DTS:2602 (0:01:48,525) Type:FF_I_TYPE FRAME EKey:1
+Decoded , KEY:1, CPN:19, DPN:0, FF_I_TYPE DTS:2842, PKey:1  EKey:0
+Decoded , KEY:1, CPN:20, DPN:0, FF_I_TYPE DTS:2917, PKey:1  EKey:0
+Decoded , KEY:1, CPN:21, DPN:0, FF_I_TYPE DTS:3027, PKey:1  EKey:0
+Decoded , KEY:1, CPN:22, DPN:0, FF_I_TYPE DTS:3267, PKey:1  EKey:0
+
+while decoding P/B frames by ezthumb -p scan --accurate middle.avi:
+
+Decoded , KEY:0, CPN:243, DPN:0, FF_P_TYPE DTS:2506, PKey:0  EKey:1
+Decoded , KEY:0, CPN:244, DPN:0, FF_P_TYPE DTS:2508, PKey:0  EKey:1
+Decoded , KEY:0, CPN:245, DPN:0, FF_P_TYPE DTS:2510, PKey:0  EKey:1
+Frame   1: Pos:6827272 Size:4336 PAC:2 DTS:2510 (0:01:44,688) Type:FF_P_TYPE FRAME EKey:1
+Decoded , KEY:0, CPN:246, DPN:0, FF_P_TYPE DTS:2603, PKey:0  EKey:0
+Decoded , KEY:0, CPN:247, DPN:0, FF_P_TYPE DTS:2843, PKey:0  EKey:0
+Decoded , KEY:0, CPN:248, DPN:0, FF_P_TYPE DTS:2918, PKey:0  EKey:0
+Decoded , KEY:0, CPN:249, DPN:0, FF_P_TYPE DTS:3028, PKey:0  EKey:0
+
+According to the DTS tag, ezthumb decoded to 2510, then jump to next I frame,
+which should be 2602 rather than 2603. And every I frame had error from 2603.
+This issue can be fixed by keeping decoding since 2510 untill a proper I frame
+is hit. However the logic of the program would be messy and the cost efficency
+would be bad, considering it only happens in old clips and most people would
+use key frame thumbnails, so I'm not going to fix this.
+
+20150227: binding mode
+In binding mode, the AR correction is only applied to the first clip in all
+clips. If the second, third or more clips apply the different AR ratio, 
+ezthumb won't follow the change.
+
+The binding mode is assumed to work with same but seperated clips. Different
+AR should not be used in mix.

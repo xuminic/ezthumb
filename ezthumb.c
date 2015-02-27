@@ -69,7 +69,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method);
 static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts);
 static int video_snap_end(EZVID *vidx, EZIMG *image);
 static EZFRM *video_frame_alloc(int pixfmt, int width, int height);
-static int video_frame_free(EZFRM *ezfrm);
+static int video_frame_free(EZFRM **ezfrm);
 static int video_frame_reset(EZVID *vidx);
 static int video_frame_update(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
@@ -1315,6 +1315,14 @@ static int video_open(EZVID *vidx)
 		return EZ_ERR_STREAM;
 	}
 
+	/* 20150227 filter out the dodge video fragment because the parameter
+	   read from ffmpeg could be very harmful */
+	if ((vidx->formatx->start_time < 0) && (vidx->formatx->duration < 0)) {
+		eznotify(NULL, EZ_ERR_STREAM, 0, 0, vidx->filename);
+		video_close(vidx);
+		return EZ_ERR_STREAM;
+	}
+
 	/* If the vsidx is uninitialized (first time opening the video),
 	 * ezthumb will go to find the video stream */
 	if (vidx->vsidx < 0) {
@@ -1393,7 +1401,7 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 	}
 
 	if ((vidx->vidframe = video_frame_alloc(0, 0, 0)) == NULL) {
-		video_frame_free(vidx->picframe);
+		video_frame_free(&vidx->picframe);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 
 				0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
@@ -1421,8 +1429,7 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 				image->dst_pixfmt, 
 				SWS_BILINEAR, NULL, NULL, NULL);
 		if (vidx->swsframe->context == NULL) {
-			video_frame_free(vidx->swsframe);
-			vidx->swsframe = NULL;
+			video_frame_free(&vidx->swsframe);
 		}
 	}
 	if (vidx->swsframe == NULL) {
@@ -1439,11 +1446,10 @@ static int video_disconnect(EZVID *vidx)
 		if (vidx->swsframe->context) {
 			sws_freeContext(vidx->swsframe->context);
 		}
-		video_frame_free(vidx->swsframe);
-		vidx->swsframe = NULL;
+		video_frame_free(&vidx->swsframe);
 	}
-	video_frame_free(vidx->picframe);
-	video_frame_free(vidx->vidframe);
+	video_frame_free(&vidx->picframe);
+	video_frame_free(&vidx->vidframe);
 	return EZ_ERR_NONE;
 }
 
@@ -1976,7 +1982,9 @@ static int video_seek_challenge(EZVID *vidx)
 			break;
 		}
 	}
-	if (cur_dts < 0) {	/* END OF FILE so save the last dts */
+	/* 20150227 video fragment clip 'xae' cause pos_first == -1 */
+	if ((cur_dts < 0) || (pos_first < 0)) {	
+		/* END OF FILE so save the last dts */
 		/* the media file is too short to do an autodetection;
 		 * actually it's done a full scan already */
 		SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
@@ -2407,7 +2415,7 @@ static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 #error	None of av_frame_alloc() or avcodec_alloc_frame() defined!
 #endif
 	if (ezfrm->frame == NULL) {
-		video_frame_free(ezfrm);
+		video_frame_free(&ezfrm);
 		return NULL;
 	}
 
@@ -2416,7 +2424,7 @@ static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 		 * RGB frame */
 		fbsize = avpicture_get_size(pixfmt, width, height);
 		if ((ezfrm->rf_buffer = av_malloc(fbsize)) == NULL) {
-			video_frame_free(ezfrm);
+			video_frame_free(&ezfrm);
 			return NULL;
 		}
 		/* link the RGB frame and the RBG pixel buffer */
@@ -2430,31 +2438,33 @@ static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 	return ezfrm;
 }
 
-static int video_frame_free(EZFRM *ezfrm)
+static int video_frame_free(EZFRM **ezfrm)
 {
 	unsigned char	*frmbuf;
 	
-	if (ezfrm == NULL) {
+	if (*ezfrm == NULL) {
 		return 0;
 	}
 	
-	frmbuf = ezfrm->rf_buffer;
-	if (ezfrm->rf_buffer) {
-		av_free(ezfrm->rf_buffer);
+	frmbuf = (*ezfrm)->rf_buffer;
+	if ((*ezfrm)->rf_buffer) {
+		av_free((*ezfrm)->rf_buffer);
 	}
 	
-	if (ezfrm->frame) {
+	if ((*ezfrm)->frame) {
 		/* check if the frame buffer has already been freed */
-		if (ezfrm->frame->data[0] == frmbuf) {
-			ezfrm->frame->data[0] = NULL;
+		if ((*ezfrm)->frame->data[0] == frmbuf) {
+			(*ezfrm)->frame->data[0] = NULL;
 		}
 #ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free(ezfrm->frame);
+		av_frame_free((*ezfrm)->frame);
 #else
-		av_free(ezfrm->frame);
+		av_free((*ezfrm)->frame);
 #endif
 	}
-	return smm_free(ezfrm);
+	smm_free(*ezfrm);
+	*ezfrm = NULL;
+	return 0;
 }
 
 static int video_frame_reset(EZVID *vidx)
