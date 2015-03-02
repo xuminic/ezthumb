@@ -1,3 +1,6 @@
+20150302:
+	* video_decode_next(): supported PTS in high version ffmpeg.
+
 20150227: Version 3.2.3 tested in CentOS 4
 	* video_frame_free(): prototype modified to clear the EZFRM pointer.
 	Otherwise the binding mode would've found the dereference pointers.

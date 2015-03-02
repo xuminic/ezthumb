@@ -84,6 +84,18 @@ if test "$?" = "0"; then
 fi
 
 rm -f conftest
+make conftest CONTEST=TEST_AVFRAME_BEST_EFFORT_TS >> conftest.log 2>> conftest.log
+if test "$?" = "0"; then
+	echo "#define	HAVE_AVFRAME_BEST_ETS		1"
+fi
+
+rm -f conftest
+make conftest CONTEST=TEST_AVFRAME_PKT_PTS >> conftest.log 2>> conftest.log
+if test "$?" = "0"; then
+	echo "#define	HAVE_AVFRAME_PKT_PTS		1"
+fi
+
+rm -f conftest
 echo ""
 echo "#endif"
 

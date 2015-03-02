@@ -506,6 +506,7 @@ typedef	struct		{
 	AVFrame		*frame;
 	unsigned char	*rf_buffer;	/* the frame buffer */
 	int		keyflag;	/* flag that i-frame received */
+	int64_t		rf_pts;		/* the PTS from the decoder */
 	int64_t		rf_dts;		/* the DTS from the last packet */
 	int64_t		rf_pos;		/* the position of the last packet */
 	int		rf_size;	/* total size of packets */

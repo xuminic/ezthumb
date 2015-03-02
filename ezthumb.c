@@ -2290,7 +2290,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
-	dtms = ezfrm->rf_dts - vidx->dts_offset;
+	dtms = ezfrm->rf_pts - vidx->dts_offset;
 	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
 	if (vidx->dur_all == 0) {
 		meta_timestamp(dtms, 1, timestamp);
@@ -2493,6 +2493,7 @@ static int video_frame_update(EZVID *vidx)
 			(AVPicture *) vidx->vidframe->frame, 
 			vidx->codecx->pix_fmt, vidx->width, vidx->height);
 	
+	vidx->picframe->rf_pts  = vidx->vidframe->rf_pts;
 	vidx->picframe->rf_dts  = vidx->vidframe->rf_dts;
 	vidx->picframe->rf_pos  = vidx->vidframe->rf_pos;
 	vidx->picframe->rf_size = vidx->vidframe->rf_size;
@@ -2523,27 +2524,27 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 {
 	int64_t	tmp;
+	EZFRM	*ezfrm = vidx->vidframe;
 	int	got_pict = 1;
 
-	vidx->vidframe->rf_pos  = packet->pos;
-	vidx->vidframe->rf_size = 0;
-	vidx->vidframe->rf_pac  = 0;
+	ezfrm->rf_pos  = packet->pos;
+	ezfrm->rf_size = 0;
+	ezfrm->rf_pac  = 0;
 
 	do {
 		eznotify(vidx->sysopt, EN_PACKET_RECV, 0, 0, packet);
-		vidx->vidframe->rf_size += packet->size;
-		vidx->vidframe->rf_pac++;
+		ezfrm->rf_size += packet->size;
+		ezfrm->rf_pac++;
 		
 		/* 20150115:according to the recent avcodec.h, the DTS of 
 		 * a frame should keep up with the received packets */
-		vidx->vidframe->rf_dts = video_packet_timestamp(packet);
+		ezfrm->rf_dts = video_packet_timestamp(packet);
 
 		avcodec_decode_video2(vidx->codecx, 
-				vidx->vidframe->frame, &got_pict, packet);
+				ezfrm->frame, &got_pict, packet);
 		
-		vidx->vidframe->context = packet;
-		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, 
-				got_pict, vidx->vidframe);
+		ezfrm->context = packet;
+		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, got_pict, ezfrm);
 		av_free_packet(packet);
 
 		/* 20150108: If a I-Frame has been successfully decoded,
@@ -2551,18 +2552,30 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		 * buffer in turn. The following decoding is named as
 		 * frame group. The I-Frame is the beginner of the group */
 		if (got_pict) {
-			//pts = ezfrm->frame->best_effort_timestamp;
-			if (vidx->vidframe->frame->key_frame) {
-				vidx->vidframe->keyflag = 1;
+			/* the reference PTS from the decoder */ 
+#if	defined(HAVE_AVFRAME_BEST_ETS)
+			ezfrm->rf_pts = ezfrm->frame->best_effort_timestamp;
+#elif	defined(HAVE_AVFRAME_PKT_PTS)
+			ezfrm->rf_pts = ezfrm->frame->pkt_pts;
+#else
+			ezfrm->rf_pts = AV_NOPTS_VALUE;
+#endif
+			if (ezfrm->rf_pts <= 0) {
+				ezfrm->rf_pts = ezfrm->rf_dts;
 			}
-			return vidx->vidframe->rf_dts;	/* succeeded */
+
+			/* Update the flag when a key frame was decoded */
+			if (ezfrm->frame->key_frame) {
+				ezfrm->keyflag = 1;
+			}
+			return ezfrm->rf_dts;	/* succeeded */
 		}
 	} while (video_load_packet(vidx, packet) >= 0);
 	/* 20130808 this function should never fail unless the last frame was 
 	 * broken in the end of stream. In that case it'll return the recent 
 	 * DTS but mark it as failure in the frame buffer */
-	tmp = vidx->vidframe->rf_dts;
-	vidx->vidframe->rf_dts = -1;
+	tmp = ezfrm->rf_dts;
+	ezfrm->rf_dts = -1;
 	return tmp; 	/* this function never failed */
 }
 
@@ -4520,13 +4533,11 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 
 	dts = ezfrm->rf_dts - vidx->dts_offset;
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	/*EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s\n",
+	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld PTS:%lld (%s) "
+				"Type:%s %s EKey:%d\n",
 			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
-			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
-			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
-	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld (%s) Type:%s %s EKey:%d\n",
-			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
-			ezfrm->rf_pac, (long long) ezfrm->rf_dts, timestamp, 
+			ezfrm->rf_pac, (long long) ezfrm->rf_dts, 
+			(long long) ezfrm->rf_pts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type), 
 			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
 			vidx->vidframe->keyflag));
