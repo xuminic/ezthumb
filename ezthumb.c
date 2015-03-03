@@ -154,7 +154,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	/* enable media info area and inset timestamp, skip the first and the
 	 * last frame, no shadows */
 	ezopt->flags = EZOP_INFO | EZOP_TIMEST | EZOP_DECODE_OTF | 
-			EZOP_THUMB_COPY | EZOP_DUR_AUTO;
+			EZOP_THUMB_COPY | EZOP_DUR_HEAD;
 
 	//ezopt->grid_gap_w = 4 | EZ_RATIO_OFF;
 	//ezopt->grid_gap_h = 4 | EZ_RATIO_OFF;
@@ -1300,7 +1300,7 @@ static int video_open(EZVID *vidx)
 	}
 
 	/* Generate missing pts even if it requires parsing future frames.*/
-	vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
+	//vidx->formatx->flags |= AVFMT_FLAG_GENPTS;
 	//vidx->formatx->flags |= AVFMT_FLAG_IGNIDX | AVFMT_TS_DISCONT ;
 
 #ifdef	HAVE_AVFORMAT_FIND_STREAM_INFO
@@ -2457,7 +2457,7 @@ static int video_frame_free(EZFRM **ezfrm)
 			(*ezfrm)->frame->data[0] = NULL;
 		}
 #ifdef	HAVE_AV_FRAME_ALLOC
-		av_frame_free((*ezfrm)->frame);
+		av_frame_free(&(*ezfrm)->frame);
 #else
 		av_free((*ezfrm)->frame);
 #endif
@@ -2477,8 +2477,6 @@ static int video_frame_reset(EZVID *vidx)
 
 static int video_frame_update(EZVID *vidx)
 {
-	AVPicture	tmpav;
-	
 	/* 20150223: only store the current frame until a keyframe is 
 	 * successfully decoded. Otherwise the frame buffer may be stuffed
 	 * by broken P-Frames */
@@ -2486,9 +2484,6 @@ static int video_frame_update(EZVID *vidx)
 		return 0;
 	}
 	
-	memcpy(&tmpav, (AVPicture *) vidx->picframe->frame, sizeof(tmpav));
-	memcpy(vidx->picframe->frame, vidx->vidframe->frame, sizeof(AVFrame));
-	memcpy((AVPicture *) vidx->picframe->frame, &tmpav, sizeof(tmpav));
 	av_picture_copy((AVPicture *) vidx->picframe->frame, 
 			(AVPicture *) vidx->vidframe->frame, 
 			vidx->codecx->pix_fmt, vidx->width, vidx->height);

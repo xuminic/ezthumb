@@ -134,7 +134,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 
 	/* load configure from file, or create the file */
 	gui->config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
-			"FunSight", "ezthumb.conf", CSC_CFG_RWC);
+			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
 	if (gui->config) {
 		ezopt_load_config(ezopt, gui->config);
 		config_dump(gui->config, "Read");
@@ -168,9 +168,9 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	if (s) {
 		gui->dfm_idx = index_of_strings(list_duration, s);
 	} else {
-		gui->dfm_idx = index_of_strings(list_duration, CFG_PIC_AUTO);
+		gui->dfm_idx = index_of_strings(list_duration, CFG_PIC_DFM_HEAD);
 		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
-				CFG_KEY_DURATION, CFG_PIC_AUTO);
+				CFG_KEY_DURATION, CFG_PIC_DFM_HEAD);
 	}
 
 	/* find the index of drop down lists: the file format drop down */

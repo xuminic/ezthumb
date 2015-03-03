@@ -2,7 +2,7 @@
 
 CFLAGS	= -Wall -O3
 
-TARGET	= hentai mkweb
+TARGET	= hentai mkweb bin2c
 
 all: $(TARGET)
 
@@ -10,6 +10,9 @@ hentai: hentai.c
 	gcc $(CFLAGS) -o $@ $^
 
 mkweb: mkweb.c
+	gcc $(CFLAGS) -o $@ $^
+
+bin2c: bin2c.c
 	gcc $(CFLAGS) -o $@ $^
 
 install:

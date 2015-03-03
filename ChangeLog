@@ -1,3 +1,11 @@
+20150303:
+	* video_frame_free(): fixed the issue that av_frame_free() reported
+	double free coredump by only copy image data in video_frame_update().
+	
+	* eziup.c: duration read from the FFMPEG avformat_find_stream_info().
+	The gain is faster and less mess in ArgusTV. The higher the version
+	of FFMPEG the better the duration it probes.
+
 20150302:
 	* video_decode_next(): supported PTS in high version ffmpeg.
 

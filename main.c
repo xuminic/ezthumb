@@ -1296,7 +1296,7 @@ static int load_default_config(EZOPT *opt)
 	char	*path;
 
 	config = csc_cfg_open(SMM_CFGROOT_SYSTEM,
-			"FunSight", "ezthumbrc", CSC_CFG_READ);
+			"ezthumb", "ezthumbrc", CSC_CFG_READ);
 	if (config) {
 		ezopt_load_config(opt, config);
 		if (EZOP_DEBUG(opt->flags) >= SLOG_LVL_INFO) {
@@ -1307,7 +1307,7 @@ static int load_default_config(EZOPT *opt)
 	}
 
 	config = csc_cfg_open(SMM_CFGROOT_USER,
-			"FunSight", "ezthumbrc", CSC_CFG_READ);
+			"ezthumb", "ezthumbrc", CSC_CFG_READ);
 	if (config) {
 		ezopt_load_config(opt, config);
 		if (EZOP_DEBUG(opt->flags) >= SLOG_LVL_INFO) {
