@@ -62,3 +62,25 @@ I reckon the Win32 version must have grabbed an intermediate version of FFMPEG
 so there's some inconsistency. Since the FFMPEG development package will follow
 the upstream soon, this bug need no fix.
 
+
+*) Failed keyframe in feral.rm and other RMVB files.
+Logs like this: 
+[0204234236] video_snapshot_skim: [IF] 33767/40571
+[rv40 @ 0x85fa320] First slice header is incorrect
+Decoding KEY:1 CPN:0 EKey:0 [0] DTS:33767 PKey:1 Pos:3663332 Size:4805
+[rv40 @ 0x85fa320] Invalid decoder state: B-frame without reference data.
+Decoding KEY:1 CPN:0 EKey:0 [0] DTS:33666 PKey:0 Pos:3663332 Size:6264
+[rv40 @ 0x85fa320] Invalid decoder state: B-frame without reference data.
+Decoding KEY:1 CPN:0 EKey:0 [0] DTS:33700 PKey:0 Pos:3663332 Size:7865
+[rv40 @ 0x85fa320] Invalid decoder state: B-frame without reference data.
+Decoding KEY:1 CPN:0 EKey:0 [0] DTS:33733 PKey:0 Pos:3663332 Size:9290
+[rv40 @ 0x85fa320] warning: first frame is no keyframe
+Decoded  KEY:1 CPN:0 EKey:0 FF_I_TYPE DTS:33767 PKey:0 Pos:3663332 Size:14484
+Decoded  KEY:0 CPN:0 EKey:0 FF_P_TYPE DTS:43710 PKey:1 Pos:4526394 Size:8764
+Decoded  KEY:1 CPN:1 EKey:0 FF_I_TYPE DTS:53787 PKey:1 Pos:5498865 Size:6548
+Frame   0: PAC:5 EKey:1 DTS:33767 (0:00:33,767) Type:FF_I_TYPE CACHE PTS:33900
+
+The first key frame can not be properly decoded. However the rv40 decoder
+still returned the look-good frame, actual contents were all grey images. 
+Currently ezthumb can not tell which key frame was successfully decoded.
+
