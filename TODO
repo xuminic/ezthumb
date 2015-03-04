@@ -2,14 +2,13 @@ TODO List
 =========
 *) Test 3.2.3 core in different linux version
 *) More test cases for bind mode
-*) Integrating recent ffmpeg in Win32 version
 *) Windows installer
 *) Update the GUI
 
 
 DO NOT FIX
 ==========
-20150227: ezthumb -p scan --accurate middle.avi
+*) 20150227: ezthumb -p scan --accurate middle.avi
 In '--accurate' mode, ezthumb would decode P/B frames between two I frames.
 Some dodge clips, like middle.avi which badly encoded the B frame, would cause
 ffmpeg messed around I frame unless keep decoding every frames. For example,
@@ -43,10 +42,23 @@ is hit. However the logic of the program would be messy and the cost efficency
 would be bad, considering it only happens in old clips and most people would
 use key frame thumbnails, so I'm not going to fix this.
 
-20150227: binding mode
+
+*) 20150227: binding mode
 In binding mode, the AR correction is only applied to the first clip in all
 clips. If the second, third or more clips apply the different AR ratio, 
 ezthumb won't follow the change.
 
 The binding mode is assumed to work with same but seperated clips. Different
 AR should not be used in mix.
+
+
+*) 20150304: Win32 version no avformat_close_input()
+This is the most weird thing I've ever had. In this FFMPEG release, the 
+av_open_input_file() has been depricated and avformat_open_input() has been
+introduced. But there's no avformat_close_input() so you still need to use
+av_close_input_file() to close the video.
+
+I reckon the Win32 version must have grabbed an intermediate version of FFMPEG
+so there's some inconsistency. Since the FFMPEG development package will follow
+the upstream soon, this bug need no fix.
+

@@ -1,76 +1,111 @@
 This is a FFmpeg Win32 shared build by Kyle Schwarz.
 
-Zeranoe's FFmpeg Builds Home Page: http://ffmpeg.zeranoe.com/builds/
+Zeranoe's FFmpeg Builds Home Page: <http://ffmpeg.zeranoe.com/builds/>
 
-Built on Aug 16 2011 18:55:50
+This build was compiled on: , at: 
 
-FFmpeg version git-41bf67d
-	libavutil    51. 12. 0 / 51. 12. 0
-	libavcodec   53. 10. 0 / 53. 10. 0
-	libavformat  53.  7. 0 / 53.  7. 0
-	libavdevice  53.  3. 0 / 53.  3. 0
-	libavfilter   2. 31. 1 /  2. 31. 1
-	libswscale    2.  0. 0 /  2.  0. 0
-	libpostproc  51.  2. 0 / 51.  2. 0
+FFmpeg version: 2015-03-03 git-5de2dab
+  libavutil      54. 19.100 / 54. 19.100
+  libavcodec     56. 26.100 / 56. 26.100
+  libavformat    56. 23.106 / 56. 23.106
+  libavdevice    56.  4.100 / 56.  4.100
+  libavfilter     5. 11.102 /  5. 11.102
+  libswscale      3.  1.101 /  3.  1.101
+  libswresample   1.  1.100 /  1.  1.100
+  libpostproc    53.  3.100 / 53.  3.100
 
-FFmpeg configured with:
-	--disable-static
-	--enable-shared
-	--disable-outdev=sdl
-	--enable-gpl
-	--enable-version3
-	--enable-memalign-hack
-	--enable-runtime-cpudetect
-	--enable-avisynth
-	--enable-bzlib
-	--enable-frei0r
-	--enable-libopencore-amrnb
-	--enable-libopencore-amrwb
-	--enable-libfreetype
-	--enable-libgsm
-	--enable-libmp3lame
-	--enable-libopenjpeg
-	--enable-librtmp
-	--enable-libschroedinger
-	--enable-libspeex
-	--enable-libtheora
-	--enable-libvorbis
-	--enable-libvpx
-	--enable-libx264
-	--enable-libxavs
-	--enable-libxvid
-	--enable-zlib
+This FFmpeg build was configured with:
+  --disable-static
+  --enable-shared
+  --enable-gpl
+  --enable-version3
+  --disable-w32threads
+  --enable-avisynth
+  --enable-bzlib
+  --enable-fontconfig
+  --enable-frei0r
+  --enable-gnutls
+  --enable-iconv
+  --enable-libass
+  --enable-libbluray
+  --enable-libbs2b
+  --enable-libcaca
+  --enable-libfreetype
+  --enable-libgme
+  --enable-libgsm
+  --enable-libilbc
+  --enable-libmodplug
+  --enable-libmp3lame
+  --enable-libopencore-amrnb
+  --enable-libopencore-amrwb
+  --enable-libopenjpeg
+  --enable-libopus
+  --enable-librtmp
+  --enable-libschroedinger
+  --enable-libsoxr
+  --enable-libspeex
+  --enable-libtheora
+  --enable-libtwolame
+  --enable-libvidstab
+  --enable-libvo-aacenc
+  --enable-libvo-amrwbenc
+  --enable-libvorbis
+  --enable-libvpx
+  --enable-libwavpack
+  --enable-libwebp
+  --enable-libx264
+  --enable-libx265
+  --enable-libxavs
+  --enable-libxvid
+  --enable-lzma
+  --enable-decklink
+  --enable-zlib
 
-The source code for this FFmpeg build can be found at:
-	http://hawkeye.arrozcru.org/source/
-	
-This version of FFmpeg was built on:
-	Ubuntu Desktop 11.04: http://www.ubuntu.com/desktop
-	
-The cross-compile toolchain used to compile this FFmpeg was:
-	MinGW-w64 r4279: http://mingw-w64.sourceforge.net/
-	winpthreads (part of MinGW-w64)
+This build was compiled with the following external libraries:
+  bzip2 1.0.6 <http://bzip.org/>
+  Fontconfig 2.11.91 <http://freedesktop.org/wiki/Software/fontconfig>
+  Frei0r 20130909-git-10d8360 <http://frei0r.dyne.org/>
+  GnuTLS 3.2.20 <http://gnutls.org/>
+  libiconv 1.14 <http://gnu.org/software/libiconv/>
+  libass 0.12.0 <http://code.google.com/p/libass/>
+  libbluray 0.7.0 <http://videolan.org/developers/libbluray.html>
+  libbs2b 3.1.0 <http://bs2b.sourceforge.net/>
+  libcaca 0.99.beta18 <http://caca.zoy.org/wiki/libcaca>
+  FreeType 2.5.4 <http://freetype.sourceforge.net/>
+  Game Music Emu 0.6.0 <http://code.google.com/p/game-music-emu/>
+  GSM 1.0.13-4 <http://packages.debian.org/source/squeeze/libgsm>
+  iLBC 20141214-git-ef04ebe <https://github.com/dekkers/libilbc/>
+  Modplug-XMMS 0.8.8.5 <http://modplug-xmms.sourceforge.net/>
+  LAME 3.99.5 <http://lame.sourceforge.net/>
+  OpenCORE AMR 0.1.3 <http://sourceforge.net/projects/opencore-amr/>
+  OpenJPEG 1.5.2 <http://www.openjpeg.org/>
+  Opus 1.1 <http://opus-codec.org/>
+  RTMPDump 20140707-git-a1900c3 <http://rtmpdump.mplayerhq.hu/>
+  Schroedinger 1.0.11 <http://diracvideo.org/>
+  libsoxr 0.1.1 <http://sourceforge.net/projects/soxr/>
+  Speex 1.2rc2 <http://speex.org/>
+  Theora 1.1.1 <http://theora.org/>
+  TwoLAME 0.3.13 <http://twolame.org/>
+  vid.stab 0.98 <http://public.hronopik.de/vid.stab/>
+  VisualOn AAC 0.1.3 <https://github.com/mstorsjo/vo-aacenc>
+  VisualOn AMR-WB 0.1.2 <https://github.com/mstorsjo/vo-amrwbenc>
+  Vorbis 1.3.4 <http://vorbis.com/>
+  vpx 1.3.0 <http://webmproject.org/>
+  WavPack 4.70.0 <http://wavpack.com/>
+  WebP 0.4.2 <https://developers.google.com/speed/webp/>
+  x264 20141220-git-40bb568 <http://videolan.org/developers/x264.html>
+  x265 1.5 <http://x265.org/>
+  XAVS svn-r55 <http://xavs.sourceforge.net/>
+  Xvid 1.3.3 <http://xvid.org/>
+  XZ Utils 5.2.0 <http://tukaani.org/xz>
+  zlib 1.2.8 <http://zlib.net/>
 
-The GCC version used to compile this FFmpeg was:
-	GCC 4.6.1: http://gcc.gnu.org/
-	
-The external libaries compiled into this FFmpeg are:
-	bzip2 1.0.6 http://www.bzip.org
-	Frei0r 1.3 http://frei0r.dyne.org/
-	opencore-amr 0.1.2 http://sourceforge.net/projects/opencore-amr/
-	FreeType 2.4.5 http://www.freetype.org/
-	gsm 1.0.13-3 http://libgsm.sourcearchive.com/
-	LAME 3.98.4 http://lame.sourceforge.net/
-	OpenJPEG 1.4 http://www.openjpeg.org/
-	RTMP git-b627335d http://rtmpdump.mplayerhq.hu/
-	Schroedinger 1.0.10 http://diracvideo.org/
-	Speex 1.2rc1 http://www.speex.org/
-	Theora 1.1.1 http://www.theora.org/
-	Vorbis 1.3.2 http://www.vorbis.com/
-	libvpx 0.9.7 http://www.webmproject.org/code/
-	x264 git-392e7621 http://www.videolan.org/developers/x264.html
-	XAVS r54 http://xavs.sourceforge.net/
-	Xvid 1.3.2 http://www.xvid.org/
-	zlib 1.2.5 http://zlib.net/
+The source code for this FFmpeg build can be found at: <http://ffmpeg.zeranoe.com/builds/source/>
 
-License for each library can be found in the licenses folder.
+This build was compiled on Debian 8.0 (64-bit): <http://www.debian.org/>
+
+GCC 4.9.2 was used to compile this FFmpeg build: <http://gcc.gnu.org/>
+
+This build was compiled using the MinGW-w64 toolchain: <http://mingw-w64.sourceforge.net/>
+
+Licenses for each library can be found in the 'licenses' folder.

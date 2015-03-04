@@ -154,9 +154,6 @@ install: all
 	install -s $(TARGET) $(BINDIR)
 	install ezthumb.1 $(MANDIR)
 
-debug: all
-	$(CP) $(TARGET) ~/bin
-
 conftest: conftest.c
 	$(CC) $(CFLAGS) $(LIBDIR) -D$(CONTEST) -o $@ $< $(LIBS)
 
@@ -181,6 +178,15 @@ else
 release: rel_source rel_win_bin
 endif
 	
+ifeq	($(SYSTOOL),unix)
+debug: all
+	$(CP) $(TARGET) ~/bin
+else
+debug: install_win
+	$(RM) -r ~/bin/ezthumb
+	mv $(RELDIR)-win-bin ~/bin/ezthumb
+endif
+
 rel_source: cleanall
 	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
@@ -196,9 +202,10 @@ install_win: all
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXTDIR)/ffmpeg/bin/*.dll $(EXTDIR)/lib/*.dll $(RELDIR)-win-bin
 
-rel_win_bin: install_win
-	-tar czf $(RELDIR)-win-bin.tar.gz $(RELDIR)-win-bin
-	-$(RM) -r $(RELDIR)-win-bin
+rel_win_bin:
+	-echo "OutFile \"ezthumb-$(shell version.sh)-setup.exe\"" > nsis_version.txt
+	makensis ezthumb.nsi
+	-$(RM) nsis_version.txt 
 
 showdll:
 	@if [ -f ezthumb.exe ]; then \
