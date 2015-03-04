@@ -1,3 +1,7 @@
+20150304:
+	* Win32 version: updated the FFMPEG to 2015-03-03 git-5de2dab.
+	It should support H.265.
+
 20150303:
 	* video_frame_free(): fixed the issue that av_frame_free() reported
 	double free coredump by only copy image data in video_frame_update().
