@@ -1337,7 +1337,7 @@ static int video_open(EZVID *vidx)
 	vidx->vstream = vidx->formatx->streams[vidx->vsidx];
 	vidx->codecx  = vidx->vstream->codec;
 	/* discard frames; AVDISCARD_NONKEY,AVDISCARD_BIDIR */
-	vidx->codecx->skip_frame = AVDISCARD_NONREF | AVDISCARD_BIDIR;
+	//vidx->codecx->skip_frame = AVDISCARD_NONREF | AVDISCARD_BIDIR;
 	//vidx->codecx->hurry_up = 1; /* fast decoding mode */
 
 	/* open the codec */
@@ -1407,27 +1407,19 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 		return EZ_ERR_LOWMEM;
 	}
 
-	/* allocate the swscale structure for scaling the screen image */
-	/*vidx->swsctx = sws_getContext(vidx->codecx->width, 
-			vidx->codecx->height, vidx->codecx->pix_fmt, 
-			image->dst_width, image->dst_height,
-			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);*/
-	/*vidx->swsctx = sws_getContext(vidx->width, 
-			vidx->height > vidx->ar_height ? 
-					vidx->height : vidx->ar_height,
-			vidx->codecx->pix_fmt, 
-			image->dst_width, image->dst_height,
-			image->dst_pixfmt, SWS_BILINEAR, NULL, NULL, NULL);*/
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
 	vidx->swsframe = video_frame_alloc(image->dst_pixfmt,
 			image->dst_width, image->dst_height);
 	if (vidx->swsframe) {
-		vidx->swsframe->context = sws_getContext(vidx->width, 
-				vidx->height, vidx->codecx->pix_fmt,
+		/* the swscale structure for scaling the screen image */
+		vidx->swsframe->context = sws_getContext(
+				vidx->width, vidx->height, 
+				vidx->codecx->pix_fmt,
 				image->dst_width, image->dst_height, 
 				image->dst_pixfmt, 
-				SWS_BILINEAR, NULL, NULL, NULL);
+				SWS_LANCZOS|SWS_ACCURATE_RND,  //SWS_BILINEAR
+				NULL, NULL, NULL);
 		if (vidx->swsframe->context == NULL) {
 			video_frame_free(&vidx->swsframe);
 		}
@@ -1437,6 +1429,23 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 		eznotify(vidx->sysopt, EZ_ERR_SWSCALE, 0, 0, vidx->filename);
 		return EZ_ERR_SWSCALE;
 	}
+
+#ifdef	CFG_DUMP_SNAPSHOT
+	/* frame image capture device for debugging only */
+	vidx->capgdimg = gdImageCreateTrueColor(vidx->width, vidx->height);
+	vidx->capframe = video_frame_alloc(PIX_FMT_RGB24, 
+				vidx->width, vidx->height);
+	if (vidx->capframe) {
+		vidx->capframe->context = sws_getContext(
+				vidx->width, vidx->height,
+				vidx->codecx->pix_fmt,
+				vidx->width, vidx->height, PIX_FMT_RGB24,
+				SWS_BILINEAR, NULL, NULL, NULL);
+		if (vidx->capframe->context == NULL) {
+			video_frame_free(&vidx->capframe);
+		}
+	}
+#endif
 	return EZ_ERR_NONE;
 }
 
@@ -1450,6 +1459,18 @@ static int video_disconnect(EZVID *vidx)
 	}
 	video_frame_free(&vidx->picframe);
 	video_frame_free(&vidx->vidframe);
+
+#ifdef	CFG_DUMP_SNAPSHOT
+	/* frame image capture device for debugging only */
+	if (vidx->capframe) {
+		sws_freeContext(vidx->capframe->context);
+		video_frame_free(&vidx->capframe);
+	}
+	if (vidx->capgdimg) {
+		gdImageDestroy(vidx->capgdimg);
+		vidx->capgdimg = NULL;
+	}
+#endif
 	return EZ_ERR_NONE;
 }
 
@@ -2283,11 +2304,6 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	myntf.varg2 = ezfrm;
 	eznotify(vidx->sysopt, EN_FRAME_EFFECT, image->taken, 0, &myntf);
 
-	/* store the frame if it's newer than the cached one */
-	if (ezfrm == vidx->vidframe) {
-		video_frame_update(vidx);
-	}
-
 	/* convert current PTS to millisecond and then 
 	 * metamorphose to human readable form */
 	dtms = ezfrm->rf_pts - vidx->dts_offset;
@@ -2327,6 +2343,9 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	/* update the number of taken shots, must before displaying */
 	image->taken++;
 
+	/* store the last frame */
+	video_frame_update(vidx);
+
 	/* display the on-going information */
 	if (image->shots) {
 		eznotify(vidx->sysopt, EN_PROC_CURRENT, 
@@ -2341,6 +2360,64 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	video_timing(vidx, EZ_PTS_UPDATE);
 	return 0;
 }
+
+#ifdef	CFG_DUMP_SNAPSHOT
+static int video_snap_debug(EZVID *vidx, EZFRM *ezfrm)
+{
+	EZTIME	dtms;
+	FILE	*fout;
+	char	timestamp[64];
+	int	x, y;
+	unsigned char	*src;
+
+	if (!vidx->capgdimg || !vidx->capframe) {
+		return -1;
+	}
+
+	/* convert current PTS to millisecond and then 
+	 * metamorphose to human readable form */
+	dtms = ezfrm->rf_pts - vidx->dts_offset;
+	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
+	if (vidx->dur_all == 0) {
+		meta_timestamp(dtms, 1, timestamp);
+	} else {		/* binding mode */
+		dtms += vidx->dur_off;	/* aligning the binding clips */
+		timestamp[0] = '(';
+		meta_timestamp(dtms, 1, timestamp + 1);
+		strcat(timestamp, ")");
+	}
+
+	/* convert image from YUV to RGB */
+	sws_scale(vidx->capframe->context, 
+			(const uint8_t * const *) ezfrm->frame->data,
+			ezfrm->frame->linesize, 0, vidx->height, 
+			vidx->capframe->frame->data, 
+			vidx->capframe->frame->linesize);
+
+	/* convert image from FFMPEG to GD device */
+	src = vidx->capframe->frame->data[0];
+	for (y = 0; y < vidx->height; y++) {
+		for (x = 0; x < vidx->width * 3; x += 3) {
+			gdImageSetPixel(vidx->capgdimg, x / 3, y,
+					gdImageColorResolve(vidx->capgdimg,
+						src[x], src[x+1], src[x+2]));
+		}
+		src += vidx->width * 3;
+	}
+
+	/* write the timestamp into the shot */
+	gdImageString(vidx->capgdimg, gdFontGetSmall(), 4, 4, (void*) timestamp,
+			gdImageColorResolve(vidx->capgdimg, 0xff, 0xff, 0xff));
+
+
+	sprintf(timestamp, "framedump_%09lld.jpg", dtms);
+	if ((fout = fopen(timestamp, "wb")) != NULL) {
+		gdImageJpeg(vidx->capgdimg, fout, 85);
+		fclose(fout);
+	}
+	return 0;
+}
+#endif	/* CFG_DUMP_SNAPSHOT */
 
 static int video_snap_end(EZVID *vidx, EZIMG *image)
 {
@@ -2487,12 +2564,17 @@ static int video_frame_update(EZVID *vidx)
 	av_picture_copy((AVPicture *) vidx->picframe->frame, 
 			(AVPicture *) vidx->vidframe->frame, 
 			vidx->codecx->pix_fmt, vidx->width, vidx->height);
+	vidx->picframe->frame->pict_type = vidx->vidframe->frame->pict_type;
 	
 	vidx->picframe->rf_pts  = vidx->vidframe->rf_pts;
 	vidx->picframe->rf_dts  = vidx->vidframe->rf_dts;
 	vidx->picframe->rf_pos  = vidx->vidframe->rf_pos;
 	vidx->picframe->rf_size = vidx->vidframe->rf_size;
 	vidx->picframe->rf_pac  = vidx->vidframe->rf_pac;
+
+#ifdef	CFG_DUMP_SNAPSHOT
+	video_snap_debug(vidx, vidx->picframe);
+#endif
 	return 1;
 }
 
@@ -4500,24 +4582,17 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 {
 	AVPacket	*packet = ezfrm->context;
 
-	/*EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, I:%d, %s\n", 
-			got_pic == 0 ? "Decoding" : "Decoded ", 
-			ezfrm->frame->key_frame, 
-			ezfrm->frame->coded_picture_number, 
-			ezfrm->frame->display_picture_number,
-			ezfrm->frame->interlaced_frame,
-			id_lookup(id_pict_type, ezfrm->frame->pict_type)));*/
-
-	if (got_pic == 0) {
+	/*if (got_pic == 0) {
 		return 0;
-	}
-	EDB_SHOW(("%s, KEY:%d, CPN:%d, DPN:%d, %s DTS:%" PRId64 ", PKey:%d  EKey:%d\n", 
+	}*/
+	EDB_SHOW(("%s KEY:%d CPN:%d EKey:%d %s DTS:%lld PKey:%d Pos:%lld Size:%d\n", 
 			got_pic == 0 ? "Decoding" : "Decoded ", 
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
-			ezfrm->frame->display_picture_number,
+			ezfrm->keyflag,
 			id_lookup(id_pict_type, ezfrm->frame->pict_type),
-			packet->dts, packet->flags, ezfrm->keyflag));
+			(long long)packet->dts, packet->flags, 
+			(long long) ezfrm->rf_pos, ezfrm->rf_size));
 	return 0;
 }
 
@@ -4528,14 +4603,13 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 
 	dts = ezfrm->rf_dts - vidx->dts_offset;
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	EDB_SHOW(("Frame %3d: Pos:%lld Size:%d PAC:%d DTS:%lld PTS:%lld (%s) "
-				"Type:%s %s EKey:%d\n",
-			sn, (long long) ezfrm->rf_pos, ezfrm->rf_size, 
-			ezfrm->rf_pac, (long long) ezfrm->rf_dts, 
-			(long long) ezfrm->rf_pts, timestamp, 
+	EDB_SHOW(("Frame %3d: PAC:%d EKey:%d DTS:%lld (%s) "
+				"Type:%s %s PTS:%lld\n",
+			sn, ezfrm->rf_pac, vidx->vidframe->keyflag,
+			(long long) ezfrm->rf_dts, timestamp, 
 			id_lookup(id_pict_type, ezfrm->frame->pict_type), 
 			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
-			vidx->vidframe->keyflag));
+			(long long) ezfrm->rf_pts));
 	return 0;
 }
 

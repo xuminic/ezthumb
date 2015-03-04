@@ -30,6 +30,8 @@
 
 #define EZTHUMB_VERSION		"3.2.3"
 
+//#define CFG_DUMP_SNAPSHOT
+
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
 #define EZ_ERR_STREAM		-2	/* wrong stream */
@@ -553,6 +555,12 @@ typedef	struct	_EzVid	{
 	EZFRM		*swsframe;	/* scaled frame */
 	EZFRM		*picframe;	/* store the recent good frame */
 	EZFRM		*vidframe;	/* the decoding frame */
+
+	/* capture video frame for debugging */
+#ifdef	CFG_DUMP_SNAPSHOT
+	EZFRM		*capframe;
+	gdImage		*capgdimg;
+#endif
 	
 	/*** runtime variables in each session */
 	SMM_TIME	tmark;		/* the beginning timestamp */
