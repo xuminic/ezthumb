@@ -1,3 +1,10 @@
+20150305: 0.8.3
+	* smm_config.c: fixed a bug that in Win32 the registry path
+	missed a '\' between "SOFTWARE" and the path. Test case also changed.
+
+20141012: 0.8.2
+	* Makefile: added _FILE_OFFSET_BITS=64 macro otherwise the smm_fstat()
+	would be failed when file size was over 2GB.
 
 20140815: 0.8.1
 	* Makefile: disable the slog-to-socket by macro SLOG_SOCKET

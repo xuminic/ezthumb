@@ -26,6 +26,7 @@
 #include <errno.h>
 
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_MODULE)
 
 #include "libcsoup.h"
 #include "csoup_internal.h"
@@ -312,7 +313,7 @@ int smm_config_current(struct KeyDev *cfgd, char *buf, int blen)
 		char	path[128];
 		if (cfgd->fpath == NULL) {	/* I/O to the stdin/stdout */
 			sprintf(path, "con://stdio");
-		} else if (cfgd->mode == 0) {	/* I/O to the read only memory */
+		} else if (cfgd->mode == 0) {	/* I/O to the read only mem */
 			sprintf(path, "mem://%p/%d/read-only", cfgd->fpath, 
 					(int)(strlen(cfgd->fpath) + 1));
 		} else {			/* I/O to the memory */
@@ -353,7 +354,7 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 		len += mem_copy(&buf, &blen, fname);
 		len += mem_copy(&buf, &blen, NULL);	/* insert \0 */
 
-		len += mem_copy(&buf, &blen, "CONSOLE");
+		len += mem_copy(&buf, &blen, "CONSOLE/");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 		}
@@ -371,7 +372,7 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 		len += mem_copy(&buf, &blen, fname);
 		len += mem_copy(&buf, &blen, NULL);	/* insert \0 */
 
-		len += mem_copy(&buf, &blen, "SOFTWARE");
+		len += mem_copy(&buf, &blen, "SOFTWARE/");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 		}
@@ -385,8 +386,7 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 			len += mem_copy(&buf, &blen, home);
 			len += mem_copy(&buf, &blen, "/");
 		}
-		len += mem_copy(&buf, &blen, ".config");
-		len += mem_copy(&buf, &blen, "/");
+		len += mem_copy(&buf, &blen, ".config/");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 			len += mem_copy(&buf, &blen, "/");
@@ -394,7 +394,7 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 		len += mem_copy(&buf, &blen, fname);
 		len += mem_copy(&buf, &blen, NULL);	/* insert \0 */
 
-		len += mem_copy(&buf, &blen, "SOFTWARE");
+		len += mem_copy(&buf, &blen, "SOFTWARE/");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 		}
@@ -478,6 +478,8 @@ static struct KeyDev *smm_config_alloc(int sysdir, char *path, char *fname)
 	if (fname == NULL) {
 		return NULL;
 	}
+
+	CDB_MODL(("smm_config_alloc: %s %s\n", path, fname));
 	tlen = sizeof(struct KeyDev) + strlen(fname) + 16;
 	tlen += path ? strlen(path) : 0;
 	tlen += smm_config_path(sysdir, path, fname, NULL, 0);
@@ -506,8 +508,6 @@ static struct KeyDev *smm_config_alloc(int sysdir, char *path, char *fname)
 	 * when it's not been using */
 	if (*cfgd->kpath == '\0') {
 		cfgd->kpath = NULL;
-	} else {
-		str_substitue_char(cfgd->kpath, -1, '/', '\\');
 	}
 
 	/* check point */
@@ -741,6 +741,7 @@ static int smc_reg_open(struct KeyDev *cfgd, int mode)
 	}
 	strcat(mkey, "\\");
 	strcat(mkey, cfgd->fname);
+	str_substitue_char(mkey, -1, '/', '\\');
 
 	CDB_INFO(("smc_reg_open: %s\n", mkey));
 	if ((wkey = smm_mbstowcs_alloc(mkey)) == NULL) {

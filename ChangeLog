@@ -1,3 +1,7 @@
+20150305:
+	* libcsoup: updated to 0.8.3 that fixed the missing '/' issue.
+	* Makefile: release method updated.
+
 20150304:
 	* Win32 version: updated the FFMPEG to 2015-03-03 git-5de2dab.
 	It should support H.265.

@@ -160,7 +160,7 @@ conftest: conftest.c
 clean:
 	$(RM) -f $(OBJDIR)/*
 	$(RM) $(TGTGUI) $(TGTCON)
-	$(RM) -f conftest conftest.log ezconfig.h
+	$(RM) -f conftest conftest.exe conftest.log ezconfig.h
 
 cleanall: clean
 	make -C $(IUP) clean
@@ -190,8 +190,9 @@ endif
 rel_source: cleanall
 	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico Make* $(RELDIR)
-	-$(CP) COPYING ChangeLog SMirC-thumbsup.svg $(RELDIR)
+	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico *.nsi *.sh *.rc *.lsm $(RELDIR)
+	-$(CP) COPYING ChangeLog Makefile TODO ezqiz $(RELDIR)
+	-$(CP) SMirC-thumbsup.svg $(RELDIR)
 	-$(CP) -a external libmingw $(RELDIR)
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)
@@ -202,7 +203,7 @@ install_win: all
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
 	-$(CP) $(EXTDIR)/ffmpeg/bin/*.dll $(EXTDIR)/lib/*.dll $(RELDIR)-win-bin
 
-rel_win_bin:
+rel_win_bin: all
 	-echo "OutFile \"ezthumb-$(shell version.sh)-setup.exe\"" > nsis_version.txt
 	makensis ezthumb.nsi
 	-$(RM) nsis_version.txt 

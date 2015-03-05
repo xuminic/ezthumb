@@ -166,7 +166,7 @@ static int config_key_test(void)
 	}
 	for (i = 0; rdlist[i][0] || rdlist[i][1]; i++) {
 		CDB_SHOW(("READ %s: %s = %s\n", rdlist[i][0], rdlist[i][1],
-				csc_cfg_read(root, rdlist[i][0], rdlist[i][1])));
+			csc_cfg_read(root, rdlist[i][0], rdlist[i][1])));
 	}
 
 	if ((val = csc_cfg_read_first(root, NULL, &key)) != NULL) {
@@ -196,7 +196,8 @@ static int config_key_test(void)
 
 	/* write to the root key */
 	csc_cfg_write(root, NULL, nkey, mytimestamp(1));
-	CDB_SHOW(("WRITEROOT: %s = %s\n", nkey, csc_cfg_read(root, NULL, nkey)));
+	CDB_SHOW(("WRITEROOT: %s = %s\n", nkey, 
+				csc_cfg_read(root, NULL, nkey)));
 
 	/* write something longer than orignal */
 	val = csc_cfg_copy(root, rdlist[4][0], rdlist[4][1], 64);
@@ -222,7 +223,7 @@ static int config_key_test(void)
 		}
 		csc_cfg_write(root, rdlist[6][0], rdlist[6][1], val);
 		CDB_SHOW(("WRITECUT %s: %s = %s\n", rdlist[6][0], rdlist[6][1],
-				csc_cfg_read(root, rdlist[6][0], rdlist[6][1])));
+			csc_cfg_read(root, rdlist[6][0], rdlist[6][1])));
 		free(val);
 	}
 
@@ -268,7 +269,8 @@ int config_block_test(char *fname)
 				break;
 			}
 		}
-		CDB_SHOW(("BLOCK [%s]: %d at %x %x\n", fname, i, fbuf[i], kbuf[i]));
+		CDB_SHOW(("BLOCK [%s]: %d at %x %x\n", 
+					fname, i, fbuf[i], kbuf[i]));
 	}
 	csc_cfg_close(root);
 	
@@ -284,6 +286,7 @@ int config_registry_test(char *syspath, char *path, char *fname)
 	char	*buf, *p;
 	int	sysp, len;
 
+	//CDB_SHOW(("config_registry_test: %s %s %s\n", syspath, path, fname));
 	if (!strcmp(syspath, "DESKTOP")) {
 		sysp = SMM_CFGROOT_DESKTOP;
 	} else if (!strcmp(syspath, "USER")) {
@@ -318,6 +321,35 @@ int config_registry_test(char *syspath, char *path, char *fname)
 	return 0;
 }
 
+int config_registry_write(char *syspath)
+{
+	KEYCB	*root;
+	int	sysp;
+
+	//CDB_SHOW(("config_registry_write: %s\n", syspath));
+	if (!strcmp(syspath, "DESKTOP")) {
+		sysp = SMM_CFGROOT_DESKTOP;
+	} else if (!strcmp(syspath, "USER")) {
+		sysp = SMM_CFGROOT_USER;
+	} else if (!strcmp(syspath, "SYSTEM")) {
+		sysp = SMM_CFGROOT_SYSTEM;
+	} else if (!strcmp(syspath, "CURRENT")) {
+		sysp = SMM_CFGROOT_CURRENT;
+	} else {
+		CDB_SHOW(("Unknown system path - %s\n", syspath));
+		return -1;
+	}
+	
+	if ((root = csc_cfg_open(SMM_CFGROOT_MEMPOOL, testconf,
+					NULL, CSC_CFG_READ)) == NULL) {
+		CDB_SHOW(("Weird\n"));
+		return -1;
+	}
+	//csc_cfg_dump(root);
+	csc_cfg_saveas(root, sysp, "FunSight", "Local/Setting");
+	csc_cfg_free(root);
+	return 0;
+}
 
 
 int config_create_new(void)
@@ -340,7 +372,8 @@ static	struct	cliopt	clist[] = {
 	{   0, NULL,        0, "OPTIONS:" },
 	{ 'h', "help",      0, "This help" },
 	{ 'o', "open-read", 0, "Open the configure file in read-only mode" },
-	{ 'r', "registry",  1, "dump the registry" },
+	{ 'r', "registry",  1, "dump the registry MKEY KEY [KEY]" },
+	{ 'R', "regwrite",  1, "write to the registry MKEY" },
 	{ 'k', "key-test",  0, "Test the key and value pairs" },
 	{ 'b', "block",     1, "Test the block in the configure file" },
 	{ 'c', "create",    0, "Create a new configure file" },
@@ -370,6 +403,19 @@ int config_main(void *rtime, int argc, char **argv)
 			break;
 		case 'r':
 			sdir = csc_cli_qopt_optarg(rtime);
+			c = csc_cli_qopt_optind(rtime);
+			if (c + 1 == argc) {
+				config_registry_test(sdir, NULL, argv[c]);
+			} else if (c + 1 < argc) {
+				config_registry_test(sdir, argv[c+1], argv[c]);
+			} else {
+				CDB_SHOW(("%c: DESKTOP/USER/SYSTEM/CURRENT "
+							"KEY ...\n"));
+			}
+			break;
+		case 'R':
+			sdir = csc_cli_qopt_optarg(rtime);
+			config_registry_write(sdir);
 			break;
 		case 'k':
 			config_key_test();
@@ -393,17 +439,6 @@ int config_main(void *rtime, int argc, char **argv)
 			break;
 		}
 	}
-
-	if (sdir) {
-		c = csc_cli_qopt_optind(rtime);
-		//printf("options: %d %d %s\n", c, argc, argv[c]);
-		if (c + 1 == argc) {
-			config_registry_test(sdir, NULL, argv[c]);
-		} else if (c + 1 < argc) {
-			config_registry_test(sdir, argv[c+1], argv[c]);
-		}
-	}
-
 	csc_cli_qopt_close(rtime);
 	return 0;
 }

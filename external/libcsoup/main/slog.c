@@ -40,14 +40,16 @@ int slog_main(void *rtime, int argc, char **argv)
 	slogs(NULL, SLOG_LVL_ERROR, "OK: Error\n");
 	slogs(NULL, SLOG_LVL_FUNC, "OK: Func\n");
 
-	CDB_SHOW(("Testing slog can NOT be used with uninitialized control block\n"));
+	CDB_SHOW(("Testing slog can NOT be used with uninitialized "
+				"control block\n"));
 	slogs(&localdbgc, SLOG_LVL_ERROR, "FAILED\n");
 
 	tstdbg = slog_initialize(&localdbgc, SLOG_MODUL_ALL(SLOG_LVL_DEBUG));
 	//tstdbg->cword = SLOG_MODUL_ALL(tstdbg->cword);
 	CDB_SHOW(("Testing slog by a control block (%x)\n", tstdbg->cword));
 	for (i = 0; i < 8; i++) {
-		slogf(tstdbg, i, "%d/%d: debug level test\n", i, SLOG_LVL_DEBUG);
+		slogf(tstdbg, i, "%d/%d: debug level test\n", 
+				i, SLOG_LVL_DEBUG);
 	}
 
 	tstdbg->cword = SLOG_LEVEL_GET(tstdbg->cword) | CSOUP_MOD_SLOG | 
@@ -55,7 +57,8 @@ int slog_main(void *rtime, int argc, char **argv)
 	CDB_SHOW(("Testing slog by module (%x)\n", tstdbg->cword));
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, SLOG_MODUL_ENUM(i) | i,
-				"%d/%x: debug level test\n", i, SLOG_MODUL_ENUM(i) | i);//SLOG_LVL_DEBUG);
+				"%d/%x: debug level test\n", i, 
+				SLOG_MODUL_ENUM(i) | i);//SLOG_LVL_DEBUG);
 	}
 
 	tstdbg->cword = SLOG_LEVEL_SET(tstdbg->cword, SLOG_LVL_FUNC);

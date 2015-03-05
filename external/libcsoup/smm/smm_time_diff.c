@@ -1,5 +1,5 @@
 
-/*  smm_time_diff.c - get the differecnce of times in seconds
+/*  smm_time_diff.c - get the differecnce of times in milliseconds
 
     Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
 
