@@ -4,6 +4,8 @@ echo "#ifndef	_EZCONFIG_H_"
 echo "#define	_EZCONFIG_H_"
 echo ""
 
+date > conftest.log
+
 rm -f conftest
 make conftest CONTEST=TEST_AV_FRAME_ALLOC >> conftest.log 2>> conftest.log
 if test "$?" = "0"; then

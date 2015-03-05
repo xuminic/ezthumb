@@ -66,11 +66,16 @@ MANDIR	= /usr/local/man/man1
 RELDIR	= ./release-bin
 OBJDIR  = ./objs
 
+# CFG_SNAPSHOT_DUMP is used to save each frames to JPEG pictures
+# CFG_SNAPSHOT_RAW is used to save each frames to YUV files
+# CFG_SNAPSHOT_RGB is used to save each frames to RGB files
 DEBUG	= -g -DDEBUG
+
+# _FILE_OFFSET_BITS=64 is used to support files over 2GB in 32-bit OS
 DEFINES = -D_FILE_OFFSET_BITS=64
+
 INCDIR	= -I$(CSOUP) -I$(IUP)/include $(SYSINC)
 CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(INCDIR) $(SYSFLAG) 
-CONTEST = NONE
 
 
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
@@ -154,6 +159,7 @@ install: all
 	install -s $(TARGET) $(BINDIR)
 	install ezthumb.1 $(MANDIR)
 
+CONTEST = DUMMY
 conftest: conftest.c
 	$(CC) $(CFLAGS) $(LIBDIR) -D$(CONTEST) -o $@ $< $(LIBS)
 

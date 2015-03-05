@@ -73,6 +73,15 @@ static int video_frame_free(EZFRM **ezfrm);
 static int video_frame_reset(EZVID *vidx);
 static int video_frame_update(EZVID *vidx);
 static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts);
+#ifdef	CFG_SNAPSHOT_DUMP
+static int video_frame_save_jpeg(EZVID *vidx, EZFRM *ezfrm);
+#endif
+#ifdef	CFG_SNAPSHOT_RAW
+static int video_frame_save_raw(EZVID *vidx, EZFRM *ezfrm);
+#endif
+#ifdef	CFG_SNAPSHOT_RGB
+static int video_frame_save_rgb(EZVID *vidx, EZFRM *ezfrm);
+#endif
 static int64_t video_decode_next(EZVID *vidx, AVPacket *);
 static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto);
 static int64_t video_decode_valided(EZVID *vidx, AVPacket *packet, int64_t);
@@ -1406,6 +1415,9 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 				0, 0, vidx->filename);
 		return EZ_ERR_LOWMEM;
 	}
+	vidx->vidframe->pixfmt = vidx->codecx->pix_fmt;
+	vidx->vidframe->width  = vidx->width;
+	vidx->vidframe->height = vidx->height;
 
 	/* allocate the frame structure for RGB converter which
 	 * will be filled by frames converted from YUV form */
@@ -1430,9 +1442,11 @@ static int video_connect(EZVID *vidx, EZIMG *image)
 		return EZ_ERR_SWSCALE;
 	}
 
-#ifdef	CFG_DUMP_SNAPSHOT
 	/* frame image capture device for debugging only */
+#ifdef	CFG_SNAPSHOT_DUMP
 	vidx->capgdimg = gdImageCreateTrueColor(vidx->width, vidx->height);
+#endif
+#if	defined(CFG_SNAPSHOT_DUMP) || defined(CFG_SNAPSHOT_RGB)
 	vidx->capframe = video_frame_alloc(PIX_FMT_RGB24, 
 				vidx->width, vidx->height);
 	if (vidx->capframe) {
@@ -1460,12 +1474,14 @@ static int video_disconnect(EZVID *vidx)
 	video_frame_free(&vidx->picframe);
 	video_frame_free(&vidx->vidframe);
 
-#ifdef	CFG_DUMP_SNAPSHOT
 	/* frame image capture device for debugging only */
+#if	defined(CFG_SNAPSHOT_DUMP) || defined(CFG_SNAPSHOT_RGB)
 	if (vidx->capframe) {
 		sws_freeContext(vidx->capframe->context);
 		video_frame_free(&vidx->capframe);
 	}
+#endif
+#ifdef	CFG_SNAPSHOT_DUMP
 	if (vidx->capgdimg) {
 		gdImageDestroy(vidx->capgdimg);
 		vidx->capgdimg = NULL;
@@ -2361,64 +2377,6 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	return 0;
 }
 
-#ifdef	CFG_DUMP_SNAPSHOT
-static int video_snap_debug(EZVID *vidx, EZFRM *ezfrm)
-{
-	EZTIME	dtms;
-	FILE	*fout;
-	char	timestamp[64];
-	int	x, y;
-	unsigned char	*src;
-
-	if (!vidx->capgdimg || !vidx->capframe) {
-		return -1;
-	}
-
-	/* convert current PTS to millisecond and then 
-	 * metamorphose to human readable form */
-	dtms = ezfrm->rf_pts - vidx->dts_offset;
-	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
-	if (vidx->dur_all == 0) {
-		meta_timestamp(dtms, 1, timestamp);
-	} else {		/* binding mode */
-		dtms += vidx->dur_off;	/* aligning the binding clips */
-		timestamp[0] = '(';
-		meta_timestamp(dtms, 1, timestamp + 1);
-		strcat(timestamp, ")");
-	}
-
-	/* convert image from YUV to RGB */
-	sws_scale(vidx->capframe->context, 
-			(const uint8_t * const *) ezfrm->frame->data,
-			ezfrm->frame->linesize, 0, vidx->height, 
-			vidx->capframe->frame->data, 
-			vidx->capframe->frame->linesize);
-
-	/* convert image from FFMPEG to GD device */
-	src = vidx->capframe->frame->data[0];
-	for (y = 0; y < vidx->height; y++) {
-		for (x = 0; x < vidx->width * 3; x += 3) {
-			gdImageSetPixel(vidx->capgdimg, x / 3, y,
-					gdImageColorResolve(vidx->capgdimg,
-						src[x], src[x+1], src[x+2]));
-		}
-		src += vidx->width * 3;
-	}
-
-	/* write the timestamp into the shot */
-	gdImageString(vidx->capgdimg, gdFontGetSmall(), 4, 4, (void*) timestamp,
-			gdImageColorResolve(vidx->capgdimg, 0xff, 0xff, 0xff));
-
-
-	sprintf(timestamp, "framedump_%09lld.jpg", dtms);
-	if ((fout = fopen(timestamp, "wb")) != NULL) {
-		gdImageJpeg(vidx->capgdimg, fout, 85);
-		fclose(fout);
-	}
-	return 0;
-}
-#endif	/* CFG_DUMP_SNAPSHOT */
-
 static int video_snap_end(EZVID *vidx, EZIMG *image)
 {
 	struct	ezntf	myntf;
@@ -2496,6 +2454,11 @@ static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 		return NULL;
 	}
 
+	/* copy the frame attribution */
+	ezfrm->pixfmt = pixfmt;
+	ezfrm->width  = width;
+	ezfrm->height = height;
+
 	if (width && height) {
 		/* allocate the memory buffer for holding the pixel array of
 		 * RGB frame */
@@ -2572,8 +2535,14 @@ static int video_frame_update(EZVID *vidx)
 	vidx->picframe->rf_size = vidx->vidframe->rf_size;
 	vidx->picframe->rf_pac  = vidx->vidframe->rf_pac;
 
-#ifdef	CFG_DUMP_SNAPSHOT
-	video_snap_debug(vidx, vidx->picframe);
+#ifdef	CFG_SNAPSHOT_DUMP
+	video_frame_save_jpeg(vidx, vidx->picframe);
+#endif
+#ifdef	CFG_SNAPSHOT_RAW
+	video_frame_save_raw(vidx, vidx->picframe);
+#endif
+#ifdef	CFG_SNAPSHOT_RGB
+	video_frame_save_rgb(vidx, vidx->picframe);
 #endif
 	return 1;
 }
@@ -2597,6 +2566,129 @@ static EZFRM *video_frame_best(EZVID *vidx, int64_t refdts)
 	}
 	return vidx->vidframe;
 }
+
+#ifdef	CFG_SNAPSHOT_DUMP
+static int video_frame_save_jpeg(EZVID *vidx, EZFRM *ezfrm)
+{
+	EZTIME	dtms;
+	FILE	*fout;
+	char	timestamp[64];
+	int	x, y;
+	unsigned char	*src;
+
+	if (!vidx->capgdimg || !vidx->capframe) {
+		return -1;
+	}
+
+	/* convert current PTS to millisecond and then 
+	 * metamorphose to human readable form */
+	dtms = ezfrm->rf_pts - vidx->dts_offset;
+	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
+	if (vidx->dur_all == 0) {
+		meta_timestamp(dtms, 1, timestamp);
+	} else {		/* binding mode */
+		dtms += vidx->dur_off;	/* aligning the binding clips */
+		timestamp[0] = '(';
+		meta_timestamp(dtms, 1, timestamp + 1);
+		strcat(timestamp, ")");
+	}
+
+	/* convert image from YUV to RGB */
+	sws_scale(vidx->capframe->context, 
+			(const uint8_t * const *) ezfrm->frame->data,
+			ezfrm->frame->linesize, 0, vidx->height, 
+			vidx->capframe->frame->data, 
+			vidx->capframe->frame->linesize);
+
+	/* convert image from FFMPEG to GD device */
+	src = vidx->capframe->frame->data[0];
+	for (y = 0; y < vidx->height; y++) {
+		for (x = 0; x < vidx->width * 3; x += 3) {
+			gdImageSetPixel(vidx->capgdimg, x / 3, y,
+					gdImageColorResolve(vidx->capgdimg,
+						src[x], src[x+1], src[x+2]));
+		}
+		src += vidx->width * 3;
+	}
+
+	/* write the timestamp into the shot */
+	gdImageString(vidx->capgdimg, gdFontGetSmall(), 4, 4, (void*) timestamp,
+			gdImageColorResolve(vidx->capgdimg, 0xff, 0xff, 0xff));
+
+
+	sprintf(timestamp, "framedump_%09lld.jpg", (long long) dtms);
+	if ((fout = fopen(timestamp, "wb")) != NULL) {
+		gdImageJpeg(vidx->capgdimg, fout, 85);
+		fclose(fout);
+	}
+	return 0;
+}
+#endif	/* CFG_SNAPSHOT_DUMP */
+
+#ifdef	CFG_SNAPSHOT_RAW
+static int video_frame_save_raw(EZVID *vidx, EZFRM *ezfrm)
+{
+	EZTIME	dtms;
+	FILE	*fout;
+	char	fname[64];
+	int	fbsize;
+
+	/* convert current PTS to millisecond and then 
+	 * metamorphose to human readable form */
+	dtms = ezfrm->rf_pts - vidx->dts_offset;
+	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
+	if (vidx->dur_all) {
+		dtms += vidx->dur_off;	/* aligning the binding clips */
+	}
+	
+	fbsize = avpicture_get_size(ezfrm->pixfmt, 
+			ezfrm->width, ezfrm->height);
+	sprintf(fname, "framedump_%09lld.raw", (long long) dtms);
+	if ((fout = fopen(fname, "wb")) != NULL) {
+		fwrite(ezfrm->frame->data[0], 1, fbsize, fout);
+		fclose(fout);
+	}
+	return fbsize;
+}
+#endif	/* CFG_SNAPSHOT_RAW */
+
+#ifdef	CFG_SNAPSHOT_RGB
+static int video_frame_save_rgb(EZVID *vidx, EZFRM *ezfrm)
+{       
+	EZTIME	dtms;
+	FILE	*fout;
+	char	fname[64];
+	int	fbsize;
+
+	if (!vidx->capframe) {
+		return -1;
+	}
+
+	/* convert current PTS to millisecond and then 
+	 * metamorphose to human readable form */
+	dtms = ezfrm->rf_pts - vidx->dts_offset;
+	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
+	if (vidx->dur_all) {
+		dtms += vidx->dur_off;	/* aligning the binding clips */
+	}
+
+	/* convert image from YUV to RGB */
+	sws_scale(vidx->capframe->context, 
+			(const uint8_t * const *) ezfrm->frame->data,
+			ezfrm->frame->linesize, 0, vidx->height, 
+			vidx->capframe->frame->data, 
+			vidx->capframe->frame->linesize);
+
+	fbsize = avpicture_get_size(vidx->capframe->pixfmt, 
+			vidx->capframe->width, vidx->capframe->height);
+	sprintf(fname, "framedump_%09lld.rgb", (long long) dtms);
+	if ((fout = fopen(fname, "wb")) != NULL) {
+		fwrite(vidx->capframe->frame->data[0], 1, fbsize, fout);
+		fclose(fout);
+	}
+	return fbsize;
+}
+#endif	/* CFG_SNAPSHOT_RGB */
 
 static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 {

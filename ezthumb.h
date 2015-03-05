@@ -30,8 +30,6 @@
 
 #define EZTHUMB_VERSION		"3.2.3"
 
-//#define CFG_DUMP_SNAPSHOT
-
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */
 #define EZ_ERR_STREAM		-2	/* wrong stream */
@@ -507,6 +505,10 @@ typedef	struct	{
 typedef	struct		{
 	AVFrame		*frame;
 	unsigned char	*rf_buffer;	/* the frame buffer */
+	int		pixfmt;
+	int		width;
+	int		height;
+
 	int		keyflag;	/* flag that i-frame received */
 	int64_t		rf_pts;		/* the PTS from the decoder */
 	int64_t		rf_dts;		/* the DTS from the last packet */
@@ -557,11 +559,13 @@ typedef	struct	_EzVid	{
 	EZFRM		*vidframe;	/* the decoding frame */
 
 	/* capture video frame for debugging */
-#ifdef	CFG_DUMP_SNAPSHOT
+#if	defined(CFG_SNAPSHOT_DUMP) || defined(CFG_SNAPSHOT_RGB)
 	EZFRM		*capframe;
+#endif
+#ifdef	CFG_SNAPSHOT_DUMP
 	gdImage		*capgdimg;
 #endif
-	
+
 	/*** runtime variables in each session */
 	SMM_TIME	tmark;		/* the beginning timestamp */
 	int		pts[EZ_PTS_MAX<<1]; /* progress timestamp array */

@@ -79,7 +79,6 @@ static KEYCB *smm_config_mem_read(struct KeyDev *cfgd);
 static int smm_config_mem_write(struct KeyDev *cfgd, KEYCB *kp);
 static KEYCB *smm_config_file_read(struct KeyDev *cfgd);
 static int smm_config_file_write(struct KeyDev *cfgd, KEYCB *kp);
-static int str_substitue_char(char *s, int len, char src, char dst);
 static int mem_copy(char **dest, int *room, char *s);
 
 #ifdef	CFG_WIN32_API
@@ -635,22 +634,6 @@ static int smm_config_file_write(struct KeyDev *cfgd, KEYCB *kp)
 	return 0;
 }
 
-static int str_substitue_char(char *s, int len, char src, char dst)
-{
-	int	i, n = 0;
-
-	if (len < 0) {
-		len = strlen(s);
-	}
-	for (i = n = 0; i < len; i++) {
-		if (s[i] == src) {
-			s[i] = dst;
-			n++;
-		}
-	}
-	return n;
-}
-
 /* Concatenate a string into a memory pool which is specified by 'dest' with 
  * the size of 'room'. After the appending, the 'dest' will be increased and 
  * the 'room' will be decreased by the length of 's'. The memory pool will 
@@ -726,6 +709,22 @@ static HKEY regy_open_dir(HKEY hRoot, char *dkey);
 static DWORD regy_puts(HKEY hKey, TCHAR *key, DWORD dwType, char *val);
 static BOOL RegDelnodeRecurse(HKEY hKeyRoot, LPTSTR lpSubKey, int buflen);
 
+
+static int str_substitue_char(char *s, int len, char src, char dst)
+{
+	int	i, n = 0;
+
+	if (len < 0) {
+		len = strlen(s);
+	}
+	for (i = n = 0; i < len; i++) {
+		if (s[i] == src) {
+			s[i] = dst;
+			n++;
+		}
+	}
+	return n;
+}
 
 static int smc_reg_open(struct KeyDev *cfgd, int mode)
 {

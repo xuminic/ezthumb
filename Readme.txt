@@ -13,12 +13,26 @@ curve profiles.
 From 2.0.0 ezthumb introduced a GUI based on GTK2. The command line interface 
 is still the same.
 
+From 3.2.0 ezthumb migrated to a portable GUI based on IUP. The command line 
+interface is still the same. http://www.tecgraf.puc-rio.br/iup
+
 This program was inspired by movie thumbnailer (mtn):
 http://sourceforge.net/projects/moviethumbnail/
 
 
 Release Notes
 =============
+Version 3.3.0:
+*) FFMPEG updated to 2015-03-03 git-5de2dab (H.265 ready)
+*) Accurate PTS display
+*) Default duration mode changed to HEAD for ArgusTV.
+*) FFMPEG version auto-detection make it easier to build.
+*) UI migrated to IUP.
+*) Fixed: seperated frame buffer to grab clear image.
+*) Fixed: configuration stored in registry in Win32.
+*) Fixed: the AR correction issue.
+*) Fixed: size incorrect in 32-bit OS when video size over 2GB
+
 Version 3.0.4:
 *) Fixed a bug in Win32 version that ezthumb went to full scan mode while a
    media player is playing the same file.
