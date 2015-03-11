@@ -112,6 +112,35 @@ TGTCON	= ezthumb.exe
 TARGET	= $(TGTCON) $(TGTGUI)
 endif
 
+RELLIST	= ChangeLog	\
+	  conftest.c	\
+	  COPYING	\
+	  ezgui.c	\
+	  ezgui.h	\
+	  ezicon.h	\
+	  eziup.c	\
+	  ezqiz		\
+	  ezthumb.1	\
+	  ezthumb.c	\
+	  ezthumb_debug.c	\
+	  ezthumb_debug.h	\
+	  ezthumb.h	\
+	  ezthumb.ico	\
+	  ezthumb_icon.rc	\
+	  ezthumb.lsm	\
+	  ezthumb.nsi	\
+	  ezthumb.pdf	\
+	  ezutil.c	\
+	  id_lookup.c	\
+	  id_lookup.h	\
+	  main.c	\
+	  Makefile	\
+	  mkconfig.sh	\
+	  Readme.txt	\
+	  SMirC-thumbsup.svg	\
+	  TODO		\
+	  version.sh
+
 $(OBJDIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -196,9 +225,7 @@ endif
 rel_source: cleanall
 	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) *.c *.h *.1 *.pdf *.txt *.ico *.nsi *.sh *.rc *.lsm $(RELDIR)
-	-$(CP) COPYING ChangeLog Makefile TODO ezqiz $(RELDIR)
-	-$(CP) SMirC-thumbsup.svg $(RELDIR)
+	-$(CP) $(RELLIST) $(RELDIR)
 	-$(CP) -a external libmingw $(RELDIR)
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)

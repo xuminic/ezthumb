@@ -10,15 +10,6 @@ The output format could be JPG, PNG, GIF or GIF animation, where PNG and GIF
 supports the transparent background. Supported batch processing with logarithm
 curve profiles.
 
-From 2.0.0 ezthumb introduced a GUI based on GTK2. The command line interface 
-is still the same.
-
-From 3.2.0 ezthumb migrated to a portable GUI based on IUP. The command line 
-interface is still the same. http://www.tecgraf.puc-rio.br/iup
-
-This program was inspired by movie thumbnailer (mtn):
-http://sourceforge.net/projects/moviethumbnail/
-
 
 Release Notes
 =============
@@ -32,6 +23,10 @@ Version 3.3.0:
 *) Fixed: configuration stored in registry in Win32.
 *) Fixed: the AR correction issue.
 *) Fixed: size incorrect in 32-bit OS when video size over 2GB
+
+Version 3.2.0:
+*) ezthumb migrated to a portable GUI based on IUP. 
+   The command line interface is still the same.
 
 Version 3.0.4:
 *) Fixed a bug in Win32 version that ezthumb went to full scan mode while a
@@ -55,39 +50,79 @@ Version 3.0.0:
 *) Included an internal file name filter to help the recursive mode.
 *) Many bug fixes.
 
+Version 2.0.0:
+*) ezthumb introduced a GUI based on GTK2. 
+   The command line interface is still the same.
+
 
 Install
 =======
 
-Ezthumb requires following packages:
+Ezthumb requires the following packages:
 
 ffmpeg
 gd
+gtk2 (in X-window)
 freetype
+libpng
+libjpeg
 bzip2
 
-You may need to modify the Makefile, especially the INCDIR and LIBDIR macros,
-to point to proper directories.
+Most systems have already installed those libraries so normally you only need
+to install the development files of ffmpeg/gd/gtk2.
 
-Libcsoup will be shipped with ezthumb. It's part of ezthumb project so you 
-need to enter libcsoup first:
+*) CentOS 5/6/7 or similar version Fedora/RHEL
 
-make clean
+$ sudo yum install ffmpeg-devel gd-devel gtk2-devel
+
+then
+
+$ make
+
+*) CentOS 4 or similar version Fedora/RHEL
+
+Current version IUP is not compatible with CentOS 4 so Ezthumb has to disable
+the GUI interface. What's more, ezthumb could not generate GIF animation 
+thumbnails because the old version of libgd.
+
+$ sudo yum install ffmpeg-devel gd-devel
+$ export SYSGUI=CFG_GUI_OFF
+
+then
+
+$ make
+
+
+*) Windows and MinGW
+
+The ezthumb has been shipped with a library bundle in which all necessary 
+libraries are included. You don't need to download anything to build ezthumb.
+Just go to the ezthumb directory in MinGW console and type:
+
 make
 
-then go to ezthumb do the same thing.
+it will build two execute files, ezthumb.exe for command line and the GUI
+frontend ezthumb_win.exe. You may need to use
+
+make install_win
+
+to collect all required DLL files into one directory for easy releasing.
+If you have Nullsoft Installer (NSIS) installed, you may use
+
+make release
+
+to generate an install file.
 
 
-MinGW
-=====
 
-Make.conf setting:
 
-SYSTOOL = mingw
-SYSAPI  = CFG_WIN32_API
+Credits
+=======
 
 FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:
 http://ffmpeg.zeranoe.com/builds/
+Of cause you can find source codes of FFMPEG at
+https://www.ffmpeg.org/
 
 Following Libraries were grabbed from GnuWin:
 http://sourceforge.net/projects/gnuwin32/files/
@@ -99,53 +134,18 @@ libpng-1.2.37
 zlib-1.2.3
 freetype-2.3.5-1
 
-The GTK+ library was tailored from the All-in-one bundles in 
-http://www.gtk.org/download/win32.php
-
-NOTE that these libraries are not part of Ezthumb. They were grabbed from
-different websites to here to make life easier. Therefore you don't need to 
-download them one by one, just download the recent one big bundle tar ball
-
-ezthumb-libmingw-xxxxxxxx.tar.gz 
-
-along with the ezthumb source codes, untar it to libmingw/
-The file structure should look like this:
-
-./ezthumb.c
-./libmingw/
-./libmingw/gtk-2.24.8/
-...
-
-Then you may build it by
-
-make clean
-make
-
-It will generate two executable files: ezthumb.exe and ezthumb_win.exe. 
-One for the console and another one for the GUI environment. 
-These two files can not be executed directly in normal condition because 
-the supporting DLLs were not with them. You need to
-
-make install
-
-to collect all files into the directory looks like
-
-ezthumb-x.x.x-win-bin
-
-then
-
-cd ezthumb-x.x.x-win-bin
-ezthumb
-ezthumb_win
-
-Enjoy!
-
-
-Icons
-=====
-
-The icon file SMirC-thumbsup.svg is a public domain under GNU Free Documentation License.
+The icon SMirC-thumbsup.svg is a public domain under GNU Free Documentation 
+License. 
 http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg
+
+The GUI frontend is based on IUP, a multi-platform toolkit for building 
+graphical user interfaces.
+http://webserver2.tecgraf.puc-rio.br/iup/
+
+This program was inspired by movie thumbnailer (mtn):
+http://sourceforge.net/projects/moviethumbnail/
+
+
 
 Examples
 ========

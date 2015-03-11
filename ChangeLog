@@ -1,3 +1,7 @@
+20150311: Version 3.3.0 release
+	* libcsoup: fixed a makefile bug in main/ directory
+	* Makefile: updated the release process
+
 20150305:
 	* libcsoup: updated to 0.8.3 that fixed the missing '/' issue.
 	* Makefile: release method updated.

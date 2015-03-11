@@ -42,7 +42,7 @@ crc: universal_crc
 
 clean:
 	$(RM) $(TARGET) main_define.h
-	$(RM) universal_crc
+	$(RM) universal_crc mkclicmd
 
 
 
