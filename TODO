@@ -83,3 +83,14 @@ The first key frame can not be properly decoded. However the rv40 decoder
 still returned the look-good frame, actual contents were all grey images. 
 Currently ezthumb can not tell which key frame was successfully decoded.
 
+*) IUP GUI do not save MAXIMIZED status.
+The MAXIMIZED ezthumb dialog window do not save the MAXIMIZED status. Instead
+it saves the previous window size so when a MAXIMIZED ezthumb is restarted, 
+it won't be MAXIMIZED.
+
+The reason is setting
+IupSetAttribute(gui->dlg_main, "PLACEMENT", "MAXIMIZED");
+won't generate the resize event so the client area of ezthumb couldn't be
+updated. Ezthumb can not maximize itself either because the window manage
+would not know the recent window size.
+

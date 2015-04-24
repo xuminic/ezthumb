@@ -41,8 +41,7 @@ crc: universal_crc
 	universal_crc -a tab -b 8 -p 0x7 > crc8.c
 
 clean:
-	$(RM) $(TARGET) main_define.h
-	$(RM) universal_crc mkclicmd
+	$(RM) $(TARGET) main_define.h universal_crc mkclicmd
 
 
 

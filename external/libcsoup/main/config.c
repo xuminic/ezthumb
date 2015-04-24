@@ -238,6 +238,13 @@ static int config_key_test(void)
 	}
 	CDB_SHOW(("\n"));
 
+	CDB_SHOW(("\n\n"));
+	csc_cfg_dump(root);
+	csc_cfg_delete_key(root, NULL, "timestamp");
+	csc_cfg_delete_key(root, "hello", "window_state");
+	csc_cfg_delete_block(root, "main_define.h");
+	CDB_SHOW(("DELETE: timestamp, hello/window_state, [main_define.h]\n"));
+	csc_cfg_dump(root);
 	CDB_SHOW(("%x\n", csc_cfg_close(root)));
 	return 0;
 }

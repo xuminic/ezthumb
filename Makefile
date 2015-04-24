@@ -112,6 +112,7 @@ TGTCON	= ezthumb.exe
 TARGET	= $(TGTCON) $(TGTGUI)
 endif
 
+# This list of files for source release
 RELLIST	= ChangeLog	\
 	  conftest.c	\
 	  COPYING	\

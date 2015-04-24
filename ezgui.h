@@ -36,6 +36,7 @@
 #define CFG_KEY_WIN_WIDTH	"window_width"
 #define CFG_KEY_WIN_HEIGHT	"window_height"
 #define CFG_KEY_WINDOWSTATE	"window_state"
+#define CFG_KEY_WIN_POS		"window_position"
 #define CFG_KEY_DIRECTORY	"last_directory"
 #define CFG_KEY_GRID		"grid_define"
 #define CFG_KEY_ZOOM		"zoom_define"
@@ -144,6 +145,11 @@ typedef	struct		{
 	EZOPT		*sysopt;	/* system parameters */
 	char		inst_id[64];	/* instant identity */
 	void		*config;
+	/* current size of the main window and the decoration */
+	int		win_width;	/* window size */
+	int		win_height;
+	int		win_dec_x;	/* client difference to the window */
+	int		win_dec_y;
 
 	/* Main Page: work place */
 	Ihandle		*list_fname;	/* the list control of file names */

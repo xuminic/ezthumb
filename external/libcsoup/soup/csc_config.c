@@ -622,8 +622,8 @@ int csc_cfg_link_block(KEYCB *block, void *bin, int bsize)
 }
 
 /* return:
- * 0: not a binary block
- * <0: empty binary block
+ * <0: not a binary block
+ * 0: empty binary block
  * n: content size of the binary block */
 #define MAGIC_LENGTH	(sizeof(CFGF_BLOCK_MAGIC) - 1)
 int csc_cfg_block_size(KEYCB *kcb)
@@ -635,6 +635,57 @@ int csc_cfg_block_size(KEYCB *kcb)
 		return -2;
 	}
 	return (int) strtol(kcb->value + MAGIC_LENGTH, NULL, 0);
+}
+
+
+int csc_cfg_delete_key(KEYCB *cfg, char *dkey, char *nkey)
+{
+	struct	KEYROOT	*rext;
+	KEYCB	*dcb, *ncb;
+
+	if ((nkey == NULL) || (cfg == NULL)) {
+		return SMM_ERR_NULL;
+	}
+
+	dcb = csc_cfg_find_dir(cfg, dkey);
+	if ((ncb = csc_cfg_find_key(dcb, nkey, CFGF_TYPE_KEY)) == NULL) {
+		return SMM_ERR_NONE;
+	}
+	csc_cdl_list_free(&dcb->anchor, ncb->self);
+	dcb->update++;
+	cfg->update++;
+
+	rext = (struct KEYROOT *) cfg->pool;
+	rext->items--;
+	return SMM_ERR_NONE;
+}
+
+int csc_cfg_delete_block(KEYCB *cfg, char *dkey)
+{
+	struct	KEYROOT	*rext;
+	KEYCB	*dcb;
+
+	if (cfg == NULL) {
+		return SMM_ERR_NULL;
+	}
+
+	if ((dcb = csc_cfg_find_dir(cfg, dkey)) == NULL) {
+		return SMM_ERR_NULL;
+	} 
+
+	/* do not delete other types of dir keys */
+	if (csc_cfg_block_size(dcb) < 0) {
+		return SMM_ERR_ACCESS;
+	}
+
+	csc_cdl_list_destroy(&dcb->anchor);
+	csc_cdl_list_free(&cfg->anchor, dcb->self);
+
+	cfg->update++;
+	rext = (struct KEYROOT *) cfg->pool;
+	rext->items--;
+	return SMM_ERR_NONE;
+
 }
 
 

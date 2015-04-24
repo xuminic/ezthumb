@@ -1,5 +1,5 @@
 
-/*  ezgui.c - the graphic user interface
+/*  eziup.c - the graphic user interface based on IUP
 
     Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
 
@@ -23,7 +23,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
 
 #include "iup.h"
 #include "libcsoup.h"
@@ -59,6 +60,8 @@ static	char	*list_format[] = {
 static int ezgui_create_window(EZGUI *gui);
 static EZGUI *ezgui_get_global(Ihandle *any);
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
+static int ezgui_event_window_show(Ihandle *ih, int state);
+static int ezgui_event_window_close(Ihandle *ih);
 
 static Ihandle *ezgui_page_main(EZGUI *gui);
 static int ezgui_page_main_reset(EZGUI *gui);
@@ -276,6 +279,7 @@ void ezgui_version(void)
 static int ezgui_create_window(EZGUI *gui)
 {
 	Ihandle		*tabs;
+	char		*s, tmp[64];
 
 	/* create the Open-File dialog in the initialize stage.
 	 * so in the event, it can be popup and hide without a real destory */
@@ -295,7 +299,26 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
 	gui->dlg_main = IupDialog(tabs);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
-	IupSetAttribute(gui->dlg_main, "SIZE", "HALFx");
+	
+	/* retrieve the previous window size */
+	gui->win_width = gui->win_height = 0;
+	csc_cfg_read_int(gui->config, NULL, 
+			CFG_KEY_WIN_WIDTH, &gui->win_width);
+	csc_cfg_read_int(gui->config, NULL, 
+			CFG_KEY_WIN_HEIGHT, &gui->win_height);
+	if ((gui->win_width == 0) || (gui->win_height == 0)) {
+		gui->win_width = 800;
+		gui->win_height = 540;
+	}
+	sprintf(tmp, "%dx%d", gui->win_width, gui->win_height);
+	IupSetAttribute(gui->dlg_main, "RASTERSIZE", tmp);
+
+	/* recover the placement of the window */
+	s = csc_cfg_read(gui->config, NULL, CFG_KEY_WINDOWSTATE);
+	if (s) {
+		IupSetAttribute(gui->dlg_main, "PLACEMENT", s);
+	}
+	
 	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
 	IupSetHandle(gui->inst_id, gui->dlg_main);
 
@@ -304,7 +327,23 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetAttribute(gui->dlg_main, EZGUI_INST, (char*) gui);
 	IupSetCallback(gui->dlg_main, "RESIZE_CB",
 			(Icallback) ezgui_event_window_resize);
-	IupShow(gui->dlg_main);
+	IupSetCallback(gui->dlg_main, "SHOW_CB",
+			(Icallback) ezgui_event_window_show);
+	IupSetCallback(gui->dlg_main, "CLOSE_CB",
+			(Icallback) ezgui_event_window_close);
+
+	/* show the dialog window at the last location */
+	s = csc_cfg_read(gui->config, NULL, CFG_KEY_WIN_POS);
+	if (s == NULL) {
+		IupShow(gui->dlg_main);
+	} else {
+		int	y = 0, x = (int) strtol(s, NULL, 0);
+
+		if ((s = strchr(s, ',')) != NULL) {
+			y = (int) strtol(s+1, NULL, 0);
+		}
+		IupShowXY(gui->dlg_main, x, y);
+	}
 
 	ezgui_page_setup_reset(gui);
 	ezgui_page_main_reset(gui);
@@ -325,9 +364,32 @@ static EZGUI *ezgui_get_global(Ihandle *any)
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 {
 	EZGUI	*gui = ezgui_get_global(ih);
+	char	*s;
 	int	csize;
 
 	(void)height;
+
+	if ((gui->win_dec_x == 0) && (gui->win_dec_y == 0)) {
+		gui->win_dec_x = gui->win_width - width;
+		gui->win_dec_y = gui->win_height - height;
+	} else {
+		gui->win_width = width + gui->win_dec_x;
+		gui->win_height = height + gui->win_dec_y;
+	}
+
+	s = IupGetAttribute(gui->dlg_main, "SCREENPOSITION");
+	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d D:%dx%d %s %s\n", width, height, 
+			gui->win_width, gui->win_height, 
+			gui->win_dec_x, gui->win_dec_y, s,
+			IupGetAttribute(gui->dlg_main, "CLIENTOFFSET")));
+
+	s = csc_cfg_read(gui->config, NULL, CFG_KEY_WINDOWSTATE);
+	if (!s || strcmp(s, "MAXIMIZED")) {
+		csc_cfg_write_int(gui->config, NULL, 
+				CFG_KEY_WIN_WIDTH, gui->win_width);
+		csc_cfg_write_int(gui->config, NULL, 
+				CFG_KEY_WIN_HEIGHT, gui->win_height);
+	}
 	
 	/*xui_get_size(ezgui_get_global(ih)->list_fname, "RASTERSIZE", NULL);
 	xui_get_size(ezgui_get_global(ih)->list_fname, "CHARSIZE", NULL);
@@ -346,11 +408,68 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	if (width < 159) {
 		width = 159;
 	}
-	EDB_MODL(("EVT_RESIZE: %dx%d usersize = %d\n", width, height, width));
+	EDB_MODL(("EVT_RESIZE: list control %dx%d\n", width, height));
 	ezgui_list_refresh(gui, width);
 	return 0;
 }
 
+static int ezgui_event_window_show(Ihandle *ih, int state)
+{
+	EZGUI	*gui = ezgui_get_global(ih);
+
+#ifdef	DEBUG
+	switch (state) {
+	case IUP_HIDE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_HIDE\n", state));
+		break;
+	case IUP_SHOW:
+		EDB_MODL(("EVT_SHOW(%d): IUP_SHOW\n", state));
+		break;
+	case IUP_RESTORE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_RESTORE\n", state));
+		break;
+	case IUP_MINIMIZE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_MINIMIZE\n", state));
+		break;
+	case IUP_MAXIMIZE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_MAXIMIZE\n", state));
+		break;
+	case IUP_CLOSE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_CLOSE\n", state));
+		break;
+	default:
+		EDB_MODL(("EVT_SHOW(%d): unknown\n", state));
+		break;
+	}
+#endif
+	/* we don't save the MAXIMIZED status because when IUP set the 
+	 * PLACEMENT of MAXIMIZED, IUP won't generate the resize event */
+	switch (state) {
+	case IUP_MINIMIZE:
+		csc_cfg_write(gui->config, NULL,
+				CFG_KEY_WINDOWSTATE, "MINIMIZED");
+		break;
+	/*case IUP_MAXIMIZE:
+		csc_cfg_write(gui->config, NULL,
+				CFG_KEY_WINDOWSTATE, "MAXIMIZED");
+		break;*/
+	default:
+		csc_cfg_delete_key(gui->config, NULL, CFG_KEY_WINDOWSTATE);
+		break;
+	}
+	return 0;
+}
+
+static int ezgui_event_window_close(Ihandle *ih)
+{
+	EZGUI	*gui = ezgui_get_global(ih);
+	char	*s = IupGetAttribute(gui->dlg_main, "SCREENPOSITION");
+	
+	EDB_MODL(("EVT_CLOSE: SCREENPOSITION = %s\n", s));
+	csc_cfg_write(gui->config, NULL, CFG_KEY_WIN_POS, s);
+
+	return 0;
+}
 
 
 /****************************************************************************

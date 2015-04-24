@@ -1,3 +1,9 @@
+20150424: 0.8.5
+	* csc_config.c: added csc_cfg_delete_key() and csc_cfg_delete_block().
+
+20150311: 0.8.4
+	* main/Makefile: fixed a bug that mkclicmd was forgotten to be cleaned.
+
 20150305: 0.8.3
 	* smm_config.c: fixed a bug that in Win32 the registry path
 	missed a '\' between "SOFTWARE" and the path. Test case also changed.

@@ -45,14 +45,19 @@ char *ezthumb_slog_format(char *fmt, ...);
 
 #ifndef  DEBUG
 #define EDB_OUTPUT(l,args)
+#define EDB_STATE(l) 		0
 #elif	defined(CSOUP_DEBUG_LOCAL)
 #define	EDB_OUTPUT(l,args)	ezthumb_slog_puts(&ezthumb_debug_control, \
 					CSOUP_DEBUG_LOCAL, \
 					SLOG_LEVEL_SET(CSOUP_DEBUG_LOCAL,(l)),\
 					ezthumb_slog_format args)
+#define EDB_STATE(l)		slog_validate(&ezthumb_debug_control, \
+					CSOUP_DEBUG_LOCAL, \
+					SLOG_LEVEL_SET(CSOUP_DEBUG_LOCAL,(l)))
 #else
 #define	EDB_OUTPUT(l,args)	slogs(&ezthumb_debug_control, (l), \
 					ezthumb_slog_format args)
+#define EDB_STATE(l)		slog_validate(&ezthumb_debug_control, 0, (l))
 #endif
 
 
