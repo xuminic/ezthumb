@@ -150,6 +150,7 @@ typedef	struct		{
 	int		win_height;
 	int		win_dec_x;	/* client difference to the window */
 	int		win_dec_y;
+	int		win_state;	/* window show event */
 
 	/* Main Page: work place */
 	Ihandle		*list_fname;	/* the list control of file names */

@@ -99,6 +99,8 @@ static int ezgui_event_setup_zoom(Ihandle *ih, char *text, int i, int s);
 static int ezgui_event_setup_ok(Ihandle *ih);
 static int ezgui_event_setup_cancel(Ihandle *ih);
 
+static Ihandle *ezgui_page_about(EZGUI *gui);
+
 static Ihandle *xui_text(char *label, char *size);
 static Ihandle *xui_label(char *label, char *size, char *font);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
@@ -290,10 +292,14 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetAttribute(gui->dlg_open, "EXTFILTER", gui->filefilter);
 
 	tabs = IupTabs(ezgui_page_main(gui), 
-			ezgui_page_setup(gui), IupVbox(IupFill(), NULL), NULL);
+			ezgui_page_setup(gui), 
+			IupVbox(IupFill(), NULL), 
+			ezgui_page_about(gui), 
+			NULL);
 	IupSetAttribute(tabs, "TABTITLE0", "Generate");
 	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
 	IupSetAttribute(tabs, "TABTITLE2", "Advanced");
+	IupSetAttribute(tabs, "TABTITLE3", " About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
 	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
@@ -313,7 +319,7 @@ static int ezgui_create_window(EZGUI *gui)
 	sprintf(tmp, "%dx%d", gui->win_width, gui->win_height);
 	IupSetAttribute(gui->dlg_main, "RASTERSIZE", tmp);
 
-	/* recover the placement of the window */
+	/* recover the minimized placement of the window */
 	s = csc_cfg_read(gui->config, NULL, CFG_KEY_WINDOWSTATE);
 	if (s) {
 		IupSetAttribute(gui->dlg_main, "PLACEMENT", s);
@@ -364,7 +370,6 @@ static EZGUI *ezgui_get_global(Ihandle *any)
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 {
 	EZGUI	*gui = ezgui_get_global(ih);
-	char	*s;
 	int	csize;
 
 	(void)height;
@@ -377,14 +382,12 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 		gui->win_height = height + gui->win_dec_y;
 	}
 
-	s = IupGetAttribute(gui->dlg_main, "SCREENPOSITION");
-	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d D:%dx%d %s %s\n", width, height, 
+	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d D:%dx%d P:%s\n", width, height,
 			gui->win_width, gui->win_height, 
-			gui->win_dec_x, gui->win_dec_y, s,
-			IupGetAttribute(gui->dlg_main, "CLIENTOFFSET")));
+			gui->win_dec_x, gui->win_dec_y, 
+			IupGetAttribute(gui->dlg_main, "SCREENPOSITION")));
 
-	s = csc_cfg_read(gui->config, NULL, CFG_KEY_WINDOWSTATE);
-	if (!s || strcmp(s, "MAXIMIZED")) {
+	if (gui->win_state != IUP_MAXIMIZE) {
 		csc_cfg_write_int(gui->config, NULL, 
 				CFG_KEY_WIN_WIDTH, gui->win_width);
 		csc_cfg_write_int(gui->config, NULL, 
@@ -444,12 +447,16 @@ static int ezgui_event_window_show(Ihandle *ih, int state)
 #endif
 	/* we don't save the MAXIMIZED status because when IUP set the 
 	 * PLACEMENT of MAXIMIZED, IUP won't generate the resize event */
+	gui->win_state = state;
+
 	switch (state) {
 	case IUP_MINIMIZE:
 		csc_cfg_write(gui->config, NULL,
 				CFG_KEY_WINDOWSTATE, "MINIMIZED");
 		break;
-	/*case IUP_MAXIMIZE:
+	case IUP_HIDE:
+		break;
+	/* case IUP_MAXIMIZE:
 		csc_cfg_write(gui->config, NULL,
 				CFG_KEY_WINDOWSTATE, "MAXIMIZED");
 		break;*/
@@ -1095,8 +1102,8 @@ static Ihandle *ezgui_page_setup(EZGUI *gui)
 			ezgui_page_setup_output(gui), 
 			IupFill(), 
 			ezgui_page_setup_button(gui), NULL);
-	IupSetAttribute(vbox, "NGAP", "4");
-	IupSetAttribute(vbox, "NMARGIN", "4x4");
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
 	return vbox;
 }
 
@@ -1507,6 +1514,85 @@ static int ezgui_event_setup_cancel(Ihandle *ih)
 	return IUP_DEFAULT;
 }
 
+
+/****************************************************************************
+ * Page About
+ ****************************************************************************/
+static	const	char	*description = "\
+A video thumbnail generator based on FFMPEG library.\n\
+\n\
+Copyright (C) 2011-2015 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n";
+
+static	const	char	*credits = "\
+FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:\n\
+http://ffmpeg.zeranoe.com/builds\n\
+You can find source codes and copyrights of FFMPEG at\n\
+https://www.ffmpeg.org\n\
+\n\
+Following Libraries were grabbed from GnuWin:\n\
+http://sourceforge.net/projects/gnuwin32/files\n\
+\n\
+gd-2.0.33-1\n\
+jpeg-6b-4\n\
+libiconv-1.9.2-1\n\
+libpng-1.2.37\n\
+zlib-1.2.3\n\
+freetype-2.3.5-1\n\
+\n\
+The icon is a public domain under GNU Free Documentation License:\n\
+http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg\n\
+\n\
+The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
+graphical user interfaces.\n\
+http://webserver2.tecgraf.puc-rio.br/iup\n\
+\n\
+This program was inspired by movie thumbnailer (mtn):\n\
+http://sourceforge.net/projects/moviethumbnail\n";
+
+static Ihandle *ezgui_page_about(EZGUI *gui)
+{
+	Ihandle	*icon, *name, *descr, *thanks;
+	Ihandle	*vbox, *sbox;
+
+	(void) gui;
+
+	/* show the icon */
+	icon = IupLabel(NULL);
+	IupSetAttributeHandle(icon, "IMAGE", 
+			IupImageRGBA(64, 64, ezicon_about));
+
+	/* show name and the version */
+	name = IupLabel("Ezthumb " EZTHUMB_VERSION);
+	IupSetAttribute(name, "FONTSIZE", "20");
+	IupSetAttribute(name, "FONTSTYLE", "Bold");
+	
+	/* show the simple description */
+	descr = IupLabel(description);
+	IupSetAttribute(descr, "ALIGNMENT", "ACENTER:ACENTER");
+
+	/* show the credits */
+	thanks = IupLabel(credits);
+	IupSetAttribute(thanks, "ALIGNMENT", "ACENTER:ACENTER");
+	
+	/* group these elements inside a vertical box */
+	vbox = IupVbox(icon, name, descr, thanks, NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+	IupSetAttribute(vbox, "ALIGNMENT", "ACENTER");
+
+	/* fill the right side of the veritcal box with blank and pack
+	 * into a scrollbox */
+	sbox = IupScrollBox(IupHbox(vbox, IupHbox(IupFill(), NULL), NULL));
+	return sbox;
+}
+
+
+/****************************************************************************
+ * Support Functions 
+ ****************************************************************************/
 static Ihandle *xui_text(char *label, char *size)
 {
 	Ihandle	*ih;

@@ -1,3 +1,14 @@
+
+20150501:
+	* eziup.c: added an 'about' page.
+
+20150428:
+	* ezicon.h: fixed a bug that ICON shifted 6 pixels.
+	The ICON array converted from gdk-pixbuf-csource has a 24-byte-head
+	structure, which is not needed in IupImage/IupImageRGB/IupImageRGBA.
+	Otherwise IupImage/IupImageRGB/IupImageRGBA() will read the
+	head as part of pixels, which shifts the whole image.
+
 20150311: Version 3.3.0 release
 	* libcsoup: fixed a makefile bug in main/ directory
 	* Makefile: updated the release process

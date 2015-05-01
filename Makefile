@@ -139,6 +139,7 @@ RELLIST	= ChangeLog	\
 	  mkconfig.sh	\
 	  Readme.txt	\
 	  SMirC-thumbsup.svg	\
+	  SMirC-thumbsup.png	\
 	  TODO		\
 	  version.sh
 
@@ -176,8 +177,11 @@ csoup:
 objdir:
 	@if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
 
-ezicon.h: SMirC-thumbsup.svg
-	gdk-pixbuf-csource --name=ezicon_pixbuf --raw $< > $@
+
+# Don't do it by make because the head file need to be modified manually
+#ezicon.h: 
+#	gdk-pixbuf-csource --name=ezicon_pixbuf --raw SMirC-thumbsup.svg > $@
+#	gdk-pixbuf-csource --name=ezicon2_pixbuf --raw SMirC-thumbsup.png >> $@
 
 ezconfig.h: conftest.c
 	./mkconfig.sh > ezconfig.h
