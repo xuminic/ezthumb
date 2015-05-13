@@ -1,3 +1,7 @@
+20150513: 0.8.6
+	* smm_config.c: truncated the existed configure by CSC_CFG_RWC method,
+	otherwise the contents would be overlapped with the previous contents.
+
 20150424: 0.8.5
 	* csc_config.c: added csc_cfg_delete_key() and csc_cfg_delete_block().
 

@@ -111,6 +111,10 @@
  * However, if the shot's step is less than EZ_GATE_KEY_STEP millisecond, 
  * it automatically converts into EZOP_ANYFRAME mode */
 #define EZOP_P_FRAME		0x10	
+#define SETACCUR(m)		((m) |= EZOP_P_FRAME)
+#define GETACCUR(m)		((m) & EZOP_P_FRAME)
+#define CLRACCUR(m)		((m) &= ~EZOP_P_FRAME)
+
 /* Display media information in the command line. It just displays the
  * common information, not includes the debug info */
 #define EZOP_CLI_INSIDE		0x20
@@ -122,16 +126,24 @@
 #define EZOP_DECODE_OTF		0x100
 /* font test (obsolete) */
 #define EZOP_FONT_TEST		0x200
-/* define the override mode */
+
+/* define the process of the existed thumbnails */
+#define EZOP_THUMB_COPY		0
 #define EZOP_THUMB_OVERRIDE	0x400
-/* define the copy mode if not override */
-#define EZOP_THUMB_COPY		0x800
+#define EZOP_THUMB_SKIP		0x800
+#define EZOP_THUMB_MASK		0xC00
+#define EZOP_THUMB_SET(m,d)	((m) &= ~EZOP_THUMB_MASK, (m) |= (d))
+#define EZOP_THUMB_GET(m)	((m) & EZOP_THUMB_MASK)
+
 /* define the video duration finding mode */
 #define EZOP_DUR_AUTO		0		/* try head first or scan */
 #define EZOP_DUR_QSCAN		0x1000		/* quick scan */
 #define EZOP_DUR_FSCAN		0x2000		/* full scan */
 #define EZOP_DUR_HEAD		0x3000		/* head only */
 #define EZOP_DUR_MASK		0x3000
+#define SETDURMOD(m,d)		((m) &= ~EZOP_DUR_MASK, (m) |= (d))
+#define GETDURMOD(m)		((m) & EZOP_DUR_MASK)
+
 /* process the subdirectories if the file name is a folder */
 #define EZOP_RECURSIVE		0x8000
 
@@ -166,14 +178,6 @@
 #define EZOP_DEBUG_CLEAR(f)	((f) &= ~(SLOG_LVL_MASK << EZDBG_FIELD))
 #define EZOP_DEBUG_SET(f,x)	((f) |= (((x) & SLOG_LVL_MASK) << EZDBG_FIELD))
 #define EZOP_DEBUG_MAKE(f,x)	(EZOP_DEBUG_CLEAR(f),EZOP_DEBUG_SET(f,x))
-
-#define SETDURMOD(m,d)	((m) &= ~EZOP_DUR_MASK, (m) |= (d))
-#define GETDURMOD(m)	((m) & EZOP_DUR_MASK)
-
-#define SETACCUR(m)	((m) |= EZOP_P_FRAME)
-#define GETACCUR(m)	((m) & EZOP_P_FRAME)
-#define CLRACCUR(m)	((m) &= ~EZOP_P_FRAME)
-
 
 
 #define EZ_POS_LEFTTOP		0
@@ -274,7 +278,9 @@
 #define CFG_KEY_INSET_COLOR	"thumbnail_inset_color"
 #define CFG_KEY_INSET_SHADOW	"thumbnail_inset_shadow_size"
 #define CFG_KEY_INSET_LAYOUT 	"thumbnail_inset_layout"
-#define CFG_KEY_FILE_FORMAT	"file_format"
+#define CFG_KEY_FILE_FORMAT	"thumbnail_format"
+#define CFG_KEY_FILE_QUALITY	"thumbnail_quality"
+#define CFG_KEY_FILE_EXISTED	"thumbnail_existed"
 #define CFG_KEY_TRANSPARENCY	"transparency"
 #define CFG_KEY_FILE_SUFFIX	"thumbnail_suffix"
 #define CFG_KEY_BG_PICTURE	"backgroup_picture"
@@ -283,6 +289,7 @@
 #define CFG_KEY_SUFFIX_FILTER	"accepted_file"
 #define CFG_KEY_DURATION	"duration_mode"
 #define CFG_KEY_PROF_SIMPLE	"simple_profile"
+#define CFG_KEY_MEDIA_PROC	"media_process"
 
 #define CFG_PIC_POS_LFETTOP	"left top"
 #define CFG_PIC_POS_LEFTCENTR	"left centre"
@@ -304,6 +311,10 @@
 #define CFG_PIC_DFM_SCAN	"Full Scan"
 #define CFG_PIC_DFM_FAST	"Fast Scan"
 #define CFG_PIC_AUTO		"Auto"
+
+#define CFG_PIC_TEX_APPEND	"Create New Thumbnails"
+#define CFG_PIC_TEX_OVERRIDE	"Override Existed Thumbnails"
+#define CFG_PIC_TEX_SKIP	"Skip Existed Thumbnails"
 
 
 /* FORMAT: WEIGHT + flag + X + sep + Y + sep + Z

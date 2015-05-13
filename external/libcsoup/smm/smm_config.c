@@ -183,9 +183,14 @@ struct KeyDev *smm_config_open(int sysdir, char *path, char *fname, int mode)
 				break;
 			}
 		}
-		if ((cfgd->fp = fopen(cfgd->fpath, "r+")) == NULL) {
+		/* 20150513 make the CSC_CFG_RWC truncating the existed files,
+		 * otherwise the content would be overlapped with the previous
+		 * contents. 
+		 * It looks the CSC_CFG_RDWR is practically useless */
+		/*if ((cfgd->fp = fopen(cfgd->fpath, "r+")) == NULL) {
 			cfgd->fp = fopen(cfgd->fpath, "w+");
-		}
+		}*/
+		cfgd->fp = fopen(cfgd->fpath, "w+");
 		break;
 	case CSC_CFG_RDWR:
 		cfgd->fp = fopen(cfgd->fpath, "r+");

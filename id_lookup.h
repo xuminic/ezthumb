@@ -33,7 +33,9 @@ struct	idtbl	{
 };
 
 extern	struct	idtbl	id_layout[];
-extern	struct	idtbl	id_duration[];
+extern	struct	idtbl	id_duration_long[];
+extern	struct	idtbl	id_existed[];
+extern	struct	idtbl	id_mprocess[];
 extern	struct	idtbl	id_codec[];
 extern	struct	idtbl	id_codec_flag[];
 extern	struct	idtbl	id_codec_type[];
@@ -45,6 +47,10 @@ extern	struct	idtbl	id_sam_format[];
 char *id_lookup(struct idtbl *table, int id);
 char *id_lookup_tail(struct idtbl *table, int id);
 int id_lookup_id(struct idtbl *table, char *s);
+char *lookup_string_idnum(struct idtbl *table, int err, int idnum);
+int lookup_idnum_string(struct idtbl *table, int err, char *s);
+int lookup_index_string(struct idtbl *table, int err, char *s);
+int lookup_index_idnum(struct idtbl *table, int err, int idnum);
 
 #endif	/* _ID_LOOKUP_H_ */
 

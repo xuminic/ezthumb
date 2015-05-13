@@ -28,6 +28,7 @@
 #ifndef	CFG_GUI_OFF
 #include "ezgui.h"
 #endif
+#include "id_lookup.h"
 
 #define CMD_ERROR	-2
 #define CMD_UNSET	-1
@@ -73,6 +74,23 @@
 #define CMD_W_IDTH	'w'
 #define CMD_SUFFI_X	'x'
 
+static	struct	idtbl	id_duration[] = {
+	{ EZOP_DUR_QSCAN, "fast" },
+	{ EZOP_DUR_FSCAN, "scan" },
+	{ EZOP_DUR_HEAD,  "head" },
+	{ EZOP_DUR_AUTO,  "auto" },
+	{ 0, NULL }
+};
+
+static	struct	idtbl	id_process[] = {
+	{ EZOP_PROC_AUTO,    "auto" },
+	{ EZOP_PROC_SKIM,    "skim" },
+	{ EZOP_PROC_SCAN,    "scan" },
+	{ EZOP_PROC_TWOPASS, "2pass" },
+	{ EZOP_PROC_SAFE,    "safe" },
+	{ EZOP_PROC_KEYRIP,  "key" },
+	{ 0, NULL }
+};
 
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: ezthumb [OPTIONS] video_clip ..." },
@@ -344,7 +362,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 {
 	EZOPT	*dummy = NULL;
 	void	*rtbuf;
-	char	*p;
+	char	*p, tmp[64];
 	int	c, todo, prof_grid, prof_size;
 
 	if ((rtbuf = csc_cli_getopt_open(clist)) == NULL) {
@@ -498,14 +516,11 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 
 		case CMD_OVERRIDE:
 			if (!strcmp(optarg, "on")) {
-				opt->flags |= EZOP_THUMB_OVERRIDE;
-				opt->flags &= ~EZOP_THUMB_COPY;
+				EZOP_THUMB_SET(opt->flags, EZOP_THUMB_OVERRIDE);
 			} else if (!strcmp(optarg, "off")) {
-				opt->flags &= ~EZOP_THUMB_OVERRIDE;
-				opt->flags &= ~EZOP_THUMB_COPY;
+				EZOP_THUMB_SET(opt->flags, EZOP_THUMB_SKIP);
 			} else if (!strcmp(optarg, "copy")) {
-				opt->flags &= ~EZOP_THUMB_OVERRIDE;
-				opt->flags |= EZOP_THUMB_COPY;
+				EZOP_THUMB_SET(opt->flags, EZOP_THUMB_COPY);
 			} else {
 				todo = CMD_ERROR;	/* command line error */
 				goto break_parse;	/* break the analysis */
@@ -549,28 +564,22 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_C_OLOR:	/* RRGGBB:RRGGBB:RRGGBB */
 			if (para_get_color(opt, optarg) != EZ_ERR_NONE) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR; /* command line error */
+				goto break_parse; /* break the analysis */
 			}
 			break;
 		case CMD_D_URING:	/* Examples: 0,1,quick,skim,scan */
-			if (!strcmp(optarg, "scan")) {
-				SETDURMOD(opt->flags, EZOP_DUR_FSCAN);
-			} else if (!strcmp(optarg, "head")) {
-				SETDURMOD(opt->flags, EZOP_DUR_HEAD);
-			} else if (!strcmp(optarg, "fast")) {
-				SETDURMOD(opt->flags, EZOP_DUR_QSCAN);
-			} else if (!strcmp(optarg, "auto")) {
-				SETDURMOD(opt->flags, EZOP_DUR_AUTO);
-			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+			c = lookup_idnum_string(id_duration, -1, optarg);
+			if (c == -1) {
+				todo = CMD_ERROR; /* command line error */
+				goto break_parse; /* break the analysis */
 			}
+			SETDURMOD(opt->flags, c);
 			break;
 		case CMD_EDGE:
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR; /* command line error */
+				goto break_parse; /* break the analysis */
 			} else {
 				opt->edge_width = strtol(optarg, NULL, 0);
 			}
@@ -584,14 +593,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_F_ONTSZ:	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR; /* command line error */
+				goto break_parse; /* break the analysis */
 			}
 			break;
 		case CMD_G_RID:	/* Examples: 4, 4x8, 0x8 */
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR; /* command line error */
+				goto break_parse; /* break the analysis */
 			}
 			opt->grid_col = strtol(optarg, &p, 10);
 			if (*p == 0) {
@@ -622,40 +631,23 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			opt->pathout = optarg;
 			break;
 		case CMD_P_ROCESS:
-			if (!strcmp(optarg, "auto")) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_AUTO);
-				break;
+			csc_strlcpy(tmp, optarg, sizeof(tmp));
+			if ((p = strchr(tmp, '@')) != NULL) {
+				*p++ = 0;
+				opt->key_ripno = (int)strtol(p, NULL, 0);
 			}
-			if (!strcmp(optarg, "skim")) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_SKIM);
-				break;
+			c = lookup_idnum_string(id_process, -1, tmp);
+			if (c == -1) {
+				todo = CMD_ERROR; /* command line error */
+				goto break_parse; /* break the analysis */
 			}
-			if (!strcmp(optarg, "scan")) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_SCAN);
-				break;
-			}
-			if (!strcmp(optarg, "2pass")) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_TWOPASS);
-				break;
-			}
-			if (!strcmp(optarg, "safe")) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_SAFE);
-				break;
-			}
-			if (!strncmp(optarg, "key", 3)) {
-				EZOP_PROC_MAKE(opt->flags, EZOP_PROC_KEYRIP);
+			EZOP_PROC_MAKE(opt->flags, c);
+			if (c == EZOP_PROC_KEYRIP) {
 				opt->grid_col = 0;
 				opt->grid_row = 0;
 				prof_grid = 0;	/* disable the profile */
-				c = (*optarg == '6') ? 1 : 3;
-				if (optarg[c] == '@') {
-					opt->key_ripno = (int)
-						strtol(optarg+c+1, NULL, 0);
-				}
-				break;
 			}
-			todo = CMD_ERROR;	/* command line error */
-			goto break_parse;	/* break the analysis */
+			break;
 
 		case CMD_P_ROFILE:
 			c = strtol(optarg, &p, 10);

@@ -41,10 +41,11 @@
 #define CFG_KEY_GRID		"grid_define"
 #define CFG_KEY_ZOOM		"zoom_define"
 #define CFG_KEY_DURATION	"duration_mode"
-#define CFG_KEY_FILE_FORMAT	"file_format"
 #define CFG_KEY_TRANSPARENCY	"transparency"
 #define CFG_KEY_JPG_QUALITY	"jpeg_quality"
 #define CFG_KEY_GIF_FRATE	"gif_anim_delay"
+#define CFG_KEY_OUTPUT_PATH	"output_path"
+#define CFG_KEY_OUTPUT_METHOD	"output_method"
 
 #define	CFG_PIC_GRID_DIM	"Column and Row"	/* Grid 4x4 */
 #define CFG_PIC_GRID_STEP	"Column and Step"	/* Grid 4 Step 15 */
@@ -59,6 +60,10 @@
 #define CFG_PIC_FMT_PNG		"Png"
 #define CFG_PIC_FMT_GIFA	"Animated GIF"
 #define CFG_PIC_FMT_GIF		"GIF"
+
+#define CFG_PIC_ODIR_CURR	"With the Media Files"
+#define CFG_PIC_ODIR_PATH	"To the Diretory Below"
+
 
 #define EZGUI_MAGIC		(('E'<<24) | ('Z'<<16) | ('U'<<8) | 'I')
 
@@ -177,6 +182,7 @@ typedef	struct		{
 	/* Main Page: dialog of Open File */
 	Ihandle		*dlg_main;	/* the main dialog itself */
 	Ihandle		*dlg_open;	/* dialog of Open File */
+	Ihandle		*dlg_odir;	/* dialog of output directory */
 
 	/* Setup Page: the two main buttons in the bottom */
 	Ihandle		*butt_setup_apply;
@@ -202,9 +208,16 @@ typedef	struct		{
 	Ihandle		*entry_zbox_grid;
 	Ihandle		*entry_zbox_zoom;
 
-	/* Setup Page: the duration finding mode */
-	Ihandle		*dfm_list;
+	/* Setup Page: the media process */
+	Ihandle		*dfm_list;	/* duration finding mode */
 	int		dfm_idx;
+	Ihandle		*mpm_list;	/* media process method */
+	int		mpm_idx;
+
+	/* Setup Page: the output directory */
+	Ihandle		*dir_list;
+	int		dir_idx;
+	Ihandle		*dir_path;
 
 	/* Setup Page: the output file format */
 	Ihandle		*fmt_list;
@@ -212,10 +225,13 @@ typedef	struct		{
 	Ihandle		*fmt_jpg_qf;	/* quality fact */
 	Ihandle		*fmt_transp;	/* transparent */
 	Ihandle		*fmt_zbox;
+	Ihandle		*fmt_suffix;
+	Ihandle		*fmt_exist;
 	int		fmt_idx;
 	int		fmt_idx_tmp;
 	int		tmp_jpg_qf;
 	int		tmp_gifa_fr;
+	int		exist_idx;
 } EZGUI;
 #endif
 

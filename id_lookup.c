@@ -66,6 +66,58 @@ int id_lookup_id(struct idtbl *table, char *s)
 	return 0;
 }
 
+char *lookup_string_idnum(struct idtbl *table, int err, int idnum)
+{
+	int	i;
+
+	for (i = 0; table[i].s; i++) {
+		if (idnum == table[i].id) {
+			return table[i].s;
+		}
+	}
+	if ((err >= 0) && (err < i)) {
+		return table[err].s;
+	}
+	return NULL;
+}
+
+int lookup_idnum_string(struct idtbl *table, int err, char *s)
+{
+	int	i;
+
+	for (i = 0; table[i].s; i++) {
+		if (!strcasecmp(s, table[i].s)) {
+			return table[i].id;
+		}
+	}
+	return err;
+}
+
+int lookup_index_string(struct idtbl *table, int err, char *s)
+{
+	int	i;
+
+	for (i = 0; table[i].s; i++) {
+		if (!strcasecmp(s, table[i].s)) {
+			return i;
+		}
+	}
+	return err;
+}
+
+int lookup_index_idnum(struct idtbl *table, int err, int idnum)
+{
+	int	i;
+
+	for (i = 0; table[i].s; i++) { 
+		if (idnum == table[i].id) {
+			return i;
+		}
+	}
+	return err;
+}
+
+
 
 #if 0
 /* help to generate the array of ffmpeg IDs */
@@ -115,11 +167,28 @@ struct	idtbl	id_layout[] = {
 	{ 0, NULL }
 };
 
-struct	idtbl	id_duration[] = {
-	{ EZOP_DUR_QSCAN, CFG_PIC_DFM_FAST },
-	{ EZOP_DUR_FSCAN, CFG_PIC_DFM_SCAN },
-	{ EZOP_DUR_HEAD,  CFG_PIC_DFM_HEAD },
+struct	idtbl	id_existed[] = {
+	{ EZOP_THUMB_COPY,      CFG_PIC_TEX_APPEND },
+	{ EZOP_THUMB_OVERRIDE,  CFG_PIC_TEX_OVERRIDE },
+	{ EZOP_THUMB_SKIP,      CFG_PIC_TEX_SKIP },
+	{ 0, NULL }
+};
+
+struct	idtbl	id_duration_long[] = {
 	{ EZOP_DUR_AUTO,  CFG_PIC_AUTO },
+	{ EZOP_DUR_HEAD,  CFG_PIC_DFM_HEAD },
+	{ EZOP_DUR_FSCAN, CFG_PIC_DFM_SCAN },
+	{ EZOP_DUR_QSCAN, CFG_PIC_DFM_FAST },
+	{ 0, NULL }
+};
+
+struct	idtbl	id_mprocess[] = {
+	{ EZOP_PROC_AUTO,    "Auto" },
+	{ EZOP_PROC_SKIM,    "Upon Key Frames" },
+	{ EZOP_PROC_SCAN,    "Single Pass" },
+	{ EZOP_PROC_TWOPASS, "Two Pass" },
+	{ EZOP_PROC_SAFE,    "Safe Mode" },
+	{ EZOP_PROC_KEYRIP,  "Key Frame Rip" },
 	{ 0, NULL }
 };
 
