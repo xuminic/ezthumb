@@ -44,8 +44,10 @@
 #define CFG_KEY_TRANSPARENCY	"transparency"
 #define CFG_KEY_JPG_QUALITY	"jpeg_quality"
 #define CFG_KEY_GIF_FRATE	"gif_anim_delay"
-#define CFG_KEY_OUTPUT_PATH	"output_path"
 #define CFG_KEY_OUTPUT_METHOD	"output_method"
+#define CFG_KEY_OUTPUT_PATH	"output_path"
+#define CFG_KEY_FONT_METHOD	"font_method"
+#define CFG_KEY_FONT_FACE	"font_face"
 
 #define	CFG_PIC_GRID_DIM	"Column and Row"	/* Grid 4x4 */
 #define CFG_PIC_GRID_STEP	"Column and Step"	/* Grid 4 Step 15 */
@@ -64,6 +66,8 @@
 #define CFG_PIC_ODIR_CURR	"With the Media Files"
 #define CFG_PIC_ODIR_PATH	"To the Diretory Below"
 
+#define CFG_PIC_FONT_SYSTEM	"Use the System Font"
+#define CFG_PIC_FONT_BROWSE	"Choose Font"
 
 #define EZGUI_MAGIC		(('E'<<24) | ('Z'<<16) | ('U'<<8) | 'I')
 
@@ -156,6 +160,7 @@ typedef	struct		{
 	int		win_dec_x;	/* client difference to the window */
 	int		win_dec_y;
 	int		win_state;	/* window show event */
+	char		win_size[32];
 
 	/* Main Page: work place */
 	Ihandle		*list_fname;	/* the list control of file names */
@@ -167,6 +172,8 @@ typedef	struct		{
 	int		list_idx;	/* current active item start from 1 */
 	int 		list_count;	/* total items in the list */
 	CSCLNK		*list_cache;
+
+	Ihandle		*list_view;
 
 	/* Main Page: Progress Bar and Buttons */
 	Ihandle		*prog_bar;	/* progress bar of current file */
@@ -183,6 +190,7 @@ typedef	struct		{
 	Ihandle		*dlg_main;	/* the main dialog itself */
 	Ihandle		*dlg_open;	/* dialog of Open File */
 	Ihandle		*dlg_odir;	/* dialog of output directory */
+	Ihandle		*dlg_font;
 
 	/* Setup Page: the two main buttons in the bottom */
 	Ihandle		*butt_setup_apply;
@@ -214,6 +222,11 @@ typedef	struct		{
 	Ihandle		*mpm_list;	/* media process method */
 	int		mpm_idx;
 
+	/* Setup Page: the font */
+	Ihandle		*font_list;
+	int		font_idx;
+	Ihandle		*font_face;
+
 	/* Setup Page: the output directory */
 	Ihandle		*dir_list;
 	int		dir_idx;
@@ -234,6 +247,31 @@ typedef	struct		{
 	int		exist_idx;
 } EZGUI;
 #endif
+
+#define	EZGUI_SVIEW_ACTIVE_MAX		8
+#define EZGUI_SVIEW_ACTIVE_CONTENT	0
+#define EZGUI_SVIEW_ACTIVE_SELECT	1
+#define EZGUI_SVIEW_ACTIVE_PROGRESS	2
+
+typedef	struct		simpleview	{
+	Ihandle		*filename;	/* the list control of file names */
+	Ihandle		*filesize;	/* the list control of file sizes */
+	Ihandle		*medialen;	/* the list control of media length */
+	Ihandle		*resolution;	/* the list control of resolution */
+	Ihandle		*progress;	/* the list control of progress */
+	Ihandle		*attrib;	/* video attribution (invisible) */
+	int		svidx;		/* current active item start from 1 */
+	int 		svnum;		/* total items in the list */
+	int		moused;		/* the recent line being moused to */
+	EZGUI		*gui;		/* uplink to the EZGUI */
+
+	/* set active status if contents exist */
+	Ihandle		*act_content[EZGUI_SVIEW_ACTIVE_MAX];
+	/* set active status if selection was made */
+	Ihandle		*act_select[EZGUI_SVIEW_ACTIVE_MAX];
+	/* set active status if progress bar moving */
+	Ihandle		*act_progress[EZGUI_SVIEW_ACTIVE_MAX];
+} SView;
 
 typedef	struct	{
 	char	fsize[16];
