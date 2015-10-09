@@ -1,3 +1,34 @@
+/*  blackip.c - download/convert/update the IP block list
+
+    Copyright (C) 2015  "Andy Xuming" <xuming@users.sourceforge.net>
+
+    This file is part of BLACKIP, a utility to process IP block list.
+
+    This program was inspired by "pg2ipset" and "UpdateList.sh".
+
+    BLACKIP is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    BLACKIP is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/* History:
+ * 20150920: V1.0 
+ *   Function initialized.
+ */
+/* Install:
+ *   gcc -Wall -O3 -DCFG_LIBCURL -o blackip blackip -lz -lcurl
+ * or without libcurl:
+ *   gcc -Wall -O3 -o blackip blackip -lz
+ *
+ */
 
 #include <ctype.h>
 #include <stdio.h>
@@ -20,15 +51,30 @@
  * Safari on Mac OS X Leopard: 
  *     Mozilla/5.0 (Macintosh; U; Intel Mac OS X; en) AppleWebKit/523.12.2 (KHTML, like Gecko) Version/3.0.4 Safari/523.12.2
  */
-#define BROWSER		\
+#define CFG_BROWSER		\
 	"Mozilla/4.0 (compatible; MSIE 6.0; Microsoft Windows NT 5.1)"
 
+#define	CFG_VERSION		"1.0"
+
+#define	SETMAP_SIZE		(sizeof(unsigned long) * 8)
+#define SETMAP_SET(s,n)		(((n) < SETMAP_SIZE) ? ((s) | ((unsigned long)1) << (n)) : (s))
+#define SETMAP_CHECK(s,n)	(((n) < SETMAP_SIZE) ? ((s) & ((unsigned long)1) << (n)) : 0)
+
+/* TODO matrix:
+ * DOWNLOAD + CONVERT + UPDATE  : alter SETNAME
+ * DOWNLOAD + CONVERT           : true SETNAME
+ * DOWNLOAD
+ * CONVERT + UPDATE             : alter SETNAME + argv
+ * CONVERT                      : true SETNAME + argv
+ * UPDATE                       : true SETNAME + argv
+ */
 #define TODO_HELP		1
 #define TODO_VERSION		2
 #define TODO_CONVERT		4
 #define TODO_DOWNLOAD		8
 #define TODO_UPDATE		16
 #define TODO_PACKLIST		32
+#define TODO_END		0x1000
 
 
 static	struct	{
@@ -56,80 +102,163 @@ static	struct	{
 	{ NULL, NULL }
 };
 
-static	char	*proxy = NULL;
-static	char	*setname = "IPFILTER";
-
-/* download block list and save as transmission format: iblock_transmission_20150806120038.gz
- *   blackip -d[] [-t]
- * download block list and save as IPSET format: iblock_ipset_20150806120038.txt
- *   blackip -d[] -i [-s SETNAME] 
- * download block list and save as IPSET format and update the IPSET rule:
- *   blackip -d[] -I [-s SETNAME]
- * convert block list to IPSET format: 
- *   blackip -c [-s SETNAME] [] []
- * update the IPSET rules:
- *   blackip -I [iblock_ipset_20150806120038.txt]
- */
 static	char	*help = "\
 Usage: blackip COMMAND [OPTION] [input_file] [output_file]\n\
 COMMAND:\n\
   -c                convert to IPSET format from transmission format\n\
   -d[0-m,n]         download block list from iblocklist\n\
-  -I                update the IPSET rules\n\
+  -i                update the IPSET rules (root privilige)\n\
   -l                list the block list packages\n\
 OPTION:\n\
-  -i,--ipset        save iblock to IPSET format\n\
-  -t,--transmission save iblock to transmission format\n\
   -p xx.xx.xx.xx    specify a proxy server\n\
   -s SETNAME        specify the setname of IPSET\n\
+EXAMPLE:\n\
+  *) blackip -d                      ##Download all block list and save as Transmission format\n\
+  *) blackip -l                      ##List the build-in URLs of block lists\n\
+  *) blackip -d0-3 -c -s MYIPSET     ##Download 0 to 3 block list and save as the IPSET rules\n\
+  *) blackip -d1,3 -c -i -s MYIPSET  ##Download 1 and 3 block list and update the IPSET rules\n\
+  *) blackip -c -s MYIPSET ipblock.txt ipset.txt\n\
+                                     ##Convert the block lists to the IPSET rules\n\
+  *) blackip -c -i -s MYIPSET ipblock.txt ipset.txt\n\
+                                     ##Convert the block lists to and update the IPSET rules\n\
+  *) blackip -i -s MYIPSET ipset.txt ##Update the IPSET rules\n\
+  *) blackip -d0-3 -c -s DOWNLOADED ipset.txt      ##Download IPSET rules as common user\n\
+     sudo blackip -i -s MYIPSET ipset.txt          ##Then update the IPSET rules by sudo call\n\
 ";
 
-static int iblock_convert_to_ipset(char *infile, char *outfile);
+static	char	*testcase = "\
+001) List the build-in URLs of block lists:\n\
+	blackip -l\n\
+002) Download all block list and save as Transmission format:\n\
+	blackip -d\n\
+003) Download 0-3 block list and save as Transmission format:\n\
+	blackip -d0-3\n\
+004) Download 2,3 block list and save as IPSET rules:\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c -s MYIPSET iblocktmp ipset.txt\n\
+	head ipset.txt\n\
+005) Download 2,3 block list and write as IPSET rules to stdout:\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c -s MYIPSET iblocktmp\n\
+006) Similar to test 005 but includes update (-i) command:\n\
+It should be the same to 005 because IPSET rules were sent to stdout.\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c -i -s MYIPSET iblocktmp\n\
+007) Similar to test 005 but using the system default SETNAME:\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c iblocktmp\n\
+008) Same to test 007 besides update (-i) command:\n\
+The result should be same to 007 because IPSET rules were sent to stdout.\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c -i iblocktmp\n\
+009) A fix to test 008 to make it work with the update (-i) command:\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c -i iblocktmp ipset.txt\n\
+	head ipset.txt\n\
+010) Convert and update the IPSET rules with specified SETNAME:\n\
+Most useful for root.\n\
+	blackip -d2,3 iblocktmp.gz\n\
+	gunzip iblocktmp.gz\n\
+	blackip -c -i -s MYIPSET iblocktmp ipset.txt\n\
+	head ipset.txt\n\
+011) Download 2,3 block list, convert to the IPSET rules and load into IPSET:\n\
+Most useful for root.\n\
+	blackip -d2,3 -i -s MYIPSET\n\
+	head iblock_*_ipset.txt\n\
+012) Download 0-2 block list, convert to specified file and load into IPSET:\n\
+Most useful for rc.local.\n\
+	blackip -d0-2 -i -s MYIPSET /tmp/ipset.txt\n\
+	head /tmp/ipset.txt\n\
+013) Download 2,3 block list and convert to IPSET rules, save to ipset.txt:\n\
+Most useful for sudo user.\n\
+	blackip -d2,3 -c -s DOWNLOADED ipset.txt\n\
+	head ipset.txt\n\
+	sudo blackip -i -s MYIPSET ipset.txt\n\
+";
+
+static int iblock_convert_to_ipset(char *setname, char *, char *, int);
 static int iblock_compress(char *infile, char *outfile);
-static int iblock_download(int *plist, int plen, char *outfile);
-static int iblock_download_append(FILE *fp, char *url);
-static int ipset_update(char *blockfile);
-static int set_package_list(char *s, int *lbuf, int len);
+static int iblock_uncompress(char *infile, FILE *fout);
+static int iblock_download(unsigned long setmap, char *outfile, char *proxy);
+static int iblock_download_packages(unsigned long setmap, char *proxy);
+static int ipset_update(char *rulefile, char *setname, unsigned elem);
+static unsigned long set_package_list(char *s);
+static void dump_package_list(unsigned long setmap);
 static int progress(size_t update);
 static int sys_file_delete(char *fname);
 static char *sys_timestamp(char *tmbuf);
-static int sys_download_wget(char *url, char *fname, char *proxy);
+static int sys_download_url(char *url, char *fname, char *proxy);
 
 static int zlib_deflate(FILE *source, FILE *dest, int level);
 static int zlib_inflate(FILE *source, FILE *dest);
 static void zlib_zerr(int ret);
 
+
+static int	simulation = 0;
+
 int main(int argc, char **argv)
 {
-	int	i, todo = 0, dlno, dlbuf[32];
+	unsigned long	setmap = 0;
+	unsigned	maxelem = (unsigned)-1;
+	int	i, todo = 0;
 	char	blockfile[256], midfile[256];
-	int	format = 0;	/* 0: transmission  others: IPSET */
+	char	*setname = "IPFILTER";
+	char	*proxy = NULL;
 
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "--help")) {
 			puts(help);
+			todo |= TODO_END;
+		} else if (!strcmp(*argv, "--help-gzip")) {	/* unit test */
+			iblock_compress(*++argv, "test.gz");
+			argc--;
+			todo |= TODO_END;
+		} else if (!strcmp(*argv, "--help-gunzip")) {	/* unit test */
+			FILE	*fout = fopen("test.txt", "w");
+			iblock_uncompress(*++argv, fout);
+			fclose(fout);
+			argc--;
+			todo |= TODO_END;
+		} else if (!strcmp(*argv, "--help-setmap")) {	/* unit test */
+			setmap = set_package_list(*++argv);
+			dump_package_list(setmap);
+			setmap = 0;
+			argc--;
+			todo |= TODO_END;
+		} else if (!strcmp(*argv, "--help-download")) {	/* unit test */
+			setmap = set_package_list(*++argv);
+			iblock_download_packages(setmap, proxy);
+			setmap = 0;
+			argc--;
+			todo |= TODO_END;
+		} else if (!strcmp(*argv, "--help-examples")) {	/* unit test */
+			puts(testcase);
+			todo |= TODO_END;
+		} else  if (!strcmp(*argv, "--version") || !strcmp(*argv, "-V")) {
+			puts(CFG_VERSION);
+			todo |= TODO_END;
 		} else if (!strcmp(*argv, "-c")) {
-			todo = TODO_CONVERT;
+			todo |= TODO_CONVERT;
 		} else if (!strncmp(*argv, "-d", 2)) {
 			if (isdigit(argv[0][2])) {
-				dlno = set_package_list((*argv) + 2, dlbuf, 32);
+				setmap = set_package_list((*argv) + 2);
 			} else {
-				dlno = -1;/* download all */
+				setmap = (unsigned long) -1;	/* download all */
 			}
-			todo = TODO_DOWNLOAD;
-		} else if (!strcmp(*argv, "-I")) {
-			todo = TODO_UPDATE;
-		} else if (!strcmp(*argv, "-zip")) {
-			iblock_compress(*++argv, "test.gz");
-			return 0;
+			todo |= TODO_DOWNLOAD;
+		} else if (!strcmp(*argv, "-i") || !strcmp(*argv, "--ipset")) {
+			todo |= TODO_UPDATE;
 		} else if (!strcmp(*argv, "-l")) {
 			for (i = 0; iblock[i].name; i++) {
 				printf("%2d: %s\n", i, iblock[i].name);
 			}
-		} else if (!strcmp(*argv, "-i") || !strcmp(*argv, "--ipset")) {
-			format = 1;
-		} else if (!strcmp(*argv, "-t") || !strcmp(*argv, "--transmission")) {
-			format = 0;
+			todo |= TODO_END;
 		} else if (!strcmp(*argv, "-p")) {
 			if (--argc == 0) {
 				puts(help);
@@ -142,49 +271,66 @@ int main(int argc, char **argv)
 				return -1;
 			}
 			setname = *++argv;
+		} else if (!strcmp(*argv, "--simulation")) {
+			simulation = 1;
 		} else {
 			printf("Invalided option [%s]\n", *argv);
 			return -1;
 		}
 	}
 
-	blockfile[0] = 0;
-	if (todo && TODO_DOWNLOAD) {
-		if (todo && TODO_UPDATE) {
-			format = 1;
-		}
+	/* DOWNLOAD + CONVERT + UPDATE  : alter SETNAME
+	 * DOWNLOAD + CONVERT           : true SETNAME
+	 * DOWNLOAD */
+	if (todo & TODO_DOWNLOAD) {
+		todo |= todo & TODO_UPDATE ? TODO_CONVERT : 0;
 		sprintf(midfile, "iblock_%s", sys_timestamp(NULL));
-		if (iblock_download(dlbuf, dlno, midfile) > 0) {
+		if (iblock_download(setmap, midfile, proxy) <= 0) {
+			return -1;	/* download fail */
+		}
+		if (argc > 0) {
+			strcpy(blockfile, argv[0]);
+		} else {
 			strcpy(blockfile, midfile);
-			if (format) {
+			if (todo & TODO_CONVERT) {
 				strcat(blockfile, "_ipset.txt");
-				iblock_convert_to_ipset(midfile, blockfile);
 			} else {
 				strcat(blockfile, "_transmission.gz");
-				iblock_compress(midfile, blockfile);
 			}
-			sys_file_delete(midfile);
 		}
+		if ((todo & TODO_CONVERT) == 0) {
+			iblock_compress(midfile, blockfile);
+		} else {
+			maxelem = iblock_convert_to_ipset(setname, 
+					midfile, blockfile, todo&TODO_UPDATE);
+			if (todo & TODO_UPDATE) {
+				ipset_update(blockfile, setname, maxelem + 1);
+			}
+		}
+		sys_file_delete(midfile);
+		return 0;
 	}
-	if (todo && TODO_CONVERT) {
+	
+	/* CONVERT + UPDATE             : alter SETNAME + argv
+	 * CONVERT                      : true SETNAME + argv */
+	if (todo & TODO_CONVERT) {
 		if (argc == 0) {
-			iblock_convert_to_ipset(NULL, NULL);
+			iblock_convert_to_ipset(setname, NULL, NULL, 0);
 		} else if (argc == 1) {
-			iblock_convert_to_ipset(argv[1], NULL);
+			iblock_convert_to_ipset(setname, argv[0], NULL, 0);
+		} else if ((todo & TODO_UPDATE) == 0) {
+			iblock_convert_to_ipset(setname, argv[0], argv[1], 0);
 		} else {
-			iblock_convert_to_ipset(argv[1], argv[2]);
+			maxelem = iblock_convert_to_ipset(setname, argv[0], argv[1], 1);
+			ipset_update(argv[1], setname, maxelem + 1);
 		}
+		return 0;
 	}
-	if (todo && TODO_UPDATE) {
-		if (argc == 1) {
-			ipset_update(argv[1]);
-		} else if (argc > 1) {
-			ipset_update(argv[2]);
-		} else if (todo && TODO_DOWNLOAD) {
-			ipset_update(blockfile);
-		} else {
-			ipset_update(NULL);
-		}
+
+	if ((todo & TODO_UPDATE) && (argc >= 1)) {	
+		/* Update the IPSET only: true SETNAME + argv */
+		ipset_update(argv[0], setname, 0);
+		return 0;
 	}
 	if (todo == 0) {
 		puts(help);
@@ -192,7 +338,8 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-static int iblock_convert_to_ipset(char *infile, char *outfile)
+static int iblock_convert_to_ipset(char *setname, 
+		char *infile, char *outfile, int tmpflag)
 {
 	FILE	*fin, *fout;
 	char	*line, *lend;
@@ -236,7 +383,11 @@ static int iblock_convert_to_ipset(char *infile, char *outfile)
 		num++;
 		line++;
 		for (lend = line + strlen(line) - 1; isspace(*lend);  *lend-- = 0);
-		fprintf(fout, "add -exist %s %s\n", setname, line);
+		if (tmpflag) {
+			fprintf(fout, "add -exist %s_TMP %s\n", setname, line);
+		} else {
+			fprintf(fout, "add -exist %s %s\n", setname, line);
+		}
 	}
 	if (fin != stdin) {
 		fclose(fin);
@@ -267,6 +418,7 @@ static int iblock_compress(char *infile, char *outfile)
 
 	progress(-1);
 	progress(inlen);
+	printf("Compressing %s: ", outfile);
 
 	rc = zlib_deflate(fin, fout, Z_DEFAULT_COMPRESSION);
 	if (rc != Z_OK) {
@@ -279,92 +431,214 @@ static int iblock_compress(char *infile, char *outfile)
 	return rc;
 }
 
-static int iblock_download(int *plist, int plen, char *outfile)
+static int iblock_uncompress(char *infile, FILE *fout)
+{
+	FILE	*fin;
+	size_t	inlen;
+	int	rc;
+
+	if ((fin = fopen(infile, "r")) == NULL) {
+		return -1;
+	}
+
+	fseek(fin, 0, SEEK_END);
+	inlen = ftell(fin);
+	rewind(fin);
+
+	progress(-1);
+	progress(inlen);
+	printf("Uncompressing: ");
+
+	rc = zlib_inflate(fin, fout);
+	if (rc != Z_OK) {
+		zlib_zerr(rc);
+	}
+
+	progress(inlen);
+	fclose(fin);
+	return rc;
+}
+
+static int iblock_download(unsigned long setmap, char *outfile, char *proxy)
 {
 	FILE	*fp;
-	int	i, rc = 0;
+	char	tmpfile[128];
+	int	i;
 
 	if ((fp = fopen(outfile, "w")) == NULL) {
 		return -1;
 	}
-	if (plen > 0) {
-		for (i = 0; i < plen; i++) {
-			rc += iblock_download_append(fp, iblock[plist[i]].url);
+	for (i = 0; i < SETMAP_SIZE; i++) {
+		if (iblock[i].name == NULL) {
+			break;
 		}
-	} else {
-		for (i = 0; iblock[i].name; i++) {
-			rc += iblock_download_append(fp, iblock[i].url);
+		if (SETMAP_CHECK(setmap, i) == 0) {
+			continue;
 		}
+
+		sprintf(tmpfile, "/tmp/iblock_%02d.gz", i);
+		printf("Downloading '%s': ", iblock[i].name);
+		fflush(stdout);
+		if (sys_download_url(iblock[i].url, tmpfile, proxy) == 0) {
+			iblock_uncompress(tmpfile, fp); /** append to block */
+		} else {
+			printf("FAILED!\n");
+		}
+		sys_file_delete(tmpfile);
 	}
+
+	i = (int) ftell(fp);
 	fclose(fp);
-	if (rc == 0) {
+
+	if (i == 0) {
 		sys_file_delete(outfile);
+	}
+	return i;
+}
+
+static int iblock_download_packages(unsigned long setmap, char *proxy)
+{
+	char	tmpfile[128];
+	int	i, rc;
+
+	for (i = rc = 0; i < SETMAP_SIZE; i++) {
+		if (iblock[i].name == NULL) {
+			break;
+		}
+		if (SETMAP_CHECK(setmap, i) == 0) {
+			continue;
+		}
+
+		sprintf(tmpfile, "iblock_%02d.gz", i);
+		sys_download_url(iblock[i].url, tmpfile, proxy);
 	}
 	return rc;
 }
 
-static int iblock_download_append(FILE *fp, char *url)
-{
-	char	*tmpfile;
 
-	sys_download_wget(url, tmpfile, proxy);
-	/** append to block */
-	sys_file_delete(tmpfile);
-	return 0;
-}
-
-static int ipset_update(char *blockfile)
+static int ipset_update(char *rulefile, char *setname, unsigned maxelem)
 {
 	FILE	*fp;
+	char	buf[256], insetn[128], *p;
+	int	rc;
 
-	if (blockfile == NULL) {
-		fp = stdin;
-	} else {
-		fp = fopen(blockfile, "r");
+	//printf("ipset_update: %s %s %u\n", rulefile, setname, maxelem);
+	/* review the IPSET runtime environment */
+	rc = system("ipset list");
+	if (rc == 1) {
+		printf("IPSET require root privilige.\n");
+		if (simulation == 0) {
+			return -1;
+		}
 	}
-	if (fp == NULL) {
+	if (rc != 0) {	/* such as 127 */
+		printf("IPSET is not found.\n");
+		if (simulation == 0) {
+			return -2;
+		}
+	}
+
+	if ((fp = fopen(rulefile, "r")) == NULL) {
+		return -3;
+	}
+	
+	/* if the setname and rule number are unknown, grab them from the
+	 * file:   add -exist MYIPSET 1.0.64.0-1.0.127.255  */
+	while (fgets(buf, sizeof(buf), fp) != NULL) {
+		if ((p = strstr(buf, "-exist")) == NULL) {
+			continue;
+		}
+		for (p += 6; isspace(*p); p++);
+		strncpy(insetn, p, sizeof(insetn));
+		insetn[sizeof(insetn)-1] = 0;
+		for (p = insetn; !isspace(*p); p++);
+		*p = 0;
+		break;
+	}
+	if (maxelem == 0) {
+		maxelem = 2;
+		while (fgets(buf, sizeof(buf), fp) != NULL) {
+			if (strstr(buf, "-exist") != NULL) {
+				maxelem++;
+			}
+		}
+	}
+	fclose(fp);
+
+	if (!strcmp(setname, insetn)) {
+		printf("Failure: SETNAME equals to Temporary SETNAME\n");
 		return -1;
 	}
 
-	/**/
-
-	if (fp != stdin) {
-		fclose(fp);
+	sprintf(buf, "ipset create -exist %s hash:net maxelem %u", insetn, maxelem);
+	if (simulation == 0) {
+		system(buf);
+	} else {
+		puts(buf);
 	}
-	return 0;
+	
+	sprintf(buf, "ipset flush %s", insetn);
+	if (simulation == 0) {
+		system(buf);
+	} else {
+		puts(buf);
+	}
+	
+	sprintf(buf, "ipset restore < %s", rulefile);
+	if (simulation == 0) {
+		system(buf);
+	} else {
+		puts(buf);
+	}
+	
+	sprintf(buf, "ipset create -exist %s hash:net maxelem %u", setname, maxelem);
+	if (simulation == 0) {
+		system(buf);
+	} else {
+		puts(buf);
+	}
+	
+	sprintf(buf, "ipset swap %s %s", setname, insetn);
+	if (simulation == 0) {
+		system(buf);
+	} else {
+		puts(buf);
+	}
+	
+	sprintf(buf, "ipset destroy %s", insetn);
+	if (simulation == 0) {
+		system(buf);
+	} else {
+		puts(buf);
+	}
+	return rc;
 }
 
 /* 0,2,5-9,11 */
-static int set_package_list(char *s, int *lbuf, int len)
+static unsigned long set_package_list(char *s)
 {
-	int	i, begin, end;
+	unsigned long	setmap = 0;
+	int	begin, end;
 
-	for (i = 0; i < len; i++) {
-		/* find the first number */
-		if (!isdigit(*s)) {
-			i--;	/* skip the broken group */
-			break;
-		}
+	if (!strncmp(s, "all", 3)) {
+		return (unsigned long) -1;
+	}
+	while (isdigit(*s)) {	/* find the first number */
 		begin = end = (int) strtol(s, NULL, 0);
 		/* find the next number */
 		while (*s && isdigit(*s)) s++;
 		if (*s == '-') {
 			s++;
 			if (!isdigit(*s)) {
-				i--;	/* skip the broken group */
 				break;
 			}
 			end = (int) strtol(s, NULL, 0);
 			while (*s && isdigit(*s)) s++;
 		}
 		/* fill up the list */
-		if (begin == end) {
-			lbuf[i] = begin;
-		} else {
-			while ((i < len) && (begin <= end)) {
-				lbuf[i++] = begin++;
-			}
-			i--;	/* remove the last increment */
+		while (begin <= end) {
+			setmap = SETMAP_SET(setmap, begin);
+			begin++;
 		}
 		/* go to the next */
 		if (*s != ',') {
@@ -372,12 +646,22 @@ static int set_package_list(char *s, int *lbuf, int len)
 		}
 		s++;
 	}
-	
-	/* for debugging only */
-	/*for (end = 0; end <= i; end++) printf("%d ", lbuf[end]);
-	printf("\n");*/
-	return i+1;
+	return setmap;
 }
+
+static void dump_package_list(unsigned long setmap)
+{
+	int	i;
+
+	for (i = 0; i < SETMAP_SIZE; i++) {
+		if (SETMAP_CHECK(setmap, i)) {
+			printf("%d ", i);
+		}
+	}
+	printf("\n");
+}
+
+
 
 #define PROGRSS_LENGTH		50
 
@@ -405,7 +689,7 @@ static int progress(size_t update)
 		return (int) pc;
 	}
 	while (pc < run) {
-		printf("#");
+		printf(".");
 		fflush(stdout);
 		pc++;
 	}
@@ -448,10 +732,115 @@ static int sys_file_delete(char *fname)
 
 /* proxy: username:passwd@10.20.30.40:1234 or
  * http://hniksic:mypassword@proxy.company.com:8001/ */
-static int sys_download_wget(char *url, char *fname, char *proxy)
+#ifdef	CFG_LIBCURL
+#include <curl/curl.h>
+
+static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 {
+	size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+	return written;
+}
+
+static int curl_xferinfo(void *clientp, curl_off_t dltotal, curl_off_t dlnow,
+		curl_off_t ultotal, curl_off_t ulnow)
+{
+	size_t	*total = clientp;
+	static	curl_off_t	dllast;
+
+	if ((*total == 0) && (dltotal != 0)) {
+		progress(dltotal);
+		*total = dltotal;
+		dllast = 0;
+		return 0;
+	}
+	if (*total == 0) {
+		return 0;
+	}
+	progress(dlnow - dllast);
+	dllast = dlnow;
+	return 0;
+}
+
+static int curl_progress(void *clientp, double dltotal, double dlnow,
+		double ultotal, double ulnow)
+{
+	return curl_xferinfo(clientp, (curl_off_t)dltotal, (curl_off_t)dlnow,
+			(curl_off_t)ultotal, (curl_off_t)ulnow);
+}
+
+static int sys_download_url(char *url, char *fname, char *proxy)
+{
+	static	size_t	total_length;
+	CURL	*curl_handle;
+	FILE	*fout;
+	int	rcode;
+
+	curl_global_init(CURL_GLOBAL_ALL);
+	
+	/* init the curl session */
+	if ((curl_handle = curl_easy_init()) == NULL) {
+		return -1;	/* libcurl abnormal */
+	}
+	
+	/* open the file */ 
+	if ((fout = fopen(fname, "wb")) == NULL) {
+		return -2;	/* not received */
+	}
+	
+	/* set URL to get here */
+	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+	
+	/* Switch on full protocol/debug output while testing */ 
+	//curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
+	
+	/* follow HTTP 3xx redirects */
+	curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
+	
+	/* send all data to this function  */ 
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
+
+	/* write the page body to this file handle */ 
+	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, fout);
+	
+	/* setup the progress bar */
+	progress(-1);
+	total_length = 0;
+	curl_easy_setopt(curl_handle, CURLOPT_PROGRESSFUNCTION, curl_progress);
+	curl_easy_setopt(curl_handle, CURLOPT_PROGRESSDATA, &total_length);
+#if LIBCURL_VERSION_NUM >= 0x072000
+	curl_easy_setopt(curl_handle, CURLOPT_XFERINFOFUNCTION, curl_xferinfo);
+	curl_easy_setopt(curl_handle, CURLOPT_XFERINFODATA, &total_length);
+#endif
+	/* disable progress meter, set to 0L to enable and disable debug output */ 
+	curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 0L);
+
+	/* setup the proxy server if exists */
+	if (proxy) {
+		curl_easy_setopt(curl_handle, CURLOPT_PROXY, proxy);
+	}
+	
+	/* get it! */ 
+	curl_easy_perform(curl_handle);
+		
+	/* check if the expected file received */
+	rcode = 0;
+	if (ftell(fout) == 0) {
+		rcode = -3;	/* empty income file */
+	}
+
+	/* close the header file */ 
+	fclose(fout);
+
+	/* cleanup curl stuff */ 
+	curl_easy_cleanup(curl_handle);
+	return rcode;
+}
+#else	/* fork() to wget */
+static int sys_download_url(char *url, char *fname, char *proxy)
+{
+	FILE	*fchk;
 	char	*wget_tbl[] = { "-O" };
-	char	*argv[64] = { "wget", "-U", BROWSER, "-t", "1" };
+	char	*argv[64] = { "wget", "-U", CFG_BROWSER, "-t", "1" };
 	int	i, rcode;
 
 	i = 5;
@@ -464,7 +853,7 @@ static int sys_download_wget(char *url, char *fname, char *proxy)
 	}
 	argv[i++] = NULL;
 
-	for (i = 0; argv[i]; printf("%s ", argv[i++])); puts("");
+	//for (i = 0; argv[i]; printf("%s ", argv[i++])); puts("");
 
 	if (fork() == 0) {
 		if (proxy && *proxy) {
@@ -475,13 +864,31 @@ static int sys_download_wget(char *url, char *fname, char *proxy)
 		}
 		execvp(argv[0], argv);
 		//execlp("env", "env", NULL);
-		return -1;
+		return -1;	/* never goes there */
 	}
 
 	wait(&rcode);
 	printf("WGET returns: %d\n", rcode);
+	if (!WIFEXITED(rcode)) {	/* normal return? */
+		return -1;	/* killed/signaled/suspended/coredumped */
+	}
+	if ((rcode = WEXITSTATUS(rcode)) != 0) {	
+		/* pass on the return code of wget */
+		return rcode;	/* 1,2,...127 */
+	}
+	/* check if the expected file received */
+	if ((fchk = fopen(fname, "r")) == NULL) {
+		return -2;	/* not received */
+	}
+	fseek(fchk, 0, SEEK_END);
+	if (ftell(fchk) == 0) {
+		rcode = -3;	/* empty income file */
+	}
+	fclose(fchk);
 	return rcode;
 }
+#endif
+
 
 /* zpipe.c: example of proper use of zlib's inflate() and deflate()
    Not copyrighted -- provided to the public domain
@@ -604,6 +1011,8 @@ static int zlib_inflate(FILE *source, FILE *dest)
         if (strm.avail_in == 0)
             break;
         strm.next_in = in;
+
+	progress(strm.avail_in);
 
         /* run inflate() on input until output buffer not full */
         do {

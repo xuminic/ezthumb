@@ -2,8 +2,9 @@ TODO List
 =========
 *) Test 3.2.3 core in different linux version
 *) More test cases for bind mode
-*) Update the GUI
-
+*) key rip need to be retested
+*) Process option need to be retested
+*) Font and size setting
 
 DO NOT FIX
 ==========

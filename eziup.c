@@ -34,11 +34,18 @@
 #include "ezicon.h"
 #include "id_lookup.h"
 
-#define EZGUI_INST	"GUIEXT"
-#define EZGUI_MAINKEY	"GUI"
+#define EZOBJ_MAIN	"EZGUIOBJ"
+#define EZOBJ_SVIEW	"SVIEWOBJ"
+
+#define EZGUI_MAINKEY	"GUI"		/* for the configure file */
 
 #define EGPS_SETUP_DESCR	"120"
 #define EGPS_SETUP_DROPDOWN	"200x14"
+#define EGPS_SETUP_SHORT_TEXT	"40x10"
+#define EGPS_GRID_FST_TEXT	"24x10"
+#define EGPS_GRID_SND_TEXT	"18x10"
+#define EGPS_GRID_LABEL		"28"
+#define EGPS_SETUP_BUTTON	"42"
 
 
 static	struct	idtbl	uir_grid[] = {
@@ -80,30 +87,16 @@ static	struct	idtbl	uir_choose_font[] = {
 };
 
 static int ezgui_create_window(EZGUI *gui);
-static EZGUI *ezgui_get_global(Ihandle *any);
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
 static int ezgui_event_window_show(Ihandle *ih, int state);
 static int ezgui_event_window_close(Ihandle *ih);
 
 static Ihandle *ezgui_page_main(EZGUI *gui);
 static int ezgui_page_main_reset(EZGUI *gui);
-static Ihandle *ezgui_page_main_workarea(EZGUI *gui);
 static Ihandle *ezgui_page_main_button(EZGUI *gui);
-static void *ezgui_page_main_file_append(EZGUI *gui, char *fname);
-static int ezgui_list_entry(EZGUI *gui, int usize, int n, EZMEDIA *minfo);
-static int ezgui_list_temporary(EZGUI *gui, int usize, int n, char *fname);
-//static int ezgui_list_refresh(EZGUI *gui, int usize);
-static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text);
-static int ezgui_event_main_dropfiles(Ihandle *ih, 
-		const char* filename, int num, int x, int y);
-static int ezgui_event_main_multi_select(Ihandle *ih, char *value);
-static int ezgui_event_main_moused(Ihandle *ih, 
-		int button, int pressed, int x, int y, char *status);
 static int ezgui_event_main_add(Ihandle *ih);
 static int ezgui_event_main_remove(Ihandle *ih);
 static int ezgui_event_main_run(Ihandle *ih);
-static char *ezgui_make_filters(char *slist);
-static int ezgui_remove_item(EZGUI *gui, int idx);
 static int ezgui_show_progress(EZGUI *gui, int cur, int range);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
@@ -130,7 +123,7 @@ static Ihandle *ezgui_page_about(EZGUI *gui);
 static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck);
 static int ezgui_sview_progress(Ihandle *ih, int percent);
 static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl);
-static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl);
+//static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl);
 static int ezgui_sview_event_run(Ihandle *ih, int item, char *text);
 static int ezgui_sview_event_dropfiles(Ihandle *, const char *,int, int, int);
 static int ezgui_sview_event_multi_select(Ihandle *ih, char *value);
@@ -143,20 +136,19 @@ static int ezgui_sview_run(SView *sview);
 static int ezgui_sview_file_append(SView *sview, char *fname);
 static int ezgui_sview_file_remove(SView *sview, int idx);
 static int ezgui_sview_active_update(SView *sview, int type, int num);
-static int ezgui_sview_notificate(void *v, int eid, long param, long opt, void *b);
-
 
 static Ihandle *xui_label(char *label, char *size, char *font);
 static Ihandle *xui_text(Ihandle **xlst, char *label);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
 static int xui_list_get_idx(Ihandle *ih);
 static int xui_text_get_number(Ihandle *ih);
-static int xui_get_size(Ihandle *ih, char *attr, int *height);
+//static int xui_get_size(Ihandle *ih, char *attr, int *height);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
 static Ihandle *xui_text_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext);
 static Ihandle *xui_button(char *prompt, Icallback ntf);
-static int config_dump(void *config, char *prompt);
+static int xui_config_status(void *config, char *prompt);
+static char *xui_make_filters(char *slist);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -177,7 +169,6 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	}
 
 	/* initialize GUI structure with parameters from command line */
-	gui->magic  = EZGUI_MAGIC;
 	gui->sysopt = ezopt;
 	sprintf(gui->inst_id, "EZTHUMB_%p", gui);
 
@@ -186,7 +177,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
 	if (gui->config) {
 		ezopt_load_config(ezopt, gui->config);
-		config_dump(gui->config, "Read");
+		xui_config_status(gui->config, "Read");
 	}
 
 	/* bind the notification function to GUI mode */
@@ -290,9 +281,9 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	 * so make it readonly here. */
 	s = csc_cfg_read(gui->config, NULL, CFG_KEY_SUFFIX_FILTER);
 	if (s) {
-		gui->filefilter = ezgui_make_filters(s);
+		gui->filefilter = xui_make_filters(s);
 	} else {
-		gui->filefilter = ezgui_make_filters(EZ_DEF_FILTER);
+		gui->filefilter = xui_make_filters(EZ_DEF_FILTER);
 	}
 
 	/* seperate the image quality and frame rate */
@@ -312,22 +303,23 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 			CFG_KEY_GIF_FRATE, &gui->tmp_gifa_fr);
 
 	/* reset the chain list of list control */
-	gui->list_cache = NULL;
 	csc_cfg_save(gui->config);
-	config_dump(gui->config, "Write");
+	xui_config_status(gui->config, "Write");
 	return gui;
 }
 
 int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 {
+	SView	*sview;
 	int	i;
 
 	ezgui_create_window(gui);
 
 	/* filling the work area with file names from command line */
-	if (fnum) {
+	sview = (SView *) IupGetAttribute(gui->list_view, EZOBJ_SVIEW);
+	if (fnum && sview) {
 		for (i = 0; i < fnum; i++) {
-			ezgui_page_main_file_append(gui, flist[i]);
+			ezgui_sview_file_append(sview, flist[i]);
 			ezgui_show_progress(gui, i, fnum);
 		}
 		ezgui_show_progress(gui, i, fnum);
@@ -344,10 +336,9 @@ int ezgui_close(EZGUI *gui)
 		if (gui->filefilter) {
 			smm_free(gui->filefilter);
 		}
-		csc_cdl_list_destroy(&gui->list_cache);
 		if (gui->config) {
 			csc_cfg_flush(gui->config);
-			config_dump(gui->config, "Finalize");
+			xui_config_status(gui->config, "Finalize");
 			csc_cfg_close(gui->config);
 		}
 		smm_free(gui);
@@ -422,7 +413,7 @@ static int ezgui_create_window(EZGUI *gui)
 
 	/* bind the GUI structure into the current dialog so it can be accessed
 	 * in its sub-controls */
-	IupSetAttribute(gui->dlg_main, EZGUI_INST, (char*) gui);
+	IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, (char*) gui);
 	IupSetCallback(gui->dlg_main, "RESIZE_CB",
 			(Icallback) ezgui_event_window_resize);
 	IupSetCallback(gui->dlg_main, "SHOW_CB",
@@ -448,24 +439,15 @@ static int ezgui_create_window(EZGUI *gui)
 	return 0;
 }
 
-/* retrieve the GUI structure from the top leve dialog wedget */
-static EZGUI *ezgui_get_global(Ihandle *any)
-{
-	Ihandle	*dlg = IupGetDialog(any);
-
-	if (dlg) {
-		return (EZGUI*) IupGetAttribute(dlg, EZGUI_INST);
-	}
-	return NULL;
-}
-
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 {
-	EZGUI	*gui = ezgui_get_global(ih);
-	//int	csize;
+	EZGUI	*gui;
 
 	(void)height;
 
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
 	if ((gui->win_dec_x == 0) && (gui->win_dec_y == 0)) {
 		gui->win_dec_x = gui->win_width - width;
 		gui->win_dec_y = gui->win_height - height;
@@ -488,36 +470,14 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 
 	/* 20150514 find an easy way to shrink the window by setting 
 	 * RASTERSIZE of the main dialog. The IUP will do all other things */
-#if 1
 	sprintf(gui->win_size, "%dx%d", width+gui->win_dec_x, height+gui->win_dec_y);
 	IupSetAttribute(gui->dlg_main, "RASTERSIZE", gui->win_size);
-#else
-	/*xui_get_size(ezgui_get_global(ih)->list_fname, "RASTERSIZE", NULL);
-	xui_get_size(ezgui_get_global(ih)->list_fname, "CHARSIZE", NULL);
-	xui_get_size(ezgui_get_global(ih)->list_fname, "SIZE", NULL);*/
-
-	/* find the client size of the list control of file names */
-	width -= 360;	/* this magic number is the sum-up lenght of 
-			   filesize/videolength/resolution/progress */
-	/* convert it to the user size */
-	csize = xui_get_size(gui->list_fname, "CHARSIZE", NULL);
-	xui_get_size(gui->list_fname, "SIZE", NULL);
-	width = width / csize * 4;
-	
-	/* this magic number was defined by the default size of the 
-	 * list control of file names */
-	if (width < 159) {
-		width = 159;
-	}
-	EDB_MODL(("EVT_RESIZE: list control %dx%d\n", width, height));
-	ezgui_list_refresh(gui, width);
-#endif
-	return 0;
+	return IUP_DEFAULT;
 }
 
 static int ezgui_event_window_show(Ihandle *ih, int state)
 {
-	EZGUI	*gui = ezgui_get_global(ih);
+	EZGUI	*gui;
 
 #ifdef	DEBUG
 	switch (state) {
@@ -544,6 +504,10 @@ static int ezgui_event_window_show(Ihandle *ih, int state)
 		break;
 	}
 #endif
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
 	/* we don't save the MAXIMIZED status because when IUP set the 
 	 * PLACEMENT of MAXIMIZED, IUP won't generate the resize event */
 	gui->win_state = state;
@@ -569,9 +533,15 @@ static int ezgui_event_window_show(Ihandle *ih, int state)
 
 static int ezgui_event_window_close(Ihandle *ih)
 {
-	EZGUI	*gui = ezgui_get_global(ih);
-	char	*s = IupGetAttribute(gui->dlg_main, "SCREENPOSITION");
+	EZGUI	*gui;
+	char	*s;
 	
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	s = IupGetAttribute(ih, "SCREENPOSITION");
+
 	EDB_MODL(("EVT_CLOSE: SCREENPOSITION = %s\n", s));
 	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_WIN_POS, s);
 	return 0;
@@ -583,7 +553,7 @@ static int ezgui_event_window_close(Ihandle *ih)
  ****************************************************************************/
 static Ihandle *ezgui_page_main(EZGUI *gui)
 {
-	Ihandle	*vbox, *hbox, *sbox;
+	Ihandle	*vbox, *hbox;
 
 	/* the progress bar of the current processing file */
 	gui->prog_bar = IupProgressBar();
@@ -614,7 +584,6 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 
 	/* grouping with the work area, a group of lists inside a scroll box */
-	//sbox = IupScrollBox(ezgui_page_main_workarea(gui));
 	gui->list_view = ezgui_sview_create(gui, 1);
 	ezgui_sview_active_add(gui->list_view, 
 			EZGUI_SVIEW_ACTIVE_CONTENT, gui->button_run);
@@ -622,14 +591,10 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 			EZGUI_SVIEW_ACTIVE_SELECT, gui->button_del);
 	ezgui_sview_active_add(gui->list_view, 
 			EZGUI_SVIEW_ACTIVE_PROGRESS, gui->prog_bar);
+	ezgui_sview_active_add(gui->list_view,
+			EZGUI_SVIEW_ACTIVE_BIND, gui->button_add);
 	
-	ezgui_sview_active_add(gui->list_view, 
-			EZGUI_SVIEW_ACTIVE_CONTENT, gui->button_add);
-	ezgui_sview_active_remove(gui->list_view,
-			EZGUI_SVIEW_ACTIVE_CONTENT, gui->button_add);
-	
-	sbox = IupScrollBox(gui->list_view);
-	vbox = IupVbox(sbox, hbox, NULL);
+	vbox = IupVbox(IupScrollBox(gui->list_view), hbox, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
@@ -637,68 +602,17 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 
 static int ezgui_page_main_reset(EZGUI *gui)
 {
+	SView	*sview;
+
 	IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
-	if (gui->list_count == 0) {
-		IupSetAttribute(gui->button_run, "ACTIVE", "NO");
+
+	sview = (SView *) IupGetAttribute(gui->button_run, EZOBJ_SVIEW);
+	if (sview) {
+		ezgui_sview_active_update(sview, 
+				EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
 	}
 	return 0;
-}
-
-static Ihandle *ezgui_page_main_workarea(EZGUI *gui)
-{
-	Ihandle	*vb_main, *vb_size, *vb_len, *vb_res, *vb_prog, *hbox;
-
-	gui->list_fname = IupList(NULL);
-	IupSetAttribute(gui->list_fname, "EXPAND", "YES");
-	IupSetAttribute(gui->list_fname, "MULTIPLE", "YES");
-	IupSetAttribute(gui->list_fname, "SCROLLBAR", "NO");
-	IupSetAttribute(gui->list_fname, "DROPFILESTARGET", "YES");
-	vb_main = IupVbox(xui_label("Files", NULL, NULL), 
-			gui->list_fname, NULL);
-	IupSetCallback(gui->list_fname, "DBLCLICK_CB", 
-			(Icallback) ezgui_event_main_workarea);
-	IupSetCallback(gui->list_fname, "DROPFILES_CB",
-			(Icallback) ezgui_event_main_dropfiles);
-	IupSetCallback(gui->list_fname, "MULTISELECT_CB",
-			(Icallback) ezgui_event_main_multi_select);
-	IupSetCallback(gui->list_fname, "BUTTON_CB",
-			(Icallback) ezgui_event_main_moused);
-
-	gui->list_size = IupList(NULL);
-	IupSetAttribute(gui->list_size, "SIZE", "50");
-	IupSetAttribute(gui->list_size, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_size, "SCROLLBAR", "NO");
-	IupSetAttribute(gui->list_size, "ACTIVE", "NO");
-	vb_size = IupVbox(xui_label("Size", "50", NULL), 
-			gui->list_size, NULL);
-
-	gui->list_length = IupList(NULL);
-	IupSetAttribute(gui->list_length, "SIZE", "48");
-	IupSetAttribute(gui->list_length, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_length, "SCROLLBAR", "NO");
-	IupSetAttribute(gui->list_length, "ACTIVE", "NO");
-	vb_len = IupVbox(xui_label("Length", "48", NULL), 
-			gui->list_length, NULL);
-
-	gui->list_resolv = IupList(NULL);
-	IupSetAttribute(gui->list_resolv, "SIZE", "50");
-	IupSetAttribute(gui->list_resolv, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_resolv, "SCROLLBAR", "NO");
-	IupSetAttribute(gui->list_resolv, "ACTIVE", "NO");
-	vb_res = IupVbox(xui_label("Resolution", "50", NULL), 
-			gui->list_resolv, NULL);
-	
-	gui->list_prog = IupList(NULL);
-	IupSetAttribute(gui->list_prog, "SIZE", "40");
-	IupSetAttribute(gui->list_prog, "SCROLLBAR", "NO");
-	IupSetAttribute(gui->list_prog, "EXPAND", "VERTICAL");
-	IupSetAttribute(gui->list_prog, "ACTIVE", "NO");
-	vb_prog = IupVbox(xui_label("Progress", "40", NULL), 
-			gui->list_prog, NULL);
-
-	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
-	return hbox;
 }
 
 static Ihandle *ezgui_page_main_button(EZGUI *gui)
@@ -715,426 +629,34 @@ static Ihandle *ezgui_page_main_button(EZGUI *gui)
 	return IupHbox(gui->button_add, gui->button_del, gui->button_run,NULL);
 }
 
-static void *ezgui_page_main_file_append(EZGUI *gui, char *fname)
-{
-	EZVID	vobj;
-	EZMEDIA	*minfo;
-	CSCLNK	*node;
-	int	len, usize, lnext;
-
-	/* preset the filename to make it look better */
-	lnext = gui->list_count + 1;
-	usize = xui_get_size(gui->list_fname, "SIZE", NULL);
-	ezgui_list_temporary(gui, usize, lnext, fname);
-
-	/* 20120903 Bugfix: set the codepage to utf-8 before calling
-	 * ezthumb core. In Win32 version, the ezthumb core uses the 
-	 * default codepage to process file name. However the GTK 
-	 * converted the file name to UTF-8 so the Windows version 
-	 * could not find the file. 
-	 * There's no such problem in linux.*/
-	smm_codepage_set(65001);
-	if (ezinfo(fname, gui->sysopt, &vobj) != EZ_ERR_NONE) {
-		smm_codepage_reset();
-		/* FIXME: disaster control */
-		IupSetAttributeId(gui->list_fname,  "", lnext, "");
-		return NULL;
-	}
-	smm_codepage_reset();
-
-	len = strlen(fname) * 2 + sizeof(EZMEDIA) + 8;
-	if ((node = csc_cdl_list_alloc_tail(&gui->list_cache, len)) == NULL) {
-		IupSetAttributeId(gui->list_fname,  "", lnext, "");
-		return NULL;
-	}
-	minfo = (EZMEDIA *) csc_cdl_payload(node);
-
-	/* highlight the RUN button when the list is not empty */
-	IupSetAttribute(gui->button_run, "ACTIVE", "YES");
-
-	strcpy(minfo->fname, fname);
-	minfo->showing = minfo->fname + strlen(minfo->fname) + 1;
-	minfo->duration = vobj.duration;
-	minfo->seekable = vobj.seekable;
-	minfo->bitrates = vobj.bitrates;
-
-	meta_timestamp(vobj.duration, 0, minfo->vidlen);
-	meta_filesize(vobj.filesize, minfo->fsize);
-	sprintf(minfo->resolv, "%dx%d", vobj.width, vobj.height);
-	sprintf(minfo->progr, "0%%");
-
-	//IupSetAttributeId(gui->list_fname,  "", lnext, minfo->fname);
-	ezgui_list_entry(gui, usize, lnext, minfo);
-	IupSetAttributeId(gui->list_size,   "", lnext, minfo->fsize);
-	IupSetAttributeId(gui->list_length, "", lnext, minfo->vidlen);
-	IupSetAttributeId(gui->list_resolv, "", lnext, minfo->resolv);
-	IupSetAttributeId(gui->list_prog,   "", lnext, minfo->progr);
-
-	/* increase the list index first because the IUP list control
-	 * starts from 1 */
-	gui->list_count++;
-
-	IupFlush();
-	/*if (gui->dlg_main) {
-		IupRedraw(gui->dlg_main, 1);
-	}*/
-
-	return minfo;
-}
-
-static int ezgui_list_entry(EZGUI *gui, int usize, int n, EZMEDIA *minfo)
-{
-	int	len;
-
-	usize = usize / 4 - 3;
-	len = strlen(minfo->fname);
-
-	if (len < usize) {
-		strcpy(minfo->showing, minfo->fname);
-	} else {
-		strcpy(minfo->showing, "... ");
-		strcat(minfo->showing, &minfo->fname[len - usize + 4]);
-	}
-
-	IupSetAttributeId(gui->list_fname, "",  n, minfo->showing);
-	return 0;
-}
-
-static int ezgui_list_temporary(EZGUI *gui, int usize, int n, char *fname)
-{
-	int	len;
-
-	usize = usize / 4 - 3;
-	len = strlen(fname);
-	if (len > usize) {
-		fname += len - usize + 3;
-	}
-	IupSetAttributeId(gui->list_fname, "",  n, fname);
-	return 0;
-}
-
-/*static int ezgui_list_refresh(EZGUI *gui, int usize)
-{
-	CSCLNK	*node;
-	int	i;
-
-	for (i = 1, node = gui->list_cache; node; 
-			i++, node = csc_cdl_next(gui->list_cache, node)) {
-		ezgui_list_entry(gui, usize, i, (EZMEDIA*) csc_cdl_payload(node));
-	}
-	return 0;
-}*/
-
-static int ezgui_event_main_workarea(Ihandle *ih, int item, char *text)
-{
-	EZGUI	*gui = (EZGUI *) ih;
-	EZMEDIA	*minfo = NULL;
-	CSCLNK	*node;
-
-	(void)text;
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-
-	EDB_DEBUG(("EVT_Action %d: %p %s\n", item, ih, text));
-	gui->list_idx = item;	/* store the current index */
-
-	node = csc_cdl_goto(gui->list_cache, item - 1);
-	if (node) {
-		minfo = (EZMEDIA*) csc_cdl_payload(node);
-		gui->sysopt->pre_dura = minfo->duration;
-		gui->sysopt->pre_seek = minfo->seekable;
-		gui->sysopt->pre_br = minfo->bitrates;
-	
-		smm_codepage_set(65001);
-		ezthumb(minfo->fname, gui->sysopt);
-		smm_codepage_reset();
-
-		gui->sysopt->pre_dura = 0;
-		gui->sysopt->pre_seek = 0;
-		gui->sysopt->pre_br = 0;
-	}
-	return IUP_DEFAULT;
-}
-
-static int ezgui_event_main_dropfiles(Ihandle *ih, 
-		const char* filename, int num, int x, int y)
-{
-	EZGUI	*gui = (EZGUI *) ih;
-
-	(void)num; (void)x; (void)y;
-
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-
-	EDB_DEBUG(("EVT_Dropfiles: fname=%s number=%d %dx%d\n",
-				filename, num, x, y));
-	ezgui_page_main_file_append(gui, (char*) filename);
-	return IUP_DEFAULT;
-}
-
-static int ezgui_event_main_multi_select(Ihandle *ih, char *value)
-{
-	EZGUI	*gui = (EZGUI *) ih;
-	int	i;
-
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-
-	EDB_DEBUG(("EVT_Multi_select: %s\n", value));
-	EDB_DEBUG(("List value=%s\n", 
-				IupGetAttribute(gui->list_fname, "VALUE")));
-	
-	/* the parameter 'value' is useless. grab list myself */
-	value = IupGetAttribute(gui->list_fname, "VALUE");
-	for (i = 0; value[i]; i++) {
-		if (value[i] == '+') {
-			IupSetAttribute(gui->button_del, "ACTIVE", "YES");
-			return IUP_DEFAULT;
-		}
-	}
-	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
-	return IUP_DEFAULT;
-}
-
-static int ezgui_event_main_moused(Ihandle *ih, 
-		int button, int pressed, int x, int y, char *status)
-{
-	EZGUI	*gui = (EZGUI *) ih;
-
-	(void)x; (void)y; (void)status;	/* stop compiler complains */
-
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-
-	EDB_MODL(("EVT_Mouse: %d %d %dx%d %s\n", 
-				button, pressed, x, y, status));
-	if (pressed) {	/* only act when button is released */
-		return IUP_DEFAULT;
-	}
-	//line = IupConvertXYToPos(ih, x, y);
-	/* deselect every thing if the right button was released */
-	if (button == IUP_BUTTON3) {
-		IupSetAttribute(gui->list_fname, "VALUE", "");
-		IupSetAttribute(gui->button_del, "ACTIVE", "NO");
-	}
-	return IUP_DEFAULT;
-}
-
 static int ezgui_event_main_add(Ihandle *ih)
 {
 	SView	*sview;
 
-	if ((sview = (SView*)IupGetAttribute(ih, "SVIEWOBJ")) != NULL) {
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) != NULL) {
 		ezgui_sview_add(sview);
 	}
 	return IUP_DEFAULT;
-#if 0
-	EZGUI	*gui = (EZGUI *) ih;
-	char	*flist, *fname, *path, *sdir;
-	int	i, amnt;
-
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-	
-	/* Store the recent visited diretory so it can be used next time.
-	 * The file open dialog can not go to the last directory in gtk */
-	path = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_DIRECTORY);
-	if (path) {
-		IupSetAttribute(gui->dlg_open, "DIRECTORY", path);
-	}
-	IupPopup(gui->dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
-
-	if (IupGetInt(gui->dlg_open, "STATUS") < 0) {
-		return IUP_DEFAULT;	/* cancelled */
-	}
-
-	/* IUP generate different file list between one file and more files:
-	 * Open File VALUE: /home/xum1/dwhelper/lan_ke_er.flv
-	 * Last  DIRECTORY: /home/xum1/dwhelper/
-	 * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
-	 * 			lan_ke_er.flv|Powered_by_Discuz.flv|
-	 * Last  DIRECTORY: /home/xum1/dwhelper0 */
-	EDB_DEBUG(("Open File VALUE: %s\n", 
-			IupGetAttribute(gui->dlg_open, "VALUE")));
-	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
-			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
-	/* duplicate the path and filename list */
-	flist = csc_strcpy_alloc(IupGetAttribute(gui->dlg_open, "VALUE"), 16);
-	/* find out how many files is in */
-	for (i = amnt = 0; flist[i]; i++) {
-		amnt += (flist[i] == '|') ? 1 : 0;
-	}
-	if (amnt == 0) {
-		amnt++;
-	} else {
-		amnt--;
-	}
-	ezgui_show_progress(gui, 0, amnt);
-
-	/* store the current directory. note that the tailing '/' or '0' 
-	 * need to be cut out first.
-	 * Is the tailing '0' a bug of IUP? */
-	path = csc_strcpy_alloc(
-			IupGetAttribute(gui->dlg_open, "DIRECTORY"), 4);
-	i = strlen(path) - 1;
-	if ((path[i] == '/') || (path[i] == '\\') || (path[i] == '0')) {
-		path[i] = 0;
-	}
-	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_DIRECTORY, path);
-	smm_free(path);
-
-	/* process the single file list */
-	if (amnt == 1) {
-		ezgui_page_main_file_append(gui, flist);
-		ezgui_show_progress(gui, amnt, amnt);
-		smm_free(flist);
-		return IUP_DEFAULT;
-	}
-
-	/* cut out the path first */
-	flist = csc_cuttoken(flist, &sdir, "|");
-	/* extract the file names */
-	i = 0;
-	while ((flist = csc_cuttoken(flist, &fname, "|")) != NULL) {
-		if (fname[0] == 0) {
-			break;	/* end of list */
-		}
-		path = csc_strcpy_alloc(sdir, strlen(fname)+8);
-		strcat(path, "/");
-		strcat(path, fname);
-		//printf("%s\n", path);
-		ezgui_page_main_file_append(gui, path);
-		ezgui_show_progress(gui, ++i, amnt);
-		smm_free(path);
-	}
-	if (i < amnt) {
-		ezgui_show_progress(gui, amnt, amnt);
-	}
-	smm_free(flist);
-	return IUP_DEFAULT;
-#endif
 }
 
 static int ezgui_event_main_remove(Ihandle *ih)
 {
 	SView	*sview;
 
-	if ((sview = (SView*)IupGetAttribute(ih, "SVIEWOBJ")) != NULL) {
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) != NULL) {
 		ezgui_sview_remove(sview);
 	}
 	return IUP_DEFAULT;
-#if 0
-	EZGUI	*gui = (EZGUI *) ih;
-	char	*value;
-	int	i;
-
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-
-	while (1) {
-		value = IupGetAttribute(gui->list_fname, "VALUE");
-		EDB_PROG(("EVT_Remove: %s\n", value));
-		for (i = 0; value[i]; i++) {
-			if (value[i] == '+') {
-				ezgui_remove_item(gui, i+1);
-				break;
-			}
-		}
-		if (!value[i]) {
-			break;
-		}
-	}
-	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
-	if (gui->list_count == 0) {
-		IupSetAttribute(gui->button_run, "ACTIVE", "NO");
-	}
-	return IUP_DEFAULT;
-#endif
 }
 
 static int ezgui_event_main_run(Ihandle *ih)
 {
 	SView	*sview;
 
-	if ((sview = (SView*)IupGetAttribute(ih, "SVIEWOBJ")) != NULL) {
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) != NULL) {
 		ezgui_sview_run(sview);
 	}
 	return IUP_DEFAULT;
-#if 0
-	EZGUI	*gui = (EZGUI *) ih;
-	char	*value, *fname;
-	int	i, n;
-
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
-	}
-
-	value = IupGetAttribute(gui->list_fname, "VALUE");
-	for (i = n = 0; value[i]; i++) {
-		if (value[i] == '+') {
-			fname = IupGetAttributeId(gui->list_fname, "",  i+1);
-			ezgui_event_main_workarea((Ihandle*)gui, i+1, fname);
-			n++;
-		}
-	}
-	if (n == 0) {
-		for (i = 0; i < gui->list_count; i++) {
-			fname = IupGetAttributeId(gui->list_fname, "",  i+1);
-			ezgui_event_main_workarea((Ihandle*)gui, i+1, fname);
-		}
-	}
-	return IUP_DEFAULT;
-#endif
-}
-
-/* expand the short form extension list to the full length */
-static char *ezgui_make_filters(char *slist)
-{
-	char	*flt, token[32];
-	int	n;
-
-	/* Assuming the worst case of the short list is like "a;b;c;d",
-	 * it will then be expanded to "*.a;*.b;*.c;*.d". The biggest length 
-	 * is N + (N/2+1) * 2 */
-	if ((flt = smm_alloc(strlen(slist) * 2 + 64)) == NULL) {
-		return NULL;
-	}
-
-	strcpy(flt, "Video Files|");
-	n = strlen(flt);
-	while ((slist = csc_gettoken(slist, token, ",;:")) != NULL) {
-		n += sprintf(flt + n, "*.%s;", token);
-	}
-	flt[strlen(flt)-1] = 0;		/* cut out the tailing ';' */
-	strcat(flt, "|All Files|*.*|");
-	return flt;
-}
-
-static int ezgui_remove_item(EZGUI *gui, int idx)
-{
-	CSCLNK	*node;
-	char	*fname;
-
-	fname = IupGetAttributeId(gui->list_fname, "",  idx);
-	EDB_INFO(("Removing: %s\n", fname));
-
-	IupSetInt(gui->list_fname, "REMOVEITEM", idx);
-	IupSetInt(gui->list_size, "REMOVEITEM", idx);
-	IupSetInt(gui->list_length, "REMOVEITEM", idx);
-	IupSetInt(gui->list_resolv, "REMOVEITEM", idx);
-	IupSetInt(gui->list_prog, "REMOVEITEM", idx);
-	gui->list_count--;
-
-	if ((node = csc_cdl_goto(gui->list_cache, idx - 1)) != NULL) {
-		csc_cdl_list_free(&gui->list_cache, node);
-	}
-	return 0;
 }
 
 static int ezgui_show_progress(EZGUI *gui, int cur, int range)
@@ -1181,12 +703,10 @@ static int ezgui_show_duration(EZGUI *gui, int state)
 	return 0;
 }
 
+#if 0
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 {
 	EZGUI	*gui = ((EZOPT*) v)->gui;
-	//EZVID	*vidx = ((EZOPT*) v)->vidobj;
-	EZMEDIA	*minfo = NULL;
-	CSCLNK	*node;
 
 	(void)b;
 	switch (eid) {
@@ -1211,6 +731,36 @@ static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 			IupSetAttributeId(gui->list_prog, "", 
 					gui->list_idx, minfo->progr);
 		}
+		ezgui_show_progress(gui, param, param);
+		break;
+	case EN_OPEN_BEGIN:
+	case EN_OPEN_GOING:
+	case EN_OPEN_END:
+		ezgui_show_duration(gui, eid);
+		break;
+	default:
+		return EN_EVENT_PASSTHROUGH;
+	}
+	return eid;
+}
+#endif
+static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
+//static int ezgui_sview_notificate(void *v, int eid, long param, long opt, void *b)
+{
+	EZGUI	*gui = ((EZOPT*) v)->gui;
+
+	(void)b;
+
+	switch (eid) {
+	case EN_PROC_BEGIN:
+		ezgui_show_progress(gui, 0, 0);	/* show/reset progress bar */
+		break;
+	case EN_PROC_CURRENT:
+		ezgui_sview_progress(gui->prog_bar, (int)(opt * 100 / param));
+		ezgui_show_progress(gui, opt, param);
+		break;
+	case EN_PROC_END:
+		ezgui_sview_progress(gui->prog_bar, 100);
 		ezgui_show_progress(gui, param, param);
 		break;
 	case EN_OPEN_BEGIN:
@@ -1308,10 +858,11 @@ static int ezgui_page_setup_reset(EZGUI *gui)
 	IupSetInt(gui->entry_zoom_hei, "VALUE", gui->sysopt->tn_height);
 	IupSetInt(gui->entry_width, "VALUE", gui->sysopt->canvas_width);
 
-	ezgui_event_setup_format((Ihandle*) gui, 
+	ezgui_event_setup_format(gui->fmt_list,
 			uir_format[gui->fmt_idx].s, gui->fmt_idx + 1, 1);
 
-	ezgui_event_setup_ok((Ihandle*) gui);
+	/* store the default configures */
+	//ezgui_event_setup_ok(gui->butt_setup_apply);
 	return 0;
 }
 
@@ -1326,6 +877,7 @@ static Ihandle *ezgui_page_setup_profile(EZGUI *gui)
 		IupSetAttributeId(gui->prof_grid, "", i + 1, 
 				uir_grid[i].s);
 	}
+	IupSetAttribute(gui->prof_grid, EZOBJ_MAIN, (char*) gui);
 	IupSetCallback(gui->prof_grid, "ACTION",
 			(Icallback) ezgui_event_setup_grid);
 	gui->entry_zbox_grid = ezgui_page_setup_grid_zbox(gui);
@@ -1337,6 +889,7 @@ static Ihandle *ezgui_page_setup_profile(EZGUI *gui)
 		IupSetAttributeId(gui->prof_zoom, "", i + 1, 
 				uir_zoom[i].s);
 	}
+	IupSetAttribute(gui->prof_zoom, EZOBJ_MAIN, (char*) gui);
 	IupSetCallback(gui->prof_zoom, "ACTION",
 			(Icallback) ezgui_event_setup_zoom);
 	gui->entry_zbox_zoom = ezgui_page_setup_zoom_zbox(gui);
@@ -1430,6 +983,7 @@ static Ihandle *ezgui_page_setup_directory(EZGUI *gui)
 	for (i = 0; uir_outdir[i].s; i++) {
 		IupSetAttributeId(gui->dir_list, "", i + 1, uir_outdir[i].s);
 	}
+	IupSetAttribute(gui->dir_list, EZOBJ_MAIN, (char*) gui);
 	IupSetCallback(gui->dir_list, "ACTION",
 			(Icallback) ezgui_event_setup_outputdir);
 
@@ -1452,6 +1006,7 @@ static Ihandle *ezgui_page_setup_font(EZGUI *gui)
 		IupSetAttributeId(gui->font_list, "", i + 1, 
 				uir_choose_font[i].s);
 	}
+	IupSetAttribute(gui->font_list, EZOBJ_MAIN, (char*) gui);
 	IupSetCallback(gui->font_list, "ACTION",
 			(Icallback) ezgui_event_setup_setfont);
 
@@ -1485,6 +1040,7 @@ static Ihandle *ezgui_page_setup_output(EZGUI *gui)
 		IupSetAttributeId(gui->fmt_list, "", i+1, 
 				uir_format[i].s);
 	}
+	IupSetAttribute(gui->fmt_list, EZOBJ_MAIN, (char*) gui);
 	IupSetCallback(gui->fmt_list, "ACTION",
 			(Icallback) ezgui_event_setup_format);
 	
@@ -1515,9 +1071,11 @@ static Ihandle *ezgui_page_setup_button(EZGUI *gui)
 	
 	gui->butt_setup_apply = 
 		xui_button("OK", (Icallback) ezgui_event_setup_ok);
+	IupSetAttribute(gui->butt_setup_apply, EZOBJ_MAIN, (char*) gui);
 
 	gui->butt_setup_cancel = 
 		xui_button("Cancel", (Icallback) ezgui_event_setup_cancel);
+	IupSetAttribute(gui->butt_setup_cancel, EZOBJ_MAIN, (char*) gui);
 
 	hbox = IupHbox(gui->butt_setup_cancel, gui->butt_setup_apply, NULL);
 	return IupHbox(xui_label("", "320", NULL), hbox, NULL);
@@ -1532,13 +1090,8 @@ static int ezgui_event_setup_format(Ihandle *ih, char *text, int i, int s)
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
 	}
-	
-	/* the EZGUI structure can be an impostor of the Ihandle when 
-	 * initializing the widgets, where the dialog hasn't been linked 
-	 * with the GUI object. A magic word is used to tell them */
-	gui = (EZGUI *) ih;
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
 	}
 
 	/* hide the transparent toggle and quality editboxes */
@@ -1558,12 +1111,12 @@ static int ezgui_event_setup_format(Ihandle *ih, char *text, int i, int s)
 
 static int ezgui_event_setup_grid(Ihandle *ih, char *text, int i, int s)
 {
-	EZGUI	*gui = ezgui_get_global(ih);
+	EZGUI	*gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN);
 	
 	(void) text;	/* stop the gcc complaining */
 	//printf("ezgui_event_setup_grid: %s %d %d\n", text, i, s);
 	
-	if (s) {
+	if (s && gui) {
 		IupSetInt(gui->entry_zbox_grid, "VALUEPOS", i - 1);
 	}
 	return IUP_DEFAULT;
@@ -1571,11 +1124,11 @@ static int ezgui_event_setup_grid(Ihandle *ih, char *text, int i, int s)
 
 static int ezgui_event_setup_zoom(Ihandle *ih, char *text, int i, int s)
 {
-	EZGUI	*gui = ezgui_get_global(ih);
+	EZGUI	*gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN);
 
 	(void) text;	/* stop the gcc complaining */
 
-	if (s) {
+	if (s && gui) {
 		IupSetInt(gui->entry_zbox_zoom, "VALUEPOS", i - 1);
 	}
 	return IUP_DEFAULT;
@@ -1591,13 +1144,8 @@ static int ezgui_event_setup_outputdir(Ihandle *ih, char *text, int i, int s)
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
 	}
-	
-	/* the EZGUI structure can be an impostor of the Ihandle when 
-	 * initializing the widgets, where the dialog hasn't been linked 
-	 * with the GUI object. A magic word is used to tell them */
-	gui = (EZGUI *) ih;
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
 	}
 	
 	if (strcmp(text, CFG_PIC_ODIR_PATH)) {
@@ -1635,13 +1183,8 @@ static int ezgui_event_setup_setfont(Ihandle *ih, char *text, int i, int s)
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
 	}
-
-	/* the EZGUI structure can be an impostor of the Ihandle when 
-	 * initializing the widgets, where the dialog hasn't been linked 
-	 * with the GUI object. A magic word is used to tell them */
-	gui = (EZGUI *) ih;
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
 	}
 
 	if (strcmp(text, CFG_PIC_FONT_BROWSE)) {
@@ -1677,12 +1220,8 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 	EZOPT	*opt;
 	char	*val, tmp[128];
 
-	/* the EZGUI structure can be an impostor of the Ihandle when 
-	 * initializing the widgets, where the dialog hasn't been linked 
-	 * with the GUI object. A magic word is used to tell them */
-	gui = (EZGUI *) ih;
-	if (gui->magic != EZGUI_MAGIC) {
-		gui = ezgui_get_global(ih);
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
 	}
 	opt = gui->sysopt;
 
@@ -1866,8 +1405,11 @@ static int ezgui_event_setup_ok(Ihandle *ih)
 
 static int ezgui_event_setup_cancel(Ihandle *ih)
 {
-	puts("Why");
-	ezgui_page_setup_reset(ezgui_get_global(ih));
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) != NULL) {
+		ezgui_page_setup_reset(gui);
+	}
 	return IUP_DEFAULT;
 }
 
@@ -1968,7 +1510,7 @@ static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 	IupSetAttribute(sview->filename, "SCROLLBAR", "NO");
 	IupSetAttribute(sview->filename, "DROPFILESTARGET", "YES");
 	IupSetAttribute(sview->filename, "ALIGNMENT", "ARIGHT");
-	IupSetAttribute(sview->filename, "SVIEWOBJ", (char*) sview);
+	IupSetAttribute(sview->filename, EZOBJ_SVIEW, (char*) sview);
 	vb_main = IupVbox(xui_label("Files", NULL, NULL), 
 			sview->filename, NULL);
 
@@ -2026,7 +1568,7 @@ static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 			sview->attrib, NULL);
 
 	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
-	IupSetAttribute(hbox, "SVIEWOBJ", (char*) sview);
+	IupSetAttribute(hbox, EZOBJ_SVIEW, (char*) sview);
 	return hbox;
 }
 
@@ -2035,7 +1577,7 @@ static int ezgui_sview_progress(Ihandle *ih, int percent)
 	SView	*sview;
 	char	*tmp;
 
-	if ((sview = (SView *) IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return EZ_ERR_PARAM;
 	}
 	tmp = IupGetAttributeId(sview->progress, "", sview->svidx);
@@ -2052,7 +1594,7 @@ static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl)
 	Ihandle	**clist;	/* control list */
 	int	i;
 
-	if ((sview = (SView*)IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return EZ_ERR_PARAM;
 	}
 
@@ -2066,6 +1608,9 @@ static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl)
 	case EZGUI_SVIEW_ACTIVE_PROGRESS:
 		clist = sview->act_progress;
 		break;
+	case EZGUI_SVIEW_ACTIVE_BIND:
+		IupSetAttribute(ctrl, EZOBJ_SVIEW, (char*) sview);
+		return EZ_ERR_NONE; 
 	default:
 		return EZ_ERR_PARAM;	/* wrong type */
 	}
@@ -2075,19 +1620,20 @@ static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl)
 			continue;
 		}
 		clist[i] = ctrl;
-		IupSetAttribute(clist[i], "SVIEWOBJ", (char*) sview);
+		IupSetAttribute(clist[i], EZOBJ_SVIEW, (char*) sview);
 		return EZ_ERR_NONE;	/* successful */
 	}
 	return EZ_ERR_LOWMEM;	/* full */ 
 }
 
+#if 0
 static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl)
 {
 	SView	*sview;
 	Ihandle	**clist;	/* control list */
 	int	i;
 
-	if ((sview = (SView*)IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return EZ_ERR_PARAM;
 	}
 
@@ -2109,14 +1655,12 @@ static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl)
 		if (ctrl && (ctrl != clist[i])) {
 			continue;
 		}
-		/* dirty trick: do not remove the "SVIEWOBJ" attribution
-		 * so it can be used to setup the "SVIEWOBJ" only */
-		//IupSetAttribute(clist[i], "SVIEWOBJ", NULL);
+		IupSetAttribute(clist[i], EZOBJ_SVIEW, NULL);
 		clist[i] = NULL;
 	}
 	return EZ_ERR_NONE;	/* successful */
 }
-
+#endif
 
 static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 {
@@ -2126,7 +1670,7 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 
 	(void)text;
 
-	if ((sview = (SView *) IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
@@ -2144,11 +1688,6 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	gui->sysopt->pre_br = (int) strtol(++attr, NULL, 0);
 	attr = strchr(attr, ':');
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
-
-	/* bind the SVIEW structure to the progress bar */
-	//IupSetAttribute(gui->prog_bar, "SVIEWOBJ", (char*) sview);
-	/* bind the notification */
-	gui->sysopt->notify = ezgui_sview_notificate;
 
 	smm_codepage_set(65001);
 	ezthumb(text, gui->sysopt);
@@ -2168,7 +1707,7 @@ static int ezgui_sview_event_dropfiles(Ihandle *ih,
 
 	(void)num; (void)x; (void)y;
 
-	if ((sview = (SView *) IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
@@ -2186,7 +1725,7 @@ static int ezgui_sview_event_multi_select(Ihandle *ih, char *value)
 	SView	*sview;
 	int	i, n;
 
-	if ((sview = (SView *) IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
@@ -2220,7 +1759,7 @@ static int ezgui_sview_event_moused(Ihandle *ih,
 
 	(void)x; (void)y; (void)status;	/* stop compiler complains */
 
-	if ((sview = (SView *) IupGetAttribute(ih, "SVIEWOBJ")) == NULL) {
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
@@ -2234,7 +1773,6 @@ static int ezgui_sview_event_moused(Ihandle *ih,
 		IupSetAttribute(sview->filename, "VALUE", "");
 		ezgui_sview_active_update(sview, 
 				EZGUI_SVIEW_ACTIVE_SELECT, 0);
-		//IupSetAttribute(gui->button_del, "ACTIVE", "NO");
 	}
 	return IUP_DEFAULT;
 }
@@ -2248,19 +1786,22 @@ static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
 	(void)status;	/* stop compiler complains */
 
 	line  = IupConvertXYToPos(ih, x, y);
-	sview = (SView *) IupGetAttribute(ih, "SVIEWOBJ");
 
 	EDB_MODL(("EVT_Motion: %d %d %d\n", x, y, line));
-	
-	if ((line < 1) || (sview == NULL)) {
-		IupSetAttribute(ih, "TIP", "");
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
 	}
-
+	
 	if (line != sview->moused) {
 		sview->moused = line;
-		if ((fname = IupGetAttributeId(ih, "",  line)) != NULL) {
-			IupSetAttribute(ih, "TIP", fname);
+		if (line < 1) {
+			IupSetAttribute(ih, "TIP", NULL);
+		} else {
+			fname = IupGetAttributeId(ih, "",  line);
+			if (fname) {
+				IupSetAttribute(ih, "TIP", fname);
+			}
 		}
 	}
 	return IUP_DEFAULT;
@@ -2489,35 +2030,6 @@ static int ezgui_sview_active_update(SView *sview, int type, int num)
 	return EZ_ERR_NONE;
 }
 
-static int ezgui_sview_notificate(void *v, int eid, long param, long opt, void *b)
-{
-	EZGUI	*gui = ((EZOPT*) v)->gui;
-
-	(void)b;
-
-	switch (eid) {
-	case EN_PROC_BEGIN:
-		ezgui_show_progress(gui, 0, 0);	/* show/reset progress bar */
-		break;
-	case EN_PROC_CURRENT:
-		ezgui_sview_progress(gui->prog_bar, (int)(opt * 100 / param));
-		ezgui_show_progress(gui, opt, param);
-		break;
-	case EN_PROC_END:
-		ezgui_sview_progress(gui->prog_bar, 100);
-		ezgui_show_progress(gui, param, param);
-		break;
-	/*case EN_OPEN_BEGIN:
-	case EN_OPEN_GOING:
-	case EN_OPEN_END:
-		ezgui_show_duration(gui, eid);
-		break;*/
-	default:
-		return EN_EVENT_PASSTHROUGH;
-	}
-	return eid;
-}
-
 
 /****************************************************************************
  * Support Functions 
@@ -2585,6 +2097,7 @@ static int xui_text_get_number(Ihandle *ih)
 	return (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 0);
 }
 
+/*
 static int xui_get_size(Ihandle *ih, char *attr, int *height)
 {
 	char	*ssize;
@@ -2604,13 +2117,13 @@ static int xui_get_size(Ihandle *ih, char *attr, int *height)
 	}
 	return width;
 }
-
+*/
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 {
 	Ihandle	*hbox, *text;
 
 	text = IupText(NULL);
-	IupSetAttribute(text, "SIZE", "40x10");
+	IupSetAttribute(text, "SIZE", EGPS_SETUP_SHORT_TEXT);
 
 	hbox = IupHbox(IupLabel(label), text,
 			ext ? IupLabel(ext) : NULL, NULL);
@@ -2634,14 +2147,16 @@ static Ihandle *xui_text_grid(char *label,
 
 	if ((xcol == NULL) || (xrow == NULL)) {
 		text1 = IupText(NULL);
-		IupSetAttribute(text1, "SIZE", "24x10");
+		IupSetAttribute(text1, "SIZE", EGPS_GRID_FST_TEXT);
 		if (xcol) {
 			*xcol = text1;
 		} else {
 			*xrow = text1;
 		}
-		hbox = IupHbox(xui_label(label, "28", NULL), text1,
-				ext ? IupLabel(ext) : NULL, NULL);
+		hbox = IupHbox(xui_label(label, EGPS_GRID_LABEL, NULL), 
+				text1,
+				ext ? IupLabel(ext) : NULL, 
+				NULL);
 		IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 		IupSetAttribute(hbox, "NGAP", "4");
 		return hbox;
@@ -2649,12 +2164,16 @@ static Ihandle *xui_text_grid(char *label,
 
 	text1 = IupText(NULL);
 	*xcol = text1;
-	IupSetAttribute(text1, "SIZE", "18x10");
+	IupSetAttribute(text1, "SIZE", EGPS_GRID_SND_TEXT);
 	text2 = IupText(NULL);
 	*xrow = text2;
-	IupSetAttribute(text2, "SIZE", "18x10");
-	hbox = IupHbox(xui_label(label, "28", NULL), text1, IupLabel("x"), 
-			text2, ext ? IupLabel(ext) : NULL, NULL);
+	IupSetAttribute(text2, "SIZE", EGPS_GRID_SND_TEXT);
+	hbox = IupHbox(xui_label(label, EGPS_GRID_LABEL, NULL), 
+			text1, 
+			IupLabel("x"), 
+			text2, 
+			ext ? IupLabel(ext) : NULL, 
+			NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupSetAttribute(hbox, "NGAP", "4");
 	return hbox;
@@ -2666,15 +2185,14 @@ static Ihandle *xui_button(char *prompt, Icallback ntf)
 	Ihandle	*button;
 
 	button = IupButton(prompt, NULL);
-	IupSetAttribute(button, "SIZE", "42");
+	IupSetAttribute(button, "SIZE", EGPS_SETUP_BUTTON);
 	if (ntf) {
 		IupSetCallback(button, "ACTION", ntf);
 	}
 	return button;
 }
 
-
-static int config_dump(void *config, char *prompt)
+static int xui_config_status(void *config, char *prompt)
 {
 	char	*path;
 	int	item;
@@ -2684,4 +2202,26 @@ static int config_dump(void *config, char *prompt)
 	return 0;
 }
 
+/* expand the short form extension list to the full length */
+static char *xui_make_filters(char *slist)
+{
+	char	*flt, token[32];
+	int	n;
+
+	/* Assuming the worst case of the short list is like "a;b;c;d",
+	 * it will then be expanded to "*.a;*.b;*.c;*.d". The biggest length 
+	 * is N + (N/2+1) * 2 */
+	if ((flt = smm_alloc(strlen(slist) * 2 + 64)) == NULL) {
+		return NULL;
+	}
+
+	strcpy(flt, "Video Files|");
+	n = strlen(flt);
+	while ((slist = csc_gettoken(slist, token, ",;:")) != NULL) {
+		n += sprintf(flt + n, "*.%s;", token);
+	}
+	flt[strlen(flt)-1] = 0;		/* cut out the tailing ';' */
+	strcat(flt, "|All Files|*.*|");
+	return flt;
+}
 

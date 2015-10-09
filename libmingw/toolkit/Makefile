@@ -1,8 +1,8 @@
 
 
-CFLAGS	= -Wall -O3
+CFLAGS	= -Wall -g
 
-TARGET	= hentai mkweb bin2c
+TARGET	= hentai mkweb bin2c blackip
 
 all: $(TARGET)
 
@@ -14,6 +14,9 @@ mkweb: mkweb.c
 
 bin2c: bin2c.c
 	gcc $(CFLAGS) -o $@ $^
+
+blackip: blackip.c
+	gcc $(CFLAGS) -DCFG_LIBCURL -o $@ $^ -lz -lcurl
 
 install:
 	cp $(TARGET) ~/bin

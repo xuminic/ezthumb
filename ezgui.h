@@ -69,9 +69,6 @@
 #define CFG_PIC_FONT_SYSTEM	"Use the System Font"
 #define CFG_PIC_FONT_BROWSE	"Choose Font"
 
-#define EZGUI_MAGIC		(('E'<<24) | ('Z'<<16) | ('U'<<8) | 'I')
-
-
 
 #if CFG_GUI_GTK
 
@@ -150,7 +147,6 @@ typedef	struct		{
 } EZGUI;
 #else
 typedef	struct		{
-	unsigned	magic;		/* "EZUI" */
 	EZOPT		*sysopt;	/* system parameters */
 	char		inst_id[64];	/* instant identity */
 	void		*config;
@@ -163,6 +159,7 @@ typedef	struct		{
 	char		win_size[32];
 
 	/* Main Page: work place */
+#if 0
 	Ihandle		*list_fname;	/* the list control of file names */
 	Ihandle		*list_size;	/* the list control of file sizes */
 	Ihandle		*list_length;	/* the list control of media length */
@@ -172,7 +169,7 @@ typedef	struct		{
 	int		list_idx;	/* current active item start from 1 */
 	int 		list_count;	/* total items in the list */
 	CSCLNK		*list_cache;
-
+#endif
 	Ihandle		*list_view;
 
 	/* Main Page: Progress Bar and Buttons */
@@ -252,6 +249,7 @@ typedef	struct		{
 #define EZGUI_SVIEW_ACTIVE_CONTENT	0
 #define EZGUI_SVIEW_ACTIVE_SELECT	1
 #define EZGUI_SVIEW_ACTIVE_PROGRESS	2
+#define EZGUI_SVIEW_ACTIVE_BIND		3
 
 typedef	struct		simpleview	{
 	Ihandle		*filename;	/* the list control of file names */
