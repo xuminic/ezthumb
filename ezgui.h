@@ -146,6 +146,7 @@ typedef	struct		{
 	EZOPT		*sysopt;	/* system parameters */
 } EZGUI;
 #else
+
 typedef	struct		{
 	EZOPT		*sysopt;	/* system parameters */
 	char		inst_id[64];	/* instant identity */
@@ -159,17 +160,6 @@ typedef	struct		{
 	char		win_size[32];
 
 	/* Main Page: work place */
-#if 0
-	Ihandle		*list_fname;	/* the list control of file names */
-	Ihandle		*list_size;	/* the list control of file sizes */
-	Ihandle		*list_length;	/* the list control of media length */
-	Ihandle		*list_resolv;	/* the list control of resolution */
-	Ihandle		*list_prog;	/* the list control of progress */
-	Ihandle		*sbox_lists;	/* the scrollbox of list controls */
-	int		list_idx;	/* current active item start from 1 */
-	int 		list_count;	/* total items in the list */
-	CSCLNK		*list_cache;
-#endif
 	Ihandle		*list_view;
 
 	/* Main Page: Progress Bar and Buttons */
@@ -196,23 +186,7 @@ typedef	struct		{
 	/* Setup Page: the choise of profiles */
 	Ihandle		*prof_grid;
 	Ihandle		*prof_zoom;
-	int		grid_idx;	/* starts from 0 */
-	int		zoom_idx;	/* starts from 0 */
 	
-	/* Main Page: Profile selection */
-	Ihandle		*entry_col_grid;
-	Ihandle		*entry_col_step;
-	Ihandle		*entry_row;
-	Ihandle		*entry_step;
-	Ihandle		*entry_dss_amnt;
-	Ihandle		*entry_dss_step;
-	Ihandle		*entry_zoom_ratio;
-	Ihandle		*entry_zoom_wid;
-	Ihandle		*entry_zoom_hei;
-	Ihandle		*entry_width;
-	Ihandle		*entry_zbox_grid;
-	Ihandle		*entry_zbox_zoom;
-
 	/* Setup Page: the media process */
 	Ihandle		*dfm_list;	/* duration finding mode */
 	int		dfm_idx;
@@ -270,6 +244,36 @@ typedef	struct		simpleview	{
 	/* set active status if progress bar moving */
 	Ihandle		*act_progress[EZGUI_SVIEW_ACTIVE_MAX];
 } SView;
+
+#define EZOBJ_GRID_PROFILE	"GRIDPROFILE"
+typedef	struct		{
+	Ihandle		*entry_col_grid;
+	Ihandle		*entry_col_step;
+	Ihandle		*entry_row;
+	Ihandle		*entry_step;
+	Ihandle		*entry_dss_amnt;
+	Ihandle		*entry_dss_step;
+	Ihandle		*zbox;
+	Ihandle		*hbox;
+
+	EZGUI		*ezgui;
+	int		grid_idx;	/* starts from 0 */
+	//int		grid_tmp;
+} SetGrid;
+
+#define	EZOBJ_ZOOM_PROFILE	"ZOOMPROFILE"
+typedef	struct		{
+	Ihandle		*entry_zoom_ratio;
+	Ihandle		*entry_zoom_wid;
+	Ihandle		*entry_zoom_hei;
+	Ihandle		*entry_width;
+	Ihandle		*zbox;
+	Ihandle		*hbox;
+
+	EZGUI		*ezgui;
+	int		zoom_idx;	/* starts from 0 */
+	//int		zoom_tmp;
+} SetZoom;
 
 typedef	struct	{
 	char	fsize[16];
