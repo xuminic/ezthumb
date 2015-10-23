@@ -655,6 +655,7 @@ int meta_image_format(char *input, char *fmt, int flen);
 int meta_make_color(char *s, EZBYTE *color);
 int meta_export_color(EZBYTE *color, char *buf, int blen);
 char *meta_make_fontdir(char *s);
+int csc_strcmp_param(char *dest, char *sour);
 
 #endif	/* _EZTHUMB_H_ */
 
