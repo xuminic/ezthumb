@@ -462,9 +462,28 @@ int csc_cdl_setup(CSCLNK *node, void *prev, void *next, void *rp, int size)
 void *csc_cdl_payload(CSCLNK *node)
 {
 	if (node) {
-		return &node[1];
+		node++;
 	}
-	return NULL;
+	return node;
+}
+
+/*!\brief Return the node structure from the payload pointer.
+ 
+  The csc_cdl_paylink() function safely return the link structure where
+  the payload attached.
+
+  \param[in] payload  The pointer to the payload.
+
+  \return The points to the CSCLNK structure which is ahead of the payload
+*/
+CSCLNK *csc_cdl_paylink(void *payload)
+{
+	CSCLNK	*node = payload;
+
+	if (node) {
+		node--;
+	}
+	return node;
 }
 
 /****************************************************************************

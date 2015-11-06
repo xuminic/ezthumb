@@ -1114,7 +1114,9 @@ static KEYCB *csc_cfg_mkdir(KEYCB *cfg, char *dkey, char *value, char *comm)
 			dcb->flags  = CFGF_TYPE_SET(dcb->flags, CFGF_TYPE_DIR);
 			dcb->update = 0;        /* reset the counter */
 			csc_cdl_list_insert_tail(&dlast->anchor, dcb->self);
-			cfg->update++;
+			/* 20151104 Do not update it because it could be the
+			 * existed directory reading from the configure file */
+			//cfg->update++;
 		}
 		dlast = dcb;
 		if (p) {

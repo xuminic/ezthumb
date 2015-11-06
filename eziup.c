@@ -221,6 +221,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	gui->config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
 			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
 	if (gui->config) {
+		csc_cfg_status(gui->config, NULL);
 		ezopt_load_config(ezopt, gui->config);
 		xui_config_status(gui->config, "Read");
 	}
@@ -256,7 +257,6 @@ int ezgui_close(EZGUI *gui)
 			smm_free(gui->filefilter);
 		}
 		if (gui->config) {
-			csc_cfg_flush(gui->config);
 			xui_config_status(gui->config, "Finalize");
 			csc_cfg_close(gui->config);
 		}

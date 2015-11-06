@@ -4,3 +4,10 @@ csoup
 mkclicmd
 ezthumb
 *.o
+*.avi
+*.wmv
+*.jpg
+ezconfig.h
+conftest.log
+ezthumb_sample.rc
+external/libcsoup/main/main_define.h

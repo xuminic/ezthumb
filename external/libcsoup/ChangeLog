@@ -1,3 +1,18 @@
+20151105: 0.8.10:
+	* csc_strcmp_param.c: fixed the bug and added a test case in main.
+
+20151104: 0.8.9:
+	* csc_config.c: csc_cfg_mkdir() updated the cfg->update flag once an
+	internal directory was created, which is not necessary. It caused
+	ezthumb save its setting everytime even nothing was changed. Let the
+	caller of csc_cfg_mkdir() decide to set the cfg->update or not.
+
+20151021: 0.8.8:
+	* csc_strcmp_param.c: added
+
+20151020: 0.8.7
+	* csc_strbody.c: do not calculate the length if len is NULL.
+
 20150513: 0.8.6
 	* smm_config.c: truncated the existed configure by CSC_CFG_RWC method,
 	otherwise the contents would be overlapped with the previous contents.

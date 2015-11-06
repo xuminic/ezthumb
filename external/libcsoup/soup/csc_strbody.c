@@ -46,21 +46,17 @@
 */
 char *csc_strbody(char *s, int *len)
 {
-	int	n;
-
 	/* skip the heading white spaces */
 	while (*s && SMM_ISSPACE(*s)) s++;
 
 	/* skip the trailing white spaces */
-	n = strlen(s);
-	if (n > 0) {
-		n--;
-		while ((n >= 0) && SMM_ISSPACE(s[n])) n--;
-		n++;
-	}
-
 	if (len) {
-		*len = n;
+		*len = strlen(s);
+		if (*len > 0) {
+			(*len)--;
+			while ((*len >= 0) && SMM_ISSPACE(s[*len])) (*len)--;
+			(*len)++;
+		}
 	}
 	return s;
 }

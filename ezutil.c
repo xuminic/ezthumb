@@ -627,23 +627,3 @@ char *meta_make_fontdir(char *s)
 	return smm_fontpath(s, NULL);
 }
 
-/* compare two strings. empty/blank string is equal to NULL string pointer */
-int csc_strcmp_param(char *dest, char *sour)
-{
-	//printf("csc_strcmp_param: {%s}{%s}\n", dest, sour);
-	if (dest && sour) {
-		dest = csc_strbody(dest, NULL);
-		sour = csc_strbody(sour, NULL);
-		return strcmp(dest, sour);
-	} else if (!dest && !sour) {
-		return 0;
-	} else if (dest) {
-		dest = csc_strbody(dest, NULL);
-		return *dest;
-	} else {
-		sour = csc_strbody(sour, NULL);
-		return *sour;
-	}
-	return 0;
-}
-

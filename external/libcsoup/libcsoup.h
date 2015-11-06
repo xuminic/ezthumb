@@ -31,7 +31,7 @@
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	8		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	6		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	10		/* 0-4095 */
 
 
 /*****************************************************************************
@@ -234,6 +234,7 @@ CSCLNK *csc_cdl_goto(CSCLNK *anchor, int idx);
 int csc_cdl_index(CSCLNK *anchor, CSCLNK *node);
 int csc_cdl_setup(CSCLNK *node, void *prev, void *next, void *rp, int size);
 void *csc_cdl_payload(CSCLNK *node);
+CSCLNK *csc_cdl_paylink(void *payload);
 
 CSCLNK *csc_cdl_list_alloc_head(CSCLNK **anchor, int size);
 CSCLNK *csc_cdl_list_alloc_tail(CSCLNK **anchor, int size);
@@ -421,6 +422,9 @@ char *csc_strbody(char *s, int *len);
 
 /* see csoup_strcmp_list.c */
 int csc_strcmp_list(char *dest, char *src, ...);
+
+/* see csc_strcmp_param.c */
+int csc_strcmp_param(char *s1, char *s2);
 
 char *csc_path_basename(char *path, char *buffer, int blen);
 char *csc_path_path(char *path, char *buffer, int blen);
