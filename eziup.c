@@ -86,6 +86,7 @@ static	struct	idtbl	uir_choose_font[] = {
 	{ 0,	NULL }
 };
 
+static int ezgui_timer_monitor(Ihandle *ih);
 static int ezgui_create_window(EZGUI *gui);
 static int ezgui_load_window_param(EZGUI *gui);
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
@@ -231,6 +232,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 {
 	SView	*sview;
+	Ihandle *timer;
 	int	i;
 
 	ezgui_create_window(gui);
@@ -245,7 +247,14 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 		ezgui_show_progress(gui, i, fnum);
 	}
 
+	timer = IupTimer();
+	IupSetCallback(timer, "ACTION_CB", (Icallback)ezgui_timer_monitor);
+	IupSetAttribute(timer, EZOBJ_MAIN, (char*) gui);
+	IupSetAttribute(timer, "TIME", "100");
+	IupSetAttribute(timer, "RUN", "YES");
+
 	IupMainLoop();
+	IupSetAttribute(timer, "RUN", "NO");
 	return 0;
 }
 
@@ -269,6 +278,26 @@ void ezgui_version(void)
 {
 }
 
+static int ezgui_timer_monitor(Ihandle *ih)
+{
+	EZGUI	*gui;
+
+	if ((gui = IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	if (gui->dir_ppp_flag) {
+		IupSetInt(gui->dir_list, "VALUE", gui->dir_idx + 1);
+		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+		gui->dir_ppp_flag = 0;
+	}
+	if (gui->font_ppp_flag) {
+		IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
+		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		gui->font_ppp_flag = 0;
+	}
+	return IUP_DEFAULT;
+}
 
 static int ezgui_create_window(EZGUI *gui)
 {
@@ -1377,6 +1406,7 @@ static int ezgui_setup_media_event(Ihandle *ih, char *text, int i, int s)
 	return IUP_DEFAULT;
 }
 
+
 static Ihandle *ezgui_setup_outputdir_create(EZGUI *gui)
 {
 	Ihandle	*hbox1, *hbox2, *vbox;
@@ -1416,6 +1446,8 @@ static int ezgui_setup_outputdir_reset(EZGUI *gui)
 	IupSetInt(gui->dir_list, "VALUE", gui->dir_idx + 1);
 	if (gui->sysopt->pathout) {
 		IupSetAttribute(gui->dir_path, "VALUE", gui->sysopt->pathout);
+	} else {
+		IupSetAttribute(gui->dir_path, "VALUE", "");
 	}
 	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
 		IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
@@ -1460,8 +1492,7 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 	EZGUI	*gui;
 	char	*val;
 
-	(void) i;
-
+	//(void) i;
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
 	}
@@ -1481,8 +1512,10 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 	}
 	IupPopup(gui->dlg_odir, IUP_CENTERPARENT, IUP_CENTERPARENT);
 	if (IupGetInt(gui->dlg_odir, "STATUS") < 0) {
-		IupSetInt(gui->dir_list, "VALUE", gui->dir_idx + 1);
-		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+		/* 20151110 can not update list control inside the event 
+		 * callback, otherwise the list control will miss calculate 
+		 * the change and confuse the window manager */
+		gui->dir_ppp_flag = 1;
 		return IUP_DEFAULT;	/* cancelled */
 	}
 	
@@ -1537,6 +1570,8 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_FACE);
 	if (s) {
 		IupSetAttribute(gui->font_face, "VALUE", s);
+	} else {
+		IupSetAttribute(gui->font_face, "VALUE", "");
 	}
 	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_BROWSE)) {
 		IupSetAttribute(gui->font_face, "VISIBLE", "YES");
@@ -1584,8 +1619,10 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 	IupPopup(gui->dlg_font, IUP_CENTERPARENT, IUP_CENTERPARENT);
 
 	if (IupGetAttribute(gui->dlg_font, "STATUS") == NULL) {
-		IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
-		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		/* 20151110 can not update list control inside the event 
+		 * callback, otherwise the list control will miss calculate 
+		 * the change and confuse the window manager */
+		gui->font_ppp_flag = 1;
 		return IUP_DEFAULT;	/* cancelled */
 	}
 

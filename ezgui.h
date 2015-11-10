@@ -197,11 +197,13 @@ typedef	struct		{
 	Ihandle		*font_list;
 	int		font_idx;
 	Ihandle		*font_face;
+	int		font_ppp_flag;	/* postpone process flag */
 
 	/* Setup Page: the output directory */
 	Ihandle		*dir_list;
 	int		dir_idx;
 	Ihandle		*dir_path;
+	int		dir_ppp_flag;	/* postpone process flag */
 
 	/* Setup Page: the output file format */
 	Ihandle		*fmt_list;
