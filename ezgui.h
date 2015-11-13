@@ -197,6 +197,7 @@ typedef	struct		{
 	Ihandle		*font_list;
 	int		font_idx;
 	Ihandle		*font_face;
+	char		*font_gtk_name;
 	int		font_ppp_flag;	/* postpone process flag */
 
 	/* Setup Page: the output directory */

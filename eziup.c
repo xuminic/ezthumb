@@ -28,6 +28,8 @@
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_DEBUG)
 
 #include "iup.h"
+
+#include "ezconfig.h"
 #include "libcsoup.h"
 #include "ezthumb.h"
 #include "ezgui.h"
@@ -108,16 +110,16 @@ static int ezgui_page_setup_reset(EZGUI *gui);
 static Ihandle *ezgui_setup_grid_create(EZGUI *gui);
 static Ihandle *ezgui_setup_grid_groupbox(Ihandle *gridbox);
 static int ezgui_setup_grid_reset(Ihandle *gridbox);
-static int ezgui_setup_grid_read_index(Ihandle *gridbox);
-static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx);
+//static int ezgui_setup_grid_read_index(Ihandle *gridbox);
+//static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx);
 static int ezgui_setup_grid_update(Ihandle *gridbox, char *status);
 static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s);
 
 static Ihandle *ezgui_setup_zoom_create(EZGUI *gui);
 static Ihandle *ezgui_setup_zoom_groupbox(Ihandle *zoombox);
 static int ezgui_setup_zoom_reset(Ihandle *zoombox);
-static int ezgui_setup_zoom_read_index(Ihandle *zoombox);
-static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index);
+//static int ezgui_setup_zoom_read_index(Ihandle *zoombox);
+//static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index);
 static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status);
 static int ezgui_setup_zoom_check(Ihandle *zoombox);
 static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s);
@@ -196,6 +198,7 @@ static Ihandle *xui_text_grid(char *label,
 static Ihandle *xui_button(char *prompt, Icallback ntf);
 static int xui_config_status(void *config, char *prompt);
 static char *xui_make_filters(char *slist);
+static char *xui_make_font(char *face, int *size);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -282,7 +285,7 @@ static int ezgui_timer_monitor(Ihandle *ih)
 {
 	EZGUI	*gui;
 
-	if ((gui = IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+	if ((gui = (EZGUI*) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
@@ -292,8 +295,13 @@ static int ezgui_timer_monitor(Ihandle *ih)
 		gui->dir_ppp_flag = 0;
 	}
 	if (gui->font_ppp_flag) {
+		printf("ezgui_timer_monitor: font = %d\n", gui->font_idx + 1);
 		IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
-		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_BROWSE)) {
+			IupSetAttribute(gui->font_face, "VISIBLE", "YES");
+		} else {
+			IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		}
 		gui->font_ppp_flag = 0;
 	}
 	return IUP_DEFAULT;
@@ -911,6 +919,7 @@ static int ezgui_setup_grid_reset(Ihandle *gridbox)
 	return IUP_DEFAULT;
 }
 
+/*
 static int ezgui_setup_grid_read_index(Ihandle *gridbox)
 {
 	SetGrid	*grid;
@@ -933,7 +942,7 @@ static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx)
 	}
 	return -1;
 }
-
+*/
 static int ezgui_setup_grid_update(Ihandle *gridbox, char *status)
 {
 	SetGrid	*grid;
@@ -1164,6 +1173,7 @@ static int ezgui_setup_zoom_reset(Ihandle *zoombox)
 	return IUP_DEFAULT;
 }
 
+/*
 static int ezgui_setup_zoom_read_index(Ihandle *zoombox)
 {
 	SetZoom	*zoom;
@@ -1186,6 +1196,7 @@ static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index)
 	}
 	return -1;
 }
+*/
 
 static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
 {
@@ -1492,7 +1503,7 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 	EZGUI	*gui;
 	char	*val;
 
-	//(void) i;
+	(void) i;
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
 	}
@@ -1558,7 +1569,9 @@ static Ihandle *ezgui_setup_font_create(EZGUI *gui)
 	if (s) {
 		gui->font_idx = lookup_index_string(uir_choose_font, 0, s);
 	}
-
+#ifdef  HAVE_GD_USE_FONTCONFIG
+	gdFTUseFontConfig(1);
+#endif
 	return vbox;
 }
 
@@ -1583,11 +1596,42 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 
 static int ezgui_setup_font_update(EZGUI *gui)
 {
+	gui->font_idx = xui_list_get_idx(gui->font_list);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_FONT_METHOD, uir_choose_font[gui->font_idx].s);
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_SYSTEM)) {
+		csc_cfg_delete_key(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_FONT_FACE);
+
+		if (gui->sysopt->mi_font) {
+			smm_free(gui->sysopt->mi_font);
+		}
+		gui->sysopt->mi_font = gui->sysopt->ins_font = NULL;
+	} else {
+		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
+		csc_cfg_write(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_FONT_FACE, gui->font_gtk_name);
+
+		if (gui->sysopt->mi_font) {
+			smm_free(gui->sysopt->mi_font);
+		}
+		gui->sysopt->mi_font = gui->sysopt->ins_font = 
+			xui_make_font(gui->font_gtk_name, &gui->sysopt->mi_size);
+	}
 	return 0;
 }
 
 static int ezgui_setup_font_check(EZGUI *gui)
 {
+	char	*val;
+
+	if (gui->font_idx != xui_list_get_idx(gui->font_list)) {
+		return 1;
+	}
+	val = IupGetAttribute(gui->font_face, "VALUE");
+	if (csc_strcmp_param(val, gui->font_gtk_name)) {
+		return 1;
+	}
 	return 0;
 }
 
@@ -1605,12 +1649,13 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 		return IUP_DEFAULT;
 	}
 
+	printf("ezgui_setup_font_event: %s %d\n", text, IupGetInt(gui->font_list, "VALUE"));
 	if (strcmp(text, CFG_PIC_FONT_BROWSE)) {
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		ezgui_setup_button_check_status(gui);
 		return IUP_DEFAULT;
 	}
 	
-	IupSetAttribute(gui->font_face, "VISIBLE", "YES");
 	val = IupGetAttribute(gui->font_face, "VALUE");
 	if (val) {
 		IupSetAttribute(gui->dlg_font, "VALUE", val);
@@ -1630,6 +1675,8 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 	EDB_DEBUG(("Font Face: %s\n", val));
 	EDB_DEBUG(("Font Color: %s\n",
 				IupGetAttribute(gui->dlg_font, "COLOR")));
+
+	IupSetAttribute(gui->font_face, "VISIBLE", "YES");
 	if (val) {
 		IupSetAttribute(gui->font_face, "VALUE", val);
 	}
@@ -1734,7 +1781,8 @@ static int ezgui_setup_dupname_event(Ihandle *ih, char *text, int i, int s)
 {
 	EZGUI	*gui;
 
-	(void) i;
+	(void) i; (void) text;
+
 	if (s == 0) {
 		return IUP_DEFAULT;	/* ignore the leaving item */
 	}
@@ -2836,4 +2884,27 @@ static char *xui_make_filters(char *slist)
 	strcat(flt, "|All Files|*.*|");
 	return flt;
 }
+
+
+static char *xui_make_font(char *face, int *size)
+{
+	int	i, n;
+	char	*s = csc_strcpy_alloc(face, 0);
+
+	for (i = n = 0; s[i]; i++) {
+		if (s[i] == ' ') {
+			n = i;
+			s[i] = ':';
+		}
+	}
+	if (n) {
+		s[n] = 0;
+		if (size) {
+			*size = (int) strtol(&s[n+1], NULL, 0);
+		}
+	}
+	printf("xui_make_font: %s\n", s);
+	return s;
+}
+
 

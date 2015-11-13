@@ -3880,6 +3880,7 @@ static int image_gdcanvas_puts(EZIMG *image, int fsize,
 	ref = image->grid_col ? image->canvas_width / image->grid_col :
 		image->canvas_width;
 	fsize = image_fontsize(fsize, ref);
+	printf("image_gdcanvas_puts: %s\n", image->sysopt->mi_font);
 	if (image->sysopt->mi_font == NULL) {
 		gdImageString(image->gdcanvas, image_fontset(fsize),
 				x, y, (unsigned char *) s, c);

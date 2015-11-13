@@ -26,6 +26,7 @@
 
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
 
+#include "ezconfig.h"
 #include "libcsoup.h"
 #include "ezthumb.h"
 
@@ -612,16 +613,13 @@ char *meta_make_fontdir(char *s)
 	/* review whether the fontconfig pattern like "times:bold:italic"
 	 * was specified. The fontconfig pattern could be used directly.
 	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
-	if (csc_cmp_file_extname(s, "ttf") && 
-			csc_cmp_file_extname(s, "ttc")) {
-		gdFTUseFontConfig(1);
-		return csc_strcpy_alloc(s, 0);
-	}
-	/* the fontconfig pattern like "times:bold:italic" shouldn't be messed
-	 * with network path like "smb://sdfaadf/abc */
-	if (((p = strchr(s, ':')) != NULL) && isalnum(p[1])) {
-		gdFTUseFontConfig(1);
-		return csc_strcpy_alloc(s, 0);
+	if (csc_cmp_file_extname(s,"ttf") && csc_cmp_file_extname(s,"ttc")) {
+		/* the fontconfig pattern like "times:bold:italic" shouldn't
+		 * be messed with network path like "smb://sdfaadf/abc */
+		if (((p = strchr(s, ':')) != NULL) && isalnum(p[1])) {
+			gdFTUseFontConfig(1);
+			return csc_strcpy_alloc(s, 0);
+		}
 	}
 #endif	/* HAVE_GD_USE_FONTCONFIG */
 	return smm_fontpath(s, NULL);
