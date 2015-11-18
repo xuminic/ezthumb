@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 //#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
 //#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
@@ -284,24 +285,22 @@ void ezgui_version(void)
 static int ezgui_timer_monitor(Ihandle *ih)
 {
 	EZGUI	*gui;
+	int	i;
 
 	if ((gui = (EZGUI*) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
 	if (gui->dir_ppp_flag) {
-		IupSetInt(gui->dir_list, "VALUE", gui->dir_idx + 1);
+		i = lookup_index_string(uir_outdir, 0, CFG_PIC_ODIR_CURR);
+		IupSetInt(gui->dir_list, "VALUE", i + 1);
 		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
 		gui->dir_ppp_flag = 0;
 	}
 	if (gui->font_ppp_flag) {
-		printf("ezgui_timer_monitor: font = %d\n", gui->font_idx + 1);
-		IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
-		if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_BROWSE)) {
-			IupSetAttribute(gui->font_face, "VISIBLE", "YES");
-		} else {
-			IupSetAttribute(gui->font_face, "VISIBLE", "NO");
-		}
+		i = lookup_index_string(uir_choose_font, 0, CFG_PIC_FONT_SYSTEM);
+		IupSetInt(gui->font_list, "VALUE", i + 1);
+		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
 		gui->font_ppp_flag = 0;
 	}
 	return IUP_DEFAULT;
@@ -1421,7 +1420,6 @@ static int ezgui_setup_media_event(Ihandle *ih, char *text, int i, int s)
 static Ihandle *ezgui_setup_outputdir_create(EZGUI *gui)
 {
 	Ihandle	*hbox1, *hbox2, *vbox;
-	char	*s;
 	int	i;
 
 	hbox1 = xui_list_setting(&gui->dir_list, "Save Thumbnails ");
@@ -1438,32 +1436,34 @@ static Ihandle *ezgui_setup_outputdir_create(EZGUI *gui)
 	vbox = IupVbox(hbox1,  hbox2, NULL);
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
 	IupSetAttribute(vbox, "NGAP", "4");
+	return vbox;
+}
+
+static int ezgui_setup_outputdir_reset(EZGUI *gui)
+{
+	char	*s;
 
 	/* find the thumbnail output method and path */
 	gui->dir_idx = 0;
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_OUTPUT_METHOD);
 	if (s) {
 		gui->dir_idx = lookup_index_string(uir_outdir, 0, s);
-		if (!strcmp(s, CFG_PIC_ODIR_PATH)) {
-			gui->sysopt->pathout = csc_cfg_read(gui->config, 
-					EZGUI_MAINKEY, CFG_KEY_OUTPUT_PATH);
-		}
 	}
-	return vbox;
-}
-
-static int ezgui_setup_outputdir_reset(EZGUI *gui)
-{
 	IupSetInt(gui->dir_list, "VALUE", gui->dir_idx + 1);
-	if (gui->sysopt->pathout) {
-		IupSetAttribute(gui->dir_path, "VALUE", gui->sysopt->pathout);
-	} else {
-		IupSetAttribute(gui->dir_path, "VALUE", "");
-	}
-	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
-		IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
-	} else {
+
+	/* the default output directory entry */
+	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_CURR)) {
 		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+	} else {	/* CFG_PIC_ODIR_PATH */
+		IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
+		gui->sysopt->pathout = csc_cfg_read(gui->config, 
+					EZGUI_MAINKEY, CFG_KEY_OUTPUT_PATH);
+		if (gui->sysopt->pathout) {
+			IupSetAttribute(gui->dir_path, "VALUE", 
+						gui->sysopt->pathout);
+		} else {
+			IupSetAttribute(gui->dir_path, "VALUE", "");
+		}
 	}
 	return 0;
 }
@@ -1473,10 +1473,8 @@ static int ezgui_setup_outputdir_update(EZGUI *gui)
 	gui->dir_idx  = xui_list_get_idx(gui->dir_list);
 	csc_cfg_write(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_OUTPUT_METHOD, uir_outdir[gui->dir_idx].s);
-	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_CURR)) {
-		csc_cfg_delete_key(gui->config, EZGUI_MAINKEY, 
-				CFG_KEY_OUTPUT_PATH);
-	} else {
+	
+	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
 		gui->sysopt->pathout = IupGetAttribute(gui->dir_path,"VALUE");
 		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
 				CFG_KEY_OUTPUT_PATH, gui->sysopt->pathout);
@@ -1491,9 +1489,11 @@ static int ezgui_setup_outputdir_check(EZGUI *gui)
 	if (gui->dir_idx != xui_list_get_idx(gui->dir_list)) {
 		return 1;
 	}
-	val = IupGetAttribute(gui->dir_path, "VALUE");
-	if (csc_strcmp_param(val, gui->sysopt->pathout)) {
-		return 1;
+	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
+		val = IupGetAttribute(gui->dir_path, "VALUE");
+		if (csc_strcmp_param(val, gui->sysopt->pathout)) {
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -1513,10 +1513,10 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 	
 	if (strcmp(text, CFG_PIC_ODIR_PATH)) {
 		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+		ezgui_setup_button_check_status(gui);
 		return IUP_DEFAULT;
 	}
 
-	IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
 	val = IupGetAttribute(gui->dir_path, "VALUE");
 	if (val) {
 		IupSetAttribute(gui->dlg_odir, "DIRECTORY", val);
@@ -1534,6 +1534,8 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 	EDB_DEBUG(("Open File VALUE: %s\n", val));
 	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
 			IupGetAttribute(gui->dlg_odir, "DIRECTORY")));
+
+	IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
 	if (val) {
 		IupSetAttribute(gui->dir_path, "VALUE", val);
 	}
@@ -1544,7 +1546,6 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 static Ihandle *ezgui_setup_font_create(EZGUI *gui)
 {
 	Ihandle	*hbox1, *hbox2, *vbox;
-	char	*s;
 	int	i;
 
 	hbox1 = xui_list_setting(&gui->font_list, "Choose Font");
@@ -1563,12 +1564,6 @@ static Ihandle *ezgui_setup_font_create(EZGUI *gui)
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
 	IupSetAttribute(vbox, "NGAP", "4");
 
-	/* find the font choosing method */
-	gui->font_idx = 0;
-	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_METHOD);
-	if (s) {
-		gui->font_idx = lookup_index_string(uir_choose_font, 0, s);
-	}
 #ifdef  HAVE_GD_USE_FONTCONFIG
 	gdFTUseFontConfig(1);
 #endif
@@ -1579,17 +1574,27 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 {
 	char	*s;
 
-	IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
-	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_FACE);
+	/* find the font choosing method */
+	gui->font_idx = 0;
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_METHOD);
 	if (s) {
-		IupSetAttribute(gui->font_face, "VALUE", s);
-	} else {
-		IupSetAttribute(gui->font_face, "VALUE", "");
+		gui->font_idx = lookup_index_string(uir_choose_font, 0, s);
 	}
-	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_BROWSE)) {
-		IupSetAttribute(gui->font_face, "VISIBLE", "YES");
-	} else {
+	IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
+
+	/* find the default font face */
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_SYSTEM)) {
+		/* just disable the entry control if system font used */
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+	} else {	/* CFG_PIC_FONT_BROWSE */
+		IupSetAttribute(gui->font_face, "VISIBLE", "YES");
+		s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_FACE);
+		if (s) {
+			IupSetAttribute(gui->font_face, "VALUE", s);
+		} else {
+			IupSetAttribute(gui->font_face, "VALUE", "");
+		}
+		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
 	}
 	return 0;
 }
@@ -1599,22 +1604,18 @@ static int ezgui_setup_font_update(EZGUI *gui)
 	gui->font_idx = xui_list_get_idx(gui->font_list);
 	csc_cfg_write(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_FONT_METHOD, uir_choose_font[gui->font_idx].s);
-	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_SYSTEM)) {
-		csc_cfg_delete_key(gui->config, EZGUI_MAINKEY,
-				CFG_KEY_FONT_FACE);
 
-		if (gui->sysopt->mi_font) {
-			smm_free(gui->sysopt->mi_font);
-		}
+	if (gui->sysopt->mi_font) {
+		smm_free(gui->sysopt->mi_font);
+	}
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_SYSTEM)) {
+		/* don't update configure if using system font */
 		gui->sysopt->mi_font = gui->sysopt->ins_font = NULL;
-	} else {
+	} else {	/* CFG_PIC_FONT_BROWSE */
 		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
 		csc_cfg_write(gui->config, EZGUI_MAINKEY,
 				CFG_KEY_FONT_FACE, gui->font_gtk_name);
 
-		if (gui->sysopt->mi_font) {
-			smm_free(gui->sysopt->mi_font);
-		}
 		gui->sysopt->mi_font = gui->sysopt->ins_font = 
 			xui_make_font(gui->font_gtk_name, &gui->sysopt->mi_size);
 	}
@@ -1628,9 +1629,11 @@ static int ezgui_setup_font_check(EZGUI *gui)
 	if (gui->font_idx != xui_list_get_idx(gui->font_list)) {
 		return 1;
 	}
-	val = IupGetAttribute(gui->font_face, "VALUE");
-	if (csc_strcmp_param(val, gui->font_gtk_name)) {
-		return 1;
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_BROWSE)) {
+		val = IupGetAttribute(gui->font_face, "VALUE");
+		if (csc_strcmp_param(val, gui->font_gtk_name)) {
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -1649,7 +1652,6 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 		return IUP_DEFAULT;
 	}
 
-	printf("ezgui_setup_font_event: %s %d\n", text, IupGetInt(gui->font_list, "VALUE"));
 	if (strcmp(text, CFG_PIC_FONT_BROWSE)) {
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
 		ezgui_setup_button_check_status(gui);
@@ -2886,24 +2888,38 @@ static char *xui_make_filters(char *slist)
 }
 
 
+/* translate the font face style to the GD accepted one:
+ *   Nimbus Sans Bold Italic 10  --> Nimbus Sans:Bold:Italic
+ *   Nimbus Sans Italic 10  --> Nimbus Sans:Italic
+ *   Nimbus Sans 10  --> Nimbus Sans:Regular  */
 static char *xui_make_font(char *face, int *size)
 {
-	int	i, n;
-	char	*s = csc_strcpy_alloc(face, 0);
+	char	*p, *s = csc_strcpy_alloc(face, 16);
 
-	for (i = n = 0; s[i]; i++) {
-		if (s[i] == ' ') {
-			n = i;
-			s[i] = ':';
-		}
-	}
-	if (n) {
-		s[n] = 0;
+	/* isolate the number of font size */
+	if (((p = strrchr(s, ' ')) != NULL) && isdigit(p[1])) {
+		*p++ = 0;
 		if (size) {
-			*size = (int) strtol(&s[n+1], NULL, 0);
+			*size = (int) strtol(p, NULL, 0);
 		}
 	}
-	printf("xui_make_font: %s\n", s);
+	
+	/* Sans Bold Italic 10 */
+	if ((p = strstr(s, "Bold")) != NULL) {
+		*--p = ':';
+	}
+	if ((p = strstr(s, "Italic")) != NULL) {
+		*--p = ':';
+	}
+	if (strchr(s, ':') == NULL) {
+		if ((p = strstr(s, "Regular")) != NULL) {
+			*--p = ':';
+		} else {
+			strcat(s, ":Regular");
+		}
+	}
+
+	//printf("xui_make_font: %s\n", s);
 	return s;
 }
 
