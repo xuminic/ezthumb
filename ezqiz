@@ -556,19 +556,6 @@ test_4_14()
   run "-g 3x5 --gap-margin 10%" "$1" "$2" "$COMM" ${@:3}
 }
 
-test_4_15()
-{
-  local COMM="Rip out all key frames and generate seperated thumbnails"
-  run "-p key" "$1" "$2" "$COMM" ${@:3}
-}
-
-test_4_16()
-{
-  local COMM="Rip out key frames from middle and generate gif animate"
-  run "-p key -m gif@250 --time-from 20% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
-}
-
-
 
 
 
@@ -651,6 +638,23 @@ test_5_11()
   run "-b -p key --time-from 15% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
 }
 
+#############################################################################
+# Group 06: Process Test
+#############################################################################
+
+test_6_1()
+{
+  local COMM="Rip out all key frames and generate seperated thumbnails"
+  run "-p key" "$1" "$2" "$COMM" ${@:3}
+}
+
+test_6_2()
+{
+  local COMM="Rip out key frames from middle and generate gif animate"
+  run "-p key -m gif@250 --time-from 20% --time-end 80%" "$1" "$2" "$COMM" ${@:3}
+}
+
+
 
 
 # automatic test inside a specified group
@@ -674,6 +678,8 @@ group_test()
 	GRPCASE=`echo {1..16}` ;;
     5) GRPCOMM='Binding mode Test';
 	GRPCASE=`echo {1..11}` ;;
+    6) GRPCOMM='Process method Test';
+	GRPCASE=`echo {1..2}` ;;
     *) return ;;
   esac
 

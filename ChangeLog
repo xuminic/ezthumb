@@ -1,4 +1,9 @@
 
+20151119: Version 3.4.0 release
+	* libcsoup: updated to 0.8.10
+	* eziup.c: introduced SView to simplify the listview
+	Many UI changes and elements introduced.
+
 20150501:
 	* eziup.c: added an 'about' page.
 

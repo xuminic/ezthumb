@@ -91,7 +91,6 @@ static	struct	idtbl	uir_choose_font[] = {
 
 static int ezgui_timer_monitor(Ihandle *ih);
 static int ezgui_create_window(EZGUI *gui);
-static int ezgui_load_window_param(EZGUI *gui);
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
 static int ezgui_event_window_show(Ihandle *ih, int state);
 static int ezgui_event_window_close(Ihandle *ih);
@@ -346,7 +345,7 @@ static int ezgui_create_window(EZGUI *gui)
 			NULL);
 	IupSetAttribute(tabs, "TABTITLE0", "Generate");
 	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
-	IupSetAttribute(tabs, "TABTITLE2", "Advanced");
+	//IupSetAttribute(tabs, "TABTITLE2", "Advanced");
 	IupSetAttribute(tabs, "TABTITLE3", " About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
@@ -386,9 +385,6 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetCallback(gui->dlg_main, "CLOSE_CB",
 			(Icallback) ezgui_event_window_close);
 
-	/* load wedgets with parameters from the configure file */
-	ezgui_load_window_param(gui);
-
 	/* show the dialog window at the last location */
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_WIN_POS);
 	if (s == NULL) {
@@ -408,14 +404,6 @@ static int ezgui_create_window(EZGUI *gui)
 	ezgui_page_setup_reset(gui);
 	ezgui_setup_button_event_ok(gui->butt_setup_apply);
 	ezgui_page_main_reset(gui);
-	return 0;
-}
-
-static int ezgui_load_window_param(EZGUI *gui)
-{
-	/* reset the chain list of list control *///FIXME
-	//csc_cfg_save(gui->config);
-	//xui_config_status(gui->config, "Write");
 	return 0;
 }
 
