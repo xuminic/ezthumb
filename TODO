@@ -4,7 +4,9 @@ TODO List
 *) More test cases for bind mode
 *) key rip need to be retested
 *) Process option need to be retested
-*) Font and size setting
++) BUGS: Chinese characters broken in SView
++) BUGS: SView could not be updated when appending files, wrong length of sview
++) BUGS: Percentage lost update in sview
 
 DO NOT FIX
 ==========

@@ -340,13 +340,13 @@ static int ezgui_create_window(EZGUI *gui)
 
 	tabs = IupTabs(ezgui_page_main(gui), 
 			ezgui_page_setup(gui), 
-			IupVbox(IupFill(), NULL), 
+			//IupVbox(IupFill(), NULL), 
 			ezgui_page_about(gui), 
 			NULL);
 	IupSetAttribute(tabs, "TABTITLE0", "Generate");
 	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
 	//IupSetAttribute(tabs, "TABTITLE2", "Advanced");
-	IupSetAttribute(tabs, "TABTITLE3", " About  ");
+	IupSetAttribute(tabs, "TABTITLE2", " About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
 	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
