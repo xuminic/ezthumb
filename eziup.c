@@ -171,6 +171,7 @@ static Ihandle *ezgui_page_about(EZGUI *gui);
 
 static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck);
 static int ezgui_sview_progress(Ihandle *ih, int percent);
+static int ezgui_sview_resize(Ihandle *ih, int width, int height);
 static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl);
 //static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl);
 static int ezgui_sview_event_run(Ihandle *ih, int item, char *text);
@@ -191,7 +192,7 @@ static Ihandle *xui_text(Ihandle **xlst, char *label);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
 static int xui_list_get_idx(Ihandle *ih);
 static int xui_text_get_number(Ihandle *ih);
-//static int xui_get_size(Ihandle *ih, char *attr, int *height);
+static int xui_get_size(Ihandle *ih, char *attr, int *height);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
 static Ihandle *xui_text_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext);
@@ -309,6 +310,7 @@ static int ezgui_create_window(EZGUI *gui)
 {
 	Ihandle		*tabs;
 	char		*s;
+	static char	win_size[32];
 
 	/* find the extension name filter of files */
 	/* the CFG_KEY_SUFFIX_FILTER has been opened in ezthumb.c before
@@ -363,8 +365,8 @@ static int ezgui_create_window(EZGUI *gui)
 		gui->win_width = 800;
 		gui->win_height = 540;
 	}
-	sprintf(gui->win_size, "%dx%d", gui->win_width, gui->win_height);
-	IupSetAttribute(gui->dlg_main, "RASTERSIZE", gui->win_size);
+	sprintf(win_size, "%dx%d", gui->win_width, gui->win_height);
+	IupSetAttribute(gui->dlg_main, "RASTERSIZE", win_size);
 
 	/* recover the minimized placement of the window */
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_WINDOWSTATE);
@@ -411,22 +413,14 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 {
 	EZGUI	*gui;
 
-	(void)height;
-
 	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	if ((gui->win_dec_x == 0) && (gui->win_dec_y == 0)) {
-		gui->win_dec_x = gui->win_width - width;
-		gui->win_dec_y = gui->win_height - height;
-	} else {
-		gui->win_width = width + gui->win_dec_x;
-		gui->win_height = height + gui->win_dec_y;
-	}
 
-	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d D:%dx%d P:%s\n", width, height,
+	gui->win_width = xui_get_size(ih, "RASTERSIZE", &gui->win_height);
+
+	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d P:%s\n", width, height,
 			gui->win_width, gui->win_height, 
-			gui->win_dec_x, gui->win_dec_y, 
 			IupGetAttribute(gui->dlg_main, "SCREENPOSITION")));
 
 	if (gui->win_state != IUP_MAXIMIZE) {
@@ -436,10 +430,9 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 				CFG_KEY_WIN_HEIGHT, gui->win_height);
 	}
 
-	/* 20150514 find an easy way to shrink the window by setting 
-	 * RASTERSIZE of the main dialog. The IUP will do all other things */
-	sprintf(gui->win_size, "%dx%d", width+gui->win_dec_x, height+gui->win_dec_y);
-	IupSetAttribute(gui->dlg_main, "RASTERSIZE", gui->win_size);
+	/* 20151223 retrieve the client size of scrollbox instead */
+	width = xui_get_size(gui->list_sbox, "CLIENTSIZE", &height);
+	ezgui_sview_resize(gui->list_view, width, height);
 	return IUP_DEFAULT;
 }
 
@@ -562,7 +555,10 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 	ezgui_sview_active_add(gui->list_view,
 			EZGUI_SVIEW_ACTIVE_BIND, gui->button_add);
 	
-	vbox = IupVbox(IupScrollBox(gui->list_view), hbox, NULL);
+	gui->list_sbox = IupScrollBox(gui->list_view);
+	IupSetAttribute(gui->list_sbox, "SCROLLBAR", "VERTICAL");
+
+	vbox = IupVbox(gui->list_sbox, hbox, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
 	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
@@ -2276,6 +2272,28 @@ static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl)
 	return EZ_ERR_LOWMEM;	/* full */ 
 }
 
+static int ezgui_sview_resize(Ihandle *ih, int width, int height)
+{
+	SView	*sview;
+	static	char	tmp[32];
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return EZ_ERR_PARAM;
+	}
+
+	if (sview->car_size == 0) {
+		sview->car_size  = xui_get_size(sview->filesize, "RASTERSIZE", NULL);
+		sview->car_size += xui_get_size(sview->medialen, "RASTERSIZE", NULL);
+		sview->car_size += xui_get_size(sview->resolution, "RASTERSIZE", NULL);
+		sview->car_size += xui_get_size(sview->progress, "RASTERSIZE", NULL);
+		sview->car_size += 4;
+		printf("ezgui_sview_resize: %d %d\n", width, sview->car_size);
+	}
+	sprintf(tmp, "%d", width - sview->car_size);
+	IupSetAttribute(sview->filename, "RASTERSIZE", tmp);
+	return 0;
+}
+
 #if 0
 static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl)
 {
@@ -2747,7 +2765,6 @@ static int xui_text_get_number(Ihandle *ih)
 	return (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 0);
 }
 
-/*
 static int xui_get_size(Ihandle *ih, char *attr, int *height)
 {
 	char	*ssize;
@@ -2767,7 +2784,7 @@ static int xui_get_size(Ihandle *ih, char *attr, int *height)
 	}
 	return width;
 }
-*/
+
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 {
 	Ihandle	*hbox, *text;

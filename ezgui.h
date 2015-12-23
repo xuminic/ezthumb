@@ -154,13 +154,11 @@ typedef	struct		{
 	/* current size of the main window and the decoration */
 	int		win_width;	/* window size */
 	int		win_height;
-	int		win_dec_x;	/* client difference to the window */
-	int		win_dec_y;
 	int		win_state;	/* window show event */
-	char		win_size[32];
 
 	/* Main Page: work place */
 	Ihandle		*list_view;
+	Ihandle		*list_sbox;
 
 	/* Main Page: Progress Bar and Buttons */
 	Ihandle		*prog_bar;	/* progress bar of current file */
@@ -238,6 +236,7 @@ typedef	struct		simpleview	{
 	int		svidx;		/* current active item start from 1 */
 	int 		svnum;		/* total items in the list */
 	int		moused;		/* the recent line being moused to */
+	int		car_size;	/* client area reserved size */
 	EZGUI		*gui;		/* uplink to the EZGUI */
 
 	/* set active status if contents exist */
