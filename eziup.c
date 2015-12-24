@@ -303,6 +303,20 @@ static int ezgui_timer_monitor(Ihandle *ih)
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
 		gui->font_ppp_flag = 0;
 	}
+	if (gui->prog_ppp_flag) {
+		IupSetInt(gui->prog_bar, "MIN", gui->prog_min);
+		IupSetInt(gui->prog_bar, "MAX", gui->prog_max);
+		IupSetInt(gui->prog_bar, "VALUE", gui->prog_curr);
+		gui->prog_ppp_flag = 0;
+	}
+	if (gui->prog_ppp_wait) {
+		IupSetInt(gui->prog_wait, "VALUE", 1);
+		gui->prog_ppp_wait = 0;
+	}
+	if (gui->prog_ppp_zbox) {
+		IupSetInt(gui->ps_zbox, "VALUEPOS", gui->prog_zbox);
+		gui->prog_ppp_zbox = 0;
+	}
 	return IUP_DEFAULT;
 }
 
@@ -629,85 +643,40 @@ static int ezgui_show_progress(EZGUI *gui, int cur, int range)
 
 	if (cur == 0) {		/* begin to display progress */
 		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
-		IupSetInt(gui->prog_bar, "MIN", 0);
-		//IupSetInt(gui->prog_bar, "MAX", range);
-		IupSetInt(gui->prog_bar, "VALUE", 0);
-		IupSetInt(gui->ps_zbox, "VALUEPOS", 1);	/* show progress */
+		gui->prog_ppp_zbox = 1;		/* show progress */
+		gui->prog_zbox = 1;
+		gui->prog_min = gui->prog_max = gui->prog_curr = 0;
 	} else if (cur == range) {	/* end of display */
-		IupSetInt(gui->prog_bar, "VALUE", range);
-		IupFlush();
-		//smm_sleep(0, 500000);
+		gui->prog_curr = range;
+		gui->prog_ppp_zbox = 1; 
+		gui->prog_zbox = zpos;
 		IupSetInt(gui->ps_zbox, "VALUEPOS", zpos);
 	} else if (cur < range) {
-		IupSetInt(gui->prog_bar, "MAX", range);
-		IupSetInt(gui->prog_bar, "VALUE", cur);
+		gui->prog_max = range;
+		gui->prog_curr = cur;
 	}
-	IupFlush();
+	gui->prog_ppp_flag = 1;
 	return 0;
 }
 
 static int ezgui_show_duration(EZGUI *gui, int state)
 {
-	static	SMM_TIME	last;
 	static	int		zpos;
 
 	if (state == EN_OPEN_BEGIN) {
 		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
-		smm_time_get_epoch(&last);
 		IupSetInt(gui->prog_wait, "VALUE", 0);
-		IupSetInt(gui->ps_zbox, "VALUEPOS", 2);	/* show progress */
+		gui->prog_ppp_zbox = 1;
+		gui->prog_zbox = 2;	/* show progress */
 	} else if (state == EN_OPEN_END) {
-		IupSetInt(gui->ps_zbox, "VALUEPOS", zpos);
-	} else if (smm_time_diff(&last) > 50) {
-		/* update the progress bar per 50ms */
-		smm_time_get_epoch(&last);
-		IupSetInt(gui->prog_wait, "VALUE", 1);
+		gui->prog_ppp_zbox = 1;
+		gui->prog_zbox = zpos;
+	} else {
+		gui->prog_ppp_wait = 1;
 	}
-	IupFlush();
 	return 0;
 }
 
-#if 0
-static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
-{
-	EZGUI	*gui = ((EZOPT*) v)->gui;
-
-	(void)b;
-	switch (eid) {
-	case EN_PROC_BEGIN:
-		ezgui_show_progress(gui, 0, 0);	/* show/reset progress bar */
-		break;
-	case EN_PROC_CURRENT:
-		node = csc_cdl_goto(gui->list_cache, gui->list_idx - 1);
-		if (node) {
-			minfo = (EZMEDIA*) csc_cdl_payload(node);
-			sprintf(minfo->progr, "%d%%", (int)(opt*100/param));
-			IupSetAttributeId(gui->list_prog, "", 
-					gui->list_idx, minfo->progr);
-		}
-		ezgui_show_progress(gui, opt, param);
-		break;
-	case EN_PROC_END:
-		node = csc_cdl_goto(gui->list_cache, gui->list_idx - 1);
-		if (node) {
-			minfo = (EZMEDIA*) csc_cdl_payload(node);
-			strcpy(minfo->progr, "100%");
-			IupSetAttributeId(gui->list_prog, "", 
-					gui->list_idx, minfo->progr);
-		}
-		ezgui_show_progress(gui, param, param);
-		break;
-	case EN_OPEN_BEGIN:
-	case EN_OPEN_GOING:
-	case EN_OPEN_END:
-		ezgui_show_duration(gui, eid);
-		break;
-	default:
-		return EN_EVENT_PASSTHROUGH;
-	}
-	return eid;
-}
-#endif
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
 //static int ezgui_sview_notificate(void *v, int eid, long param, long opt, void *b)
 {
