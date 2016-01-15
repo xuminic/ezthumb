@@ -170,13 +170,6 @@ typedef	struct		{
 	Ihandle		*button_add;
 	char		status[256];	/* displaying the status on bottom */
 	char		*filefilter;	/* don't forget to release it */
-	int		prog_ppp_flag;
-	int		prog_min;
-	int		prog_max;
-	int		prog_curr;
-	int		prog_ppp_wait;
-	int		prog_ppp_zbox;
-	int		prog_zbox;
 
 	/* Main Page: dialog of Open File */
 	Ihandle		*dlg_main;	/* the main dialog itself */

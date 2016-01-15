@@ -303,20 +303,6 @@ static int ezgui_timer_monitor(Ihandle *ih)
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
 		gui->font_ppp_flag = 0;
 	}
-	if (gui->prog_ppp_flag) {
-		IupSetInt(gui->prog_bar, "MIN", gui->prog_min);
-		IupSetInt(gui->prog_bar, "MAX", gui->prog_max);
-		IupSetInt(gui->prog_bar, "VALUE", gui->prog_curr);
-		gui->prog_ppp_flag = 0;
-	}
-	if (gui->prog_ppp_wait) {
-		IupSetInt(gui->prog_wait, "VALUE", 1);
-		gui->prog_ppp_wait = 0;
-	}
-	if (gui->prog_ppp_zbox) {
-		IupSetInt(gui->ps_zbox, "VALUEPOS", gui->prog_zbox);
-		gui->prog_ppp_zbox = 0;
-	}
 	return IUP_DEFAULT;
 }
 
@@ -324,7 +310,7 @@ static int ezgui_create_window(EZGUI *gui)
 {
 	Ihandle		*tabs;
 	char		*s;
-	static char	win_size[32];
+	char		win_size[32];
 
 	/* find the extension name filter of files */
 	/* the CFG_KEY_SUFFIX_FILTER has been opened in ezthumb.c before
@@ -356,13 +342,13 @@ static int ezgui_create_window(EZGUI *gui)
 
 	tabs = IupTabs(ezgui_page_main(gui), 
 			ezgui_page_setup(gui), 
-			IupVbox(IupFill(), NULL), 
+			//IupVbox(IupFill(), NULL), 
 			ezgui_page_about(gui), 
 			NULL);
 	IupSetAttribute(tabs, "TABTITLE0", "Generate");
 	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
 	//IupSetAttribute(tabs, "TABTITLE2", "Advanced");
-	IupSetAttribute(tabs, "TABTITLE3", " About  ");
+	IupSetAttribute(tabs, "TABTITLE2", " About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
 	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
@@ -376,7 +362,7 @@ static int ezgui_create_window(EZGUI *gui)
 	csc_cfg_read_int(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_WIN_HEIGHT, &gui->win_height);
 	if ((gui->win_width == 0) || (gui->win_height == 0)) {
-		gui->win_width = 800;
+		gui->win_width = 800;	/* minimen "740x130" */
 		gui->win_height = 540;
 	}
 	sprintf(win_size, "%dx%d", gui->win_width, gui->win_height);
@@ -431,6 +417,8 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 		return IUP_DEFAULT;
 	}
 
+	/* 20160115 setting "RASTERSIZE" again gain the ability of shrink */
+	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 	gui->win_width = xui_get_size(ih, "RASTERSIZE", &gui->win_height);
 
 	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d P:%s\n", width, height,
@@ -639,41 +627,30 @@ static int ezgui_event_main_run(Ihandle *ih)
 
 static int ezgui_show_progress(EZGUI *gui, int cur, int range)
 {
-	static	int	zpos;
-
 	if (cur == 0) {		/* begin to display progress */
-		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
-		gui->prog_ppp_zbox = 1;		/* show progress */
-		gui->prog_zbox = 1;
-		gui->prog_min = gui->prog_max = gui->prog_curr = 0;
+		IupSetInt(gui->prog_bar, "MIN", 0);
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 1);
 	} else if (cur == range) {	/* end of display */
-		gui->prog_curr = range;
-		gui->prog_ppp_zbox = 1; 
-		gui->prog_zbox = zpos;
-		IupSetInt(gui->ps_zbox, "VALUEPOS", zpos);
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 	} else if (cur < range) {
-		gui->prog_max = range;
-		gui->prog_curr = cur;
+		IupSetInt(gui->prog_bar, "MAX", range);
+		IupSetInt(gui->prog_bar, "VALUE", cur);
 	}
-	gui->prog_ppp_flag = 1;
+	IupFlush();
 	return 0;
 }
 
 static int ezgui_show_duration(EZGUI *gui, int state)
 {
-	static	int		zpos;
-
 	if (state == EN_OPEN_BEGIN) {
-		zpos = IupGetInt(gui->ps_zbox, "VALUEPOS");
 		IupSetInt(gui->prog_wait, "VALUE", 0);
-		gui->prog_ppp_zbox = 1;
-		gui->prog_zbox = 2;	/* show progress */
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 2);
 	} else if (state == EN_OPEN_END) {
-		gui->prog_ppp_zbox = 1;
-		gui->prog_zbox = zpos;
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
 	} else {
-		gui->prog_ppp_wait = 1;
+		IupSetInt(gui->prog_wait, "VALUE", 1);
 	}
+	IupFlush();
 	return 0;
 }
 
@@ -2244,7 +2221,9 @@ static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl)
 static int ezgui_sview_resize(Ihandle *ih, int width, int height)
 {
 	SView	*sview;
-	static	char	tmp[32];
+	char	tmp[32];
+
+	(void) height;
 
 	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return EZ_ERR_PARAM;
@@ -2256,7 +2235,7 @@ static int ezgui_sview_resize(Ihandle *ih, int width, int height)
 		sview->car_size += xui_get_size(sview->resolution, "RASTERSIZE", NULL);
 		sview->car_size += xui_get_size(sview->progress, "RASTERSIZE", NULL);
 		sview->car_size += 4;
-		printf("ezgui_sview_resize: %d %d\n", width, sview->car_size);
+		//printf("ezgui_sview_resize: %d %d\n", width, sview->car_size);
 	}
 	sprintf(tmp, "%d", width - sview->car_size);
 	IupSetAttribute(sview->filename, "RASTERSIZE", tmp);
@@ -2303,9 +2282,7 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 {
 	EZGUI	*gui;
 	SView	*sview;
-	char	*attr;
-
-	(void)text;
+	char	*attr, *fname;
 
 	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
@@ -2326,11 +2303,13 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	attr = strchr(attr, ':');
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
 
+	/* 20160115 content in 'text' is not stable */
 	smm_codepage_set(65001);
-	ezthumb(text, gui->sysopt);
+	fname = csc_strcpy_alloc(text, 0);
+	ezthumb(fname, gui->sysopt);
+	smm_free(fname);
 	smm_codepage_reset();
 
-	gui->sysopt->notify = NULL;
 	gui->sysopt->pre_seek = 0;
 	gui->sysopt->pre_br   = 0;
 	gui->sysopt->pre_dura = 0;
