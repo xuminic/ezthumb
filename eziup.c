@@ -351,6 +351,9 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetAttribute(tabs, "TABTITLE2", " About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
+	tabs = IupHbox(tabs, NULL);
+	IupSetAttribute(tabs, "NMARGIN", "8x8");
+
 	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
 	gui->dlg_main = IupDialog(tabs);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
