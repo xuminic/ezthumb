@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include <Xm/Xm.h>
 
@@ -38,7 +39,11 @@ static void motTimerProc(XtPointer client_data, XtIntervalId *id)
   cb = IupGetCallback(ih, "ACTION_CB");
   if (cb)
   {
-    if (cb(ih)==IUP_CLOSE)
+    long long end = (long long)clock();
+    long long start = iupTimerGetLongLong(ih, "STARTCOUNT");
+    iupAttribSetInt(ih, "ELAPSEDTIME", (int)(end - start));
+
+    if (cb(ih) == IUP_CLOSE)
       IupExitLoop();
   }
 }
@@ -52,7 +57,14 @@ void iupdrvTimerRun(Ihandle *ih)
   
   time_ms = iupAttribGetInt(ih, "TIME");
   if (time_ms > 0)
+  {
+    long long start;
+
     ih->serial = XtAppAddTimeOut(iupmot_appcontext, time_ms, motTimerProc, (XtPointer)ih);
+
+    start = (long long)clock();
+    iupAttribSetStrf(ih, "STARTCOUNT", "%lld", start);
+  }
 }
 
 void iupdrvTimerStop(Ihandle* ih)

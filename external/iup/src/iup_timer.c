@@ -14,7 +14,20 @@
 #include "iup_str.h"
 #include "iup_stdcontrols.h"
 #include "iup_timer.h"
+#include "iup_attrib.h"
 
+
+long long iupTimerGetLongLong(Ihandle* ih, const char* name)
+{
+  long long i = 0;
+  char *value = iupAttribGetStr(ih, name);
+  if (value)
+  {
+    if (sscanf(value, "%lld", &i) != 1)
+      return 0;
+  }
+  return i;
+}
 
 static int iTimerSetRunAttrib(Ihandle *ih, const char *value)
 {

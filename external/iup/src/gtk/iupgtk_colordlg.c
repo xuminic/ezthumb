@@ -4,6 +4,8 @@
  * See Copyright Notice in "iup.h"
  */
 
+#undef GTK_DISABLE_DEPRECATED /* Since GTK 3.4 gtk_color_selection is deprecated.
+                                 TODO: Must re-implement the dialog using gtk_color_chooser. */
 #include <gtk/gtk.h>
 
 #include <string.h>
@@ -120,6 +122,24 @@ static int iStrToRGBA(const char *str, unsigned char *r, unsigned char *g, unsig
   else
     return 3;
 }
+
+#if 0
+TODO
+gtk_color_selection_dialog_new is deprecated(74) : Use gtk_color_chooser_dialog_new instead
+gtk_color_selection_set_current_color is deprecated(144) : Use gtk_color_chooser_set_rgba instead
+gtk_color_selection_set_has_opacity_control is deprecated(96) : Use gtk_color_chooser_set_use_alpha instead
+gtk_color_selection_set_current_alpha is deprecated(106) : Use gtk_color_chooser_set_rgba instead
+gtk_color_selection_set_has_opacity_control is deprecated(96) : Use gtk_color_chooser_set_use_alpha instead
+gtk_color_selection_set_current_alpha is deprecated(106) : Use gtk_color_chooser_set_rgba instead
+gtk_color_selection_set_has_opacity_control is deprecated(96) : Use gtk_color_chooser_set_use_alpha instead
+gtk_color_selection_set_has_palette is deprecated(101)
+gtk_color_selection_set_has_palette is deprecated(101)
+gtk_color_selection_set_has_palette is deprecated(101)
+gtk_color_selection_get_current_color is deprecated(147) : Use gtk_color_chooser_get_rgba instead
+gtk_color_selection_get_has_opacity_control is deprecated(94) : Use gtk_color_chooser_get_use_alpha instead
+gtk_color_selection_get_current_alpha is deprecated(109) : Use gtk_color_chooser_get_rgba instead
+gtk_color_selection_get_has_palette is deprecated(99)
+#endif
 
 static int gtkColorDlgPopup(Ihandle* ih, int x, int y)
 {

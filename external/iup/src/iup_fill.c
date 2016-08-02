@@ -34,13 +34,13 @@ static int iFillGetDir(Ihandle* ih)
   if (ih->data->dir != IUP_FILL_NONE)
     return ih->data->dir;
 
-  /* Its parent must be an IupHbox or an IupVbox. */
+  /* Its parent should be an IupHbox or an IupVbox. */
   if (ih->parent->iclass->nativetype == IUP_TYPEVOID)
   {
-    if (IupClassMatch(ih->parent, "hbox"))
-      ih->data->dir = IUP_FILL_HORIZ;
-    else if (IupClassMatch(ih->parent, "vbox"))
+    if (IupClassMatch(ih->parent, "vbox"))
       ih->data->dir = IUP_FILL_VERT;
+    else
+      ih->data->dir = IUP_FILL_HORIZ;
   }
 
   return ih->data->dir;
@@ -140,7 +140,7 @@ static int iFillSetSizeAttrib(Ihandle* ih, const char* value)
     }
   }
   iupAttribSet(ih, "RASTERSIZE", NULL);
-  return 1;
+  return 1;  /* always save in the hash table, so when FONT is changed SIZE can be updated */
 }
 
 static char* iFillGetExpandAttrib(Ihandle* ih)
@@ -196,7 +196,8 @@ static void iFillComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chil
   if (iFillGetDir(ih) == IUP_FILL_NONE) /* if Fill is not a child of a Vbox or Hbox */
     return;
 
-  /* if size is NOT defined, then expansion on that direction is permited */
+  /* If size is NOT defined, then expansion on that direction is permited.
+     This type of expansion works only when inside a vbox, hbox or gridbox. */
   if (iFillGetDir(ih) == IUP_FILL_HORIZ)
   {
     if (ih->naturalwidth <= 0)

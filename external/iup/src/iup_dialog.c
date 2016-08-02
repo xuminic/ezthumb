@@ -9,6 +9,7 @@
 #include <string.h>
 #include <memory.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #include "iup.h"
 #include "iupcbs.h"
@@ -36,6 +37,13 @@ InativeHandle* iupDialogGetNativeParent(Ihandle* ih)
     return parent->handle;
   else
     return (InativeHandle*)iupAttribGet(ih, "NATIVEPARENT");
+}
+
+static char* iDialogGetBorderSizeAttrib(Ihandle* ih)
+{
+  int border, caption, menu;
+  iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
+  return iupStrReturnInt(border);
 }
 
 int iupDialogSetClientSizeAttrib(Ihandle* ih, const char* value)
@@ -120,9 +128,6 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
     }
   }
 
-  if (*x == IUP_MOUSEPOS || *y == IUP_MOUSEPOS)
-    iupdrvAddScreenOffset(&cursor_x, &cursor_y, -1);  /* de-compensate for add offset bellow */
-
   switch (*x)
   {
   case IUP_CENTERPARENT:
@@ -170,18 +175,19 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
   iupdrvAddScreenOffset(x, y, 1);
 }
 
-static void iDialogSetModal(Ihandle* ih_popup)
+void iupDialogEnterModal(Ihandle* ih_popup, int popup_level)
 {
   Ihandle *ih;
-  iupAttribSet(ih_popup, "MODAL", "YES");
+
+  assert(popup_level == dlg_popup_level);
 
   /* disable all visible dialogs, and mark popup level */
   for (ih = iupDlgListFirst(); ih; ih = iupDlgListNext())
   {
-    if (ih != ih_popup && 
-        ih->handle &&
-        iupdrvDialogIsVisible(ih) && 
-        ih->data->popup_level == 0)
+    if (ih != ih_popup &&
+      ih->handle &&
+      iupdrvDialogIsVisible(ih) &&
+      ih->data->popup_level == 0)
     {
       iupdrvSetActive(ih, 0);
       ih->data->popup_level = dlg_popup_level;
@@ -191,20 +197,33 @@ static void iDialogSetModal(Ihandle* ih_popup)
   dlg_popup_level++;
 }
 
-static void iDialogUnSetModal(Ihandle* ih_popup)
+static void iDialogSetModal(Ihandle* ih_popup)
+{
+  iupAttribSet(ih_popup, "MODAL", "YES");
+
+  {
+    IFi cb = (IFi)IupGetFunction("GLOBALENTERMODAL_CB");
+    int popup_level = dlg_popup_level;  /* save before it is changed */
+
+    iupDialogEnterModal(ih_popup, popup_level);
+
+    if (cb)
+      cb(popup_level);
+  }
+}
+
+void iupDialogLeaveModal(int popup_level)
 {
   Ihandle *ih;
-  if (!iupAttribGetBoolean(ih_popup, "MODAL"))
-    return;
 
-  iupAttribSet(ih_popup, "MODAL", NULL);
+  assert(popup_level == dlg_popup_level);
 
   /* must enable all visible dialogs at the marked popup level */
   for (ih = iupDlgListFirst(); ih; ih = iupDlgListNext())
   {
     if (ih->handle)
     {
-      if (ih->data->popup_level == dlg_popup_level-1)
+      if (ih->data->popup_level == dlg_popup_level - 1)
       {
         iupdrvSetActive(ih, 1);
         ih->data->popup_level = 0;
@@ -213,6 +232,24 @@ static void iDialogUnSetModal(Ihandle* ih_popup)
   }
 
   dlg_popup_level--;
+}
+
+static void iDialogUnSetModal(Ihandle* ih_popup)
+{
+  if (!iupAttribGetBoolean(ih_popup, "MODAL"))
+    return;
+
+  iupAttribSet(ih_popup, "MODAL", NULL);
+
+  {
+    IFi cb = (IFi)IupGetFunction("GLOBALLEAVEMODAL_CB");
+    int popup_level = dlg_popup_level;  /* save before it is changed */
+
+    iupDialogLeaveModal(popup_level);
+
+    if (cb)
+      cb(popup_level);
+  }
 }
 
 static int iDialogCreateMethod(Ihandle* ih, void** params)
@@ -294,11 +331,42 @@ static void iDialogSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
 
 static void iDialogSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 {
-  (void)x;
-  (void)y;
+  if (ih->firstchild)
+  {
+    char* offset = iupAttribGet(ih, "CHILDOFFSET");
 
-  /* Child coordinates are relative to client left-top corner. */
-  iupBaseSetPosition(ih->firstchild, 0, 0);
+    /* Native container, position is reset */
+    x = 0;
+    y = 0;
+
+    if (offset) iupStrToIntInt(offset, &x, &y, 'x');
+
+    if (iupAttribGetBoolean(ih, "CUSTOMFRAME"))
+    {
+      int border, caption, menu;
+      iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
+
+      x += border;
+      y += border + caption + menu;
+    }
+
+    /* Child coordinates are relative to client left-top corner. */
+    iupBaseSetPosition(ih->firstchild, x, y);
+  }
+}
+
+static void iDialogAfterHide(Ihandle* ih)
+{
+  IFni show_cb;
+
+  /* process all pending messages, make sure the dialog is hidden */
+  IupFlush();
+
+  show_cb = (IFni)IupGetCallback(ih, "SHOW_CB");
+  if (show_cb && show_cb(ih, ih->data->show_state) == IUP_CLOSE)
+  {
+    IupExitLoop();
+  }
 }
 
 static void iDialogAfterShow(Ihandle* ih)
@@ -307,7 +375,7 @@ static void iDialogAfterShow(Ihandle* ih)
   IFni show_cb;
   int show_state;
 
-  /* process all pending messages */
+  /* process all pending messages, make sure the dialog is visible */
   IupFlush();
 
   old_focus = IupGetFocus();
@@ -353,76 +421,115 @@ char* iupDialogGetChildIdStr(Ihandle* ih)
   return iupStrReturnStrf("iup-%s-%d", ih->iclass->name, dialog->data->child_id);
 }
 
-int iupDialogPopup(Ihandle* ih, int x, int y)
+static void iDialogListCheckLastVisible(int was_modal)
 {
-  int was_visible;
+  if (iupDlgListVisibleCount() <= 0)
+  {
+    /* if this is the last window visible,
+    exit message loop except when LOCKLOOP==YES */
+    if (!was_modal && !iupStrBoolean(IupGetGlobal("LOCKLOOP")))
+    {
+      IupExitLoop();
+    }
+  }
+}
 
-  int ret = iupClassObjectDlgPopup(ih, x, y);
-  if (ret != IUP_INVALID) /* IUP_INVALID means it is not implemented */
-    return ret;
-
-  ih->data->show_state = IUP_SHOW;
-
+static int iDialogUpdateVisibility(Ihandle* ih, int *x, int *y)
+{
   /* save visible state before iupdrvDialogSetPlacement */
   /* because it can also show the window when changing placement. */
-  was_visible = iupdrvDialogIsVisible(ih); 
+  int was_visible = iupdrvDialogIsVisible(ih);
 
   /* Update the position and placement */
   if (!iupdrvDialogSetPlacement(ih))
   {
-    iDialogAdjustPos(ih, &x, &y);
-    iupdrvDialogSetPosition(ih, x, y);
+    iDialogAdjustPos(ih, x, y);
+    iupdrvDialogSetPosition(ih, *x, *y);
   }
 
   if (was_visible) /* already visible */
   {
     /* only re-show to raise the window */
     iupdrvDialogSetVisible(ih, 1);
-    
+
     /* flush, then process show_cb and startfocus */
     iDialogAfterShow(ih);
-    return IUP_NOERROR; 
+    return 1;
   }
 
-  if (iupAttribGetBoolean(ih, "MODAL")) /* already a popup */
-    return IUP_NOERROR; 
+  return 0;
+}
 
-  iDialogSetModal(ih);
-
+static void iDialogFirstShow(Ihandle* ih)
+{
   ih->data->first_show = 1;
 
   /* actually show the window */
-  /* test if placement turn the dialog visible */
+  /* test if placement already turned the dialog visible */
   if (!iupdrvDialogIsVisible(ih))
     iupdrvDialogSetVisible(ih, 1);
 
   /* increment visible count */
   iupDlgListVisibleInc();
-    
+
   /* flush, then process show_cb and startfocus */
   iDialogAfterShow(ih);
+}
+
+static void iDialogModalLoop(Ihandle* ih)
+{
+  iDialogSetModal(ih);
 
   /* interrupt processing here */
   IupMainLoop();
 
-  /* if window is still valid (IupDestroy not called), 
-     hide the dialog if still visible. */
+  /* if window is still valid (IupDestroy not called),
+  hide the dialog if still visible. */
   if (iupObjectCheck(ih))
   {
+    iupAttribSet(ih, "_IUP_WAS_MODAL", "1");
+
     iDialogUnSetModal(ih);
-    IupHide(ih); 
+    iupDialogHide(ih);
+
+    if (iupObjectCheck(ih))
+      iupAttribSet(ih, "_IUP_WAS_MODAL", NULL);
   }
+  else
+    iDialogListCheckLastVisible(1);
+}
+
+int iupDialogPopup(Ihandle* ih, int x, int y)
+{
+  int ret = iupClassObjectDlgPopup(ih, x, y);
+  if (ret != IUP_INVALID) /* IUP_INVALID means it is not implemented */
+    return ret;
+
+  ih->data->show_state = IUP_SHOW;
+
+  if (iDialogUpdateVisibility(ih, &x, &y))
+  {
+    if (!iupAttribGetBoolean(ih, "MODAL"))
+      iDialogModalLoop(ih);
+
+    return IUP_NOERROR;  /* if already visible, returns */
+  }
+
+  iDialogFirstShow(ih);
+
+  iDialogModalLoop(ih);
 
   return IUP_NOERROR;
 }
 
 int iupDialogShowXY(Ihandle* ih, int x, int y)
 {
-  int was_visible;
-
-  /* Calling IupShow for a visible dialog shown with IupPopup does nothing. */
-  if (iupAttribGetBoolean(ih, "MODAL")) /* already a popup */
-    return IUP_NOERROR; 
+  if (iupAttribGetBoolean(ih, "MODAL")) 
+  {
+    /* is modal, just update visibility and return */
+    iDialogUpdateVisibility(ih, &x, &y);
+    return IUP_NOERROR;
+  }
 
   if (ih->data->popup_level != 0)
   {
@@ -431,45 +538,18 @@ int iupDialogShowXY(Ihandle* ih, int x, int y)
     ih->data->popup_level = 0; /* Now it is at the current popup level */
   }
 
-  /* save visible state before iupdrvDialogSetPlacement */
-  /* because it can also show the window when changing placement. */
-  was_visible = iupdrvDialogIsVisible(ih); 
+  if (iDialogUpdateVisibility(ih, &x, &y))
+    return IUP_NOERROR;  /* if already visible, returns */
 
-  /* Update the position and placement */
-  if (!iupdrvDialogSetPlacement(ih))
-  {
-    iDialogAdjustPos(ih, &x, &y);
-    iupdrvDialogSetPosition(ih, x, y);
-  }
-
-  if (was_visible) /* already visible */
-  {
-    /* only re-show to raise the window */
-    iupdrvDialogSetVisible(ih, 1);
-    
-    /* flush, then process show_cb and startfocus */
-    iDialogAfterShow(ih);
-    return IUP_NOERROR; 
-  }
-
-  ih->data->first_show = 1;
-                          
-  /* actually show the window */
-  /* test if placement turn the dialog visible */
-  if (!iupdrvDialogIsVisible(ih))
-    iupdrvDialogSetVisible(ih, 1);
-
-  /* increment visible count */
-  iupDlgListVisibleInc();
-
-  /* flush, then process show_cb and startfocus */
-  iDialogAfterShow(ih);
+  iDialogFirstShow(ih);
 
   return IUP_NOERROR;
 }
 
 void iupDialogHide(Ihandle* ih)
 {
+  int was_modal = iupAttribGet(ih, "_IUP_WAS_MODAL") != NULL;
+
   /* hidden at the system and marked hidden in IUP */
   if (!iupdrvDialogIsVisible(ih) && ih->data->show_state == IUP_HIDE) 
     return;
@@ -480,6 +560,7 @@ void iupDialogHide(Ihandle* ih)
   /* if called IupHide for a Popup window */
   if (iupAttribGetBoolean(ih, "MODAL"))
   {
+    was_modal = 1;
     iDialogUnSetModal(ih);
     IupExitLoop();
   }
@@ -493,17 +574,11 @@ void iupDialogHide(Ihandle* ih)
 
   /* decrement visible count */
   iupDlgListVisibleDec();
-
-  if (iupDlgListVisibleCount() <= 0)
-  {
-    /* if this is the last window visible, 
-       exit message loop except when LOCKLOOP==YES */
-    if (!iupStrBoolean(IupGetGlobal("LOCKLOOP")))
-      IupExitLoop();
-  }
     
-  /* flush, then process show_cb and startfocus */
-  iDialogAfterShow(ih);
+  /* process flush and process show_cb */
+  iDialogAfterHide(ih);
+
+  iDialogListCheckLastVisible(was_modal);
 }
 
 
@@ -648,6 +723,12 @@ static char* iDialogGetRasterSizeAttrib(Ihandle* ih)
   return iupStrReturnIntInt(width, height, 'x');
 }
 
+static int iDialogSetNActiveAttrib(Ihandle* ih, const char* value)
+{
+  iupdrvSetActive(ih, iupStrBoolean(value));
+  return 0;
+}
+
 static int iDialogSetVisibleAttrib(Ihandle* ih, const char* value)
 {
   if (iupStrBoolean(value))
@@ -659,7 +740,7 @@ static int iDialogSetVisibleAttrib(Ihandle* ih, const char* value)
 
 void iupDialogUpdatePosition(Ihandle* ih)
 {
-  /* This funtion is used only by pre-defined popup native dialogs */
+  /* This function is used only by pre-defined popup native dialogs */
 
   int x = iupAttribGetInt(ih, "_IUPDLG_X");
   int y = iupAttribGetInt(ih, "_IUPDLG_Y");
@@ -678,8 +759,16 @@ void iupDialogGetDecorSize(Ihandle* ih, int *decorwidth, int *decorheight)
   int border, caption, menu;
   iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
 
-  *decorwidth = 2*border;
-  *decorheight = 2*border + caption + menu;
+  if (iupAttribGetBoolean(ih, "CUSTOMFRAMEEX"))
+  {
+    *decorwidth = 0;
+    *decorheight = 0;
+  }
+  else
+  {
+    *decorwidth = 2 * border;
+    *decorheight = 2 * border + caption + menu;
+  }
 }
 
 static int iDialogSetHideTaskbarAttrib(Ihandle *ih, const char *value)
@@ -709,7 +798,6 @@ static char* iDialogGetXAttrib(Ihandle *ih)
 {
   int x = 0;
   iupdrvDialogGetPosition(ih, NULL, &x, NULL);
-  iupdrvAddScreenOffset(&x, NULL, -1);
   return iupStrReturnInt(x);
 }
 
@@ -717,7 +805,6 @@ static char* iDialogGetYAttrib(Ihandle *ih)
 {
   int y = 0;
   iupdrvDialogGetPosition(ih, NULL, NULL, &y);
-  iupdrvAddScreenOffset(NULL, &y, -1);
   return iupStrReturnInt(y);
 }
 
@@ -725,7 +812,6 @@ static char* iDialogGetScreenPositionAttrib(Ihandle *ih)
 {
   int x = 0, y = 0;
   iupdrvDialogGetPosition(ih, NULL, &x, &y);
-  iupdrvAddScreenOffset(&x, &y, -1);
   return iupStrReturnIntInt(x, y, ',');
 }
 
@@ -795,7 +881,7 @@ Iclass* iupDialogNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name = "dialog";
-  ic->format = "h"; /* one ihandle */
+  ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPEDIALOG;
   ic->childtype = IUP_CHILDMANY+1;  /* one child */
   ic->is_interactive = 1;
@@ -829,8 +915,14 @@ Iclass* iupDialogNewClass(void)
   /* Base Container */
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
+  /* Native Container */
+  iupClassRegisterAttribute(ic, "CHILDOFFSET", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+
   /* Visual */
   iupBaseRegisterVisualAttrib(ic);
+
+  /* Dialog only */
+  iupClassRegisterAttribute(ic, "NACTIVE", iupBaseGetActiveAttrib, iDialogSetNActiveAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_DEFAULT | IUPAF_NO_INHERIT);
 
   /* Drag&Drop */
   iupdrvRegisterDragDropAttrib(ic);
@@ -853,6 +945,7 @@ Iclass* iupDialogNewClass(void)
   iupClassRegisterAttribute(ic, "MINBOX", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "RESIZE", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "BORDER", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "BORDERSIZE", iDialogGetBorderSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY | IUPAF_NO_INHERIT);
   
   iupClassRegisterAttribute(ic, "DEFAULTENTER", NULL, NULL, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DEFAULTESC",   NULL, NULL, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);

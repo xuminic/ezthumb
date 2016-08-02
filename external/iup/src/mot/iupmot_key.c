@@ -238,7 +238,7 @@ int iupmotKeyDecode(XKeyEvent *evt)
 
 KeySym iupmotKeyCharToKeySym(char c)
 {
-  if (c < 128)
+  if (c > 0)
     return (KeySym)c;
   return 0;
 }

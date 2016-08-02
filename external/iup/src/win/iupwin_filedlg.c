@@ -97,6 +97,8 @@ static void winFileDlgGetFolder(Ihandle *ih)
   TCHAR filename[MAX_PATH];
   LPITEMIDLIST selecteditem;
 
+  /* if NOT set will NOT be Modal */
+  /* anyway it will be modal only relative to its parent */
   if (!parent)
     parent = GetActiveWindow();
 
@@ -292,29 +294,31 @@ static UINT_PTR CALLBACK winFileDlgSimpleHook(HWND hWnd, UINT uiMsg, WPARAM wPar
 
 static void winFileDlgSetPreviewCanvasPos(HWND hWnd, HWND hWndPreview)
 {
-  int height, width, ypos, xpos;
+  int height, width, y, x;
   RECT rect, dlgrect;
-  HWND hWndFileList = GetDlgItem(GetParent(hWnd), 0x0471);
-  HWND hWndFileCombo = GetDlgItem(GetParent(hWnd), 0x047C);
+  HWND hWndFileList = GetDlgItem(GetParent(hWnd), 0x0471);       /* path combo list with edit box (cmb2) */
+  HWND hWndFileCombo = GetDlgItem(GetParent(hWnd), 0x047C); /* file name combo list with edit box (cmb13) */
+
+  /* NOTE: it could be positioned only bellow the default controls */
 
   /* GetWindowRect return screen coordinates, must convert to parent's client coordinates */
   GetWindowRect(hWnd, &dlgrect);
 
   GetWindowRect(hWndPreview, &rect);
-  ypos = rect.top - dlgrect.top;   /* keep the same vertical position, at first time this is 0 */
-  height = rect.bottom-rect.top;   /* keep the same height */
+  y = rect.top - dlgrect.top;   /* at first time this is 0, else use system positioned value (not the same as RC) */
+  height = rect.bottom - rect.top; /* keep the same height */
+
+  /* position the child window that contains the template, must have room for the preview canvas */
+  if (y) /* first time does nothing */
+    SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, (dlgrect.right - dlgrect.left), (dlgrect.bottom - dlgrect.top), SWP_NOMOVE | SWP_NOZORDER);
 
   GetWindowRect(hWndFileList, &rect);
-  xpos = rect.left - dlgrect.left;   /* horizontally align with file list at left */
+  x = rect.left - dlgrect.left;   /* horizontally align with file list at left */
 
   GetWindowRect(hWndFileCombo, &rect);
-  width = (rect.right - dlgrect.left) - xpos;  /* set size to align with file combo at right */
+  width = (rect.right - dlgrect.left) - x;  /* set size to align with file combo at right */
 
-  /* also position the child window that contains the template, must have room for the preview canvas */
-  if (ypos) /* first time does nothing */
-    SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, (rect.right - dlgrect.left), (dlgrect.bottom - dlgrect.top), SWP_NOMOVE|SWP_NOZORDER);
-
-  SetWindowPos(hWndPreview, HWND_TOP, xpos, ypos, width, height, SWP_NOZORDER);
+  SetWindowPos(hWndPreview, HWND_TOP, x, y, width, height, SWP_NOZORDER);
 }
 
 static void winFileDlgUpdatePreviewGLCanvas(Ihandle* ih)
@@ -370,6 +374,8 @@ static UINT_PTR CALLBACK winFileDlgPreviewHook(HWND hWnd, UINT uiMsg, WPARAM wPa
         IFnss cb = (IFnss)IupGetCallback(ih, "FILE_CB");
         TCHAR filename[IUP_MAX_FILENAME_SIZE];
         iupAttribSet(ih, "PREVIEWDC", (char*)lpDrawItem->hDC);
+        iupAttribSet(ih, "HDC_WMPAINT", (char*)lpDrawItem->hDC);
+
         if (winFileDlgGetSelectedFile(ih, hWnd, filename))
         {
           if (winIsFile(filename))
@@ -380,6 +386,7 @@ static UINT_PTR CALLBACK winFileDlgPreviewHook(HWND hWnd, UINT uiMsg, WPARAM wPa
         else
           cb(ih, NULL, "PAINT");
         iupAttribSet(ih, "PREVIEWDC", NULL);
+        iupAttribSet(ih, "HDC_WMPAINT", NULL);
       }
       break;
     }
@@ -442,7 +449,7 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
   InativeHandle* parent = iupDialogGetNativeParent(ih);
   OPENFILENAME openfilename;
   int result, dialogtype;
-  char *value, *dir=NULL;
+  char *value, *initial_dir=NULL;
   TCHAR* extfilter = NULL;
 
   iupAttribSetInt(ih, "_IUPDLG_X", x);   /* used in iupDialogUpdatePosition */
@@ -462,9 +469,10 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
     return IUP_NOERROR;
   }
 
+  /* if NOT set will NOT be Modal */
+  /* anyway it will be modal only relative to its parent */
   if (!parent)
-    parent = GetActiveWindow();  /* if NOT set will NOT be Modal */
-                                 /* anyway it will be modal only relative to its parent */
+    parent = GetActiveWindow();
 
   ZeroMemory(&openfilename, sizeof(OPENFILENAME));
   openfilename.lStructSize = sizeof(OPENFILENAME);
@@ -522,8 +530,11 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
 
   openfilename.nMaxFile = IUP_MAX_FILENAME_SIZE;
 
-  dir = iupStrDup(iupAttribGet(ih, "DIRECTORY"));
-  openfilename.lpstrInitialDir = iupwinStrToSystemFilename(dir);
+  /* only supports extensions with up to three characters, should NOT include the period */
+  openfilename.lpstrDefExt = iupwinStrToSystem(iupAttribGet(ih, "EXTDEFAULT"));
+
+  initial_dir = iupStrDup(iupAttribGet(ih, "DIRECTORY"));
+  openfilename.lpstrInitialDir = iupwinStrToSystemFilename(initial_dir);
   if (openfilename.lpstrInitialDir)
     winFileDlgStrReplacePathSlash((TCHAR*)openfilename.lpstrInitialDir);
 
@@ -577,25 +588,56 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
 
   if (result)
   {
-    char* dir = iupStrFileGetPath(iupwinStrFromSystemFilename(openfilename.lpstrFile));
-    iupAttribSetStr(ih, "DIRECTORY", dir);
-    free(dir);
-
     if (iupAttribGetBoolean(ih, "MULTIPLEFILES"))
     {
-      int i = 0;
-
       /* If there is more than one file, replace terminator by the separator */
       if (openfilename.lpstrFile[openfilename.nFileOffset-1] == 0 && 
           openfilename.nFileOffset>0) 
       {
-        while (openfilename.lpstrFile[i] != 0 || openfilename.lpstrFile[i+1] != 0)
+        int i = 0;
+        int count = 0;
+
+        char* dir = iupwinStrFromSystemFilename(openfilename.lpstrFile);  /* already is the directory, but without the last separator */
+        iupAttribSetStrf(ih, "DIRECTORY", "%s\\", dir);  /* add the last separator */
+
+        /* first the path */
+        iupAttribSetStrId(ih, "MULTIVALUE", count, iupAttribGet(ih, "DIRECTORY"));  /* here count=0 always */
+        count++;
+
+        while (openfilename.lpstrFile[i] != 0 || openfilename.lpstrFile[i + 1] != 0)
         {
-          if (openfilename.lpstrFile[i]==0)
+          if (openfilename.lpstrFile[i] == 0)
+          {
+            iupAttribSetStrId(ih, "MULTIVALUE", count, iupwinStrFromSystemFilename(openfilename.lpstrFile + i + 1));
+            count++;
+
             openfilename.lpstrFile[i] = TEXT('|');
+          }
+
           i++;
         }
-        openfilename.lpstrFile[i] = TEXT('|');
+
+        iupAttribSetInt(ih, "MULTIVALUECOUNT", count);
+        openfilename.lpstrFile[i] = TEXT('|');  /* one last at the end */
+
+        iupAttribSetStr(ih, "VALUE", iupwinStrFromSystemFilename(openfilename.lpstrFile));  /* here file was already modified to match the IUP format */
+      }
+      else
+      {
+        /* if there is only one file selected the returned value is different 
+           and includes just that file */
+        char* filename = iupwinStrFromSystemFilename(openfilename.lpstrFile);
+        char* dir = iupStrFileGetPath(filename);
+        int dir_len = (int)strlen(dir);
+        iupAttribSetStr(ih, "DIRECTORY", dir);
+
+        iupAttribSetStrId(ih, "MULTIVALUE", 0, dir);
+        iupAttribSetStrId(ih, "MULTIVALUE", 1, filename + dir_len);
+
+        iupAttribSetStr(ih, "VALUE", filename);  /* here value is not separated by '|' */
+
+        iupAttribSetInt(ih, "MULTIVALUECOUNT", 2);
+        free(dir);
       }
 
       iupAttribSet(ih, "STATUS", "0");
@@ -603,6 +645,11 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
     }
     else
     {
+      char* filename = iupwinStrFromSystemFilename(openfilename.lpstrFile);
+      char* dir = iupStrFileGetPath(filename);
+      iupAttribSetStr(ih, "DIRECTORY", dir);
+      free(dir);
+
       if (winIsFile(openfilename.lpstrFile))  /* check if file exists */
       {
         iupAttribSet(ih, "FILEEXIST", "YES");
@@ -613,9 +660,10 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
         iupAttribSet(ih, "FILEEXIST", "NO");
         iupAttribSet(ih, "STATUS", "1");
       }
+
+      iupAttribSetStr(ih, "VALUE", filename);
     }
 
-    iupAttribSetStr(ih, "VALUE", iupwinStrFromSystemFilename(openfilename.lpstrFile));
     iupAttribSetInt(ih, "FILTERUSED", (int)openfilename.nFilterIndex);
   }
   else
@@ -628,7 +676,7 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
   }
 
   if (extfilter) free(extfilter);
-  if (dir) free(dir);
+  if (initial_dir) free(initial_dir);
   if (openfilename.lpstrFile) free(openfilename.lpstrFile);
 
   return IUP_NOERROR;
@@ -638,9 +686,11 @@ void iupdrvFileDlgInitClass(Iclass* ic)
 {
   ic->DlgPopup = winFileDlgPopup;
 
+  iupClassRegisterAttribute(ic, "EXTDEFAULT", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MULTIPLEFILES", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+
   /* IupFileDialog Windows and GTK Only */
   iupClassRegisterAttribute(ic, "EXTFILTER", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTERINFO", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTERUSED", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "MULTIPLEFILES", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

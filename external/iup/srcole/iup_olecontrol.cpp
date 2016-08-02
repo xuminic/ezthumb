@@ -205,9 +205,11 @@ int IupOleControlOpen(void)
   if (IupGetGlobal("_IUP_OLECONTROL_OPEN"))
     return IUP_OPENED;
 
-  HRESULT retval = OleInitialize(NULL);
-  if (retval != S_OK && retval != S_FALSE)
-    return IUP_ERROR;
+  if (!IupGetGlobal("_IUPWIN_OLEINITIALIZE"))
+  {
+    OleInitialize(NULL);
+    IupSetGlobal("_IUPWIN_OLEINITIALIZE", "1");
+  }
 
   iupRegisterClass(iOleControlNewClass());
 

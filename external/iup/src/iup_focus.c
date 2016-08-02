@@ -276,7 +276,7 @@ void iupCallKillFocusCb(Ihandle *ih)
   cb = IupGetCallback(ih, "KILLFOCUS_CB");
   if (cb) cb(ih);
 
-  if (ih->iclass->nativetype == IUP_TYPECANVAS)
+  if (iupObjectCheck(ih) && ih->iclass->nativetype == IUP_TYPECANVAS)
   {
     IFni cb2 = (IFni)IupGetCallback(ih, "FOCUS_CB");
     if (cb2) cb2(ih, 0);

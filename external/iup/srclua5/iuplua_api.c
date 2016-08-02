@@ -94,27 +94,30 @@ static int GetAttributeData (lua_State *L)
   return 1;
 }
 
-static int GetAttribute (lua_State *L)
+static void iuplua_pushvalue(lua_State *L, Ihandle *ih, const char* name, const char* value)
 {
-  Ihandle *ih = iuplua_checkihandle(L,1);
-  const char *name = luaL_checkstring(L,2);
-  const char *value = IupGetAttribute(ih, name);
   if (!value || iupATTRIB_ISINTERNAL(name))
     lua_pushnil(L);
   else
   {
     if (iupAttribIsNotString(ih, name))
     {
-      if (ih->handle == (InativeHandle*)value) /* work around for WID, sometimes WID in Windows is not a valid pointer. Why? */
-        iuplua_pushihandle(L, ih);
-      else if (iupObjectCheck((Ihandle*)value))
+      if (iupAttribIsIhandle(ih, name))
         iuplua_pushihandle(L, (Ihandle*)value);
       else
         lua_pushlightuserdata(L, (void*)value);
     }
-    else
-      lua_pushstring(L,value);
+    else /* if (!lua_stringtonumber(L, value)) -- TODO: is this worth it? valid since Lua 5.3 */
+      lua_pushstring(L, value);
   }
+}
+
+static int GetAttribute (lua_State *L)
+{
+  Ihandle *ih = iuplua_checkihandle(L,1);
+  const char *name = luaL_checkstring(L,2);
+  const char *value = IupGetAttribute(ih, name);
+  iuplua_pushvalue(L, ih, name, value);
   return 1;
 }
 
@@ -122,24 +125,9 @@ static int GetAttributeId(lua_State *L)
 {
   Ihandle *ih = iuplua_checkihandle(L,1);
   const char *name = luaL_checkstring(L,2);
-  int id = luaL_checkint(L,3);
+  int id = (int)luaL_checkinteger(L,3);
   const char *value = IupGetAttributeId(ih, name, id);
-  if (!value || iupATTRIB_ISINTERNAL(name))
-    lua_pushnil(L);
-  else
-  {
-    if (iupAttribIsNotString(ih, name))
-    {
-      if (ih->handle == (InativeHandle*)value) /* work around for WID, sometimes WID in Windows is not a valid pointer. Why? */
-        iuplua_pushihandle(L, ih);
-      else if (iupObjectCheck((Ihandle*)value))
-        iuplua_pushihandle(L, (Ihandle*)value);
-      else
-        lua_pushlightuserdata(L, (void*)value);
-    }
-    else
-      lua_pushstring(L,value);
-  }
+  iuplua_pushvalue(L, ih, name, value);
   return 1;
 }
 
@@ -147,25 +135,10 @@ static int GetAttributeId2(lua_State *L)
 {
   Ihandle *ih = iuplua_checkihandle(L,1);
   const char *name = luaL_checkstring(L,2);
-  int lin = luaL_checkint(L,3);
-  int col = luaL_checkint(L,4);
+  int lin = (int)luaL_checkinteger(L,3);
+  int col = (int)luaL_checkinteger(L,4);
   const char *value = IupGetAttributeId2(ih, name, lin, col);
-  if (!value || iupATTRIB_ISINTERNAL(name))
-    lua_pushnil(L);
-  else
-  {
-    if (iupAttribIsNotString(ih, name))
-    {
-      if (ih->handle == (InativeHandle*)value) /* work around for WID, sometimes WID in Windows is not a valid pointer. Why? */
-        iuplua_pushihandle(L, ih);
-      else if (iupObjectCheck((Ihandle*)value))
-        iuplua_pushihandle(L, (Ihandle*)value);
-      else
-        lua_pushlightuserdata(L, (void*)value);
-    }
-    else
-      lua_pushstring(L,value);
-  }
+  iuplua_pushvalue(L, ih, name, value);
   return 1;
 }
 
@@ -179,7 +152,7 @@ static int GetAttributes(lua_State *L)
 
 static int GetAllDialogs(lua_State *L)
 {
-  int n, i, max_n = luaL_optinteger(L, 1, 0);
+  int n, i, max_n = (int)luaL_optinteger(L, 1, 0);
   char **names;
   if (!max_n) max_n = IupGetAllDialogs(NULL, 0);
   names = (char **) malloc (max_n * sizeof(char *));
@@ -198,7 +171,7 @@ static int GetAllDialogs(lua_State *L)
 
 static int GetAllNames(lua_State *L)
 {
-  int n, i, max_n = luaL_optinteger(L, 1, 0);
+  int n, i, max_n = (int)luaL_optinteger(L, 1, 0);
   char **names;
   if (!max_n) max_n = IupGetAllNames(NULL, 0);
   names = (char **) malloc (max_n * sizeof(char *));
@@ -217,7 +190,7 @@ static int GetAllNames(lua_State *L)
 
 static int GetAllAttributes(lua_State *L)
 {
-  int n, i, max_n = luaL_optinteger(L, 1, 0);
+  int n, i, max_n = (int)luaL_optinteger(L, 2, 0);
   char **names;
   if (!max_n) max_n = IupGetAllAttributes(iuplua_checkihandle(L,1), NULL, 0);
   names = (char **) malloc (max_n * sizeof(char *));
@@ -236,7 +209,7 @@ static int GetAllAttributes(lua_State *L)
 
 static int GetAllClasses(lua_State *L)
 {
-  int n, i, max_n = luaL_optinteger(L, 1, 0);
+  int n, i, max_n = (int)luaL_optinteger(L, 1, 0);
   char **names;
   if (!max_n) max_n = IupGetAllClasses(NULL, 0);
   names = (char **) malloc (max_n * sizeof(char *));
@@ -262,7 +235,7 @@ static int GetAllClasses(lua_State *L)
 
 static int GetClassAttributes(lua_State *L)
 {
-  int n, i, max_n = luaL_optinteger(L, 1, 0);
+  int n, i, max_n = (int)luaL_optinteger(L, 1, 0);
   char **names;
   if (!max_n) max_n = IupGetClassAttributes(luaL_checkstring(L,1), NULL, 0);
   names = (char **) malloc (max_n * sizeof(char *));
@@ -288,7 +261,7 @@ static int GetClassAttributes(lua_State *L)
 
 static int GetClassCallbacks(lua_State *L)
 {
-  int n, i, max_n = luaL_optinteger(L, 1, 0);
+  int n, i, max_n = (int)luaL_optinteger(L, 1, 0);
   char **names;
   if (!max_n) max_n = IupGetClassCallbacks(luaL_checkstring(L,1), NULL, 0);
   names = (char **) malloc (max_n * sizeof(char *));
@@ -416,6 +389,14 @@ static int Help(lua_State *L)
   return 0;
 }
 
+static int Execute(lua_State *L)
+{
+  const char *filename = luaL_checkstring(L, 1);
+  const char *parameters = luaL_optstring(L, 2, NULL);
+  IupExecute(filename, parameters);
+  return 0;
+}
+
 static int Hide(lua_State *L)
 {
   Ihandle *ih = iuplua_checkihandle(L,1);
@@ -431,7 +412,7 @@ static int PlayInput(lua_State *L)
 
 static int RecordInput(lua_State *L)
 {
-  lua_pushinteger(L, IupRecordInput(luaL_optstring(L,1,NULL), luaL_optinteger(L, 2, 0)));
+  lua_pushinteger(L, IupRecordInput(luaL_optstring(L, 1, NULL), (int)luaL_optinteger(L, 2, 0)));
   return 1;
 }
 
@@ -496,14 +477,6 @@ static int Unmap(lua_State *L)
   return 0;
 }
 
-static int MapFont(lua_State *L)
-{
-  const char *font = luaL_checkstring(L,1);
-  const char *nfont = IupMapFont(font);
-  lua_pushstring(L, nfont);
-  return 1;
-}
-
 static int Message(lua_State *L)
 {
   const char *title = luaL_checkstring(L,1);
@@ -525,23 +498,23 @@ static int Alarm(lua_State *L)
 
 static int ListDialog(lua_State *L)
 {
-  int type = luaL_checkint(L,1);
-  int size = luaL_checkint(L,3);
+  int type = (int)luaL_checkinteger(L,1);
+  int size = (int)luaL_checkinteger(L,3);
   char** list = iuplua_checkstring_array(L, 4, size);
   int* marks = lua_isnoneornil(L, 8)? NULL: iuplua_checkint_array(L,8,0);
   int i, ret;
 
   if (!marks && type==2)
-    luaL_argerror(L, 9, "invalid marks, must not be nil.");
+    luaL_argerror(L, 9, "Invalid marks, must not be nil.");
   if (marks && type==2 && size != iuplua_getn(L, 8))
-    luaL_argerror(L, 9, "invalid number of elements in the marks.");
+    luaL_argerror(L, 9, "Invalid number of elements in the marks.");
 
   ret = IupListDialog(type, luaL_checkstring(L, 2), 
                             size, 
                             list, 
-                            luaL_checkint(L, 5), 
-                            luaL_checkint(L, 6), 
-                            luaL_checkint(L, 7), 
+                            (int)luaL_checkinteger(L, 5), 
+                            (int)luaL_checkinteger(L, 6),
+                            (int)luaL_checkinteger(L, 7),
                             marks);
 
   if (marks && type==2 && ret!=-1)
@@ -564,15 +537,19 @@ static int ListDialog(lua_State *L)
 
 static int GetText(lua_State *L)
 {
-  char buffer[10240];
+  char* buffer;
   const char *title = luaL_checkstring(L,1);
   const char *text = luaL_checkstring(L,2);
-  iupStrCopyN(buffer, 10240, text);
-  if (IupGetText(title, buffer))
+  int maxsize = (int)luaL_optinteger(L, 3, 10240);
+  buffer = malloc(maxsize+1);
+  iupStrCopyN(buffer, maxsize, text);
+  if (IupGetText(title, buffer, maxsize))
   {
     lua_pushstring(L, buffer);
+    free(buffer);
     return 1;
   }
+  free(buffer);
   return 0;
 }
 
@@ -587,7 +564,7 @@ static int NextField(lua_State *L)
 static int PreviousField(lua_State *L)
 {
   Ihandle *h1 = iuplua_checkihandle(L,1);
-  Ihandle *h2 = IupNextField(h1);
+  Ihandle *h2 = IupPreviousField(h1);
   iuplua_pushihandle(L,h2);
   return 1;
 }
@@ -595,85 +572,85 @@ static int PreviousField(lua_State *L)
 static int Popup(lua_State *L)
 {
   Ihandle *ih = iuplua_checkihandle(L,1);
-  int x = luaL_optint(L,2, IUP_CURRENT);
-  int y = luaL_optint(L,3, IUP_CURRENT);
+  int x = (int)luaL_optinteger(L, 2, IUP_CURRENT);
+  int y = (int)luaL_optinteger(L, 3, IUP_CURRENT);
   lua_pushinteger(L,IupPopup(ih,x,y));
   return 1;
 }
 
 static int cf_isprint(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
-  lua_pushinteger(L, iup_isprint(value));
+  int value = (int)luaL_checkinteger(L, 1);
+  lua_pushboolean(L, iup_isprint(value));
   return 1;
 }
 
 static int cf_isxkey(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushboolean(L, iup_isXkey(value));
   return 1;
 }
 
 static int cf_isShiftXkey(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushboolean(L, iup_isShiftXkey(value));
   return 1;
 }
 
 static int cf_isCtrlXkey(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushboolean(L, iup_isCtrlXkey(value));
   return 1;
 }
 
 static int cf_isAltXkey(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushboolean(L, iup_isAltXkey(value));
   return 1;
 }
 
 static int cf_isSysXkey(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushboolean(L, iup_isSysXkey(value));
   return 1;
 }
 
 static int cf_XkeyShift(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushinteger(L, iup_XkeyShift(value));
   return 1;
 }
 
 static int cf_XkeyCtrl(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushinteger(L, iup_XkeyCtrl(value));
   return 1;
 }
 
 static int cf_XkeyAlt(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushinteger(L, iup_XkeyAlt(value));
   return 1;
 }
 
 static int cf_XkeySys(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushinteger(L, iup_XkeySys(value));
   return 1;
 }
 
 static int cf_XkeyBase(lua_State *L)
 {
-  int value = luaL_checkint(L, 1);
+  int value = (int)luaL_checkinteger(L, 1);
   lua_pushinteger(L, iup_XkeyBase(value));
   return 1;
 }
@@ -774,7 +751,7 @@ static int GetNextChild(lua_State *L)
 static int GetChild(lua_State *L)
 {
   Ihandle* ih = iuplua_checkihandle(L,1);
-  int pos = luaL_checkint(L,2);
+  int pos = (int)luaL_checkinteger(L,2);
   Ihandle* child = IupGetChild(ih, pos);
   iuplua_pushihandle(L, child);
   return 1;
@@ -820,14 +797,14 @@ static int ElementPropertiesDialog(lua_State *L)
 
 static int ConvertXYToPos(lua_State *L)
 {
-  lua_pushinteger(L, IupConvertXYToPos(iuplua_checkihandle(L,1), luaL_checkint(L, 2), luaL_checkint(L, 3)));
+  lua_pushinteger(L, IupConvertXYToPos(iuplua_checkihandle(L, 1), (int)luaL_checkinteger(L, 2), (int)luaL_checkinteger(L, 3)));
   return 1;
 }
 
 static int TextConvertLinColToPos(lua_State *L)
 {
   int pos;
-  IupTextConvertLinColToPos(iuplua_checkihandle(L,1), luaL_checkint(L, 2), luaL_checkint(L, 3), &pos);
+  IupTextConvertLinColToPos(iuplua_checkihandle(L, 1), (int)luaL_checkinteger(L, 2), (int)luaL_checkinteger(L, 3), &pos);
   lua_pushinteger(L, pos);
   return 1;
 }
@@ -835,7 +812,7 @@ static int TextConvertLinColToPos(lua_State *L)
 static int TextConvertPosToLinCol(lua_State *L)
 {
   int lin, col;
-  IupTextConvertPosToLinCol(iuplua_checkihandle(L,1), luaL_checkint(L, 2), &lin, &col);
+  IupTextConvertPosToLinCol(iuplua_checkihandle(L, 1), (int)luaL_checkinteger(L, 2), &lin, &col);
   lua_pushinteger(L, lin);
   lua_pushinteger(L, col);
   return 2;
@@ -940,15 +917,15 @@ static int UpdateChildren (lua_State *L)
 
 static int Redraw(lua_State *L)
 {
-  IupRedraw(iuplua_checkihandle(L,1), luaL_checkint(L, 2));
+  IupRedraw(iuplua_checkihandle(L, 1), (int)luaL_checkinteger(L, 2));
   return 0;
 }
 
 static int ShowXY(lua_State *L)
 {
   Ihandle *ih = iuplua_checkihandle(L,1);
-  int x = luaL_optint(L,2, IUP_CURRENT);
-  int y = luaL_optint(L,3, IUP_CURRENT);
+  int x = (int)luaL_optinteger(L, 2, IUP_CURRENT);
+  int y = (int)luaL_optinteger(L, 3, IUP_CURRENT);
   lua_pushinteger(L, IupShowXY(ih,x,y));
   return 1;
 }
@@ -961,78 +938,62 @@ static int ResetAttribute(lua_State *L)
   return 0;
 }
 
-static int StoreAttribute(lua_State *L)
+static const char* iuplua_checkvalue(lua_State *L, int pos, int *store)
 {
-  Ihandle *ih = iuplua_checkihandle(L,1);
-  const char *a = luaL_checkstring(L,2);
-
-  if (lua_isnil(L,3)) 
-    IupSetAttribute(ih,a,NULL);
-  else 
+  *store = 0;
+  if (lua_isnil(L, pos))
+    return NULL;
+  else
   {
-    const char *v;
-    if(lua_isuserdata(L,3)) 
+    if (lua_isuserdata(L, pos))
+      return (const char*)lua_touserdata(L, pos);
+    else
     {
-      v = lua_touserdata(L,3);
-      IupSetAttribute(ih,a,v);
-    }
-    else 
-    {
-      v = luaL_checkstring(L,3);
-      IupStoreAttribute(ih,a,v);
+      *store = 1;
+      return luaL_checkstring(L, pos);
     }
   }
+}
+
+static int StoreAttribute(lua_State *L)
+{
+  int store;
+  Ihandle *ih = iuplua_checkihandle(L, 1);
+  const char *a = luaL_checkstring(L,2);
+  const char* v = iuplua_checkvalue(L, 3, &store);
+  if (store) 
+    IupStoreAttribute(ih, a, v);
+  else 
+    IupSetAttribute(ih,a,v);
   return 0;
 }
 
 static int StoreAttributeId(lua_State *L)
 {
+  int store;
   Ihandle *ih = iuplua_checkihandle(L,1);
   const char *a = luaL_checkstring(L,2);
-  int id = luaL_checkint(L,3);
-
-  if (lua_isnil(L,4)) 
-    IupSetAttributeId(ih,a,id,NULL);
-  else 
-  {
-    const char *v;
-    if(lua_isuserdata(L,4)) 
-    {
-      v = lua_touserdata(L,4);
-      IupSetAttributeId(ih,a,id,v);
-    }
-    else 
-    {
-      v = luaL_checkstring(L,4);
-      IupStoreAttributeId(ih,a,id,v);
-    }
-  }
+  int id = (int)luaL_checkinteger(L,3);
+  const char* v = iuplua_checkvalue(L, 4, &store);
+  if (store)
+    IupStoreAttributeId(ih, a, id, v);
+  else
+    IupSetAttributeId(ih, a, id, v);
   return 0;
 }
 
 static int StoreAttributeId2(lua_State *L)
 {
-  Ihandle *ih = iuplua_checkihandle(L,1);
+  int store;
+  Ihandle *ih = iuplua_checkihandle(L, 1);
   const char *a = luaL_checkstring(L,2);
-  int lin = luaL_checkint(L,3);
-  int col = luaL_checkint(L,4);
-
-  if (lua_isnil(L,5)) 
-    IupSetAttributeId2(ih,a,lin,col,NULL);
-  else 
-  {
-    const char *v;
-    if(lua_isuserdata(L,5)) 
-    {
-      v = lua_touserdata(L,5);
-      IupSetAttributeId2(ih,a,lin,col,v);
-    }
-    else 
-    {
-      v = luaL_checkstring(L,5);
-      IupStoreAttributeId2(ih,a,lin,col,v);
-    }
-  }
+  int lin = (int)luaL_checkinteger(L,3);
+  int col = (int)luaL_checkinteger(L,4);
+  const char* v = iuplua_checkvalue(L, 5, &store);
+  if (store)
+    IupStoreAttributeId2(ih, a, lin, col, v);
+  else
+    IupSetAttributeId2(ih, a, lin, col, v);
   return 0;
 }
 
@@ -1043,15 +1004,6 @@ static int StoreGlobal(lua_State *L)
   IupStoreGlobal(a,v);
   return 0;
 }
-
-static int UnMapFont (lua_State *L)
-{
-  const char *s = luaL_checkstring(L,1);
-  const char *n = IupUnMapFont(s);
-  lua_pushstring(L,n);
-  return 1;
-}
-
 
 /*****************************************************************************
 * iupluaapi_open                                                               *
@@ -1091,6 +1043,7 @@ void iupluaapi_open(lua_State * L)
     {"GetLanguage", GetLanguage},
     {"GetName", GetName},
     {"Help", Help},
+    {"Execute", Execute},
     {"Hide", Hide},
     {"Load", Load},
     {"LoadBuffer", LoadBuffer},
@@ -1103,7 +1056,6 @@ void iupluaapi_open(lua_State * L)
     {"MainLoopLevel", MainLoopLevel},
     {"Map", Map},
     {"Unmap", Unmap},
-    {"MapFont", MapFont},
     {"Message", Message},
     {"Alarm", Alarm},  
     {"ListDialog", ListDialog},
@@ -1151,7 +1103,6 @@ void iupluaapi_open(lua_State * L)
     {"ShowXY", ShowXY},
     {"StoreAttribute", StoreAttribute},
     {"StoreGlobal", StoreGlobal},
-    {"UnMapFont", UnMapFont},
     {"Scanf", iupluaScanf},
     {"isprint", cf_isprint},
     {"isxkey", cf_isxkey},
@@ -1177,9 +1128,6 @@ void iupluaapi_open(lua_State * L)
     {NULL, NULL},
   };
 
-  /* "iup" table is at the top of the stack */
-  luaL_register(L, NULL, funcs);
+  /* iup table is already at the top of the stack */
+  iuplua_register_funcs(L, funcs);
 }
-
-
-Ihandle*  IupGetChild     (Ihandle* ih, int pos);

@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 #include "csc_cli_private.h"
 
 

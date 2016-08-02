@@ -59,12 +59,12 @@ void iupmotDisableDragSource(Widget w)
 static void motDropTransferProc(Widget dropTransfer, Ihandle* ih, Atom *selType, Atom *typeAtom,
                                 XtPointer targetData, unsigned long *length, int format)
 {
-  IFnsCiii cbDropData;
+  IFnsViii cbDropData;
 
   if(!targetData || !(*length))
     return;
 
-  cbDropData = (IFnsCiii)IupGetCallback(ih, "DROPDATA_CB");
+  cbDropData = (IFnsViii)IupGetCallback(ih, "DROPDATA_CB");
   if(cbDropData)
   {
     /* TODO should we check for incompatible targets here? */
@@ -195,7 +195,7 @@ static Boolean motDragConvertProc(Widget dragContext, Atom *selection, Atom *tar
 {
   Atom atomMotifDrop = XInternAtom(iupmot_display, "_MOTIF_DROP", False);
   Ihandle *ih = NULL;
-  IFnsCi cbDragData;
+  IFnsVi cbDragData;
   IFns cbDragDataSize;
 
   /* check if we are dealing with a drop */
@@ -204,7 +204,7 @@ static Boolean motDragConvertProc(Widget dragContext, Atom *selection, Atom *tar
 
   XtVaGetValues(dragContext, XmNclientData, &ih, NULL);
 
-  cbDragData = (IFnsCi)IupGetCallback(ih, "DRAGDATA_CB");
+  cbDragData = (IFnsVi)IupGetCallback(ih, "DRAGDATA_CB");
   cbDragDataSize = (IFns)IupGetCallback(ih, "DRAGDATASIZE_CB");
   if(cbDragData && cbDragDataSize)
   {
@@ -303,17 +303,18 @@ static Atom* motCreateTargetList(const char *value, int *count)
   int count_alloc = 10;
   Atom *targetlist = (Atom*)XtMalloc(sizeof(Atom) * count_alloc);
   char valueCopy[256];
-  char valueTemp[256];
+  char valueTemp1[256];
+  char valueTemp2[256];
 
   *count = 0;
 
   strcpy(valueCopy, value);
-  while(iupStrToStrStr(valueCopy, valueTemp, valueCopy, ',') > 0)
+  while (iupStrToStrStr(valueCopy, valueTemp1, valueTemp2, ',') > 0)
   {
-    targetlist[*count] = XInternAtom(iupmot_display, (char*)valueTemp, False);
+    targetlist[*count] = XInternAtom(iupmot_display, (char*)valueTemp1, False);
     (*count)++;
 
-    if(iupStrEqualNoCase(valueCopy, valueTemp))
+    if (iupStrEqualNoCase(valueTemp2, valueTemp1))
       break;
 
     if (*count == count_alloc)
@@ -321,6 +322,8 @@ static Atom* motCreateTargetList(const char *value, int *count)
       count_alloc += 10;
       targetlist = (Atom*)XtRealloc((char*)targetlist, sizeof(Atom) * count_alloc);
     }
+
+    strcpy(valueCopy, valueTemp2);
   }
 
   if (*count == 0)
@@ -452,9 +455,9 @@ void iupdrvRegisterDragDropAttrib(Iclass* ic)
 
   iupClassRegisterCallback(ic, "DRAGBEGIN_CB", "ii");
   iupClassRegisterCallback(ic, "DRAGDATASIZE_CB", "s");
-  iupClassRegisterCallback(ic, "DRAGDATA_CB", "sCi");
+  iupClassRegisterCallback(ic, "DRAGDATA_CB", "sVi");
   iupClassRegisterCallback(ic, "DRAGEND_CB", "i");
-  iupClassRegisterCallback(ic, "DROPDATA_CB", "sCiii");
+  iupClassRegisterCallback(ic, "DROPDATA_CB", "sViii");
   iupClassRegisterCallback(ic, "DROPMOTION_CB", "iis");
 
   iupClassRegisterAttribute(ic, "DRAGTYPES",  NULL, motSetDragTypesAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

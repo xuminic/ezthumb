@@ -27,7 +27,7 @@
 #include "iup_image.h"
 #include "iup_array.h"
 #include "iup_assert.h"
-#include "iup_draw.h"
+#include "iup_drvdraw.h"
 #include "iup_childtree.h"
 
 #include "iupwin_drv.h"
@@ -76,6 +76,24 @@ static void winTabsInitializeCloseImage(void)
   IupSetHandle("IMGCLOSEHIGH", image_close);
 }
 
+static void winTabsInitVisibleArray(Iarray* visible_array, int count)
+{
+  int old_count = iupArrayCount(visible_array);
+  if (old_count != count)
+  {
+    iupArrayRemove(visible_array, 0, old_count);
+    iupArrayAdd(visible_array, count);
+  }
+
+  /* all visible by default */
+  {
+    int pos;
+    int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
+    for (pos = 0; pos < count; pos++)
+      visible_array_array_data[pos] = 1;  
+  }
+}
+
 static Iarray* winTabsGetVisibleArray(Ihandle* ih)
 {
   Iarray* visible_array = (Iarray*)iupAttribGet(ih, "_IUPWIN_VISIBLEARRAY");
@@ -85,70 +103,102 @@ static Iarray* winTabsGetVisibleArray(Ihandle* ih)
     int count = IupGetChildCount(ih);
 
     /* create the array if does not exist */
-    visible_array = iupArrayCreate(count, sizeof(int));
+    visible_array = iupArrayCreate(50, sizeof(int));
     iupAttribSet(ih, "_IUPWIN_VISIBLEARRAY", (char*)visible_array);
 
-    iupArrayAdd(visible_array, count);
-
-    {
-      int pos;
-      int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
-      for (pos = 0; pos<count; pos++)
-        visible_array_array_data[pos] = 1;  /* all visible by default */
-    }
+    winTabsInitVisibleArray(visible_array, count);
   }
 
   return visible_array;
 }
 
-static void winTabSetVisibleArrayItem(Ihandle* ih, int pos, int visible)
+/* #define PRINT_VISIBLE_ARRAY 1 */
+#if PRINT_VISIBLE_ARRAY
+/* For debugging  */
+static void winTabsPrintVisibleArray(Ihandle* ih)
 {
   Iarray* visible_array = winTabsGetVisibleArray(ih);
+  int i, count = iupArrayCount(visible_array);
   int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
 
-  visible_array_array_data[pos] = visible;
+  for (i = 0; i < count; i++)
+    printf("%d=%d ", i, visible_array_array_data[i]);
 
-  if (!visible)
-    ih->data->has_invisible = 1;
+  printf("\n");
+}
+#endif
+
+static int winTabsHasInVisible(Iarray* visible_array)
+{
+  int i;
+  int count = iupArrayCount(visible_array);
+  int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
+
+  for (i = 0; i < count; i++)
+  {
+    if (visible_array_array_data[i] == 0)
+      return 1;
+  }
+
+  return 0;
+}
+
+static void winTabsSetVisibleArrayItem(Ihandle* ih, int pos, int visible)
+{
+  /* if set to visible and all are visible, just return */
+  if (visible && !ih->data->has_invisible)
+    return;
   else
   {
-    int i;
-    int count = iupArrayCount(visible_array);
+    Iarray* visible_array = winTabsGetVisibleArray(ih);
+    int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
 
-    for (i = 0; i < count; i++)
+    /* first invisible init array */
+    if (!visible && !ih->data->has_invisible)
     {
-      if (visible_array_array_data[i] == 0)
-        return;
+      int count = IupGetChildCount(ih);
+      winTabsInitVisibleArray(visible_array, count);
     }
 
-    ih->data->has_invisible = 0;
+    visible_array_array_data[pos] = visible;
+
+    if (!visible)
+      ih->data->has_invisible = 1;
+    else
+      ih->data->has_invisible = winTabsHasInVisible(visible_array);
   }
 }
 
-static void winTabInsertVisibleArrayItem(Ihandle* ih, int pos)
+static void winTabsInsertVisibleArrayItem(Ihandle* ih, int pos)
 {
   if (ih->data->has_invisible)
   {
     Iarray* visible_array = winTabsGetVisibleArray(ih);
     iupArrayInsert(visible_array, pos, 1);
-    winTabSetVisibleArrayItem(ih, pos, 1);
+    winTabsSetVisibleArrayItem(ih, pos, 1);
   }
 }
 
-static void winTabDeleteVisibleArrayItem(Ihandle* ih, int pos)
+static void winTabsDeleteVisibleArrayItem(Ihandle* ih, int pos)
 {
   if (ih->data->has_invisible)
   {
     Iarray* visible_array = winTabsGetVisibleArray(ih);
     iupArrayRemove(visible_array, pos, 1);
+    ih->data->has_invisible = winTabsHasInVisible(visible_array);
   }
 }
 
 static int winTabsIsTabVisible(Ihandle* ih, int pos)
 {
-  Iarray* visible_array = winTabsGetVisibleArray(ih);
-  int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
-  return visible_array_array_data[pos];
+  if (ih->data->has_invisible)
+  {
+    Iarray* visible_array = winTabsGetVisibleArray(ih);
+    int* visible_array_array_data = (int*)iupArrayGetData(visible_array);
+    return visible_array_array_data[pos];
+  }
+  else
+    return 1;
 }
 
 static int winTabsGetInsertPos(Ihandle* ih, int pos)
@@ -266,8 +316,8 @@ void iupdrvTabsSetCurrentTab(Ihandle* ih, int pos)
   int p = winTabsPosFixToWin(ih, pos);
   if (p >= 0)
   {
-    int prev_pos = iupdrvTabsGetCurrentTab(ih);
-    HWND tab_container = winTabsGetPageWindow(ih, prev_pos);
+    int curr_pos = iupdrvTabsGetCurrentTab(ih);
+    HWND tab_container = winTabsGetPageWindow(ih, curr_pos);
     if (tab_container)
       ShowWindow(tab_container, SW_HIDE);
 
@@ -306,20 +356,18 @@ static int winTabsGetImageIndex(Ihandle* ih, const char* name)
 
   bmp_array_data = iupArrayGetData(bmp_array);
 
+  /* must use this info, since image can be a driver image loaded from resources */
+  iupdrvImageGetInfo(bmp, &width, &height, &bpp);
+
   image_list = (HIMAGELIST)SendMessage(ih->handle, TCM_GETIMAGELIST, 0, 0);
   if (!image_list)
   {
-    UINT flags = ILC_COLOR32|ILC_MASK;
-
-    /* must use this info, since image can be a driver image loaded from resources */
-    iupdrvImageGetInfo(bmp, &width, &height, &bpp);
+    UINT flags = ILC_COLOR32 | (bpp == 8 ? ILC_MASK : 0);
 
     /* create the image list if does not exist */
     image_list = ImageList_Create(width, height, flags, 0, 50);
     SendMessage(ih->handle, TCM_SETIMAGELIST, 0, (LPARAM)image_list);
   }
-  else
-    iupdrvImageGetInfo(bmp, &width, &height, &bpp);
 
   /* check if that bitmap is already added to the list,
      but we can not compare with the actual bitmap at the list since it is a copy */
@@ -356,20 +404,14 @@ static void winTabSetPageWindowPos(HWND tab_container, RECT *rect)
                 SWP_NOACTIVATE|SWP_NOZORDER);
 }
 
-static void winTabsPlacePageWindows(Ihandle* ih, int w, int h)
+static void winTabsPlacePageWindows(Ihandle* ih, RECT* rect)
 {
-  RECT rect; 
   Ihandle* child;
-
-  /* Calculate the display rectangle, assuming the 
-     tab control is the size of the client area. */
-  SetRect(&rect, 0, 0, w, h); 
-  SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)&rect);
 
   for (child = ih->firstchild; child; child = child->brother)
   {
     HWND tab_container = (HWND)iupAttribGet(child, "_IUPTAB_CONTAINER");
-    winTabSetPageWindowPos(tab_container, &rect);
+    winTabSetPageWindowPos(tab_container, rect);
   }
 }
 
@@ -422,7 +464,7 @@ static LRESULT CALLBACK winTabsPageWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARA
   return DefWindowProc(hWnd, msg, wp, lp);
 }
 
-static HWND winTabCreatePageWindow(Ihandle* ih) 
+static HWND winTabsCreatePageWindow(Ihandle* ih) 
 { 
   HWND hWnd;
   DWORD dwStyle = WS_CHILD|WS_CLIPSIBLINGS, 
@@ -437,11 +479,12 @@ static HWND winTabCreatePageWindow(Ihandle* ih)
   return hWnd;
 } 
 
-static void winTabInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_container)
+static void winTabsInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_container)
 {
   TCITEM tie;
   char *tabtitle, *tabimage;
-  int old_rowcount, p;
+  int old_rowcount, old_num_tabs, p;
+  RECT rect;
 
   tabtitle = iupAttribGet(child, "TABTITLE");
   if (!tabtitle) 
@@ -460,6 +503,7 @@ static void winTabInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_cont
   if (!tabtitle && !tabimage)
     tabtitle = "     ";
 
+  old_num_tabs = (int)SendMessage(ih->handle, TCM_GETITEMCOUNT, 0, 0);
   old_rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
 
   tie.mask = TCIF_PARAM;
@@ -485,33 +529,54 @@ static void winTabInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_cont
   tie.lParam = (LPARAM)tab_container;
   SendMessage(ih->handle, TCM_INSERTITEM, p, (LPARAM)&tie);
 
+  /* Calculate the display rectangle, assuming the
+  tab control is the size of the client area. */
+  GetClientRect(ih->handle, &rect);
+  SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)&rect);
+
+  winTabSetPageWindowPos(tab_container, &rect);
+
   if (ih->data->is_multiline)
   {
     if (ih->data->type == ITABS_LEFT || ih->data->type == ITABS_RIGHT)
     {
       int rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
       if (rowcount != old_rowcount)
-      {
-        RECT rect;
-        GetClientRect(ih->handle, &rect);
-        winTabsPlacePageWindows(ih, rect.right - rect.left, rect.bottom - rect.top);
-      }
+        winTabsPlacePageWindows(ih, &rect);
     }
 
     iupdrvRedrawNow(ih);
   }
+
+  /* the first page of an empty tabs must be shown (set as current) */
+  if (old_num_tabs == 0)
+  {
+    ShowWindow(tab_container, SW_SHOW);
+    SendMessage(ih->handle, TCM_SETCURSEL, 0, 0);
+  }
+
+#if PRINT_VISIBLE_ARRAY
+  winTabsPrintVisibleArray(ih);
+#endif
 }
 
-static void winTabDeleteItem(Ihandle* ih, int p)
+static void winTabsDeleteItem(Ihandle* ih, int p, HWND tab_container)
 {
+  /* Make sure tab container is hidden */
+  ShowWindow(tab_container, SW_HIDE);
+
   SendMessage(ih->handle, TCM_DELETEITEM, p, 0);
+
+#if PRINT_VISIBLE_ARRAY
+  winTabsPrintVisibleArray(ih);
+#endif
 }
 
 /* ------------------------------------------------------------------------- */
-/* winTabs - Sets and Gets accessors                                         */
+/* winTabs - Sets and Gets Attrib                                           */
 /* ------------------------------------------------------------------------- */
 
-static int winTabsSetPaddingAttrib(Ihandle* ih, const char* value)
+static int winTabsSetTabPaddingAttrib(Ihandle* ih, const char* value)
 {
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
 
@@ -607,23 +672,25 @@ static int winTabsSetTabTitleAttrib(Ihandle* ih, int pos, const char* value)
 
 static int winTabsSetTabImageAttrib(Ihandle* ih, int pos, const char* value)
 {
+  int p;
   Ihandle* child = IupGetChild(ih, pos);
   if (child)
     iupAttribSetStr(child, "TABIMAGE", value);
 
-  if (value)
+  p = winTabsPosFixToWin(ih, pos);
+  if (p >= 0)
   {
-    int p = winTabsPosFixToWin(ih, pos);
-    if (p >= 0)
-    {
-      TCITEM tie;
+    TCITEM tie;
 
-      tie.mask = TCIF_IMAGE;
+    tie.mask = TCIF_IMAGE;
+    if (value)
       tie.iImage = winTabsGetImageIndex(ih, value);
+    else
+      tie.iImage = -1;
 
-      SendMessage(ih->handle, TCM_SETITEM, p, (LPARAM)&tie);
-    }
+    SendMessage(ih->handle, TCM_SETITEM, p, (LPARAM)&tie);
   }
+
   return 1;
 }
 
@@ -637,31 +704,32 @@ static int winTabsSetTabVisibleAttrib(Ihandle* ih, int pos, const char* value)
     {
       if (p < 0)  /* is invisible */
       {
-        HWND tab_container;
+        HWND tab_container = (HWND)iupAttribGet(child, "_IUPTAB_CONTAINER");
 
-        winTabSetVisibleArrayItem(ih, pos, 1);  /* to visible */
+        winTabsSetVisibleArrayItem(ih, pos, 1);  /* to visible */
 
-        tab_container = (HWND)iupAttribGet(child, "_IUPTAB_CONTAINER");
-        winTabInsertItem(ih, child, pos, tab_container);
+        winTabsInsertItem(ih, child, pos, tab_container);
       }
     }
     else
     {
       if (p >= 0)  /* is visible */
       {
-        iupTabsCheckCurrentTab(ih, pos);
-        winTabSetVisibleArrayItem(ih, pos, 0);  /* to invisible */
-        winTabDeleteItem(ih, p);
+        HWND tab_container = (HWND)iupAttribGet(child, "_IUPTAB_CONTAINER");
+
+        iupTabsCheckCurrentTab(ih, pos, 0);
+        winTabsSetVisibleArrayItem(ih, pos, 0);  /* to invisible */
+
+        winTabsDeleteItem(ih, p, tab_container);
       }
     }
   }
   return 0;
 }
 
-int iupdrvTabsIsTabVisible(Ihandle* child)
+int iupdrvTabsIsTabVisible(Ihandle* child, int pos)
 {
-  Ihandle* ih = IupGetParent(child);
-  int pos = IupGetChildPos(ih, child);
+  Ihandle* ih = child->parent;
   return winTabsIsTabVisible(ih, pos);
 }
 
@@ -759,13 +827,13 @@ static int winTabsWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
   {
     IFnnn cb = (IFnnn)IupGetCallback(ih, "TABCHANGE_CB");
     int prev_pos = iupdrvTabsGetCurrentTab(ih);
-    iupAttribSetInt(ih, "_IUPTABS_PREV_CHILD_POS", prev_pos);
+    iupAttribSetInt(ih, "_IUPWINTABS_PREV_CHILD_POS", prev_pos);
 
     /* save the previous handle if callback exists */
     if (cb)
     {
       Ihandle* prev_child = IupGetChild(ih, prev_pos);
-      iupAttribSet(ih, "_IUPTABS_PREV_CHILD", (char*)prev_child);
+      iupAttribSet(ih, "_IUPWINTABS_PREV_CHILD", (char*)prev_child);
     }
 
     return 0;
@@ -775,19 +843,19 @@ static int winTabsWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
   {
     IFnnn cb = (IFnnn)IupGetCallback(ih, "TABCHANGE_CB");
     int pos = iupdrvTabsGetCurrentTab(ih);
-    int prev_pos = iupAttribGetInt(ih, "_IUPTABS_PREV_CHILD_POS");
+    int prev_pos = iupAttribGetInt(ih, "_IUPWINTABS_PREV_CHILD_POS");
+
     HWND tab_container = winTabsGetPageWindow(ih, pos);
-    if (tab_container)
-      ShowWindow(tab_container, SW_SHOW);
-    tab_container = winTabsGetPageWindow(ih, prev_pos);
-    if (tab_container)
-      ShowWindow(tab_container, SW_HIDE);
+    HWND prev_tab_container = winTabsGetPageWindow(ih, prev_pos);
+
+    if (tab_container) ShowWindow(tab_container, SW_SHOW);   /* show new page, if any */
+    if (prev_tab_container) ShowWindow(prev_tab_container, SW_HIDE); /* hide previous page, if any */
 
     if (cb)
     {
       Ihandle* child = IupGetChild(ih, pos);
-      Ihandle* prev_child = (Ihandle*)iupAttribGet(ih, "_IUPTABS_PREV_CHILD");
-      iupAttribSet(ih, "_IUPTABS_PREV_CHILD", NULL);
+      Ihandle* prev_child = (Ihandle*)iupAttribGet(ih, "_IUPWINTABS_PREV_CHILD");
+      iupAttribSet(ih, "_IUPWINTABS_PREV_CHILD", NULL);
 
       /* avoid duplicate calls when a Tab is inside another Tab. */
       if (prev_child)
@@ -814,7 +882,7 @@ static int winTabsWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
       GetCursorPos(&ht.pt);
       ScreenToClient(ih->handle, &ht.pt);
       
-      p = SendMessage(ih->handle, TCM_HITTEST, 0, (LPARAM)&ht);
+      p = (int)SendMessage(ih->handle, TCM_HITTEST, 0, (LPARAM)&ht);
       if (p >= 0)
       {
         int pos = winTabsPosFixFromWin(ih, p);
@@ -834,13 +902,17 @@ static int winTabsMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
   {
   case WM_SIZE:
   {
-                WNDPROC oldProc = (WNDPROC)IupGetCallback(ih, "_IUPWIN_OLDWNDPROC_CB");
-                CallWindowProc(oldProc, ih->handle, msg, wp, lp);
+    RECT rect;
+    WNDPROC oldProc = (WNDPROC)IupGetCallback(ih, "_IUPWIN_OLDWNDPROC_CB");
+    CallWindowProc(oldProc, ih->handle, msg, wp, lp);
 
-                winTabsPlacePageWindows(ih, LOWORD(lp), HIWORD(lp));
+    SetRect(&rect, 0, 0, LOWORD(lp), HIWORD(lp));
+    SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)&rect);
 
-                *result = 0;
-                return 1;
+    winTabsPlacePageWindows(ih, &rect);
+
+    *result = 0;
+    return 1;
   }
   case WM_MOUSELEAVE:
     if (ih->data->show_close)
@@ -859,22 +931,25 @@ static int winTabsMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
       TCHITTESTINFO ht;
       int p, high_p, press_p;
 
-      ht.pt.x = (int)(short)LOWORD(lp);
-      ht.pt.y = (int)(short)HIWORD(lp);
-      p = SendMessage(ih->handle, TCM_HITTEST, 0, (LPARAM)&ht);
+      ht.pt.x = GET_X_LPARAM(lp);
+      ht.pt.y = GET_Y_LPARAM(lp);
+      p = (int)SendMessage(ih->handle, TCM_HITTEST, 0, (LPARAM)&ht);
 
       high_p = iupAttribGetInt(ih, "_IUPTABS_CLOSEHIGH");
       if (winTabsIsInsideCloseButton(ih, p))
       {
-        if (p != high_p)
+        if (high_p != p)
         {
+          /* must be called so WM_MOUSELEAVE will be called */
+          iupwinTrackMouseLeave(ih);
+
           iupAttribSetInt(ih, "_IUPTABS_CLOSEHIGH", p);
           iupdrvRedrawNow(ih);
         }
       }
       else
       {
-        if (-1 != high_p)
+        if (high_p != -1)
         {
           iupAttribSetInt(ih, "_IUPTABS_CLOSEHIGH", -1);
           iupdrvRedrawNow(ih);
@@ -895,9 +970,9 @@ static int winTabsMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
       TCHITTESTINFO ht;
       int p;
 
-      ht.pt.x = (int)(short)LOWORD(lp);
-      ht.pt.y = (int)(short)HIWORD(lp);
-      p = SendMessage(ih->handle, TCM_HITTEST, 0, (LPARAM)&ht);
+      ht.pt.x = GET_X_LPARAM(lp);
+      ht.pt.y = GET_Y_LPARAM(lp);
+      p = (int)SendMessage(ih->handle, TCM_HITTEST, 0, (LPARAM)&ht);
 
       if (p >= 0 && winTabsIsInsideCloseButton(ih, p))
       {
@@ -939,9 +1014,9 @@ static int winTabsMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
             }
             else if (ret == IUP_DEFAULT) /* hide tab and children */
             {
-              iupTabsCheckCurrentTab(ih, pos);
-              winTabSetVisibleArrayItem(ih, pos, 0);  /* to invisible */
-              winTabDeleteItem(ih, press_p);
+              iupTabsCheckCurrentTab(ih, pos, 0);
+              winTabsSetVisibleArrayItem(ih, pos, 0);  /* to invisible */
+              winTabsDeleteItem(ih, press_p, tab_container);
             }
             else if (ret == IUP_IGNORE)
             {
@@ -986,7 +1061,7 @@ static void winTabsDrawRotateText(HDC hDC, char* text, int x, int y, HFONT hFont
   oldcolor = SetTextColor(hDC, fgcolor);
 
   {
-    int len = strlen(text);
+    int len = (int)strlen(text);
     TCHAR* str = iupwinStrToSystemLen(text, &len);
     TextOut(hDC, x, y, str, len);
   }
@@ -1007,7 +1082,7 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
   HIMAGELIST image_list = (HIMAGELIST)SendMessage(ih->handle, TCM_GETIMAGELIST, 0, 0);
   int imgW = 0, imgH = 0, txtW = 0, txtH = 0, 
     bpp, style = 0, x = 0, y = 0, border = 4;
-  char *str = NULL;
+  char *str = NULL, *value = NULL;
   int high_p, press_p;
 
   tci.mask = TCIF_TEXT | TCIF_IMAGE;
@@ -1017,7 +1092,8 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
   
   if (title[0])
   {
-    str = iupStrProcessMnemonic(iupwinStrFromSystem(title), NULL, 0);   /* remove & */
+    value = iupwinStrFromSystem(title);
+    str = iupStrProcessMnemonic(value, NULL, 0);   /* remove & */
     iupdrvFontGetMultiLineStringSize(ih, str, &txtW, &txtH);
   }
 
@@ -1036,7 +1112,10 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
   else
     hBitmapClose = iupImageGetImage("IMGCLOSE", ih, 0);
   if (!hBitmapClose)
+  {
+    if (str && str != value) free(str);
     return;
+  }
 
   iupdrvImageGetInfo(hBitmapClose, NULL, NULL, &bpp);
   if (bpp == 8)
@@ -1116,6 +1195,8 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
 
   if (hCloseMask)
     DeleteObject(hCloseMask);
+
+  if (str && str != value) free(str);
 }
 
 static void winTabsDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
@@ -1159,7 +1240,7 @@ static void winTabsDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
 
   /* If the item has the focus, draw the focus rectangle */
   if (drawitem->itemState & ODS_FOCUS)
-    iupdrvDrawFocusRect(ih, hDC, 0, 0, width, height);
+    iupdrvPaintFocusRect(ih, hDC, 0, 0, width, height);
 
   iupwinDrawDestroyBitmapDC(&bmpDC);
 }
@@ -1170,52 +1251,37 @@ static void winTabsDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
 
 static void winTabsChildAddedMethod(Ihandle* ih, Ihandle* child)
 {
-  if (IupGetName(child) == NULL)
+  /* make sure it has at least one name */
+  if (!iupAttribGetHandleName(child))
     iupAttribSetHandleName(child);
 
   if (ih->handle)
   {
-    HWND tab_container;
-    int pos, num_tabs;
-    RECT rect; 
+    int pos = IupGetChildPos(ih, child);
 
-    pos = IupGetChildPos(ih, child);
-
-    tab_container = winTabCreatePageWindow(ih);
-
-    num_tabs = (int)SendMessage(ih->handle, TCM_GETITEMCOUNT, 0, 0);
-    if (num_tabs == 0)  /* the first page of an empty tabs is always shown */
-      ShowWindow(tab_container, SW_SHOW);
-
-    /* Calculate the display rectangle, assuming the 
-       tab control is the size of the client area. */
-    GetClientRect(ih->handle, &rect);
-    SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)&rect);
-
-    winTabSetPageWindowPos(tab_container, &rect);
+    HWND tab_container = winTabsCreatePageWindow(ih);
 
     iupAttribSet(child, "_IUPTAB_CONTAINER", (char*)tab_container);
 
-    winTabInsertItem(ih, child, pos, tab_container);
+    winTabsInsertVisibleArrayItem(ih, pos);  /* add to the array and set to visible */
 
-    winTabInsertVisibleArrayItem(ih, pos);
+    winTabsInsertItem(ih, child, pos, tab_container);
   }
 }
 
-static void winTabsChildRemovedMethod(Ihandle* ih, Ihandle* child)
+static void winTabsChildRemovedMethod(Ihandle* ih, Ihandle* child, int pos)
 {
   if (ih->handle)
   {
     HWND tab_container = (HWND)iupAttribGet(child, "_IUPTAB_CONTAINER");
     if (tab_container)
     {
-      /* can not use IupGetChildPos here, because child has already been detached */
       int p = winTabsGetPageWindowPos(ih, tab_container);
-      int pos = winTabsPosFixFromWin(ih, p);
 
-      iupTabsCheckCurrentTab(ih, pos);
-      winTabDeleteVisibleArrayItem(ih, pos);
-      winTabDeleteItem(ih, p);
+      iupTabsCheckCurrentTab(ih, pos, 1);
+
+      winTabsDeleteVisibleArrayItem(ih, pos);
+      if (p != -1) winTabsDeleteItem(ih, p, tab_container);
 
       iupwinHandleRemove(tab_container);
       DestroyWindow(tab_container);
@@ -1378,7 +1444,7 @@ void iupdrvTabsInitClass(Iclass* ic)
   iupClassRegisterAttributeId(ic, "TABTITLE", iupTabsGetTitleAttrib, winTabsSetTabTitleAttrib, IUPAF_NO_DEFAULTVALUE | IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "TABIMAGE", NULL, winTabsSetTabImageAttrib, IUPAF_IHANDLENAME|IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "TABVISIBLE", iupTabsGetTabVisibleAttrib, winTabsSetTabVisibleAttrib, IUPAF_NO_DEFAULTVALUE | IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "PADDING", iupTabsGetPaddingAttrib, winTabsSetPaddingAttrib, IUPAF_SAMEASSYSTEM, "0x0", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "TABPADDING", iupTabsGetTabPaddingAttrib, winTabsSetTabPaddingAttrib, IUPAF_SAMEASSYSTEM, "0x0", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   /* necessary because transparent background does not work when not using visual styles */
   if (!iupwin_comctl32ver6)  /* Used by iupdrvImageCreateImage */

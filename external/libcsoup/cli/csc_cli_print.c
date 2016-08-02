@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 #include "csc_cli_private.h"
 
 #define CLI_FIXED_ARGS		"ARGS"
@@ -93,10 +93,12 @@ static int csc_cli_format(struct cliopt *optbl, int type, int optlen,
 		char *buf, int blen)
 {
 	char	tmp[16];
-	int	rc;
 
 	if (!buf || (blen <= optlen)) {
 		return 0;
+	}
+	if (optbl->comment && (*optbl->comment == '*')) {
+		return 0;	/* hidden option */
 	}
 	
 	*buf = 0;
@@ -140,31 +142,40 @@ static int csc_cli_format(struct cliopt *optbl, int type, int optlen,
 	csc_strfill(buf, optlen, ' ');
 
 format_end:
-	rc = strlen(buf);
-	if (optbl->comment != NULL) {
-		rc += csc_strlcpy(buf + rc, optbl->comment, blen - rc);
-		if (*optbl->comment == '*') {
-			rc = 0;
-		}
-	}
-	return rc;
+	return strlen(buf);
 }	
 
 int csc_cli_print(struct cliopt *optbl, int (*show)(char *))
 {
 	char	sbuf[256];
-	int	optlen, type;
+	int	optlen, type, pflag;
 
 	optlen = csc_cli_find_longest(optbl);
 	type = csc_cli_table_type(optbl);
 	while (csc_cli_type(optbl) != CLI_EOL) {
+		pflag = 0;
 		if (csc_cli_format(optbl, type, optlen, 
 					sbuf, sizeof(sbuf) - 1)) {
-			strcat(sbuf, "\n");
 			if (show) {
 				show(sbuf);
 			} else {
 				CDB_SHOW(("%s", sbuf));
+			}
+			pflag++;
+		}
+		if (optbl->comment && (*optbl->comment != '*')) {
+			if (show) {
+				show(optbl->comment);
+			} else {
+				CDB_SHOW(("%s", optbl->comment));
+			}
+			pflag++;
+		}
+		if (pflag) {
+			if (show) {
+				show("\n");
+			} else {
+				CDB_SHOW(("\n"));
 			}
 		}
 		optbl++;

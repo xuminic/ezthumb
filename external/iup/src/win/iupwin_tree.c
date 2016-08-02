@@ -159,6 +159,7 @@ static void winTreeRebuildNodeCache(Ihandle* ih, int id, HTREEITEM hItem)
 /*****************************************************************************/
 
 static void winTreeExpandItem(Ihandle* ih, HTREEITEM hItem, int expand);
+static void winTreeSelectNode(Ihandle* ih, HTREEITEM hItem, int select);
 
 void iupdrvTreeAddNode(Ihandle* ih, int id, int kind, const char* title, int add)
 {
@@ -252,6 +253,10 @@ void iupdrvTreeAddNode(Ihandle* ih, int id, int kind, const char* title, int add
 
       /* Set the default VALUE (focus) */
       winTreeSetFocusNode(ih, hItemNew);
+
+      /* when single selection when focus is set, node is also selected */
+      if (ih->data->mark_mode == ITREE_MARK_SINGLE)
+        winTreeSelectNode(ih, hItemNew, 1);
     }
   }
 }
@@ -326,7 +331,7 @@ static int winTreeIsNodeSelected(Ihandle* ih, HTREEITEM hItem)
 
 static void winTreeSelectNode(Ihandle* ih, HTREEITEM hItem, int select)
 {
-  TV_ITEM item;
+  TVITEM item;
   item.mask = TVIF_STATE | TVIF_HANDLE;
   item.stateMask = TVIS_SELECTED;
   item.hItem = hItem;
@@ -472,6 +477,7 @@ static Iarray* winTreeGetSelectedArrayId(Ihandle* ih)
 /* Insert the copied item in a new location. Returns the new item. */
 static HTREEITEM winTreeCopyItem(Ihandle* ih, HTREEITEM hItem, HTREEITEM hParent, HTREEITEM hPosition, int is_copy)
 {
+  HTREEITEM new_hItem;
   TVITEM item; 
   TVINSERTSTRUCT tvins;
   TCHAR title[255];
@@ -497,7 +503,16 @@ static HTREEITEM winTreeCopyItem(Ihandle* ih, HTREEITEM hItem, HTREEITEM hParent
 
   /* Add the new node */
   ih->data->node_count++;
-  return (HTREEITEM)SendMessage(ih->handle, TVM_INSERTITEM, 0, (LPARAM)(LPTVINSERTSTRUCT)&tvins);
+
+  new_hItem = (HTREEITEM)SendMessage(ih->handle, TVM_INSERTITEM, 0, (LPARAM)(LPTVINSERTSTRUCT)&tvins);
+
+  /* state is not preserved during insertitem, so force it here */
+  item.hItem = new_hItem;
+  item.mask = TVIF_HANDLE | TVIF_STATE;
+  item.stateMask = TVIS_STATEIMAGEMASK;
+  SendMessage(ih->handle, TVM_SETITEM, 0, (LPARAM)(LPTVITEM)&item);
+
+  return new_hItem;
 }
 
 static void winTreeCopyChildren(Ihandle* ih, HTREEITEM hItemSrc, HTREEITEM hItemDst, int is_copy)
@@ -671,7 +686,7 @@ static int winTreeGetImageIndex(Ihandle* ih, const char* name)
 
     /* create the image list if does not exist */
     image_list = ImageList_Create(width, height, ILC_COLOR32, 0, 50);
-    SendMessage(ih->handle, TVM_SETIMAGELIST, 0, (LPARAM)image_list);
+    SendMessage(ih->handle, TVM_SETIMAGELIST, TVSIL_NORMAL, (LPARAM)image_list);
   }
 
   /* check if that bitmap is already added to the list,
@@ -692,12 +707,12 @@ static void winTreeSetToggleState(Ihandle* ih, HTREEITEM hItem, int state)
 {
   TVITEM item;
 
-  item.mask = TVIF_STATE;
+  item.mask = TVIF_STATE | TVIF_HANDLE;
   item.hItem = hItem;
   item.stateMask = TVIS_STATEIMAGEMASK;
   item.state = INDEXTOSTATEIMAGEMASK(state);
 
-  SendMessage(ih->handle, TVM_SETITEM, 0, (LPARAM)(TV_ITEM *)&item);
+  SendMessage(ih->handle, TVM_SETITEM, 0, (LPARAM)&item);
 }
 
 static void winTreeSetToggleVisible(Ihandle* ih, HTREEITEM hItem, int visible)
@@ -705,17 +720,17 @@ static void winTreeSetToggleVisible(Ihandle* ih, HTREEITEM hItem, int visible)
   TVITEM item;
   int empty_image = ih->data->show_toggle==2? 4: 3;
 
-  item.mask = TVIF_STATE;
+  item.mask = TVIF_STATE | TVIF_HANDLE;
   item.hItem = hItem;
   item.stateMask = TVIS_STATEIMAGEMASK;
   item.state = visible? INDEXTOSTATEIMAGEMASK(1): INDEXTOSTATEIMAGEMASK(empty_image);
 
-  SendMessage(ih->handle, TVM_SETITEM, 0, (LPARAM)(TV_ITEM *)&item);
+  SendMessage(ih->handle, TVM_SETITEM, 0, (LPARAM)&item);
 }
 
 static int winTreeGetToggleVisible(Ihandle* ih, HTREEITEM hItem)
 {
-  int state = ((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
+  int state = (int)((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
   int empty_image = ih->data->show_toggle==2? 4: 3;
   if (state == empty_image)
     return 0;
@@ -725,7 +740,7 @@ static int winTreeGetToggleVisible(Ihandle* ih, HTREEITEM hItem)
 
 static void winTreeToggleState(Ihandle* ih, HTREEITEM hItem)
 {
-  int state = ((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
+  int state = (int)((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
   int new_state;
 
   if (state == 3)         /* indeterminate, inconsistent */
@@ -754,7 +769,7 @@ static void winTreeCallToggleValueCb(Ihandle* ih, HTREEITEM hItem)
   IFnii cbToggle = (IFnii)IupGetCallback(ih, "TOGGLEVALUE_CB");
   if (cbToggle)
   {
-    int state = ((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
+    int state = (int)((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
     int check;
 
     if (state == 3)         /* indeterminate, inconsistent */
@@ -765,6 +780,13 @@ static void winTreeCallToggleValueCb(Ihandle* ih, HTREEITEM hItem)
       check = 0;
 
     cbToggle(ih, iupTreeFindNodeId(ih, hItem), check);
+  }
+
+  if (iupAttribGetBoolean(ih, "MARKWHENTOGGLE"))
+  {
+    int state = (int)((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
+    int id = iupTreeFindNodeId(ih, hItem);
+    IupSetAttributeId(ih, "MARKED", id, (state == 2)? "Yes": "No");
   }
 }
 
@@ -1039,7 +1061,7 @@ static int winTreeSetSpacingAttrib(Ihandle* ih, const char* value)
   if (ih->handle)
   {
     int old_spacing = iupAttribGetInt(ih, "_IUPWIN_OLDSPACING");
-    int height = SendMessage(ih->handle, TVM_GETITEMHEIGHT, 0, 0);
+    int height = (int)SendMessage(ih->handle, TVM_GETITEMHEIGHT, 0, 0);
     height -= 2*old_spacing;
     height += 2*ih->data->spacing;
     SendMessage(ih->handle, TVM_SETITEMHEIGHT, height, 0);
@@ -1181,7 +1203,7 @@ static int winTreeSetTitleFontAttrib(Ihandle* ih, int id, const char* value)
     itemData->hFont = iupwinGetHFont(value);
     if (itemData->hFont)
     {
-      TV_ITEM item;
+      TVITEM item;
       TCHAR title[255];
 
       winTreeGetTitle(ih, hItem, title);
@@ -1395,27 +1417,53 @@ static int winTreeSetFgColorAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
+static int winTreeSetHlColorAttrib(Ihandle* ih, const char* value)
+{
+  if (ih->handle)
+    iupdrvPostRedraw(ih);
+  (void)value;
+  return 1;
+}
+
+static int winTreeSetTipAttrib(Ihandle* ih, const char* value)
+{
+  if (iupAttribGetBoolean(ih, "INFOTIP"))
+    return 1;
+
+  return iupdrvBaseSetTipAttrib(ih, value);
+}
+
 static int winTreeSetTipVisibleAttrib(Ihandle* ih, const char* value)
 {
-  HWND tips_hwnd = (HWND)SendMessage(ih->handle, TVM_GETTOOLTIPS, 0, 0);
-  if (!tips_hwnd)
+  if (iupAttribGetBoolean(ih, "INFOTIP"))
+  {
+    HWND tips_hwnd = (HWND)SendMessage(ih->handle, TVM_GETTOOLTIPS, 0, 0);
+    if (!tips_hwnd)
+      return 0;
+
+    if (iupStrBoolean(value))
+      SendMessage(tips_hwnd, TTM_POPUP, 0, 0);  /* Works in Visual Styles Only */
+    else
+      SendMessage(tips_hwnd, TTM_POP, 0, 0);
+
     return 0;
+  }
 
-  if (iupStrBoolean(value))
-    SendMessage(tips_hwnd, TTM_POPUP, 0, 0);  /* Works in Visual Styles Only */
-  else
-    SendMessage(tips_hwnd, TTM_POP, 0, 0);
-
-  return 0;
+  return iupdrvBaseSetTipVisibleAttrib(ih, value);
 }
 
 static char* winTreeGetTipVisibleAttrib(Ihandle* ih)
 {
-  HWND tips_hwnd = (HWND)SendMessage(ih->handle, TVM_GETTOOLTIPS, 0, 0);
-  if (!tips_hwnd)
-    return NULL;
+  if (iupAttribGetBoolean(ih, "INFOTIP"))
+  {
+    HWND tips_hwnd = (HWND)SendMessage(ih->handle, TVM_GETTOOLTIPS, 0, 0);
+    if (!tips_hwnd)
+      return NULL;
 
-  return iupStrReturnBoolean (IsWindowVisible(tips_hwnd)); 
+    return iupStrReturnBoolean(IsWindowVisible(tips_hwnd));
+  }
+
+  return iupdrvBaseGetTipVisibleAttrib(ih);
 }
 
 static char* winTreeGetChildCountAttrib(Ihandle* ih, int id)
@@ -1694,7 +1742,7 @@ static char* winTreeGetToggleValueAttrib(Ihandle* ih, int id)
   if (!winTreeGetToggleVisible(ih, hItem))
     return NULL;
 
-  state = ((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
+  state = (int)((SendMessage(ih->handle, TVM_GETITEMSTATE, (WPARAM)hItem, TVIS_STATEIMAGEMASK)) >> 12);
 
   if(state == 3)
     state = -1;  /* indeterminate, inconsistent */
@@ -1808,7 +1856,7 @@ static int winTreeSetMarkedNodesAttrib(Ihandle* ih, const char* value)
   if (ih->data->mark_mode==ITREE_MARK_SINGLE || !value)
     return 0;
 
-  count = strlen(value);
+  count = (int)strlen(value);
   if (count > ih->data->node_count)
     count = ih->data->node_count;
 
@@ -2382,7 +2430,7 @@ static int winTreeMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
 
     if(ih->data->show_toggle)
     {
-      HTREEITEM hItem = winTreeHitTestToggle(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp));
+      HTREEITEM hItem = winTreeHitTestToggle(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
       if (hItem)
       {
         if (winTreeGetToggleVisible(ih, hItem))
@@ -2402,7 +2450,7 @@ static int winTreeMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
       if (iupAttribGetBoolean(ih, "CANFOCUS"))
         SetFocus(ih->handle);
 
-      if (winTreeMouseMultiSelect(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp)))
+      if (winTreeMouseMultiSelect(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp)))
       {
         *result = 0; /* abort the normal processing if we process multiple selection */
         return 1;
@@ -2410,7 +2458,7 @@ static int winTreeMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
     }
     break;
   case WM_RBUTTONDOWN:
-    winTreeCallRightClickCb(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp));
+    winTreeCallRightClickCb(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
     *result = 0;
     return 1;  /* must abort the normal behavior, because it is weird and just causes trouble */
   case WM_MBUTTONDOWN:
@@ -2425,7 +2473,7 @@ static int winTreeMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
 
     if(ih->data->show_toggle && msg==WM_LBUTTONDBLCLK)
     {
-      HTREEITEM hItem = winTreeHitTestToggle(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp));
+      HTREEITEM hItem = winTreeHitTestToggle(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
       if (hItem)
       {
         if (winTreeGetToggleVisible(ih, hItem))
@@ -2444,14 +2492,14 @@ static int winTreeMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
     if (ih->data->show_dragdrop && (wp & MK_LBUTTON))
     {
       if (!iupAttribGet(ih, "_IUPTREE_DRAGITEM"))
-        winTreeDragBegin(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp));
+        winTreeDragBegin(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
       else 
-        winTreeDragMove(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp));
+        winTreeDragMove(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
     }
     else if (iupAttribGet(ih, "_IUPTREE_EXTENDSELECT"))
     {
       if (wp & MK_LBUTTON)
-        winTreeExtendSelect(ih, (int)(short)LOWORD(lp), (int)(short)HIWORD(lp));
+        winTreeExtendSelect(ih, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
       else
         iupAttribSet(ih, "_IUPTREE_EXTENDSELECT", NULL);
     }
@@ -2682,8 +2730,11 @@ static int winTreeWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
       if (!itemData)
         return 0;
 
-      if (GetFocus()==ih->handle && (customdraw->nmcd.uItemState & CDIS_SELECTED))
+      if (customdraw->nmcd.uItemState & CDIS_SELECTED)
+      {
+        iupwinGetColor(iupAttribGetStr(ih, "HLCOLOR"), &customdraw->clrTextBk);
         customdraw->clrText = winTreeInvertColor(itemData->color);
+      }
       else
         customdraw->clrText = itemData->color;
 
@@ -2700,16 +2751,13 @@ static int winTreeWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
   }
   else if (msg_info->code == TVN_GETINFOTIP)
   {
+    /* called only if INFOTIP=Yes */
     NMTVGETINFOTIP* tip_info = (NMTVGETINFOTIP*)msg_info;
     IFnii cb;
     char* value;
 
     HWND tips_hwnd = (HWND)SendMessage(ih->handle, TVM_GETTOOLTIPS, 0, 0);
     if (!tips_hwnd)
-      return 0;
-
-    value = IupGetAttribute(ih, "TIP");  /* must use IupGetAttribute to use inheritance */
-    if (!value)
       return 0;
 
     cb = (IFnii)IupGetCallback(ih, "TIPS_CB");
@@ -2719,10 +2767,13 @@ static int winTreeWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
       iupdrvGetCursorPos(&x, &y);
       iupdrvScreenToClient(ih, &x, &y);
       cb(ih, x, y);
-
-      value = IupGetAttribute(ih, "TIP");  /* get again, because it could has been changed inside the callback */
     }
 
+    value = iupAttribGet(ih, "TIP");  /* must be after the callback */
+    if (!value)
+      return 0;
+
+    /* this will make the tip to be shown always when an item is highlighted */
     iupwinStrCopy(tip_info->pszText, value, tip_info->cchTextMax);
 
     iupwinTipsUpdateInfo(ih, tips_hwnd);
@@ -2747,6 +2798,7 @@ static int winTreeConvertXYToPos(Ihandle* ih, int x, int y)
 
 static HTREEITEM winTreeDragDropCopyItem(Ihandle* src, Ihandle* dst, HTREEITEM hItem, HTREEITEM hParent, HTREEITEM hPosition)
 {
+  HTREEITEM new_hItem;
   TVITEM item; 
   TVINSERTSTRUCT tvins;
   TCHAR title[255];
@@ -2770,7 +2822,15 @@ static HTREEITEM winTreeDragDropCopyItem(Ihandle* src, Ihandle* dst, HTREEITEM h
 
   /* Add the new node */
   dst->data->node_count++;
-  return (HTREEITEM)SendMessage(dst->handle, TVM_INSERTITEM, 0, (LPARAM)(LPTVINSERTSTRUCT)&tvins);
+  new_hItem = (HTREEITEM)SendMessage(dst->handle, TVM_INSERTITEM, 0, (LPARAM)(LPTVINSERTSTRUCT)&tvins);
+
+  /* state is not preserved during insertitem, so force it here */
+  item.hItem = new_hItem;
+  item.mask = TVIF_HANDLE | TVIF_STATE;
+  item.stateMask = TVIS_STATEIMAGEMASK;
+  SendMessage(dst->handle, TVM_SETITEM, 0, (LPARAM)(LPTVITEM)&item);
+
+  return new_hItem;
 }
 
 static void winTreeDragDropCopyChildren(Ihandle* src, Ihandle* dst, HTREEITEM hItemSrc, HTREEITEM hItemDst)
@@ -2840,7 +2900,7 @@ void iupdrvTreeDragDropCopyNode(Ihandle* src, Ihandle* dst, InodeHandle *itemSrc
 
 static int winTreeMapMethod(Ihandle* ih)
 {
-  DWORD dwStyle = WS_CHILD | WS_CLIPSIBLINGS | WS_BORDER | TVS_SHOWSELALWAYS | TVS_INFOTIP;
+  DWORD dwStyle = WS_CHILD | WS_CLIPSIBLINGS | WS_BORDER | TVS_SHOWSELALWAYS;
 
   /* styles can be set only on the Tree View creation */
 
@@ -2863,6 +2923,9 @@ static int winTreeMapMethod(Ihandle* ih)
 
   if (!iupAttribGetBoolean(ih, "HIDEBUTTONS"))
     dwStyle |= TVS_HASBUTTONS;
+
+  if (iupAttribGetBoolean(ih, "INFOTIP"))
+    dwStyle |= TVS_INFOTIP;
 
   if (iupAttribGetBoolean(ih, "CANFOCUS"))
     dwStyle |= WS_TABSTOP;
@@ -2894,9 +2957,9 @@ static int winTreeMapMethod(Ihandle* ih)
   }
 
   /* Initialize the default images */
-  ih->data->def_image_leaf = (void*)winTreeGetImageIndex(ih, "IMGLEAF");
-  ih->data->def_image_collapsed = (void*)winTreeGetImageIndex(ih, "IMGCOLLAPSED");
-  ih->data->def_image_expanded = (void*)winTreeGetImageIndex(ih, "IMGEXPANDED");
+  ih->data->def_image_leaf = (void*)winTreeGetImageIndex(ih, iupAttribGetStr(ih, "IMAGELEAF"));
+  ih->data->def_image_collapsed = (void*)winTreeGetImageIndex(ih, iupAttribGetStr(ih, "IMAGEBRANCHCOLLAPSED"));
+  ih->data->def_image_expanded = (void*)winTreeGetImageIndex(ih, iupAttribGetStr(ih, "IMAGEBRANCHEXPANDED"));
 
   if (ih->data->show_toggle)
   {
@@ -2925,6 +2988,8 @@ static int winTreeMapMethod(Ihandle* ih)
       hOldBitmap = SelectObject(hBitmapDC, hBitmap);
       SetDCBrushColor(hBitmapDC, (COLORREF)SendMessage(ih->handle, TVM_GETBKCOLOR, 0, 0));
       FillRect(hBitmapDC, &rect, (HBRUSH)GetStockObject(DC_BRUSH));
+      if (iupAttribGetBoolean(ih, "EMPTYAS3STATE"))
+        iupwinDraw3StateButton(ih->handle, hBitmapDC, &rect);
       SelectObject(hBitmapDC, hOldBitmap);
       ImageList_Add(image_list, hBitmap, NULL);
 
@@ -2969,10 +3034,6 @@ static void winTreeUnMapMethod(Ihandle* ih)
   if (image_list)
     ImageList_Destroy(image_list);
 
-  image_list = (HIMAGELIST)SendMessage(ih->handle, TVM_GETIMAGELIST, TVSIL_STATE, 0);
-  if (image_list)
-    ImageList_Destroy(image_list);
-
   bmp_array = (Iarray*)iupAttribGet(ih, "_IUPWIN_BMPARRAY");
   if (bmp_array)
   {
@@ -2992,12 +3053,14 @@ void iupdrvTreeInitClass(Iclass* ic)
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", winTreeGetBgColorAttrib, winTreeSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "TXTBGCOLOR", IUPAF_NO_SAVE|IUPAF_DEFAULT);
   iupClassRegisterAttribute(ic, "FGCOLOR", NULL, winTreeSetFgColorAttrib, IUPAF_SAMEASSYSTEM, "TXTFGCOLOR", IUPAF_DEFAULT);
-  iupClassRegisterAttribute(ic, "AUTOREDRAW", NULL, iupwinSetAutoRedrawAttrib, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "HLCOLOR", NULL, winTreeSetHlColorAttrib, IUPAF_SAMEASSYSTEM, "TXTHLCOLOR", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "AUTOREDRAW", NULL, iupwinSetAutoRedrawAttrib, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
 
   /* Redefined */
-  iupClassRegisterAttribute(ic, "TIP", NULL, NULL, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "TIP", NULL, winTreeSetTipAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "TIPVISIBLE", winTreeGetTipVisibleAttrib, winTreeSetTipVisibleAttrib, NULL, NULL, IUPAF_NO_INHERIT);
-
+  iupClassRegisterAttribute(ic, "INFOTIP", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  
   /* IupTree Attributes - GENERAL */
   iupClassRegisterAttribute(ic, "EXPANDALL",  NULL, winTreeSetExpandAllAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "INDENTATION", winTreeGetIndentationAttrib, winTreeSetIndentationAttrib, NULL, NULL, IUPAF_DEFAULT);
@@ -3011,13 +3074,13 @@ void iupdrvTreeInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "IMAGELEAF",            NULL, winTreeSetImageLeafAttrib, IUPAF_SAMEASSYSTEM, "IMGLEAF", IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "IMAGEBRANCHCOLLAPSED", NULL, winTreeSetImageBranchCollapsedAttrib, IUPAF_SAMEASSYSTEM, "IMGCOLLAPSED", IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "IMAGEBRANCHEXPANDED",  NULL, winTreeSetImageBranchExpandedAttrib, IUPAF_SAMEASSYSTEM, "IMGEXPANDED", IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "EMPTYAS3STATE", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* IupTree Attributes - NODES */
   iupClassRegisterAttributeId(ic, "STATE",  winTreeGetStateAttrib,  winTreeSetStateAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "DEPTH",  winTreeGetDepthAttrib,  NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "KIND",   winTreeGetKindAttrib,   NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "PARENT", winTreeGetParentAttrib, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttributeId(ic, "NAME",   winTreeGetTitleAttrib,  winTreeSetTitleAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "TITLE",  winTreeGetTitleAttrib,  winTreeSetTitleAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "CHILDCOUNT", winTreeGetChildCountAttrib, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "COLOR", winTreeGetColorAttrib, winTreeSetColorAttrib, IUPAF_NO_INHERIT);
@@ -3028,9 +3091,11 @@ void iupdrvTreeInitClass(Iclass* ic)
   /* IupTree Attributes - MARKS */
   iupClassRegisterAttributeId(ic, "MARKED", winTreeGetMarkedAttrib, winTreeSetMarkedAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute  (ic, "MARK",      NULL, winTreeSetMarkAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute  (ic, "STARTING",  NULL, winTreeSetMarkStartAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
+  /*OLD*/iupClassRegisterAttribute  (ic, "STARTING",  NULL, winTreeSetMarkStartAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute  (ic, "MARKSTART", NULL, winTreeSetMarkStartAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute  (ic, "MARKEDNODES", winTreeGetMarkedNodesAttrib, winTreeSetMarkedNodesAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "MARKWHENTOGGLE", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute  (ic, "VALUE", winTreeGetValueAttrib, winTreeSetValueAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
 

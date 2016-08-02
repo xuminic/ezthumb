@@ -16,6 +16,10 @@ void IupScintillaOpen(void);
 
 Ihandle *IupScintilla(void);
 
+#ifdef SCINTILLA_H
+sptr_t IupScintillaSendMessage(Ihandle* ih, unsigned int iMessage, uptr_t wParam, sptr_t lParam);
+#endif
+
 
 #ifdef __cplusplus
 }

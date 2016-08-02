@@ -22,19 +22,21 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
-static char *slog_csoup_prefix(void *self, int cw);
+static int slog_csoup_trans_date(char *buf, int blen);
+static int slog_csoup_trans_module(int cw, char *buf, int blen);
 
 SMMDBG	csoup_debug_control = {
-	SLOG_MAGIC,				/* the magic word */
-	SLOG_MODUL_ALL(SLOG_LVL_ERROR),		/* control word in host */
-	SLOG_OPT_ALL,				/* option */
-	NULL, NULL,				/* file name and FILEP */
-	(void*) -1,				/* standard i/o */
-	slog_csoup_prefix,			/* generating the prefix */
-	NULL, NULL,				/* socket extension */
-	NULL, NULL, NULL			/* mutex setting */
+	SLOG_MAGIC,			/* the magic word */
+	SLOG_MODUL_ALL(SLOG_LVL_AUTO),	/* control word in host */
+	SLOG_OPT_ALL,			/* option */
+	NULL, NULL,			/* file name and FILEP */
+	(void*) -1,			/* standard i/o */
+	slog_csoup_trans_date,		/* generating the prefix of date */
+	slog_csoup_trans_module,	/* generating the prefix of module */
+	NULL, NULL,			/* socket extension */
+	NULL, NULL, NULL		/* mutex setting */
 };
 
 
@@ -54,55 +56,60 @@ int slog_csoup_close(void)
 	return slog_shutdown(&csoup_debug_control);
 }
 
-int slog_csoup_puts(SMMDBG *dbgc, int setcw, int cw, char *buf)
+int slog_csoup_puts(int setcw, int cw, char *buf)
 {
-	if (!slog_validate(dbgc, setcw, cw)) {
-		return -1;
+	int	rc;
+
+	/* combine the module value and the debug level */
+	cw = SLOG_LEVEL_SET(setcw, cw);
+
+	if (!slog_validate(&csoup_debug_control, setcw, cw)) {
+		rc = -1;
+	} else {
+		rc = slog_output(&csoup_debug_control, cw, buf);
 	}
-	return slog_output(dbgc, cw, buf);
+	smm_free(buf);
+	return rc;
 }
 
 /** better use this as an example becuase it's not thread safe */
 char *slog_csoup_format(char *fmt, ...)
 {
-	static	char	logbuf[SLOG_BUFFER];
+	char	logbuf[SLOG_BUFFER];
 	va_list ap;
 
 	va_start(ap, fmt);
 	SMM_VSNPRINT(logbuf, sizeof(logbuf), fmt, ap);
 	va_end(ap);
-	return logbuf;
+	return csc_strcpy_alloc(logbuf, 0);
 }
 
-static char *slog_csoup_prefix(void *self, int cw)
+static int slog_csoup_trans_date(char *buf, int blen)
 {
-	static	char	buffer[256];
-	SMMDBG	*dbgc = self;
 	struct	tm	*lctm;
 	time_t	sec;
+	char	tmp[64];
+		
+	time(&sec);
+	lctm = localtime(&sec);
+	sprintf(tmp, "[%d%02d%02d%02d%02d%02d]", lctm->tm_year + 1900, 
+			lctm->tm_mon, lctm->tm_mday,
+			lctm->tm_hour, lctm->tm_min, lctm->tm_sec);
+	csc_strlcat(buf, tmp, blen);
+	return strlen(buf);
+}
 
-	if (dbgc->option & SLOG_OPT_TMSTAMP) {
-		time(&sec);
-		lctm = localtime(&sec);
-		sprintf(buffer, "[%d%02d%02d-%02d%02d%02d]", 
-				lctm->tm_year + 1900, 
-				lctm->tm_mon, lctm->tm_mday,
-				lctm->tm_hour, lctm->tm_min, lctm->tm_sec);
+static int slog_csoup_trans_module(int cw, char *buf, int blen)
+{
+	if (cw & CSOUP_MOD_SLOG) {
+		csc_strlcat(buf, "[SLOG]", blen);
 	}
-	if (dbgc->option & SLOG_OPT_MODULE) {
-		if (cw & CSOUP_MOD_SLOG) {
-			strcat(buffer, "[SLOG]");
-		}
-		if (cw & CSOUP_MOD_CLI) {
-			strcat(buffer, "[CLI]");
-		}
-		if (cw & CSOUP_MOD_CONFIG) {
-			strcat(buffer, "[CONFIG]");
-		}
+	if (cw & CSOUP_MOD_CLI) {
+		csc_strlcat(buf, "[CLI]", blen);
 	}
-	if (dbgc->option) {
-		strcat(buffer, " ");
+	if (cw & CSOUP_MOD_CONFIG) {
+		csc_strlcat(buf, "[CONFIG]", blen);
 	}
-	return buffer;
+	return strlen(buf);
 }
 

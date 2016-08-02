@@ -4,7 +4,7 @@
 * See Copyright Notice in "iup.h"
 */
 
-#undef GTK_DISABLE_DEPRECATED
+#undef GTK_DISABLE_DEPRECATED /* gtk_progress_bar_set_bar_style and gtk_progress_set_activity_mode are deprecated */
 #include <gtk/gtk.h>
 
 #include <stdlib.h>
@@ -56,7 +56,8 @@ static int gtkProgressBarSetValueAttrib(Ihandle* ih, const char* value)
   if (!value)
     ih->data->value = 0;
   else
-    ih->data->value = atof(value);
+    iupStrToDouble(value, &(ih->data->value));
+
   iProgressBarCropValue(ih);
 
   gtk_progress_bar_set_fraction(pbar, (ih->data->value - ih->data->vmin) / (ih->data->vmax - ih->data->vmin));
@@ -108,11 +109,11 @@ static int gtkProgressBarMapMethod(Ihandle* ih)
     gtk_progress_bar_set_orientation(GTK_PROGRESS_BAR(ih->handle), GTK_PROGRESS_BOTTOM_TO_TOP);
 #endif
 
-    if (ih->currentheight < ih->currentwidth)
+    if (ih->userheight < ih->userwidth)
     {
-      int tmp = ih->currentheight;
-      ih->currentheight = ih->currentwidth;
-      ih->currentwidth = tmp;
+      int tmp = ih->userheight;
+      ih->userheight = ih->userwidth;
+      ih->userwidth = tmp;
     }
   }
   else

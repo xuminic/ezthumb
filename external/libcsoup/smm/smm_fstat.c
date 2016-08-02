@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "libcsoup.h"
 
@@ -57,6 +58,11 @@ int smm_fstat(char *fname)
 	}
 	return SMM_FSTAT_REGULAR;
 }
+
+int smm_fncmp(char *dstname, char *srcname)
+{
+	return strcasecmp(dstname, srcname);
+}
 #endif
 
 #ifdef	CFG_UNIX_API
@@ -85,6 +91,11 @@ int smm_fstat(char *fname)
 		return SMM_FSTAT_DIR;
 	}
 	return SMM_FSTAT_DEVICE;
+}
+
+int smm_fncmp(char *dstname, char *srcname)
+{
+	return strcmp(dstname, srcname);
 }
 #endif
 

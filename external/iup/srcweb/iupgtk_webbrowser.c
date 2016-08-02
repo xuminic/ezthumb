@@ -326,7 +326,7 @@ Iclass* iupWebBrowserNewClass(void)
   ic->format = NULL; /* no parameters */
   ic->nativetype  = IUP_TYPECONTROL;
   ic->childtype   = IUP_CHILDNONE;
-  ic->is_interactive = 0;
+  ic->is_interactive = 1;
   ic->has_attrib_id = 1;   /* has attributes with IDs that must be parsed */
 
   /* Class functions */

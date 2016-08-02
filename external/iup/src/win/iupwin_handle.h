@@ -1,5 +1,5 @@
 /** \file
- * \brief HWND to ihandle table
+ * \brief HWND to Ihandle* table
  *
  * See Copyright Notice in "iup.h"
  */

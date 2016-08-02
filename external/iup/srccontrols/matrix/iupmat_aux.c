@@ -286,16 +286,22 @@ static void iMatrixAuxUpdateVisibleSize(Ihandle* ih, int m)
   if (m == IMAT_PROCESS_LIN)
   {
     D = "DY";
-    AUTOHIDE = "XAUTOHIDE";  /* when configuring the vertical scrollbar check if horizontal scrollbar is hidden */
+
+    /* when configuring the vertical scrollbar check if horizontal scrollbar can be hidden */
+    AUTOHIDE = "XAUTOHIDE";  
     SB = IUP_SB_HORIZ;
+
     p = &(ih->data->lines);
     canvas_size = ih->data->h;
   }
   else
   {
     D = "DX";
-    AUTOHIDE = "YAUTOHIDE";  /* when configuring the horizontal scrollbar check if vertical scrollbar is hidden */
+
+    /* when configuring the horizontal scrollbar check if vertical scrollbar can be hidden */
+    AUTOHIDE = "YAUTOHIDE";  
     SB = IUP_SB_VERT;
+
     p = &(ih->data->columns);
     canvas_size = ih->data->w;
   }
@@ -390,10 +396,7 @@ int iupMatrixAuxCallEditionCbLinCol(Ihandle* ih, int lin, int col, int mode, int
   if (cb)
   {
     if (lin != 0 && ih->data->sort_has_index)
-    {
-      int index = ih->data->sort_line_index[lin];
-      if (index != 0) lin = index;
-    }
+      lin = ih->data->sort_line_index[lin];
 
     return cb(ih, lin, col, mode, update);
   }
@@ -402,7 +405,7 @@ int iupMatrixAuxCallEditionCbLinCol(Ihandle* ih, int lin, int col, int mode, int
 
 static void iMatrixAuxCopyValue(Ihandle* ih, int lin1, int col1, int lin2, int col2)
 {
-  char* value = iupMatrixGetValueString(ih, lin1, col1);
+  char* value = iupMatrixGetValue(ih, lin1, col1);
   iupMatrixModifyValue(ih, lin2, col2, value);
 }
 

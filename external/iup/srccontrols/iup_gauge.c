@@ -60,8 +60,7 @@ struct _IcontrolData
 
   char* text;
 
-  cdCanvas *cddbuffer;
-  cdCanvas *cdcanvas;
+  cdCanvas *cd_canvas;
 };
 
 static void iGaugeDrawText(Ihandle* ih, int xmid)
@@ -70,9 +69,9 @@ static void iGaugeDrawText(Ihandle* ih, int xmid)
   char* text = ih->data->text;
   char buffer[30];
 
-  IupCdSetFont(ih, ih->data->cddbuffer, IupGetAttribute(ih, "FONT"));
-  cdCanvasTextAlignment(ih->data->cddbuffer, CD_CENTER);
-  cdCanvasBackOpacity(ih->data->cddbuffer, CD_TRANSPARENT);
+  IupCdSetFont(ih, ih->data->cd_canvas, IupGetAttribute(ih, "FONT"));
+  cdCanvasTextAlignment(ih->data->cd_canvas, CD_CENTER);
+  cdCanvasBackOpacity(ih->data->cd_canvas, CD_TRANSPARENT);
 
   x = (int)(0.5 * ih->data->w);
   y = (int)(0.5 * ih->data->h);
@@ -83,29 +82,29 @@ static void iGaugeDrawText(Ihandle* ih, int xmid)
     text = buffer;
   }
 
-  cdCanvasGetTextBox(ih->data->cddbuffer, x, y, text, &xmin, &xmax, &ymin, &ymax);
+  cdCanvasGetTextBox(ih->data->cd_canvas, x, y, text, &xmin, &xmax, &ymin, &ymax);
 
   if(xmid < xmin)
   {
-    cdCanvasForeground(ih->data->cddbuffer, ih->data->fgcolor);
-    cdCanvasText(ih->data->cddbuffer, x, y, text);
+    cdCanvasForeground(ih->data->cd_canvas, ih->data->fgcolor);
+    cdCanvasText(ih->data->cd_canvas, x, y, text);
   }
   else if(xmid > xmax)
   {
-    cdCanvasForeground(ih->data->cddbuffer, ih->data->bgcolor);
-    cdCanvasText(ih->data->cddbuffer, x, y, text);
+    cdCanvasForeground(ih->data->cd_canvas, ih->data->bgcolor);
+    cdCanvasText(ih->data->cd_canvas, x, y, text);
   }
   else
   {
-    cdCanvasClip(ih->data->cddbuffer, CD_CLIPAREA);
-    cdCanvasClipArea(ih->data->cddbuffer, xmin, xmid, ymin, ymax);
-    cdCanvasForeground(ih->data->cddbuffer, ih->data->bgcolor);
-    cdCanvasText(ih->data->cddbuffer, x, y, text);
+    cdCanvasClip(ih->data->cd_canvas, CD_CLIPAREA);
+    cdCanvasClipArea(ih->data->cd_canvas, xmin, xmid, ymin, ymax);
+    cdCanvasForeground(ih->data->cd_canvas, ih->data->bgcolor);
+    cdCanvasText(ih->data->cd_canvas, x, y, text);
 
-    cdCanvasClipArea(ih->data->cddbuffer, xmid, xmax, ymin, ymax);
-    cdCanvasForeground(ih->data->cddbuffer, ih->data->fgcolor);
-    cdCanvasText(ih->data->cddbuffer, x, y, text);
-    cdCanvasClip(ih->data->cddbuffer, CD_CLIPOFF);
+    cdCanvasClipArea(ih->data->cd_canvas, xmid, xmax, ymin, ymax);
+    cdCanvasForeground(ih->data->cd_canvas, ih->data->fgcolor);
+    cdCanvasText(ih->data->cd_canvas, x, y, text);
+    cdCanvasClip(ih->data->cd_canvas, CD_CLIPOFF);
   }
 }
 
@@ -117,13 +116,13 @@ static void iGaugeDrawGauge(Ihandle* ih)
   int xend   = ih->data->w-1 - (ih->data->horiz_padding+border);
   int yend   = ih->data->h-1 - (ih->data->vert_padding+border);
 
-  cdCanvasBackground(ih->data->cddbuffer, ih->data->bgcolor);
-  cdCanvasClear(ih->data->cddbuffer);
+  cdCanvasBackground(ih->data->cd_canvas, ih->data->bgcolor);
+  cdCanvasClear(ih->data->cd_canvas);
 
-  cdIupDrawSunkenRect(ih->data->cddbuffer, 0, 0, ih->data->w-1, ih->data->h-1,
+  cdIupDrawSunkenRect(ih->data->cd_canvas, 0, 0, ih->data->w-1, ih->data->h-1,
                         ih->data->light_shadow, ih->data->mid_shadow, ih->data->dark_shadow);
 
-  cdCanvasForeground(ih->data->cddbuffer, ih->data->fgcolor);
+  cdCanvasForeground(ih->data->cd_canvas, ih->data->fgcolor);
 
   if (ih->data->dashed)
   {
@@ -138,7 +137,7 @@ static void iGaugeDrawGauge(Ihandle* ih)
 
     while(gaugeround(100*(i + boxw)) <= intvx)
     {
-      cdCanvasBox(ih->data->cddbuffer, xstart + gaugeround(i),
+      cdCanvasBox(ih->data->cd_canvas, xstart + gaugeround(i),
              xstart + gaugeround(i + boxw) - 1, ystart, yend);
       i += step;
     }
@@ -148,7 +147,7 @@ static void iGaugeDrawGauge(Ihandle* ih)
     int xmid = xstart + gaugeround((xend-xstart + 1) * (ih->data->value - ih->data->vmin) / (ih->data->vmax - ih->data->vmin));
 
     if(ih->data->value != ih->data->vmin)
-      cdCanvasBox(ih->data->cddbuffer, xstart, xmid, ystart, yend );
+      cdCanvasBox(ih->data->cd_canvas, xstart, xmid, ystart, yend );
 
     if(ih->data->show_text)
       iGaugeDrawText(ih, xmid);
@@ -157,21 +156,9 @@ static void iGaugeDrawGauge(Ihandle* ih)
 
 static int iGaugeResize_CB(Ihandle* ih)
 {
-  if (!ih->data->cddbuffer)
-  {
-    /* update canvas size */
-    cdCanvasActivate(ih->data->cdcanvas);
-
-    /* this can fail if canvas size is zero */
-    ih->data->cddbuffer = cdCreateCanvas(CD_DBUFFER, ih->data->cdcanvas);
-  }
-
-  if (!ih->data->cddbuffer)
-    return IUP_DEFAULT;
-
   /* update size */
-  cdCanvasActivate(ih->data->cddbuffer);
-  cdCanvasGetSize(ih->data->cddbuffer,&ih->data->w,&ih->data->h,NULL,NULL);
+  cdCanvasActivate(ih->data->cd_canvas);
+  cdCanvasGetSize(ih->data->cd_canvas,&ih->data->w,&ih->data->h,NULL,NULL);
 
   /* update render */
   iGaugeDrawGauge(ih);
@@ -181,23 +168,25 @@ static int iGaugeResize_CB(Ihandle* ih)
 
 static void iGaugeRepaint(Ihandle* ih)
 {
-  if (!ih->data->cddbuffer)
+  if (!ih->data->cd_canvas)
     return;
+
+  cdCanvasActivate(ih->data->cd_canvas);
 
   /* update render */
   iGaugeDrawGauge(ih);
 
   /* update display */
-  cdCanvasFlush(ih->data->cddbuffer);
+  cdCanvasFlush(ih->data->cd_canvas);
 }
 
 static int iGaugeRedraw_CB(Ihandle* ih)
 {
-  if (!ih->data->cddbuffer)
+  if (!ih->data->cd_canvas)
     return IUP_DEFAULT;
 
   /* update display */
-  cdCanvasFlush(ih->data->cddbuffer);
+  cdCanvasFlush(ih->data->cd_canvas);
   return IUP_DEFAULT;
 }
 
@@ -233,8 +222,10 @@ static int iGaugeSetValueAttrib(Ihandle* ih, const char* value)
   if(value == NULL)
     ih->data->value = 0;
   else
-    ih->data->value = atof(value);
-  iGaugeCropValue(ih);
+  {
+    if (iupStrToDouble(value, &(ih->data->value)))
+      iGaugeCropValue(ih);
+  }
 
   iGaugeRepaint(ih);
   return 0; /* do not store value in hash table */
@@ -242,13 +233,13 @@ static int iGaugeSetValueAttrib(Ihandle* ih, const char* value)
 
 static char* iGaugeGetValueAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->value);
+  return iupStrReturnDouble(ih->data->value);
 }
 
 static int iGaugeSetMinAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->vmin = atof(value);
-  iGaugeCropValue(ih);
+  if (iupStrToDouble(value, &(ih->data->vmin)))
+    iGaugeCropValue(ih);
 
   iGaugeRepaint(ih);
   return 0; /* do not store value in hash table */
@@ -256,20 +247,21 @@ static int iGaugeSetMinAttrib(Ihandle* ih, const char* value)
 
 static char* iGaugeGetMinAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->vmin);
+  return iupStrReturnDouble(ih->data->vmin);
 }
 
 static int iGaugeSetMaxAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->vmax = atof(value);
-  iGaugeCropValue(ih);
+  if (iupStrToDouble(value, &(ih->data->vmax)))
+    iGaugeCropValue(ih);
+
   iGaugeRepaint(ih);
   return 0; /* do not store value in hash table */
 }
 
 static char* iGaugeGetMaxAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->vmax);
+  return iupStrReturnDouble(ih->data->vmax);
 }
 
 static int iGaugeSetShowTextAttrib(Ihandle* ih, const char* value)
@@ -334,27 +326,18 @@ static char* iGaugeGetTextAttrib(Ihandle* ih)
 
 static void iGaugeUnMapMethod(Ihandle* ih)
 {
-  if (ih->data->cddbuffer)
+  if (ih->data->cd_canvas)
   {
-    cdKillCanvas(ih->data->cddbuffer);
-    ih->data->cddbuffer = NULL;
-  }
-
-  if (ih->data->cdcanvas)
-  {
-    cdKillCanvas(ih->data->cdcanvas);
-    ih->data->cdcanvas = NULL;
+    cdKillCanvas(ih->data->cd_canvas);
+    ih->data->cd_canvas = NULL;
   }
 }
 
 static int iGaugeMapMethod(Ihandle* ih)
 {
-  ih->data->cdcanvas = cdCreateCanvas(CD_IUP, ih);
-  if (!ih->data->cdcanvas)
+  ih->data->cd_canvas = cdCreateCanvas(CD_IUPDBUFFER, ih);
+  if (!ih->data->cd_canvas)
     return IUP_ERROR;
-
-  /* this can fail if canvas size is zero */
-  ih->data->cddbuffer = cdCreateCanvas(CD_DBUFFER, ih->data->cdcanvas);
 
   return IUP_NOERROR;
 }
@@ -370,7 +353,7 @@ static int iGaugeCreateMethod(Ihandle* ih, void **params)
   /* change the IupCanvas default values */
   iupAttribSet(ih, "BORDER", "NO");
   IupSetAttribute(ih, "SIZE", IGAUGE_DEFAULTSIZE);
-  ih->expand = IUP_EXPAND_NONE;
+  IupSetAttribute(ih, "EXPAND", "NO");
 
   /* default values */
   iupAttribSet(ih, "FGCOLOR", IGAUGE_DEFAULTCOLOR);
@@ -414,7 +397,8 @@ Iclass* iupGaugeNewClass(void)
   iupClassRegisterAttribute(ic, "DASHED", iGaugeGetDashedAttrib, iGaugeSetDashedAttrib, NULL, NULL, IUPAF_NOT_MAPPED);
   iupClassRegisterAttribute(ic, "PADDING", iGaugeGetPaddingAttrib, iGaugeSetPaddingAttrib, IUPAF_SAMEASSYSTEM, "0x0", IUPAF_NOT_MAPPED);
   iupClassRegisterAttribute(ic, "TEXT", iGaugeGetTextAttrib, iGaugeSetTextAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "SHOW_TEXT", iGaugeGetShowTextAttrib, iGaugeSetShowTextAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED);
+  /*OLD*/iupClassRegisterAttribute(ic, "SHOW_TEXT", iGaugeGetShowTextAttrib, iGaugeSetShowTextAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "SHOWTEXT", iGaugeGetShowTextAttrib, iGaugeSetShowTextAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED);
   iupClassRegisterAttribute(ic, "FGCOLOR", NULL, iGaugeSetFgColorAttrib, IGAUGE_DEFAULTCOLOR, NULL, IUPAF_NOT_MAPPED);
 
   /* Overwrite IupCanvas Attributes */

@@ -12,7 +12,6 @@
 
 #include "iuplua.h"
 #include "il.h"
-#include "il_controls.h"
 
 /* 
    The REGISTRY is used to store references to the associated Lua objects.
@@ -26,10 +25,10 @@
 /* iup.TREEREFTABLE[object at pos] = ref */
 static void tree_settableref(lua_State *L, int pos, int ref)
 {
-  lua_getglobal(L, "iup");
+  iuplua_get_env(L);
   lua_pushstring(L, "TREEREFTABLE");
   lua_gettable(L, -2);
-  lua_remove(L, -2); /* remove "iup" from stack */
+  lua_remove(L, -2); /* remove iup table from stack */
 
   lua_pushvalue(L, pos);
   if(ref == LUA_NOREF)
@@ -43,10 +42,10 @@ static void tree_settableref(lua_State *L, int pos, int ref)
 /* ref = iup.TREEREFTABLE[object at pos] */
 static int tree_gettableref(lua_State *L, int pos)
 {
-  lua_getglobal(L, "iup");
+  iuplua_get_env(L);
   lua_pushstring(L, "TREEREFTABLE");
   lua_gettable(L, -2);
-  lua_remove(L, -2); /* remove "iup" from stack */
+  lua_remove(L, -2); /* remove iup table from stack */
 
   lua_pushvalue(L, pos);
   lua_gettable(L, -2);
@@ -57,7 +56,7 @@ static int tree_gettableref(lua_State *L, int pos)
   }
   else
   {
-    int ref = lua_tointeger(L, -1);
+    int ref = (int)lua_tointeger(L, -1);
     lua_pop(L, 1);
     return ref;
   }
@@ -101,7 +100,7 @@ static int TreeGetId(lua_State *L)
 static int TreeGetUserId(lua_State *L)
 {  
   Ihandle *ih = iuplua_checkihandle(L,1);
-  int id = luaL_checkint(L,2);
+  int id = (int)luaL_checkinteger(L,2);
   tree_push_userid(L, IupTreeGetUserId(ih, id));
   return 1;
 }
@@ -109,7 +108,7 @@ static int TreeGetUserId(lua_State *L)
 static int TreeSetUserId(lua_State *L)
 {  
   Ihandle *ih = iuplua_checkihandle(L,1);
-  int id = luaL_checkint(L,2);
+  int id = (int)luaL_checkinteger(L, 2);
   int ref = (int)IupTreeGetUserId(ih, id);
   if (ref != 0) /* userid is not NULL */
   {
@@ -181,18 +180,12 @@ void iuplua_treefuncs_open (lua_State *L)
   iuplua_register_cb(L, "MULTIUNSELECTION_CB", (lua_CFunction)tree_multiunselection_cb, NULL);
   iuplua_register_cb(L, "NODEREMOVED_CB", (lua_CFunction)tree_noderemoved_cb, NULL);
 
-/* In Lua 5:
-  TreeSetTableId = TreeSetUserId
-  TreeGetTable   = TreeGetUserId
-  TreeGetTableId = TreeGetId
-*/
-
-  /* Userdata <-> id */
+  /* Table/Userdata <-> id */
   iuplua_register(L, TreeGetId, "TreeGetId");
   iuplua_register(L, TreeGetUserId, "TreeGetUserId");
   iuplua_register(L, TreeSetUserId, "TreeSetUserId");
 
-  /* Table <-> id */
+  /* OLD names for backward compatibility */
   iuplua_register(L, TreeGetId, "TreeGetTableId");
   iuplua_register(L, TreeGetUserId, "TreeGetTable");
   iuplua_register(L, TreeSetUserId, "TreeSetTableId");

@@ -39,16 +39,16 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\lib\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\lib\x64\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\lib\Debug_64\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\obj\Debug\$(ProjectName)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_x64\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_64\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;..\src;..\srcmglplot;..\srcmglplot\ftgl;..\srcmglplot\freetype;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;_DEBUG;IUP_ASSERT;NO_PNG;NO_GSL;FTGL_LIBRARY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include;..\src;..\srcmglplot;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;_DEBUG;IUP_ASSERT;MGL_STATIC_DEFINE;MGL_SRC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -64,8 +64,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;..\src;..\srcmglplot;..\srcmglplot\ftgl;..\srcmglplot\freetype;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;_DEBUG;IUP_ASSERT;NO_PNG;NO_GSL;FTGL_LIBRARY_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include;..\src;..\srcmglplot;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_DEPRECATE;_DEBUG;IUP_ASSERT;MGL_STATIC_DEFINE;MGL_SRC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -80,69 +80,83 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\iup_mglplot.h" />
-    <ClInclude Include="..\srcmglplot\mgl\config.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_ab.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_addon.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_c.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_data.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_define.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_eps.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_eval.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_evalc.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_f.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_font.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_gl.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_parse.h" />
-    <ClInclude Include="..\srcmglplot\mgl\mgl_zb.h" />
-    <ClInclude Include="..\srcmglplot\mgl_makefont.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\abstract.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\addon.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\base.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\base_cf.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\canvas.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\canvas_cf.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\canvas_wnd.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\config.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\cont.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\data.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\datac.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\datac_cf.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\data_cf.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\define.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\dllexport.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\eval.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\evalc.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\fit.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\font.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\mgl.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\mgl_cf.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\opengl.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\other.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\parser.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\pde.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\plot.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\prim.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\surf.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\thread.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\type.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\vect.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\volume.h" />
+    <ClInclude Include="..\srcmglplot\mgl2\wnd.h" />
+    <ClInclude Include="..\srcmglplot\src\interp.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\srcmglplot\mgl\mgl_1d.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_2d.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_3d.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_ab.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_addon.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_axis.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_c.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_combi.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_cont.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_crust.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_data.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_data_cf.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_data_io.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_data_png.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_def_font.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_eps.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_eval.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_evalc.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_evalp.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_exec.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_export.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_f.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_fit.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_flow.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_font.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_gl.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_main.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_parse.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_pde.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_tex_table.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_vect.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_zb.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl\mgl_zb2.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTCharmap.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTContour.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTFace.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTFont\FTFont.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTGlyph\FTGlyph.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTGlyphContainer.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTLibrary.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTPoint.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTSize.cpp" />
-    <ClCompile Include="..\srcmglplot\ftgl\FTVectoriser.cpp" />
     <ClCompile Include="..\srcmglplot\iup_mglplot.cpp" />
-    <ClCompile Include="..\srcmglplot\mgl_makefont.cpp" />
+    <ClCompile Include="..\srcmglplot\src\addon.cpp" />
+    <ClCompile Include="..\srcmglplot\src\axis.cpp" />
+    <ClCompile Include="..\srcmglplot\src\base.cpp" />
+    <ClCompile Include="..\srcmglplot\src\base_cf.cpp" />
+    <ClCompile Include="..\srcmglplot\src\canvas.cpp" />
+    <ClCompile Include="..\srcmglplot\src\canvas_cf.cpp" />
+    <ClCompile Include="..\srcmglplot\src\complex.cpp" />
+    <ClCompile Include="..\srcmglplot\src\complex_ex.cpp" />
+    <ClCompile Include="..\srcmglplot\src\complex_io.cpp" />
+    <ClCompile Include="..\srcmglplot\src\cont.cpp" />
+    <ClCompile Include="..\srcmglplot\src\crust.cpp" />
+    <ClCompile Include="..\srcmglplot\src\data.cpp" />
+    <ClCompile Include="..\srcmglplot\src\data_ex.cpp" />
+    <ClCompile Include="..\srcmglplot\src\data_gr.cpp" />
+    <ClCompile Include="..\srcmglplot\src\data_io.cpp" />
+    <ClCompile Include="..\srcmglplot\src\data_png.cpp" />
+    <ClCompile Include="..\srcmglplot\src\eval.cpp" />
+    <ClCompile Include="..\srcmglplot\src\evalc.cpp" />
+    <ClCompile Include="..\srcmglplot\src\evalp.cpp" />
+    <ClCompile Include="..\srcmglplot\src\exec.cpp" />
+    <ClCompile Include="..\srcmglplot\src\export.cpp" />
+    <ClCompile Include="..\srcmglplot\src\export_2d.cpp" />
+    <ClCompile Include="..\srcmglplot\src\export_3d.cpp" />
+    <ClCompile Include="..\srcmglplot\src\fft.cpp" />
+    <ClCompile Include="..\srcmglplot\src\fit.cpp" />
+    <ClCompile Include="..\srcmglplot\src\font.cpp" />
+    <ClCompile Include="..\srcmglplot\src\fractal.cpp" />
+    <ClCompile Include="..\srcmglplot\src\obj.cpp" />
+    <ClCompile Include="..\srcmglplot\src\opengl.cpp" />
+    <ClCompile Include="..\srcmglplot\src\other.cpp" />
+    <ClCompile Include="..\srcmglplot\src\parser.cpp" />
+    <ClCompile Include="..\srcmglplot\src\pde.cpp" />
+    <ClCompile Include="..\srcmglplot\src\pixel.cpp" />
+    <ClCompile Include="..\srcmglplot\src\plot.cpp" />
+    <ClCompile Include="..\srcmglplot\src\prim.cpp" />
+    <ClCompile Include="..\srcmglplot\src\surf.cpp" />
+    <ClCompile Include="..\srcmglplot\src\s_hull\s_hull_pro.cpp" />
+    <ClCompile Include="..\srcmglplot\src\vect.cpp" />
+    <ClCompile Include="..\srcmglplot\src\volume.cpp" />
+    <ClCompile Include="..\srcmglplot\src\window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\srcmglplot\iup_mglplot.def" />

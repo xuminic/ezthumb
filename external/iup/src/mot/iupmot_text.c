@@ -796,9 +796,15 @@ static void motTextModifyVerifyCallback(Widget w, Ihandle *ih, XmTextVerifyPtr t
   if (text->event && text->event->type == KeyPress)
   {
     unsigned int state = ((XKeyEvent*)text->event)->state;
-    if (state & ControlMask ||  /* Ctrl */
-        state & Mod1Mask || state & Mod5Mask ||  /* Alt */
-        state & Mod4Mask) /* Apple/Win */
+    int has_ctrl = state & ControlMask;  /* Ctrl */
+    int has_alt = state & Mod1Mask || state & Mod5Mask;  /* Alt */
+    int has_sys = state & Mod4Mask; /* Apple/Win */
+
+    /* only process when no modifiers are used */        
+    /* except when Ctrl and Alt are pressed at the same time */
+    if (has_sys ||
+        (!has_ctrl && has_alt) ||
+        (has_ctrl && !has_alt))
     {
       text->doit = False;     /* abort processing */
       return;
@@ -922,7 +928,7 @@ static void motTextKeyPressEvent(Widget w, Ihandle *ih, XKeyEvent *evt, Boolean 
   if (*cont == False)
     return;
 
-  if (evt->state & ControlMask)   /* Ctrl */
+  if (evt->state & ControlMask && !(evt->state & Mod1Mask || evt->state & Mod5Mask))   /* Ctrl but NOT Alt */
   {
     KeySym motcode = iupmotKeycodeToKeysym(evt);
     if (motcode == XK_c || motcode == XK_x || motcode == XK_v || motcode == XK_a)
@@ -1018,7 +1024,7 @@ static int motTextMapMethod(Ihandle* ih)
     if (iupAttribGetBoolean(ih, "WORDWRAP"))
     {
       wordwrap = 1;
-      ih->data->sb &= ~IUP_SB_HORIZ;  /* must remove the horizontal scroolbar */
+      ih->data->sb &= ~IUP_SB_HORIZ;  /* must remove the horizontal scrollbar */
     }
 
     /******************************/
@@ -1098,9 +1104,10 @@ static int motTextMapMethod(Ihandle* ih)
     {
       /* Spin Constraints */
       iupMOT_SETARG(args, num_args, XmNspinBoxChildType, XmNUMERIC);
-      iupMOT_SETARG(args, num_args, XmNminimumValue, 0);
-      iupMOT_SETARG(args, num_args, XmNmaximumValue, 100);
-      iupMOT_SETARG(args, num_args, XmNposition, 0);
+      iupMOT_SETARG(args, num_args, XmNminimumValue, iupAttribGetInt(ih, "SPINMIN"));
+      iupMOT_SETARG(args, num_args, XmNmaximumValue, iupAttribGetInt(ih, "SPINMAX"));
+      iupMOT_SETARG(args, num_args, XmNincrementValue, iupAttribGetInt(ih, "SPININC"));
+      iupMOT_SETARG(args, num_args, XmNposition, iupAttribGetInt(ih, "SPINMIN"));
 
       if (iupAttribGetBoolean(ih, "SPINWRAP"))
         iupMOT_SETARG(args, num_args, XmNwrap, TRUE);
@@ -1190,6 +1197,7 @@ static int motTextMapMethod(Ihandle* ih)
   {
     iupmotSetGlobalColorAttrib(ih->handle, XmNbackground, "TXTBGCOLOR");
     iupmotSetGlobalColorAttrib(ih->handle, XmNforeground, "TXTFGCOLOR");
+    iupmotSetGlobalColorAttrib(ih->handle, XmNhighlightColor, "TXTHLCOLOR");
     IupSetGlobal("_IUP_RESET_TXTCOLORS", NULL);
   }
 

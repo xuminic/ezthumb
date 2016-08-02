@@ -50,6 +50,10 @@ static int iZboxCreateMethod(Ihandle* ih, void** params)
 
 static void iZboxChildAddedMethod(Ihandle* ih, Ihandle* child)
 {
+  /* make sure it has at least one name */
+  if (!iupAttribGetHandleName(child))
+    iupAttribSetHandleName(child);
+
   if (!ih->data->value_handle)
   {
     IupSetAttribute(child, "VISIBLE", IupGetAttribute(ih, "VISIBLE"));
@@ -59,8 +63,10 @@ static void iZboxChildAddedMethod(Ihandle* ih, Ihandle* child)
     IupSetAttribute(child, "VISIBLE", "NO");
 }
 
-static void iZboxChildRemovedMethod(Ihandle* ih, Ihandle* child)
+static void iZboxChildRemovedMethod(Ihandle* ih, Ihandle* child, int pos)
 {
+  (void)pos;
+
   if (child == ih->data->value_handle)
   {
     /* reset to the first child, even if it is NULL */
@@ -203,7 +209,7 @@ static char* iZboxGetValueAttrib(Ihandle* ih)
 
   for (pos=0, child = ih->firstchild; child; child = child->brother, pos++)
   {
-    if (child == ih->data->value_handle) /* found child, just cheking */
+    if (child == ih->data->value_handle) /* found child, just checking */
       return IupGetName(ih->data->value_handle);
   }
 
@@ -363,14 +369,14 @@ Iclass* iupZboxNewClass(void)
 
   /* Base Container */
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetRasterSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetCurrentSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   /* Zbox only */
   iupClassRegisterAttribute(ic, "ALIGNMENT", iZboxGetAlignmentAttrib, iZboxSetAlignmentAttrib, IUPAF_SAMEASSYSTEM, "NW", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "VALUE", iZboxGetValueAttrib, iZboxSetValueAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "VALUEPOS", iZboxGetValuePosAttrib, iZboxSetValuePosAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "VALUE_HANDLE", iZboxGetValueHandleAttrib, iZboxSetValueHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_NO_STRING);
+  iupClassRegisterAttribute(ic, "VALUE_HANDLE", iZboxGetValueHandleAttrib, iZboxSetValueHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
 
   /* Intercept VISIBLE since ZBOX works by showing and hidding its children */
   iupClassRegisterAttribute(ic, "VISIBLE", NULL, iZboxSetVisibleAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED);

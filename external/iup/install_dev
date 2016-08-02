@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Include TEC_UNAME definitions
-source tec_uname
+source ./tec_uname
 
 echo ' '
 echo '  This script will install the >>Development<< files in the system'

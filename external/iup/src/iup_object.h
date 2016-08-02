@@ -44,7 +44,9 @@ enum Iexpand {
   IUP_EXPAND_H0   = 0x01,  /* only set by IupFill */
   IUP_EXPAND_H1   = 0x02,
   IUP_EXPAND_W0   = 0x04,  /* only set by IupFill */
-  IUP_EXPAND_W1   = 0x08
+  IUP_EXPAND_W1   = 0x08,
+  IUP_EXPAND_HFREE = 0x10,  /* expand to the available space only, container is not affect */
+  IUP_EXPAND_WFREE = 0x20,
 };
 
 /** Expand configuration

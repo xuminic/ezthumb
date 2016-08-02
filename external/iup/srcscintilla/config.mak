@@ -11,11 +11,13 @@ ifdef DBG
   endif
 endif  
 
+DEF_FILE = iup_scintilla.def
+
 INCLUDES =  ../include ../src .
 LDIR = ../lib/$(TEC_UNAME)
 LIBS = iup
 
-DEFINES += STATIC_BUILD SCI_LEXER SCI_NAMESPACE
+DEFINES += STATIC_BUILD SCI_LEXER 
 
 # Supported only in Windows and GTK
 
@@ -33,18 +35,19 @@ endif
 
 ifdef USE_GTK
   CHECK_GTK = Yes
+  DEFINES += NO_CXX11_REGEX
   DEFINES += GTK GTK_DISABLE_DEPRECATED 
   ifdef USE_GTK3
     DEFINES += GDK_DISABLE_DEPRECATED GSEAL_ENABLE G_HAVE_ISO_VARARGS
   endif
-  INCLUDES += ../src/gtk ../srcscintilla/lexlib ../srcscintilla/src ../srcscintilla/include ../srcscintilla/gtk
+  INCLUDES += ../src/gtk lexlib src include gtk
   INCLUDES += gtk
   ifneq ($(findstring cygw, $(TEC_UNAME)), )
     INCLUDES += $(GTK)/include/cairo
     LIBS += pangocairo-1.0 cairo
   endif
 else
-  INCLUDES += ../src/win ../srcscintilla/lexlib ../srcscintilla/src ../srcscintilla/include ../srcscintilla/win32
+  INCLUDES += ../src/win lexlib src include win32
   INCLUDES += win
   LIBS += imm32
   DEFINES += UNICODE
@@ -55,15 +58,22 @@ else
   ifneq ($(findstring dllg, $(TEC_UNAME)), )
     DEFINES += _WIN32 DISABLE_D2D
   endif
+  ifneq ($(findstring mingw, $(TEC_UNAME)), )
+    DEFINES += _WIN32 DISABLE_D2D
+  endif
+  ifneq ($(findstring dllw, $(TEC_UNAME)), )
+    DEFINES += _WIN32 DISABLE_D2D
+  endif
 endif
 
 SRCSCINTILLA = src/AutoComplete.cxx src/CallTip.cxx src/Catalogue.cxx src/CellBuffer.cxx src/CharClassify.cxx \
                src/ContractionState.cxx src/Decoration.cxx src/Document.cxx src/Editor.cxx src/ExternalLexer.cxx \
                src/Indicator.cxx src/KeyMap.cxx src/LineMarker.cxx src/PerLine.cxx src/PositionCache.cxx \
                src/RESearch.cxx src/RunStyles.cxx src/ScintillaBase.cxx src/Selection.cxx src/Style.cxx \
-               src/UniConversion.cxx src/ViewStyle.cxx src/XPM.cxx src/CaseConvert.cxx src/CaseFolder.cxx
+               src/UniConversion.cxx src/ViewStyle.cxx src/XPM.cxx src/CaseConvert.cxx src/CaseFolder.cxx \
+               src/EditModel.cxx src/EditView.cxx src/MarginView.cxx
 
-SRCSCINTILLA += lexers/LexA68k.cxx lexers/LexAbaqus.cxx lexers/LexAda.cxx lexers/LexAPDL.cxx lexers/LexAsm.cxx \
+SRCSCINTILLA += lexers/LexA68k.cxx lexers/LexAbaqus.cxx lexers/LexAda.cxx lexers/LexAPDL.cxx \
 				lexers/LexAsn1.cxx lexers/LexASY.cxx lexers/LexAU3.cxx lexers/LexAVE.cxx lexers/LexAVS.cxx \
 				lexers/LexBaan.cxx lexers/LexBash.cxx lexers/LexBasic.cxx lexers/LexBullant.cxx lexers/LexCaml.cxx \
 				lexers/LexCLW.cxx lexers/LexCmake.cxx lexers/LexCOBOL.cxx lexers/LexCoffeeScript.cxx \
@@ -75,7 +85,7 @@ SRCSCINTILLA += lexers/LexA68k.cxx lexers/LexAbaqus.cxx lexers/LexAda.cxx lexers
 				lexers/LexMarkdown.cxx lexers/LexMatlab.cxx lexers/LexMetapost.cxx lexers/LexMMIXAL.cxx \
 				lexers/LexModula.cxx lexers/LexMPT.cxx lexers/LexMSSQL.cxx lexers/LexMySQL.cxx \
 				lexers/LexNimrod.cxx lexers/LexNsis.cxx lexers/LexOpal.cxx lexers/LexOScript.cxx \
-				lexers/LexOthers.cxx lexers/LexPascal.cxx lexers/LexPB.cxx lexers/LexPerl.cxx \
+				lexers/LexPascal.cxx lexers/LexPB.cxx lexers/LexPerl.cxx \
 				lexers/LexPLM.cxx lexers/LexPO.cxx lexers/LexPOV.cxx lexers/LexPowerPro.cxx \
 				lexers/LexPowerShell.cxx lexers/LexProgress.cxx lexers/LexPS.cxx lexers/LexPython.cxx \
 				lexers/LexR.cxx lexers/LexRebol.cxx lexers/LexRuby.cxx lexers/LexScriptol.cxx \
@@ -83,7 +93,10 @@ SRCSCINTILLA += lexers/LexA68k.cxx lexers/LexAbaqus.cxx lexers/LexAda.cxx lexers
 				lexers/LexSpice.cxx lexers/LexSQL.cxx lexers/LexTACL.cxx lexers/LexTADS3.cxx lexers/LexTAL.cxx \
 				lexers/LexTCL.cxx lexers/LexTCMD.cxx lexers/LexTeX.cxx lexers/LexTxt2tags.cxx lexers/LexVB.cxx \
 				lexers/LexVerilog.cxx lexers/LexVHDL.cxx lexers/LexVisualProlog.cxx lexers/LexYAML.cxx \
-        lexers/LexKVIrc.cxx lexers/LexLaTeX.cxx lexers/LexSTTXT.cxx lexers/LexRust.cxx
+        lexers/LexKVIrc.cxx lexers/LexLaTeX.cxx lexers/LexSTTXT.cxx lexers/LexRust.cxx \
+        lexers/LexDMAP.cxx lexers/LexDMIS.cxx lexers/LexBibTeX.cxx lexers/LexHex.cxx lexers/LexAsm.cxx \
+        lexers/LexRegistry.cxx lexers/LexBatch.cxx lexers/LexDiff.cxx lexers/LexErrorList.cxx \
+        lexers/LexMake.cxx lexers/LexNull.cxx lexers/LexProps.cxx lexers/LexJSON.cxx
 				
 SRCSCINTILLA += lexlib/Accessor.cxx lexlib/CharacterSet.cxx lexlib/LexerBase.cxx lexlib/LexerModule.cxx \
                 lexlib/LexerNoExceptions.cxx lexlib/LexerSimple.cxx lexlib/PropSetSimple.cxx \
@@ -92,14 +105,7 @@ SRCSCINTILLA += lexlib/Accessor.cxx lexlib/CharacterSet.cxx lexlib/LexerBase.cxx
 ifdef USE_GTK
   SRCSCINTILLA += gtk/PlatGTK.cxx gtk/ScintillaGTK.cxx gtk/scintilla-marshal.c
 else
-  SRCSCINTILLA += win32/PlatWin.cxx win32/ScintillaWin.cxx
-  
-  ifneq ($(findstring mingw, $(TEC_UNAME)), )
-    DEFINES += DISABLE_D2D
-  endif
-  ifneq ($(findstring dllw, $(TEC_UNAME)), )
-    DEFINES += DISABLE_D2D
-  endif
+  SRCSCINTILLA += win32/PlatWin.cxx win32/ScintillaWin.cxx win32/HanjaDic.cxx
 endif
 
 SRC = $(SRCSCINTILLA) iupsci_clipboard.c iupsci_folding.c iupsci_lexer.c iupsci_margin.c \

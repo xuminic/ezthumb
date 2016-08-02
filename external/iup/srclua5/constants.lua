@@ -25,8 +25,8 @@ iup.RIGHT        = 65533
 iup.MOUSEPOS     = 65532
 iup.CURRENT      = 65531
 iup.CENTERPARENT = 65530
-iup.TOP = LEFT
-iup.BOTTOM = RIGHT
+iup.TOP          = iup.LEFT
+iup.BOTTOM       = iup.RIGHT
 
 ----------------------------------------------------------------------------
 --  Scrollbar
@@ -71,16 +71,22 @@ iup.RECTEXT = 1
 ----------------------------------------------------------------------------
 --  Pre-Defined Masks        
 ----------------------------------------------------------------------------
-iup.MASK_FLOAT   = "[+/-]?(/d+/.?/d*|/./d+)"
-iup.MASK_UFLOAT  = "(/d+/.?/d*|/./d+)"
-iup.MASK_EFLOAT  = "[+/-]?(/d+/.?/d*|/./d+)([eE][+/-]?/d+)?"
-iup.MASK_INT     = "[+/-]?/d+"
-iup.MASK_UINT    = "/d+"
+iup.MASK_FLOAT       = "[+/-]?(/d+/.?/d*|/./d+)"
+iup.MASK_UFLOAT      =       "(/d+/.?/d*|/./d+)"
+iup.MASK_EFLOAT      = "[+/-]?(/d+/.?/d*|/./d+)([eE][+/-]?/d+)?"
+iup.MASK_FLOATCOMMA  = "[+/-]?(/d+/,?/d*|/,/d+)"
+iup.MASK_UFLOATCOMMA =       "(/d+/,?/d*|/,/d+)"
+iup.MASK_INT         =  "[+/-]?/d+"
+iup.MASK_UINT        =        "/d+"
 
 ----------------------------------------------------------------------------
 --  IupGetParam Callback situations
 ----------------------------------------------------------------------------
-iup.GETPARAM_OK     = -1
-iup.GETPARAM_INIT   = -2
-iup.GETPARAM_CANCEL = -3
-iup.GETPARAM_HELP   = -4
+iup.GETPARAM_BUTTON1 = -1
+iup.GETPARAM_INIT    = -2
+iup.GETPARAM_BUTTON2 = -3
+iup.GETPARAM_BUTTON3 = -4
+iup.GETPARAM_CLOSE   = -5
+iup.GETPARAM_OK      = iup.GETPARAM_BUTTON1
+iup.GETPARAM_CANCEL  = iup.GETPARAM_BUTTON2
+iup.GETPARAM_HELP    = iup.GETPARAM_BUTTON3

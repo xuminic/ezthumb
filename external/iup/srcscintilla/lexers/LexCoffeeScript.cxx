@@ -31,11 +31,8 @@ using namespace Scintilla;
 #endif
 
 static bool IsSpaceEquiv(int state) {
-	return (state <= SCE_COFFEESCRIPT_COMMENTDOC
-	    // including SCE_COFFEESCRIPT_DEFAULT, SCE_COFFEESCRIPT_COMMENT, SCE_COFFEESCRIPT_COMMENTLINE
-	    || state == SCE_COFFEESCRIPT_COMMENTLINEDOC
-	    || state == SCE_COFFEESCRIPT_COMMENTDOCKEYWORD
-	    || state == SCE_COFFEESCRIPT_COMMENTDOCKEYWORDERROR
+	return (state == SCE_COFFEESCRIPT_DEFAULT
+	    || state == SCE_COFFEESCRIPT_COMMENTLINE
 	    || state == SCE_COFFEESCRIPT_COMMENTBLOCK
 	    || state == SCE_COFFEESCRIPT_VERBOSE_REGEX
 	    || state == SCE_COFFEESCRIPT_VERBOSE_REGEX_COMMENT
@@ -51,7 +48,7 @@ static bool IsSpaceEquiv(int state) {
 // Putting a space between the '++' post-inc operator and the '+' binary op
 // fixes this, and is highly recommended for readability anyway.
 static bool FollowsPostfixOperator(StyleContext &sc, Accessor &styler) {
-	int pos = (int) sc.currentPos;
+	Sci_Position pos = (Sci_Position) sc.currentPos;
 	while (--pos > 0) {
 		char ch = styler[pos];
 		if (ch == '+' || ch == '-') {
@@ -61,84 +58,40 @@ static bool FollowsPostfixOperator(StyleContext &sc, Accessor &styler) {
 	return false;
 }
 
-static bool followsReturnKeyword(StyleContext &sc, Accessor &styler) {
-    // Don't look at styles, so no need to flush.
-	int pos = (int) sc.currentPos;
-	int currentLine = styler.GetLine(pos);
-	int lineStartPos = styler.LineStart(currentLine);
-	char ch;
+static bool followsKeyword(StyleContext &sc, Accessor &styler) {
+	Sci_Position pos = (Sci_Position) sc.currentPos;
+	Sci_Position currentLine = styler.GetLine(pos);
+	Sci_Position lineStartPos = styler.LineStart(currentLine);
 	while (--pos > lineStartPos) {
-		ch = styler.SafeGetCharAt(pos);
+		char ch = styler.SafeGetCharAt(pos);
 		if (ch != ' ' && ch != '\t') {
 			break;
 		}
 	}
-	const char *retBack = "nruter";
-	const char *s = retBack;
-	while (*s
-	       && pos >= lineStartPos
-	       && styler.SafeGetCharAt(pos) == *s) {
-		s++;
-		pos--;
-	}
-	return !*s;
+	styler.Flush();
+	return styler.StyleAt(pos) == SCE_COFFEESCRIPT_WORD;
 }
 
-static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int initStyle, WordList *keywordlists[],
+static void ColouriseCoffeeScriptDoc(Sci_PositionU startPos, Sci_Position length, int initStyle, WordList *keywordlists[],
                             Accessor &styler) {
 
 	WordList &keywords = *keywordlists[0];
 	WordList &keywords2 = *keywordlists[1];
-	WordList &keywords3 = *keywordlists[2];
 	WordList &keywords4 = *keywordlists[3];
-
-	// property styling.within.preprocessor
-	//	For C++ code, determines whether all preprocessor code is styled in the preprocessor style (0, the default)
-	//	or only from the initial # to the end of the command word(1).
-	bool stylingWithinPreprocessor = styler.GetPropertyInt("styling.within.preprocessor") != 0;
 
 	CharacterSet setOKBeforeRE(CharacterSet::setNone, "([{=,:;!%^&*|?~+-");
 	CharacterSet setCouldBePostOp(CharacterSet::setNone, "+-");
 
-	CharacterSet setDoxygen(CharacterSet::setAlpha, "$@\\&<>#{}[]");
-
-	CharacterSet setWordStart(CharacterSet::setAlpha, "_", 0x80, true);
-	CharacterSet setWord(CharacterSet::setAlphaNum, "._", 0x80, true);
-
-	// property lexer.cpp.allow.dollars
-	//	Set to 0 to disallow the '$' character in identifiers with the cpp lexer.
-	if (styler.GetPropertyInt("lexer.cpp.allow.dollars", 1) != 0) {
-		setWordStart.Add('$');
-		setWord.Add('$');
-	}
+	CharacterSet setWordStart(CharacterSet::setAlpha, "_$@", 0x80, true);
+	CharacterSet setWord(CharacterSet::setAlphaNum, "._$", 0x80, true);
 
 	int chPrevNonWhite = ' ';
 	int visibleChars = 0;
-	bool lastWordWasUUID = false;
-	int styleBeforeDCKeyword = SCE_COFFEESCRIPT_DEFAULT;
-	bool continuationLine = false;
-	bool isIncludePreprocessor = false;
-
-	if (initStyle == SCE_COFFEESCRIPT_PREPROCESSOR) {
-		// Set continuationLine if last character of previous line is '\'
-		int lineCurrent = styler.GetLine(startPos);
-		if (lineCurrent > 0) {
-			int chBack = styler.SafeGetCharAt(startPos-1, 0);
-			int chBack2 = styler.SafeGetCharAt(startPos-2, 0);
-			int lineEndChar = '!';
-			if (chBack2 == '\r' && chBack == '\n') {
-				lineEndChar = styler.SafeGetCharAt(startPos-3, 0);
-			} else if (chBack == '\n' || chBack == '\r') {
-				lineEndChar = chBack2;
-			}
-			continuationLine = lineEndChar == '\\';
-		}
-	}
 
 	// look back to set chPrevNonWhite properly for better regex colouring
-	int endPos = startPos + length;
+	Sci_Position endPos = startPos + length;
         if (startPos > 0 && IsSpaceEquiv(initStyle)) {
-		unsigned int back = startPos;
+		Sci_PositionU back = startPos;
 		styler.Flush();
 		while (back > 0 && IsSpaceEquiv(styler.StyleAt(--back)))
 			;
@@ -159,23 +112,9 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 	for (; sc.More(); sc.Forward()) {
 
 		if (sc.atLineStart) {
-			// Reset states to begining of colourise so no surprises
+			// Reset states to beginning of colourise so no surprises
 			// if different sets of lines lexed.
 			visibleChars = 0;
-			lastWordWasUUID = false;
-			isIncludePreprocessor = false;
-		}
-
-		// Handle line continuation generically.
-		if (sc.ch == '\\') {
-			if (sc.chNext == '\n' || sc.chNext == '\r') {
-				sc.Forward();
-				if (sc.ch == '\r' && sc.chNext == '\n') {
-					sc.Forward();
-				}
-				continuationLine = true;
-				continue;
-			}
 		}
 
 		// Determine if the current state should terminate.
@@ -185,7 +124,7 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 				break;
 			case SCE_COFFEESCRIPT_NUMBER:
 				// We accept almost anything because of hex. and number suffixes
-				if (!setWord.Contains(sc.ch)) {
+				if (!setWord.Contains(sc.ch) || sc.Match('.', '.')) {
 					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
 				}
 				break;
@@ -194,45 +133,23 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 					char s[1000];
 					sc.GetCurrent(s, sizeof(s));
 					if (keywords.InList(s)) {
-						lastWordWasUUID = strcmp(s, "uuid") == 0;
 						sc.ChangeState(SCE_COFFEESCRIPT_WORD);
 					} else if (keywords2.InList(s)) {
 						sc.ChangeState(SCE_COFFEESCRIPT_WORD2);
 					} else if (keywords4.InList(s)) {
 						sc.ChangeState(SCE_COFFEESCRIPT_GLOBALCLASS);
+					} else if (sc.LengthCurrent() > 0 && s[0] == '@') {
+						sc.ChangeState(SCE_COFFEESCRIPT_INSTANCEPROPERTY);
 					}
 					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
 				}
 				break;
-			case SCE_COFFEESCRIPT_PREPROCESSOR:
-				if (sc.atLineStart && !continuationLine) {
+			case SCE_COFFEESCRIPT_WORD:
+			case SCE_COFFEESCRIPT_WORD2:
+			case SCE_COFFEESCRIPT_GLOBALCLASS:
+			case SCE_COFFEESCRIPT_INSTANCEPROPERTY:
+				if (!setWord.Contains(sc.ch)) {
 					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
-				} else if (stylingWithinPreprocessor) {
-					if (IsASpace(sc.ch)) {
-						sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
-					}
-				} else {
-					if (sc.Match('/', '*') || sc.Match('/', '/')) {
-						sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
-					}
-				}
-				break;
-			case SCE_COFFEESCRIPT_COMMENT:
-				if (sc.Match('*', '/')) {
-					sc.Forward();
-					sc.ForwardSetState(SCE_COFFEESCRIPT_DEFAULT);
-				}
-				break;
-			case SCE_COFFEESCRIPT_COMMENTDOC:
-				if (sc.Match('*', '/')) {
-					sc.Forward();
-					sc.ForwardSetState(SCE_COFFEESCRIPT_DEFAULT);
-				} else if (sc.ch == '@' || sc.ch == '\\') { // JavaDoc and Doxygen support
-					// Verify that we have the conditions to mark a comment-doc-keyword
-					if ((IsASpace(sc.chPrev) || sc.chPrev == '*') && (!IsASpace(sc.chNext))) {
-						styleBeforeDCKeyword = SCE_COFFEESCRIPT_COMMENTDOC;
-						sc.SetState(SCE_COFFEESCRIPT_COMMENTDOCKEYWORD);
-					}
 				}
 				break;
 			case SCE_COFFEESCRIPT_COMMENTLINE:
@@ -240,38 +157,8 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
 				}
 				break;
-			case SCE_COFFEESCRIPT_COMMENTLINEDOC:
-				if (sc.atLineStart) {
-					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
-				} else if (sc.ch == '@' || sc.ch == '\\') { // JavaDoc and Doxygen support
-					// Verify that we have the conditions to mark a comment-doc-keyword
-					if ((IsASpace(sc.chPrev) || sc.chPrev == '/' || sc.chPrev == '!') && (!IsASpace(sc.chNext))) {
-						styleBeforeDCKeyword = SCE_COFFEESCRIPT_COMMENTLINEDOC;
-						sc.SetState(SCE_COFFEESCRIPT_COMMENTDOCKEYWORD);
-					}
-				}
-				break;
-			case SCE_COFFEESCRIPT_COMMENTDOCKEYWORD:
-				if ((styleBeforeDCKeyword == SCE_COFFEESCRIPT_COMMENTDOC) && sc.Match('*', '/')) {
-					sc.ChangeState(SCE_COFFEESCRIPT_COMMENTDOCKEYWORDERROR);
-					sc.Forward();
-					sc.ForwardSetState(SCE_COFFEESCRIPT_DEFAULT);
-				} else if (!setDoxygen.Contains(sc.ch)) {
-					char s[100];
-					sc.GetCurrent(s, sizeof(s));
-					if (!IsASpace(sc.ch) || !keywords3.InList(s + 1)) {
-						sc.ChangeState(SCE_COFFEESCRIPT_COMMENTDOCKEYWORDERROR);
-					}
-					sc.SetState(styleBeforeDCKeyword);
-				}
-				break;
 			case SCE_COFFEESCRIPT_STRING:
-				if (isIncludePreprocessor) {
-					if (sc.ch == '>') {
-						sc.ForwardSetState(SCE_COFFEESCRIPT_DEFAULT);
-						isIncludePreprocessor = false;
-					}
-				} else if (sc.ch == '\\') {
+				if (sc.ch == '\\') {
 					if (sc.chNext == '\"' || sc.chNext == '\'' || sc.chNext == '\\') {
 						sc.Forward();
 					}
@@ -308,20 +195,6 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
 				}
 				break;
-			case SCE_COFFEESCRIPT_VERBATIM:
-				if (sc.ch == '\"') {
-					if (sc.chNext == '\"') {
-						sc.Forward();
-					} else {
-						sc.ForwardSetState(SCE_COFFEESCRIPT_DEFAULT);
-					}
-				}
-				break;
-			case SCE_COFFEESCRIPT_UUID:
-				if (sc.ch == '\r' || sc.ch == '\n' || sc.ch == ')') {
-					sc.SetState(SCE_COFFEESCRIPT_DEFAULT);
-				}
-				break;
 			case SCE_COFFEESCRIPT_COMMENTBLOCK:
 				if (sc.Match("###")) {
 					sc.Forward();
@@ -351,44 +224,21 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 
 		// Determine if a new state should be entered.
 		if (sc.state == SCE_COFFEESCRIPT_DEFAULT) {
-			if (sc.Match('@', '\"')) {
-				sc.SetState(SCE_COFFEESCRIPT_VERBATIM);
-				sc.Forward();
-			} else if (IsADigit(sc.ch) || (sc.ch == '.' && IsADigit(sc.chNext))) {
-				if (lastWordWasUUID) {
-					sc.SetState(SCE_COFFEESCRIPT_UUID);
-					lastWordWasUUID = false;
-				} else {
-					sc.SetState(SCE_COFFEESCRIPT_NUMBER);
-				}
-			} else if (setWordStart.Contains(sc.ch) || (sc.ch == '@') || (sc.ch == '$')) {
-				if (lastWordWasUUID) {
-					sc.SetState(SCE_COFFEESCRIPT_UUID);
-					lastWordWasUUID = false;
-				} else {
-					sc.SetState(SCE_COFFEESCRIPT_IDENTIFIER);
-				}
-			} else if (sc.Match('/', '*')) {
-				if (sc.Match("/**") || sc.Match("/*!")) {	// Support of Qt/Doxygen doc. style
-					sc.SetState(SCE_COFFEESCRIPT_COMMENTDOC);
-				} else {
-					sc.SetState(SCE_COFFEESCRIPT_COMMENT);
-				}
-				sc.Forward();	// Eat the * so it isn't used for the end of the comment
+			if (IsADigit(sc.ch) || (sc.ch == '.' && IsADigit(sc.chNext))) {
+				sc.SetState(SCE_COFFEESCRIPT_NUMBER);
+			} else if (setWordStart.Contains(sc.ch)) {
+				sc.SetState(SCE_COFFEESCRIPT_IDENTIFIER);
 			} else if (sc.Match("///")) {
 				sc.SetState(SCE_COFFEESCRIPT_VERBOSE_REGEX);
 				sc.Forward();
 				sc.Forward();
 			} else if (sc.ch == '/'
 				   && (setOKBeforeRE.Contains(chPrevNonWhite)
-				       || followsReturnKeyword(sc, styler))
+				       || followsKeyword(sc, styler))
 				   && (!setCouldBePostOp.Contains(chPrevNonWhite)
 				       || !FollowsPostfixOperator(sc, styler))) {
 				sc.SetState(SCE_COFFEESCRIPT_REGEX);	// JavaScript's RegEx
 			} else if (sc.ch == '\"') {
-				sc.SetState(SCE_COFFEESCRIPT_STRING);
-				isIncludePreprocessor = false;	// ensure that '>' won't end the string
-			} else if (isIncludePreprocessor && sc.ch == '<') {
 				sc.SetState(SCE_COFFEESCRIPT_STRING);
 			} else if (sc.ch == '\'') {
 				sc.SetState(SCE_COFFEESCRIPT_CHARACTER);
@@ -397,12 +247,15 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 					sc.SetState(SCE_COFFEESCRIPT_COMMENTBLOCK);
 					sc.Forward();
 					sc.Forward();
-					
 				} else {
 					sc.SetState(SCE_COFFEESCRIPT_COMMENTLINE);
 				}
 			} else if (isoperator(static_cast<char>(sc.ch))) {
 				sc.SetState(SCE_COFFEESCRIPT_OPERATOR);
+				// Handle '..' and '...' operators correctly.
+				if (sc.ch == '.') {
+					for (int i = 0; i < 2 && sc.chNext == '.'; i++, sc.Forward()) ;
+				}
 			}
 		}
 
@@ -410,21 +263,16 @@ static void ColouriseCoffeeScriptDoc(unsigned int startPos, int length, int init
 			chPrevNonWhite = sc.ch;
 			visibleChars++;
 		}
-		continuationLine = false;
 	}
 	sc.Complete();
 }
 
-static bool IsCommentLine(int line, Accessor &styler) {
-	int pos = styler.LineStart(line);
-	int eol_pos = styler.LineStart(line + 1) - 1;
-	for (int i = pos; i < eol_pos; i++) {
+static bool IsCommentLine(Sci_Position line, Accessor &styler) {
+	Sci_Position pos = styler.LineStart(line);
+	Sci_Position eol_pos = styler.LineStart(line + 1) - 1;
+	for (Sci_Position i = pos; i < eol_pos; i++) {
 		char ch = styler[i];
 		if (ch == '#')
-			return true;
-        else if (ch == '/'
-                 && i < eol_pos - 1
-                 && styler[i + 1] == '*')
 			return true;
 		else if (ch != ' ' && ch != '\t')
 			return false;
@@ -432,12 +280,12 @@ static bool IsCommentLine(int line, Accessor &styler) {
 	return false;
 }
 
-static void FoldCoffeeScriptDoc(unsigned int startPos, int length, int,
+static void FoldCoffeeScriptDoc(Sci_PositionU startPos, Sci_Position length, int,
 				WordList *[], Accessor &styler) {
 	// A simplified version of FoldPyDoc
-	const int maxPos = startPos + length;
-	const int maxLines = styler.GetLine(maxPos - 1);             // Requested last line
-	const int docLines = styler.GetLine(styler.Length() - 1);  // Available last line
+	const Sci_Position maxPos = startPos + length;
+	const Sci_Position maxLines = styler.GetLine(maxPos - 1);             // Requested last line
+	const Sci_Position docLines = styler.GetLine(styler.Length() - 1);  // Available last line
 
 	// property fold.coffeescript.comment
 	const bool foldComment = styler.GetPropertyInt("fold.coffeescript.comment") != 0;
@@ -449,7 +297,7 @@ static void FoldCoffeeScriptDoc(unsigned int startPos, int length, int,
 	// and so we can fix any preceding fold level (which is why we go back
 	// at least one line in all cases)
 	int spaceFlags = 0;
-	int lineCurrent = styler.GetLine(startPos);
+	Sci_Position lineCurrent = styler.GetLine(startPos);
 	int indentCurrent = styler.IndentAmount(lineCurrent, &spaceFlags, NULL);
 	while (lineCurrent > 0) {
 		lineCurrent--;
@@ -472,7 +320,7 @@ static void FoldCoffeeScriptDoc(unsigned int startPos, int length, int,
 
 		// Gather info
 		int lev = indentCurrent;
-		int lineNext = lineCurrent + 1;
+		Sci_Position lineNext = lineCurrent + 1;
 		int indentNext = indentCurrent;
 		if (lineNext <= docLines) {
 			// Information about next line is only available if not at end of document
@@ -516,7 +364,7 @@ static void FoldCoffeeScriptDoc(unsigned int startPos, int length, int,
 		// which is indented more than the line after the end of
 		// the comment-block, use the level of the block before
 
-		int skipLine = lineNext;
+		Sci_Position skipLine = lineNext;
 		int skipLevel = levelAfterComments;
 
 		while (--skipLine > lineCurrent) {
@@ -557,6 +405,9 @@ static void FoldCoffeeScriptDoc(unsigned int startPos, int length, int,
 
 static const char *const csWordLists[] = {
             "Keywords",
+            "Secondary keywords",
+            "Unused",
+            "Global classes",
             0,
 };
 

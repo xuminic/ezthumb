@@ -26,7 +26,8 @@
 #include "iupmat_def.h"
 #include "iupmat_colres.h"
 #include "iupmat_draw.h"
-
+#include "iupmat_aux.h"
+#include "iupmat_edit.h"
 
 #define IMAT_COLRES_TOL       3
 
@@ -70,7 +71,6 @@ int iupMatrixColResStart(Ihandle* ih, int x, int y)
   {
     ih->data->colres_drag_col_start_x = x;
     ih->data->colres_dragging =  1;
-    ih->data->colres_drag_col_last_x = -1;
     ih->data->colres_drag_col = col;
     ih->data->colres_color = cdIupConvertColor(iupAttribGetStr(ih, "RESIZEMATRIXCOLOR"));
     return 1;
@@ -86,25 +86,19 @@ void iupMatrixColResFinish(Ihandle* ih, int x)
   if (width < 0)
     width = 0;
 
-  /* delete feedback */
-  if (ih->data->colres_drag_col_last_x != -1)
-  {
-    int y1 = ih->data->lines.dt[0].size;  /* from the bottom of the line of titles */
-    int y2 = ih->data->h-1;             /* to the bottom of the matrix */
-
-    cdCanvasWriteMode(ih->data->cdcanvas, CD_XOR);
-    cdCanvasForeground(ih->data->cdcanvas, ih->data->colres_color);               
-    cdCanvasLine(ih->data->cdcanvas, ih->data->colres_drag_col_last_x, iupMATRIX_INVERTYAXIS(ih, y1), 
-                                     ih->data->colres_drag_col_last_x, iupMATRIX_INVERTYAXIS(ih, y2));
-    cdCanvasWriteMode(ih->data->cdcanvas, CD_REPLACE);
-  }
-
   ih->data->colres_dragging = 0;
 
   iupAttribSetIntId(ih, "RASTERWIDTH", ih->data->colres_drag_col, width-IMAT_PADDING_W-IMAT_FRAME_W);
   iupAttribSetId(ih, "WIDTH", ih->data->colres_drag_col, NULL);
 
   ih->data->need_calcsize = 1;
+
+  if (!ih->data->edit_hide_onfocus && ih->data->editing)
+  {
+    iupMatrixAuxCalcSizes(ih);
+    iupMatrixEditUpdatePos(ih);
+  }
+
   iupMatrixDraw(ih, 0);
 
   {
@@ -120,6 +114,7 @@ void iupMatrixColResFinish(Ihandle* ih, int x)
 void iupMatrixColResMove(Ihandle* ih, int x)
 {
   int y1, y2;
+  cdCanvas* cd_canvas_front = (cdCanvas*)IupGetAttribute(ih, "_CD_CANVAS");  /* front buffer canvas */
 
   int delta = x - ih->data->colres_drag_col_start_x;
   int width = ih->data->columns.dt[ih->data->colres_drag_col].size + delta;
@@ -129,21 +124,11 @@ void iupMatrixColResMove(Ihandle* ih, int x)
   y1 = ih->data->lines.dt[0].size;  /* from the bottom of the line of titles */
   y2 = ih->data->h-1;             /* to the bottom of the matrix */
 
-  cdCanvasWriteMode(ih->data->cdcanvas, CD_XOR);
-  cdCanvasForeground(ih->data->cdcanvas, ih->data->colres_color);
+  iupMatrixDrawUpdate(ih);
 
-  /* If it is not the first time, move old line */
-  if (ih->data->colres_drag_col_last_x != -1)
-  {
-    cdCanvasLine(ih->data->cdcanvas, ih->data->colres_drag_col_last_x, iupMATRIX_INVERTYAXIS(ih, y1), 
-                                     ih->data->colres_drag_col_last_x, iupMATRIX_INVERTYAXIS(ih, y2));
-  }
-
-  cdCanvasLine(ih->data->cdcanvas, x, iupMATRIX_INVERTYAXIS(ih, y1), 
-                                   x, iupMATRIX_INVERTYAXIS(ih, y2));
-
-  ih->data->colres_drag_col_last_x = x;
-  cdCanvasWriteMode(ih->data->cdcanvas, CD_REPLACE);
+  cdCanvasForeground(cd_canvas_front, ih->data->colres_color);
+  cdCanvasLine(cd_canvas_front, x, iupMATRIX_INVERTYAXIS(ih, y1), 
+                                x, iupMATRIX_INVERTYAXIS(ih, y2));
 }
 
 /* Change the cursor when it passes over a group of the column titles. */

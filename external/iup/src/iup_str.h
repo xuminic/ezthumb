@@ -94,7 +94,7 @@ char* iupStrDup(const char* str);
 /** Returns a new string containing a copy of the string up to the character.
  * The string is then incremented to after the position of the character.
  * \ingroup str */
-char *iupStrDupUntil(char **str, char c);
+char *iupStrDupUntil(const char **str, char c);
 
 /** Copy the string to the buffer, but limited to the max_size of the buffer.
  * buffer is always properly ended.
@@ -134,6 +134,11 @@ int iupStrHasSpace(const char* str);
  * \ingroup str */
 #define iup_isdigit(_c) (_c>='0' && _c<='9')
 
+#define iup_isnumber(_c) ((_c>='0' && _c<='9') || \
+                          _c == '.'  || _c == ',' || \
+                          _c == '-' || _c == '+' || \
+                          _c == 'e' || _c == 'E')
+
 /** Converts a character into upper case. \n
  * It will work only for character codes <128.
  * \ingroup str */
@@ -144,9 +149,13 @@ int iupStrHasSpace(const char* str);
  * \ingroup str */
 #define iup_tolower(_c)  ((_c >= 'A' && _c <= 'Z')? (_c - 'A') + 'a': _c)
 
+/** Checks if the string has only ASCII codes.
+ * \ingroup str */
+int iupStrIsAscii(const char* str);
 
 
-/** Returns combined values in a formated string using \ref iupStrGetMemory.
+
+/** Returns combined values in a formatted string using \ref iupStrGetMemory.
  * This is not supposed to be used for very large strings,
  * just for combinations of numeric data or constant strings.
  * \ingroup str */
@@ -168,13 +177,29 @@ char* iupStrReturnChecked(int i);
  * \ingroup str */
 char* iupStrReturnInt(int i);
 
+/** maximum float precision
+* \ingroup str */
+#define IUP_FLOAT2STR "%.9f"
+
 /** Returns a float value in a string using \ref iupStrGetMemory.
  * \ingroup str */
 char* iupStrReturnFloat(float f);
 
+/** maximum double precision
+ * \ingroup str */
+#define IUP_DOUBLE2STR "%.18f"
+
+/** Returns a double value in a string using \ref iupStrGetMemory.
+ * \ingroup str */
+char* iupStrReturnDouble(double d);
+
 /** Returns a RGB value in a string using \ref iupStrGetMemory.
  * \ingroup str */
 char* iupStrReturnRGB(unsigned char r, unsigned char g, unsigned char b);
+
+/** Returns a RGBA value in a string using \ref iupStrGetMemory.
+ * \ingroup str */
+char* iupStrReturnRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 
 /** Returns two string values in a string using \ref iupStrGetMemory.
  * \ingroup str */
@@ -185,10 +210,22 @@ char* iupStrReturnStrStr(const char *str1, const char *str2, char sep);
 char* iupStrReturnIntInt(int i1, int i2, char sep);
 
 
+/** Returns the number of decimals in a format string for floating point output.
+ * \ingroup str */
+int iupStrGetFormatPrecision(const char* format);
 
-/** Extract a RGB triple from the string. Returns 0 or 1.
+/** Prints a double in a string using the given decimal symbol.
+ * \ingroup str */
+void iupStrPrintfDoubleLocale(char *str, const char *format, double d, const char* decimal_symbol);
+
+
+/** Extract RGB components from the string. Returns 0 or 1.
  * \ingroup str */
 int iupStrToRGB(const char *str, unsigned char *r, unsigned char *g, unsigned char *b);
+
+/** Extract RGBA components from the string. Returns 0 or 1.
+ * \ingroup str */
+int iupStrToRGBA(const char *str, unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *a);
 
 /** Converts the string to an int. The string must contains only the integer value.
  * Returns a a non zero value if sucessfull.
@@ -202,12 +239,25 @@ int iupStrToInt(const char *str, int *i);
  * \ingroup str */
 int iupStrToIntInt(const char *str, int *i1, int *i2, char sep);
 
-/** Converts the string to an float. The string must contains only the real value.
+/** Converts the string to a float. The string must contains only the real value.
  * Returns a a non zero value if sucessfull.
  * \ingroup str */
 int iupStrToFloat(const char *str, float *f);
+int iupStrToFloatDef(const char *str, float *f, float def);
 
-/** Converts the string to two float. The string must contains two real values in sequence, 
+/** Converts the string to a double. The string must contains only the real value.
+ * Returns a a non zero value if sucessfull.
+ * \ingroup str */
+int iupStrToDouble(const char *str, double *d);
+int iupStrToDoubleDef(const char *str, double *d, double def);
+
+/** Converts the string to a double using the given decimal symbol. 
+ * The string must contains only the real value.
+ * Returns a a non zero value if sucessfull. Returns 2 if a locale was set.
+ * \ingroup str */
+int iupStrToDoubleLocale(const char *str, double *d, const char* decimal_symbol);
+
+/** Converts the string to two float. The string must contains two real values in sequence,
  * separated by the given character (usually 'x' or ':').
  * Returns the number of converted values.
  * Values not extracted are not changed.
@@ -215,10 +265,18 @@ int iupStrToFloat(const char *str, float *f);
  * \ingroup str */
 int iupStrToFloatFloat(const char *str, float *f1, float *f2, char sep);
 
-/** Extract two strings from the string.
+/** Converts the string to two double. The string must contains two real values in sequence,
  * separated by the given character (usually 'x' or ':').
  * Returns the number of converted values.
  * Values not extracted are not changed.
+ * ATENTION: AVOID DEFINING THIS TYPE OF ATTRIBUTE VALUE.
+ * \ingroup str */
+int iupStrToDoubleDouble(const char *str, double *f1, double *f2, char sep);
+
+/** Extract two strings from the string.
+ * separated by the given character (usually 'x' or ':').
+ * Returns the number of converted values.
+ * Values not extracted are set to empty strings.
  * \ingroup str */
 int iupStrToStrStr(const char *str, char *str1, char *str2, char sep);
 
@@ -236,6 +294,7 @@ char* iupStrFileGetTitle(const char *file_name);
 
 /** Returns the file path of a file name.
  * Supports UNIX and Windows directory separators.
+ * The returned value includes the last separator.
  * \ingroup str */
 char* iupStrFileGetPath(const char *file_name);
 
@@ -313,7 +372,7 @@ int iupStrCompare(const char* str1, const char* str2, int casesensitive, int utf
 int iupStrCompareEqual(const char *str1, const char *str2, int casesensitive, int utf8, int partial);
 
 /** Returns a non zero value if the second string is found inside the first string.  \n
-    Uses \ref iupStrCompareEqual.
+ *  Uses \ref iupStrCompareEqual.
  * \ingroup str */
 int iupStrCompareFind(const char *str1, const char *str2, int casesensitive, int utf8);
 

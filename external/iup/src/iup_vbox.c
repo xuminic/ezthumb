@@ -63,7 +63,7 @@ static int iVboxSetSizeAttrib(Ihandle* ih, const char* value)
       ih->userwidth = 0;
     }
   }
-  return 1;
+  return 1;  /* always save in the hash table, so when FONT is changed SIZE can be updated */
 }
 
 static int iVboxSetAlignmentAttrib(Ihandle* ih, const char* value)
@@ -216,7 +216,7 @@ static void iVboxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
         {
           float weight; 
           if (iupStrToFloat(weight_str, &weight))
-            empty = iupROUND(empty * weight);
+            empty = iupRound(empty * weight);
         }
         iupBaseSetCurrentSize(child, client_width, child->naturalheight+empty, shrink);
       }

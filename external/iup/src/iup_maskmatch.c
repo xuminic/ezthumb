@@ -1,5 +1,5 @@
 /** \file
- * \brief iupmask imask_match_functions
+ * \brief iupMask functions
  *
  * See Copyright Notice in "iup.h"
  */

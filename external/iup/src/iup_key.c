@@ -25,7 +25,7 @@ typedef struct _IkeyMapASCII {
   unsigned char mod;
 } IkeyMapASCII;
 
-static IkeyMapASCII ikey_map_ascii[126-32+1] = {
+static IkeyMapASCII ikey_map_ascii[126-32+1] = {  /* from 32 to 126 (inclusive) */
   {"K_SP",                  0},
   {"K_exclam",              2}, /* NO shift */
   {"K_quotedbl",            2}, /* NO shift */
@@ -356,6 +356,12 @@ int iupKeyCallKeyPressCb(Ihandle *ih, int code, int press)
   return IUP_DEFAULT;
 }
 
+static void iupKeyActivate(Ihandle* ih)
+{
+  if (ih->handle && iupdrvIsActive(ih))
+    iupdrvActivate(ih);
+}
+
 int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
 {
   /* this is called after K_ANY is processed, 
@@ -388,6 +394,7 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
   else if (code == K_UP || code == K_DOWN)
   {
     int is_button = (IupClassMatch(ih, "button") || 
+                     IupClassMatch(ih, "flatbutton") ||
                      IupClassMatch(ih, "toggle"));
     if (is_button)
     {
@@ -401,8 +408,8 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
   else if (code==K_ESC)
   {
     Ihandle* bt = IupGetAttributeHandle(IupGetDialog(ih), "DEFAULTESC");
-    if (iupObjectCheck(bt) && IupClassMatch(bt, "button"))
-      iupdrvActivate(bt);
+    if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "glbutton")))
+      iupKeyActivate(bt);
     return 1;
   }
   else if (code==K_CR || code==K_cCR)
@@ -411,9 +418,40 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
     if ((code==K_CR && !is_multiline) || (code==K_cCR && is_multiline))
     {
       Ihandle* bt = IupGetAttributeHandle(IupGetDialog(ih), "DEFAULTENTER");
-      if (iupObjectCheck(bt) && IupClassMatch(bt, "button"))
-        iupdrvActivate(bt);
+      if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "flatbutton")))
+        iupKeyActivate(bt);
       return 1;
+    }
+  }
+  else if (iup_isCtrlXkey(code) && iup_isShiftXkey(code) && iup_isAltXkey(code) && iup_XkeyBase(code) == K_L)
+  {
+    /* Ctrl+Shift+Alt+L */
+    if (iupStrBoolean(IupGetGlobal("GLOBALLAYOUTDLGKEY")))
+      IupShow(IupLayoutDialog(IupGetDialog(ih)));
+  }
+  else if (iup_isCtrlXkey(code) && (iup_XkeyBase(code) == K_plus || iup_XkeyBase(code) == K_minus || iup_XkeyBase(code) == K_equal))
+  {
+    /* Ctrl+'+' */
+    if (iupStrBoolean(IupGetGlobal("GLOBALLAYOUTRESIZEKEY")))
+    {
+      int new_size;
+      int size = IupGetInt(IupGetDialog(ih), "FONTSIZE");
+
+      if (iup_XkeyBase(code) == K_plus || iup_XkeyBase(code) == K_equal)
+      {
+        new_size = (size * 11) / 10; /* 10% increase */
+        if (new_size == size) new_size++;
+      }
+      else
+      {
+        new_size = (size * 9) / 10; /* 10% decrease */
+        if (new_size == size) new_size--;
+      }
+
+      IupSetInt(IupGetDialog(ih), "FONTSIZE", new_size);
+
+      IupSetAttribute(IupGetDialog(ih), "SIZE", NULL);
+      IupRefresh(ih);
     }
   }
 
@@ -434,16 +472,18 @@ int iupKeyProcessMnemonic(Ihandle* ih, int code)
       Ihandle* ih_next = iupFocusNextInteractive(ih_mnemonic);
       if (ih_next)
       {
-        if (IupClassMatch(ih_next, "button") || IupClassMatch(ih_next, "toggle"))
-          iupdrvActivate(ih_next);
+        if (IupClassMatch(ih_next, "button") || 
+            IupClassMatch(ih_next, "flatbutton") ||
+            IupClassMatch(ih_next, "toggle"))
+          iupKeyActivate(ih_next);
         else
           IupSetFocus(ih_next);
       }
     }
     else if (IupClassMatch(ih_mnemonic, "tabs"))
       IupSetAttribute(ih_mnemonic, "VALUEPOS", IupGetAttribute(ih_mnemonic, attrib));
-    else if (ih_mnemonic->handle)  /* button or toggle */
-      iupdrvActivate(ih_mnemonic);
+    else /* button or toggle */
+      iupKeyActivate(ih_mnemonic);
 
     return 1;
   }

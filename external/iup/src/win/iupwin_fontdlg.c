@@ -21,9 +21,17 @@
 #include "iupwin_str.h"
 
 
-#define IUP_FONTFAMILYCOMBOBOX        0x0470
+#ifndef CF_NOSCRIPTSEL
+#define CF_NOSCRIPTSEL             0x00800000L
+#endif
 
-static UINT_PTR winFontDlgHookProc(HWND hWnd, UINT uiMsg, WPARAM wParam, LPARAM lParam)
+#define IUP_FONTFAMILYCOMBOBOX        0x0470
+#define IUP_FONTCOLORLTEXT            0x0443
+#define IUP_FONTCOLORCOMBOBOX         0x0473
+#define IUP_FONTSCRIPTLTEXT           0x0446
+#define IUP_FONTSCRIPTCOMBOBOX        0x0474
+
+static UINT_PTR CALLBACK winFontDlgHookProc(HWND hWnd, UINT uiMsg, WPARAM wParam, LPARAM lParam)
 {
   (void)wParam;
   if (uiMsg == WM_INITDIALOG)
@@ -44,6 +52,23 @@ static UINT_PTR winFontDlgHookProc(HWND hWnd, UINT uiMsg, WPARAM wParam, LPARAM 
 
     hWndItem = GetDlgItem(hWnd, IUP_FONTFAMILYCOMBOBOX);
     SetFocus(hWndItem);
+
+    if (!iupAttribGetBoolean(ih, "SHOWCOLOR"))
+    {
+      hWndItem = GetDlgItem(hWnd, IUP_FONTCOLORLTEXT);
+      if (hWndItem)
+        ShowWindow(hWndItem, SW_HIDE);
+      hWndItem = GetDlgItem(hWnd, IUP_FONTCOLORCOMBOBOX);
+      if (hWndItem)
+        ShowWindow(hWndItem, SW_HIDE);
+    }
+
+    hWndItem = GetDlgItem(hWnd, IUP_FONTSCRIPTLTEXT);
+    if (hWndItem)
+      ShowWindow(hWndItem, SW_HIDE);
+    hWndItem = GetDlgItem(hWnd, IUP_FONTSCRIPTCOMBOBOX);
+    if (hWndItem)
+      ShowWindow(hWndItem, SW_HIDE);
   }
   return 0;
 }
@@ -54,7 +79,7 @@ static int winFontDlgPopup(Ihandle* ih, int x, int y)
   unsigned char r, g, b;
   CHOOSEFONT choosefont;
   LOGFONT logfont;
-  char* standardfont;
+  char* font;
   int height_pixels;
   char typeface[50] = "";
   int height = 8;
@@ -68,16 +93,45 @@ static int winFontDlgPopup(Ihandle* ih, int x, int y)
   iupAttribSetInt(ih, "_IUPDLG_X", x);   /* used in iupDialogUpdatePosition */
   iupAttribSetInt(ih, "_IUPDLG_Y", y);
 
+  /* if NOT set will NOT be Modal */
+  /* anyway it will be modal only relative to its parent */
   if (!parent)
-    parent = GetActiveWindow();  /* if NOT set will NOT be Modal */
-                                 /* anyway it will be modal only relative to its parent */
+    parent = GetActiveWindow();
 
-  standardfont = iupAttribGet(ih, "VALUE");
-  if (!standardfont)
-    standardfont = IupGetGlobal("DEFAULTFONT");
+  font = iupAttribGet(ih, "VALUE");
+  if (!font)
+  {
+    if (!iupGetFontInfo(IupGetGlobal("DEFAULTFONT"), typeface, &height, &is_bold, &is_italic, &is_underline, &is_strikeout))
+      return IUP_ERROR;
+  }
+  else
+  {
+    if (!iupGetFontInfo(font, typeface, &height, &is_bold, &is_italic, &is_underline, &is_strikeout))
+    {
+      char def_typeface[50] = "";
+      int def_height = 8;
+      int def_is_bold = 0,
+        def_is_italic = 0,
+        def_is_underline = 0,
+        def_is_strikeout = 0;
 
-  if (!iupGetFontInfo(standardfont, typeface, &height, &is_bold, &is_italic, &is_underline, &is_strikeout))
-    return IUP_ERROR;
+      if (!iupGetFontInfo(IupGetGlobal("DEFAULTFONT"), def_typeface, &def_height, &def_is_bold, &def_is_italic, &def_is_underline, &def_is_strikeout))
+        return IUP_ERROR;
+
+      if (typeface[0] == 0)
+        strcpy(typeface, def_typeface);
+      if (height == 0)
+        height = def_height;
+      if (is_bold == 0)
+        is_bold = def_is_bold;
+      if (is_italic == 0)
+        is_italic = def_is_italic;
+      if (is_underline == 0)
+        is_underline = def_is_underline;
+      if (is_strikeout == 0)
+        is_strikeout = def_is_strikeout;
+    }
+  }
 
   /* Map standard names to native names */
   mapped_name = iupFontGetWinName(typeface);
@@ -101,14 +155,10 @@ static int winFontDlgPopup(Ihandle* ih, int x, int y)
   
   choosefont.hwndOwner = parent;
   choosefont.lpLogFont = &logfont;
-  choosefont.Flags = CF_SCREENFONTS | CF_EFFECTS | CF_INITTOLOGFONTSTRUCT;
+  choosefont.Flags = CF_SCREENFONTS | CF_EFFECTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
   choosefont.lCustData = (LPARAM)ih;
-
-  if (!iupwinIsWin8OrNew() || iupAttribGetBoolean(ih, "WIN8_FONT_HOOK"))
-  {
-    choosefont.lpfnHook = (LPCFHOOKPROC)winFontDlgHookProc;
-    choosefont.Flags |= CF_ENABLEHOOK;
-  }
+  choosefont.lpfnHook = (LPCFHOOKPROC)winFontDlgHookProc;
+  choosefont.Flags |= CF_ENABLEHOOK;
 
   if (IupGetCallback(ih, "HELP_CB"))
     choosefont.Flags |= CF_SHOWHELP;
@@ -170,4 +220,5 @@ void iupdrvFontDlgInitClass(Iclass* ic)
 
   /* IupFontDialog Windows Only */
   iupClassRegisterAttribute(ic, "COLOR", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SHOWCOLOR", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

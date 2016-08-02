@@ -4,7 +4,7 @@
 #include <time.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 
 static int csc_cdll_print_test_block(CSCLNK *root)

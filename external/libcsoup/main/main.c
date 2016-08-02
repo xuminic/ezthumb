@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 #include "main_define.h"
 
@@ -35,12 +35,12 @@ int main(int argc, char **argv)
 	smm_init();
 
 	if (argc < 2) {
-		slogs(dbgc, SLOG_LVL_SHOWOFF, 
+		slogs(dbgc, SLOG_LVL_AUTO, 
 				"Usage: csoup COMMAND [args ...]\n");
 		csc_cli_cmd_print(cmdlist, NULL);
 	} else if (csc_cli_cmd_run(cmdlist, NULL, --argc, ++argv) == 
 			CSC_CLI_UNCMD) {
-		slogf(dbgc, SLOG_LVL_SHOWOFF, 
+		slogf(dbgc, SLOG_LVL_AUTO, 
 				"%s: command not found.\n", *argv);
 	}
 	slog_csoup_close();

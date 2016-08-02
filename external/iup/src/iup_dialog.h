@@ -44,6 +44,11 @@ InativeHandle* iupDialogGetNativeParent(Ihandle* ih);
    Used mostly by the native pre-defined dialogs. */
 void iupDialogUpdatePosition(Ihandle* ih);
 
+/* For external modal dialog stack control */
+void iupDialogLeaveModal(int popup_level);
+void iupDialogEnterModal(Ihandle* ih_popup, int popup_level);
+
+
 
 /*********************************************************************/
                         /* PRIVATE */

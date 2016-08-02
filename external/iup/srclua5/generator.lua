@@ -17,14 +17,14 @@ iup.RegisterWidget = iupDoNothing
 -- TODO: This is different from iupClassRegisterCallback, 
 --       should be changed to use the same standard
 c_types = {
-  c = "unsigned char ",    -- should be b
-  n = "int",               -- should be i
+  c = "unsigned char ",    
+  n = "int",               
   f = "float",
   d = "double",
   s = "char *",
-  i = "Ihandle *",         -- should be h
-  v = "Ihandle **",        -- should be g
-  o = "void*",             -- should be v
+  i = "Ihandle *",         
+  v = "Ihandle **",        
+  o = "void*",             
 }
 
 -- Adjust the callbacks table
@@ -81,7 +81,7 @@ function write_creation(o, t)
    end
    local max = string.len(v)
    string.gsub(v, "(.)", function(p)
-      if p == "n" then io.write("luaL_checkint(L, ",aux.n,")")
+      if p == "n" then io.write("luaL_checkinteger(L, ",aux.n,")")
       elseif p == "N" then io.write("luaL_optinteger(L, ",aux.n,", 0)")
       elseif p == "d" then io.write("luaL_number(L, ",aux.n,")")
       elseif p == "s" then io.write("(char *)luaL_checkstring(L, ",aux.n,")")
@@ -211,7 +211,11 @@ end
 dofile(arg[1])
 element.callback = adjustcallbacktable(element.callback)
 
-io.output("il_"..element.nick..".c")
+filename = "il_"..element.nick..".c"
+if (element.subdir) then
+  filename = element.subdir.."/"..filename
+end
+io.output(filename)
 header(element.nick, element.include)
 write_callbacks(element.nick, element.callback)
 if element.createfunc == nil then 

@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 int fontpath_main(void *rtime, int argc, char **argv)
 {

@@ -1,57 +1,51 @@
 ifeq ($(OS), Windows_NT)
   TECMAKE_CMD = $(MAKE) --no-print-directory -f ../tecmakewin.mak TEC_UNAME=$(TEC_UNAME)
-  WINLIBS = iupole
+  WINLIBS = iupluaole
 else
   TECMAKE_CMD = $(MAKE) --no-print-directory -f ../tecmake.mak
 endif
 
-.PHONY: do_all iuplua iupluacd iupluacontrols iupluagl iuplua_pplot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio iupluaole iupluaweb
-do_all: iuplua iupluacd iupluacontrols iupluagl iuplua_pplot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio $(WINLIBS)
+.PHONY: do_all iuplua iupluacd iupluacontrols iupluamatrixex iupluagl iupluaglcontrols iuplua_plot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio iupluaole iupluaweb
+do_all: iuplua iupluacd iupluacontrols iupluamatrixex iupluagl iupluaglcontrols iuplua_plot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio $(WINLIBS) iupluaweb
 
 iuplua:
-	@$(TECMAKE_CMD) USE_LUA51=Yes 
-	@$(TECMAKE_CMD) USE_LUA52=Yes 
+	@$(TECMAKE_CMD)  
 
 iupluacd:
-	@$(TECMAKE_CMD) MF=iupcd USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupcd USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupcd 
 
 iupluacontrols:
-	@$(TECMAKE_CMD) MF=iupcontrols USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupcontrols USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupcontrols 
+
+iupluamatrixex:
+	@$(TECMAKE_CMD) MF=iupmatrixex
 
 iupluagl:
-	@$(TECMAKE_CMD) MF=iupgl USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupgl USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupgl 
 
-iuplua_pplot:
-	@$(TECMAKE_CMD) MF=iup_pplot USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iup_pplot USE_LUA52=Yes
+iupluaglcontrols:
+	@$(TECMAKE_CMD) MF=iupglcontrols 
+
+iuplua_plot:
+	@$(TECMAKE_CMD) MF=iup_plot 
 
 iuplua_mglplot:
-	@$(TECMAKE_CMD) MF=iup_mglplot USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iup_mglplot USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iup_mglplot 
 
 iuplua_scintilla:
-	@$(TECMAKE_CMD) MF=iup_scintilla USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iup_scintilla USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iup_scintilla 
 
 iupluaim:
-	@$(TECMAKE_CMD) MF=iupim USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupim USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupim 
 
 iupluaimglib:
-	@$(TECMAKE_CMD) MF=iupimglib USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupimglib USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupimglib 
   
 iupluatuio:
-	@$(TECMAKE_CMD) MF=iuptuio USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iuptuio USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iuptuio 
   
 iupluaole:
-	@$(TECMAKE_CMD) MF=iupole USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupole USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupole 
   
 iupluaweb:
-	@$(TECMAKE_CMD) MF=iupweb USE_LUA51=Yes
-	@$(TECMAKE_CMD) MF=iupweb USE_LUA52=Yes
+	@$(TECMAKE_CMD) MF=iupweb 

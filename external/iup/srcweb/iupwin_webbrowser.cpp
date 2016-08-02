@@ -1,6 +1,8 @@
 /** \file
 * \brief Web Browser Control
 *
+* http://msdn.microsoft.com/en-us/library/aa752040(v=vs.85).aspx
+*
 * See Copyright Notice in "iup.h"
 */
 
@@ -425,9 +427,12 @@ static void winWebBrowserDestroyMethod(Ihandle* ih)
 static void winWebBrowserRelease(Iclass* ic)
 {
   /* Terminating ATL support */
-  iweb_module->Term();
-  delete iweb_module;
-  iweb_module = NULL;
+  if (iweb_module)
+  {
+    iweb_module->Term();
+    delete iweb_module;
+    iweb_module = NULL;
+  }
 
   (void)ic;
 }
@@ -465,12 +470,15 @@ Iclass* iupWebBrowserNewClass(void)
   iupClassRegisterAttribute(ic, "ZOOM", winWebBrowserGetZoomAttrib, winWebBrowserSetZoomAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "PRINT", NULL, winWebBrowserSetPrintAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
 
-  /* CComModule implements a COM server module, 
-     allowing a client to access the module's components  */
-  iweb_module = new CComModule();
+  if (!iweb_module)
+  {
+    /* CComModule implements a COM server module,
+       allowing a client to access the module's components  */
+    iweb_module = new CComModule();
 
-  /* Initializing ATL Support */
-  iweb_module->Init(NULL, GetModuleHandle(NULL));
+    /* Initializing ATL Support */
+    iweb_module->Init(NULL, GetModuleHandle(NULL));
+  }
 
   return ic;
 }

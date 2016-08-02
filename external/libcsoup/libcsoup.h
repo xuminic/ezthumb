@@ -30,8 +30,8 @@
 
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
-#define LIBCSOUP_VER_MINOR	8		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	10		/* 0-4095 */
+#define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	2		/* 0-4095 */
 
 
 /*****************************************************************************
@@ -112,6 +112,14 @@ Debug level is 0-7 using Bit2 to Bit0 in the control word
      running detailly inside a function)
 Bit3 is used to indicate flush or non-flush mode.
 
+If the debug level of 'cword' in SMMDBG is 0/SLOG_LVL_AUTO, it means the user
+hasn't specified the runtime debug level. The debug level therefore is decided
+by the CSOUP_DEBUG_LOCAL macro in every source code file, or otherwise by 
+default hardcoded in libcsoup. 
+
+If the debug level in slogs() is 0/SLOG_LVL_AUTO, it means the debug level
+is the unmaskable and undecorated.
+
 Module indicator uses Bit31 to Bit4 in the control word (reserved)
 
 
@@ -128,9 +136,9 @@ slog_bind_window();
 slog(int control_word, char *fmt, ...);
 
 */
-#define	SLOG_BUFFER		1024	/* maximum log buffer */
+#define	SLOG_BUFFER		32768	/* maximum log buffer */
 
-#define SLOG_LVL_SHOWOFF	0
+#define SLOG_LVL_AUTO		0	/* decided by local macroes */
 #define SLOG_LVL_ERROR		1
 #define SLOG_LVL_WARNING	2
 #define SLOG_LVL_INFO		3
@@ -161,7 +169,8 @@ slog(int control_word, char *fmt, ...);
 
 
 typedef int	(*F_LCK)(void *);
-typedef	char	*(*F_PRF)(void *, int);
+typedef	int	(*F_PRF_DATE)(char *buf, int);
+typedef int	(*F_PRF_MODL)(int cw, char *buf, int);
 typedef	int	(*F_EXT)(void *, void *, char *);
 
 typedef	struct	{
@@ -176,7 +185,8 @@ typedef	struct	{
 	FILE	*stdio;
 
 	/* for generating a prefix according to the 'option' field */
-	F_PRF	f_prefix;
+	F_PRF_DATE	f_trans_date;
+	F_PRF_MODL	f_trans_modu;
 
 	/* log into the socket extension */
 	F_EXT	f_inet;
@@ -200,7 +210,9 @@ int slog_bind_file(SMMDBG *dbgc, char *fname);
 int slog_bind_stdio(SMMDBG *dbgc, FILE *ioptr);
 int slog_output(SMMDBG *dbgc, int cw, char *buf);
 int slogs(SMMDBG *dbgc, int cw, char *buf);
+int slogs_long(SMMDBG *dbgc, int setcw, int cw, char *buf);
 int slogf(SMMDBG *dbgc, int cw, char *fmt, ...);
+int slogf_long(SMMDBG *dbgc, int setcw, int cw, char *fmt, ...);
 int slog_validate(SMMDBG *dbgc, int setcw, int cw);
 void *slog_bind_tcp(SMMDBG *dbgc, int port);
 
@@ -403,6 +415,7 @@ int csc_extname_filter_export(void *efft, char *buf, int blen);
 char *csc_extname_filter_export_alloc(void *efft);
 
 char *csc_strfill(char *s, int padto, int ch);
+size_t csc_strlcat(char *dst, const char *src, size_t siz);
 size_t csc_strlcpy(char *dst, const char *src, size_t siz);
 char *csc_strcpy_alloc(const char *src, int extra);
 int csc_fixtoken(char *sour, char **idx, int ids, char *delim);
@@ -418,6 +431,11 @@ int csc_cmp_file_extname(char *fname, char *ext);
 int csc_cmp_file_extlist(char *fname, char **ext);
 int csc_cmp_file_extargs(char *fname, char *ext, ...);
 
+/* see csc_strbival.c */
+int csc_strbival_int(char *s, char *delim, int *opt);
+long csc_strbival_long(char *s, char *delim, long *opt);
+
+/* see csc_strbody.c */
 char *csc_strbody(char *s, int *len);
 
 /* see csoup_strcmp_list.c */
@@ -428,6 +446,7 @@ int csc_strcmp_param(char *s1, char *s2);
 
 char *csc_path_basename(char *path, char *buffer, int blen);
 char *csc_path_path(char *path, char *buffer, int blen);
+int csc_strinsert(char *buf, int len, char *ip, int del, char *s);
 
 /* see csc_crc*.c */
 unsigned short csc_crc16_byte(unsigned short crc, char data);
@@ -493,34 +512,8 @@ char *csc_file_load(char *path, char *buf, long *len);
 #define SMM_ERR_LENGTH		SMM_ERR(9)	/* general fail of length */
 #define SMM_ERR_PWNAM		SMM_ERR(10)	/* passwd and name */
 #define SMM_ERR_MKDIR		SMM_ERR(11)
-#define SMM_ERR_NULL		SMM_ERR(32)	/* empty content */
-#define SMM_ERR_OBJECT		SMM_ERR(33)	/* wrong object */
-
-
-#define SMM_FSTAT_ERROR		-1
-#define	SMM_FSTAT_REGULAR	0
-#define SMM_FSTAT_DIR		1
-#define SMM_FSTAT_DEVICE	2
-#define SMM_FSTAT_LINK		3
-
-/* Error mask is always 1000 0000 ... in 32-bit error code
- * libsmm error mask uses 0100 0000 ... in 32-bit error code */
-#define SMM_ERR_MASK		0xC0000000	/* 1100 0000 0000 ... */
-#define SMM_ERR(x)		(SMM_ERR_MASK | (x))
-
-#define SMM_ERR_NONE		0
-#define SMM_ERR_NONE_READ	SMM_ERR(0)	/* errno read mode */
-#define SMM_ERR_LOWMEM		SMM_ERR(1)
-#define SMM_ERR_ACCESS		SMM_ERR(2)	/* access denied */
-#define SMM_ERR_EOP		SMM_ERR(3)	/* end of process */
-#define SMM_ERR_CHDIR		SMM_ERR(4)	/* change path */
-#define SMM_ERR_OPENDIR		SMM_ERR(5)	/* open directory */
-#define SMM_ERR_GETCWD		SMM_ERR(6)
-#define SMM_ERR_OPEN		SMM_ERR(7)	/* open file */
-#define SMM_ERR_STAT		SMM_ERR(8)	/* stat failed */
-#define SMM_ERR_LENGTH		SMM_ERR(9)	/* general fail of length */
-#define SMM_ERR_PWNAM		SMM_ERR(10)	/* passwd and name */
-#define SMM_ERR_MKDIR		SMM_ERR(11)
+#define SMM_ERR_RENAME		SMM_ERR(12)
+#define SMM_ERR_FOPEN		SMM_ERR(13)
 #define SMM_ERR_NULL		SMM_ERR(32)	/* empty content */
 #define SMM_ERR_OBJECT		SMM_ERR(33)	/* wrong object */
 
@@ -643,7 +636,7 @@ extern "C"
 {
 #endif
 void *smm_alloc(size_t size);
-int smm_free(void *ptr);
+void *smm_free(void *ptr);
 int smm_chdir(char *path);
 int smm_codepage(void);
 int smm_codepage_set(int cpno);
@@ -668,15 +661,20 @@ int smm_errno_update(int value);
 long long smm_filesize(char *fname);
 char *smm_fontpath(char *ftname, char **userdir);
 int smm_fstat(char *fname);
+void *smm_fopen(char *path, char *mode);
+int smm_fclose(void *fp);
+int smm_fncmp(char *dstname, char *srcname);
 int smm_init(void);
 int smm_mkdir(char *path);
 int smm_mkpath(char *path);
 int smm_pathtrek(char *path, int flags, F_DIR msg, void *option);
 int smm_pwuid(char *uname, long *uid, long *gid);
+int smm_rename(char *oldname, char *newname);
 int smm_signal_break(int (*handle)(int));
 int smm_sleep(int sec, int usec);
 int smm_time_diff(SMM_TIME *tmbuf);
 int smm_time_get_epoch(SMM_TIME *tmbuf);
+char *smm_userpath(char *buffer, int len);
 void *smm_mbstowcs_alloc(char *mbs);
 char *smm_wcstombs_alloc(void *wcs);
 #ifdef __cplusplus

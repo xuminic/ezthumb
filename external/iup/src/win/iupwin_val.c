@@ -32,6 +32,7 @@
 
 void iupdrvValGetMinSize(Ihandle* ih, int *w, int *h)
 {
+  /* LAYOUT_DECORATION_ESTIMATE */
   int ticks_size = 0;
   if (iupAttribGetInt(ih, "SHOWTICKS"))
   {
@@ -63,19 +64,21 @@ static int winValSetBgColorAttrib(Ihandle *ih, const char *value)
 
 static int winValSetStepAttrib(Ihandle* ih, const char* value)
 {
-  int linesize;
-  ih->data->step = atof(value);
-  linesize = (int)(ih->data->step*SHRT_MAX);
-  SendMessage(ih->handle, TBM_SETLINESIZE, 0, linesize);
+  if (iupStrToDoubleDef(value, &(ih->data->step), 0.01))
+  {
+    int linesize = (int)(ih->data->step*SHRT_MAX);
+    SendMessage(ih->handle, TBM_SETLINESIZE, 0, linesize);
+  }
   return 0; /* do not store value in hash table */
 }
 
 static int winValSetPageStepAttrib(Ihandle* ih, const char* value)
 {
-  int pagesize;
-  ih->data->pagestep = atof(value);
-  pagesize = (int)(ih->data->pagestep*SHRT_MAX);
-  SendMessage(ih->handle, TBM_SETPAGESIZE, 0, pagesize);
+  if (iupStrToDoubleDef(value, &(ih->data->pagestep), 0.1))
+  {
+    int pagesize = (int)(ih->data->pagestep*SHRT_MAX);
+    SendMessage(ih->handle, TBM_SETPAGESIZE, 0, pagesize);
+  }
   return 0; /* do not store value in hash table */
 }
 
@@ -98,16 +101,18 @@ static int winValSetShowTicksAttrib(Ihandle* ih, const char* value)
 
 static int winValSetValueAttrib(Ihandle* ih, const char* value)
 {
-  int ival;
+  if (iupStrToDouble(value, &(ih->data->val)))
+  {
+    int ival;
 
-  ih->data->val = atof(value);
-  iupValCropValue(ih);
+    iupValCropValue(ih);
 
-  ival = (int)(((ih->data->val-ih->data->vmin)/(ih->data->vmax - ih->data->vmin))*SHRT_MAX);
-  if (ih->data->inverted)
-    ival = SHRT_MAX-ival;
+    ival = (int)(((ih->data->val - ih->data->vmin) / (ih->data->vmax - ih->data->vmin))*SHRT_MAX);
+    if (ih->data->inverted)
+      ival = SHRT_MAX - ival;
 
-  SendMessage(ih->handle, TBM_SETPOS, TRUE, ival);
+    SendMessage(ih->handle, TBM_SETPOS, TRUE, ival);
+  }
   return 0; /* do not store value in hash table */
 }
 
@@ -328,6 +333,9 @@ static int winValMapMethod(Ihandle* ih)
   if (ih->data->inverted)
     SendMessage(ih->handle, TBM_SETPOS, FALSE, SHRT_MAX);  /* default initial position is at MIN */
 
+  winValSetPageStepAttrib(ih, NULL);
+  winValSetStepAttrib(ih, NULL);
+
   return IUP_NOERROR;
 }
 
@@ -341,8 +349,8 @@ void iupdrvValInitClass(Iclass* ic)
   /* IupVal only */
   iupClassRegisterAttribute(ic, "VALUE", iupValGetValueAttrib, winValSetValueAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);  
   iupClassRegisterAttribute(ic, "SHOWTICKS", iupValGetShowTicksAttrib, winValSetShowTicksAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_DEFAULT);
-  iupClassRegisterAttribute(ic, "PAGESTEP", iupValGetPageStepAttrib, winValSetPageStepAttrib, "0.1", NULL, IUPAF_NO_INHERIT);  /* force new default value */
-  iupClassRegisterAttribute(ic, "STEP", iupValGetStepAttrib, winValSetStepAttrib, "0.01", NULL, IUPAF_NO_INHERIT);   /* force new default value */
+  iupClassRegisterAttribute(ic, "PAGESTEP", iupValGetPageStepAttrib, winValSetPageStepAttrib, NULL, NULL, IUPAF_NO_INHERIT);  /* force new default value */
+  iupClassRegisterAttribute(ic, "STEP", iupValGetStepAttrib, winValSetStepAttrib, NULL, NULL, IUPAF_NO_INHERIT);   /* force new default value */
 
   iupClassRegisterAttribute(ic, "TICKSPOS", NULL, NULL, "NORMAL", NULL, IUPAF_NOT_MAPPED);
 

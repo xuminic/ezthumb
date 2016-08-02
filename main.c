@@ -26,7 +26,7 @@
 #define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
 #include "ezthumb.h"
 #ifndef	CFG_GUI_OFF
-#include "ezgui.h"
+  #include "ezgui.h"
 #endif
 #include "id_lookup.h"
 
@@ -695,7 +695,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_V_ERBOSE:
 			if (!strcmp(optarg, "show")) {
-				c = SLOG_LVL_SHOWOFF;
+				c = SLOG_LVL_AUTO;
 			} else if (!strcmp(optarg, "error")) {
 				c = SLOG_LVL_ERROR;
 			} else if (!strcmp(optarg, "warning")) {

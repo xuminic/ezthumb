@@ -14,11 +14,11 @@ $(OBJDIR)/iup_focus.o: iup_focus.c ../include/iup.h ../include/iupkey.h \
  iup_str.h iup_drv.h
 $(OBJDIR)/iup_font.o: iup_font.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_str.h iup_drvfont.h iup_assert.h iup_attrib.h \
- iup_class.h iup_table.h iup_classbase.h
+ iup_class.h iup_table.h iup_classbase.h iup_object.h
 $(OBJDIR)/iup_globalattrib.o: iup_globalattrib.c ../include/iup.h \
  ../include/iupkey.h ../include/iupdef.h iup_table.h iup_globalattrib.h \
- iup_drv.h iup_drvfont.h iup_drvinfo.h iup_assert.h iup_str.h \
- iup_strmessage.h
+ iup_class.h iup_classbase.h iup_drv.h iup_drvfont.h iup_drvinfo.h \
+ iup_assert.h iup_str.h iup_strmessage.h
 $(OBJDIR)/iup_object.o: iup_object.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
  iup_assert.h iup_register.h iup_names.h
@@ -74,10 +74,12 @@ $(OBJDIR)/iup_messagedlg.o: iup_messagedlg.c ../include/iup.h ../include/iupkey.
  iup_stdcontrols.h iup_register.h iup_str.h
 $(OBJDIR)/iup_timer.o: iup_timer.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
- iup_table.h iup_classbase.h iup_str.h iup_stdcontrols.h iup_timer.h
+ iup_table.h iup_classbase.h iup_str.h iup_stdcontrols.h iup_timer.h \
+ iup_attrib.h
 $(OBJDIR)/iup_image.o: iup_image.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
- iup_attrib.h iup_str.h iup_image.h iup_assert.h iup_stdcontrols.h
+ iup_attrib.h iup_str.h iup_image.h iup_assert.h iup_stdcontrols.h \
+ iup_drvinfo.h
 $(OBJDIR)/iup_label.o: iup_label.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
  iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
@@ -101,7 +103,7 @@ $(OBJDIR)/iup_filedlg.o: iup_filedlg.c ../include/iup.h ../include/iupkey.h \
  iup_attrib.h iup_str.h iup_stdcontrols.h iup_register.h
 $(OBJDIR)/iup_strmessage.o: iup_strmessage.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
- iup_attrib.h iup_str.h iup_strmessage.h
+ iup_attrib.h iup_str.h iup_strmessage.h iup_register.h
 $(OBJDIR)/iup_menu.o: iup_menu.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
  iup_attrib.h iup_dialog.h iup_str.h iup_assert.h iup_key.h \
@@ -179,8 +181,9 @@ $(OBJDIR)/iup_list.o: iup_list.c ../include/iup.h ../include/iupkey.h \
  iup_drvfont.h iup_drvinfo.h iup_stdcontrols.h iup_layout.h iup_mask.h \
  iup_image.h iup_list.h
 $(OBJDIR)/iup_getparam.o: iup_getparam.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h iup_attrib.h iup_str.h iup_strmessage.h \
- iup_drvfont.h
+ ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
+ iup_attrib.h iup_str.h iup_assert.h iup_strmessage.h iup_layout.h \
+ iup_drvfont.h iup_register.h iup_stdcontrols.h
 $(OBJDIR)/iup_link.o: iup_link.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h iup_object.h \
  iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
@@ -192,7 +195,7 @@ $(OBJDIR)/iup_sbox.o: iup_sbox.c ../include/iup.h ../include/iupkey.h \
 $(OBJDIR)/iup_scrollbox.o: iup_scrollbox.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h iup_object.h \
  iup_class.h iup_table.h iup_classbase.h iup_register.h iup_attrib.h \
- iup_str.h iup_stdcontrols.h iup_layout.h iup_drv.h
+ iup_str.h iup_stdcontrols.h iup_layout.h iup_drv.h iup_childtree.h
 $(OBJDIR)/iup_normalizer.o: iup_normalizer.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
  iup_attrib.h iup_str.h iup_array.h iup_stdcontrols.h iup_normalizer.h
@@ -204,11 +207,12 @@ $(OBJDIR)/iup_tree.o: iup_tree.c ../include/iup.h ../include/iupkey.h \
 $(OBJDIR)/iup_split.o: iup_split.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h iup_object.h \
  iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
- iup_stdcontrols.h iup_layout.h iup_childtree.h iup_draw.h
+ iup_stdcontrols.h iup_layout.h iup_childtree.h iup_drvdraw.h
 $(OBJDIR)/iup_layoutdlg.o: iup_layoutdlg.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
- iup_attrib.h iup_str.h iup_dlglist.h iup_assert.h iup_draw.h \
- iup_childtree.h iup_drv.h iup_func.h iup_register.h
+ iup_attrib.h iup_str.h iup_focus.h iup_dlglist.h iup_assert.h \
+ iup_drvdraw.h iup_image.h iup_childtree.h iup_drv.h iup_func.h \
+ iup_register.h
 $(OBJDIR)/iup_recplay.o: iup_recplay.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_key.h iup_drv.h iup_drvfont.h iup_drvinfo.h \
  iup_str.h
@@ -219,7 +223,7 @@ $(OBJDIR)/iup_progressdlg.o: iup_progressdlg.c ../include/iup.h ../include/iupke
 $(OBJDIR)/iup_expander.o: iup_expander.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h iup_object.h \
  iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
- iup_drvfont.h iup_stdcontrols.h iup_layout.h iup_childtree.h iup_draw.h
+ iup_drvfont.h iup_stdcontrols.h iup_layout.h iup_childtree.h iup_image.h
 $(OBJDIR)/iup_open.o: iup_open.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_str.h iup_globalattrib.h iup_names.h iup_func.h \
  iup_drv.h iup_drvinfo.h iup_drvfont.h iup_predialogs.h iup_class.h \
@@ -227,9 +231,10 @@ $(OBJDIR)/iup_open.o: iup_open.c ../include/iup.h ../include/iupkey.h \
  iup_dlglist.h iup_assert.h iup_strmessage.h
 $(OBJDIR)/iup_table.o: iup_table.c iup_table.h iup_str.h iup_assert.h
 $(OBJDIR)/iup_canvas.o: iup_canvas.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
- iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
- iup_drvfont.h iup_stdcontrols.h iup_layout.h iup_canvas.h
+ ../include/iupdef.h ../include/iupcbs.h ../include/iupdraw.h \
+ iup_object.h iup_class.h iup_table.h iup_classbase.h iup_attrib.h \
+ iup_str.h iup_drv.h iup_drvfont.h iup_stdcontrols.h iup_layout.h \
+ iup_canvas.h
 $(OBJDIR)/iup_gridbox.o: iup_gridbox.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
  iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
@@ -237,22 +242,32 @@ $(OBJDIR)/iup_gridbox.o: iup_gridbox.c ../include/iup.h ../include/iupkey.h \
 $(OBJDIR)/iup_detachbox.o: iup_detachbox.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h iup_object.h \
  iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
- iup_stdcontrols.h iup_layout.h iup_childtree.h iup_draw.h
+ iup_stdcontrols.h iup_layout.h iup_childtree.h iup_drvdraw.h
 $(OBJDIR)/iup_backgroundbox.o: iup_backgroundbox.c ../include/iup.h \
  ../include/iupkey.h ../include/iupdef.h ../include/iupcbs.h \
  ../include/iupkey.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
  iup_register.h iup_attrib.h iup_str.h iup_stdcontrols.h iup_layout.h \
  iup_drv.h
-$(OBJDIR)/iupgtk_globalattrib.o: gtk/iupgtk_globalattrib.c ../include/iup.h \
+$(OBJDIR)/iup_linefile.o: iup_linefile.c iup_linefile.h
+$(OBJDIR)/iup_config.o: iup_config.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
+ iup_table.h iup_classbase.h ../include/iup_config.h iup_linefile.h \
+ iup_str.h
+$(OBJDIR)/iup_flatbutton.o: iup_flatbutton.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
+ iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_drvfont.h iup_image.h iup_stdcontrols.h iup_register.h iup_drvdraw.h \
+ iup_key.h
+$(OBJDIR)/iup_animatedlabel.o: iup_animatedlabel.c ../include/iup.h \
  ../include/iupkey.h ../include/iupdef.h ../include/iupcbs.h iup_object.h \
- iup_class.h iup_table.h iup_classbase.h iup_str.h iup_drv.h \
- iup_drvinfo.h iup_key.h gtk/iupgtk_drv.h
+ iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_image.h iup_stdcontrols.h iup_register.h
+$(OBJDIR)/iup_draw.o: iup_draw.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupdraw.h iup_object.h iup_class.h \
+ iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drvfont.h \
+ iup_drvdraw.h iup_assert.h iup_image.h
 $(OBJDIR)/iupgtk_loop.o: gtk/iupgtk_loop.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h
-$(OBJDIR)/iupgtk_messagedlg.o: gtk/iupgtk_messagedlg.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h iup_object.h iup_class.h \
- iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_dialog.h \
- gtk/iupgtk_drv.h
 $(OBJDIR)/iupgtk_timer.o: gtk/iupgtk_timer.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
  iup_attrib.h iup_str.h iup_assert.h iup_timer.h
@@ -260,14 +275,14 @@ $(OBJDIR)/iupgtk_colordlg.o: gtk/iupgtk_colordlg.c ../include/iup.h \
  ../include/iupkey.h ../include/iupdef.h iup_object.h iup_class.h \
  iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_dialog.h \
  gtk/iupgtk_drv.h
-$(OBJDIR)/iupgtk_frame.o: gtk/iupgtk_frame.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h iup_object.h iup_class.h iup_table.h iup_classbase.h \
- iup_layout.h iup_attrib.h iup_str.h iup_dialog.h iup_drv.h iup_drvfont.h \
- iup_stdcontrols.h iup_frame.h gtk/iupgtk_drv.h
-$(OBJDIR)/iupgtk_draw.o: gtk/iupgtk_draw.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h iup_attrib.h iup_class.h iup_table.h iup_classbase.h \
- iup_str.h iup_object.h iup_class.h iup_image.h iup_draw.h \
- gtk/iupgtk_drv.h
+$(OBJDIR)/iupgtk_calendar.o: gtk/iupgtk_calendar.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iupcbs.h iup_object.h \
+ iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_drvfont.h gtk/iupgtk_drv.h
+$(OBJDIR)/iup_datepick.o: iup_datepick.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
+ iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_drvfont.h iup_register.h iup_childtree.h
 $(OBJDIR)/iupgtk_help.o: gtk/iupgtk_help.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_str.h
 $(OBJDIR)/iupunix_info.o: mot/iupunix_info.c iup_str.h iup_drvinfo.h

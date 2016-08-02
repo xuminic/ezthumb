@@ -25,11 +25,11 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "libcsoup.h"
+
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
 //#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_MODULE)
-
-#include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 
 /* How to find out the input/output device.
@@ -218,7 +218,8 @@ int smm_config_close(struct KeyDev *cfgd)
 	if (cfgd->fp) {
 		fclose(cfgd->fp);
 	}
-	return smm_free(cfgd);
+	smm_free(cfgd);
+	return 0;
 }
 
 KEYCB *smm_config_read_alloc(struct KeyDev *cfgd)

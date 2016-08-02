@@ -137,6 +137,12 @@
     <ClCompile Include="..\src\win\iupwin_str.c">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_calendar.c">
+      <Filter>src_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_datepick.c">
+      <Filter>src_controls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\iup.def" />

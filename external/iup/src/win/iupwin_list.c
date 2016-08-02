@@ -69,7 +69,7 @@ static void winListUpdateShowImageItemHeight(Ihandle* ih, winListItemData* itemd
 
 static winListItemData* winListGetItemData(Ihandle* ih, int pos)
 {
-  LRESULT ret = SendMessage(ih->handle, WIN_GETITEMDATA(ih), pos, 0);
+  LRESULT ret = (LRESULT)SendMessage(ih->handle, WIN_GETITEMDATA(ih), pos, 0);
   if (ret == CB_ERR)
     return NULL;
   else
@@ -165,7 +165,8 @@ void iupdrvListAddItemSpace(Ihandle* ih, int *h)
 
 void iupdrvListAddBorders(Ihandle* ih, int *x, int *y)
 {
-  int border_size = 2*4;
+  /* LAYOUT_DECORATION_ESTIMATE */
+  int border_size = 2 * 4;
   (*x) += border_size;
   (*y) += border_size;
 
@@ -186,7 +187,7 @@ void iupdrvListAddBorders(Ihandle* ih, int *x, int *y)
 
 int iupdrvListGetCount(Ihandle* ih)
 {
-  return SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
+  return (int)SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
 }
 
 static int winListConvertXYToPos(Ihandle* ih, int x, int y)
@@ -199,10 +200,10 @@ static int winListConvertXYToPos(Ihandle* ih, int x, int y)
   if (ih->data->has_editbox)
   {
     HWND cblist = (HWND)iupAttribGet(ih, "_IUPWIN_LISTBOX");
-    ret = SendMessage(cblist, LB_ITEMFROMPOINT, 0, MAKELPARAM(x, y));
+    ret = (DWORD)SendMessage(cblist, LB_ITEMFROMPOINT, 0, MAKELPARAM(x, y));
   }
   else
-    ret = SendMessage(ih->handle, LB_ITEMFROMPOINT, 0, MAKELPARAM(x, y));
+    ret = (DWORD)SendMessage(ih->handle, LB_ITEMFROMPOINT, 0, MAKELPARAM(x, y));
 
   if (HIWORD(ret))
     return -1;
@@ -216,7 +217,7 @@ static int winListConvertXYToPos(Ihandle* ih, int x, int y)
 static int winListGetMaxWidth(Ihandle* ih)
 {
   int i, item_w, max_w = 0,
-    count = SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
+    count = (int)SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
 
   for (i=0; i<count; i++)
   { 
@@ -274,7 +275,7 @@ static void winListUpdateScrollWidthItem(Ihandle* ih, int item_width, int add)
 
 void iupdrvListAppendItem(Ihandle* ih, const char* value)
 {
-  int pos = SendMessage(ih->handle, WIN_ADDSTRING(ih), 0, (LPARAM)iupwinStrToSystem(value));
+  int pos = (int)SendMessage(ih->handle, WIN_ADDSTRING(ih), 0, (LPARAM)iupwinStrToSystem(value));
   winListSetItemData(ih, pos, value, NULL);
 }
 
@@ -292,7 +293,7 @@ void iupdrvListRemoveItem(Ihandle* ih, int pos)
   if (ih->data->is_dropdown && !ih->data->has_editbox)
   {
     /* must check if removing the current item */
-    int curpos = SendMessage(ih->handle, WIN_GETCURSEL(ih), 0, 0);
+    int curpos = (int)SendMessage(ih->handle, WIN_GETCURSEL(ih), 0, 0);
     if (pos == curpos)
     {
       if (curpos > 0) 
@@ -345,7 +346,7 @@ static int winListGetCaretPos(HWND cbedit)
   }
   else
   {
-    pos = SendMessage(cbedit, EM_CHARFROMPOS, 0, MAKELPARAM(point.x, point.y));
+    pos = (int)SendMessage(cbedit, EM_CHARFROMPOS, 0, MAKELPARAM(point.x, point.y));
     pos = LOWORD(pos);
   }
 
@@ -354,7 +355,7 @@ static int winListGetCaretPos(HWND cbedit)
 
 static char* winListGetText(Ihandle* ih, int pos)
 {
-  int len = SendMessage(ih->handle, WIN_GETTEXTLEN(ih), (WPARAM)pos, 0);
+  int len = (int)SendMessage(ih->handle, WIN_GETTEXTLEN(ih), (WPARAM)pos, 0);
   TCHAR* str = (TCHAR*)iupStrGetMemory((len+1)*sizeof(TCHAR));
   SendMessage(ih->handle, WIN_GETTEXT(ih), (WPARAM)pos, (LPARAM)str);
   return iupwinStrFromSystem(str);
@@ -366,7 +367,7 @@ static char* winListGetText(Ihandle* ih, int pos)
 
 static void winListUpdateItemWidth(Ihandle* ih)
 {
-  int i, count = SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
+  int i, count = (int)SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
   for (i=0; i<count; i++)
   { 
     winListItemData* itemdata = winListGetItemData(ih, i);
@@ -383,9 +384,9 @@ static int winListSetBgColorAttrib(Ihandle *ih, const char *value)
   return 1;
 }
 
-static int winListSetStandardFontAttrib(Ihandle* ih, const char* value)
+static int winListSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetStandardFontAttrib(ih, value);
+  iupdrvSetFontAttrib(ih, value);
   if (ih->handle)
   {
     winListUpdateItemWidth(ih);
@@ -405,19 +406,33 @@ static char* winListGetIdValueAttrib(Ihandle* ih, int id)
 static char* winListGetValueAttrib(Ihandle* ih)
 {
   if (ih->data->has_editbox)
-    return iupStrReturnStr(iupwinStrFromSystem(iupwinGetWindowText(ih->handle)));
+  {
+    if (iupAttribGet(ih, "_IUPWIN_GETFROMLIST"))
+    {
+      int pos = (int)SendMessage(ih->handle, WIN_GETCURSEL(ih), 0, 0);
+      return iupStrReturnStr(winListGetText(ih, pos));
+    }
+    else
+    {
+      TCHAR* value = iupwinGetWindowText(ih->handle);
+      if (value)
+        return iupStrReturnStr(iupwinStrFromSystem(value));
+      else
+        return "";
+    }
+  }
   else 
   {
     if (ih->data->is_dropdown || !ih->data->is_multiple)
     {
-      int pos = SendMessage(ih->handle, WIN_GETCURSEL(ih), 0, 0);
+      int pos = (int)SendMessage(ih->handle, WIN_GETCURSEL(ih), 0, 0);
       return iupStrReturnInt(pos+1);  /* IUP starts at 1 */
     }
     else
     {
-      int i, count = SendMessage(ih->handle, LB_GETCOUNT, 0, 0);
+      int i, count = (int)SendMessage(ih->handle, LB_GETCOUNT, 0, 0);
       int* pos = malloc(sizeof(int)*count);
-      int sel_count = SendMessage(ih->handle, LB_GETSELITEMS, count, (LPARAM)pos);
+      int sel_count = (int)SendMessage(ih->handle, LB_GETSELITEMS, count, (LPARAM)pos);
       char* str = iupStrGetMemory(count+1);
       memset(str, '-', count);
       str[count]=0;
@@ -463,8 +478,8 @@ static int winListSetValueAttrib(Ihandle* ih, const char* value)
         return 0;
       }
 
-      count = SendMessage(ih->handle, LB_GETCOUNT, 0, 0L);
-      len = strlen(value);
+      count = (int)SendMessage(ih->handle, LB_GETCOUNT, 0, 0L);
+      len = (int)strlen(value);
       if (len < count) 
         count = len;
 
@@ -524,7 +539,7 @@ static int winListSetSpacingAttrib(Ihandle* ih, const char* value)
     else
     {
       /* must manually set for each item */
-      int i, count = SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
+      int i, count = (int)SendMessage(ih->handle, WIN_GETCOUNT(ih), 0, 0);
 
       for (i=0; i<count; i++)
       { 
@@ -982,7 +997,7 @@ static void winListDrawRect(HWND hWnd, HDC hDC, int nIndex)
   if (nIndex == -1)
   {
     int h;
-    nIndex = SendMessage(hWnd, LB_GETCOUNT, 0, 0)-1;
+    nIndex = (int)SendMessage(hWnd, LB_GETCOUNT, 0, 0)-1;
     SendMessage(hWnd, LB_GETITEMRECT, (WPARAM)nIndex, (LPARAM)&rect);
 
     h = rect.bottom-rect.top;
@@ -1148,6 +1163,7 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
     {
     case CBN_EDITCHANGE:
       {
+        /* called only when the edit was changed by the user */
         iupBaseCallValueChangedCb(ih);
         break;
       }
@@ -1162,7 +1178,7 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
       {
         IFni cb = (IFni)IupGetCallback(ih, "DROPDOWN_CB");
         if (cb)
-          cb(ih, HIWORD(wp)==CBN_DROPDOWN? 1: 0);
+          cb(ih, HIWORD(wp) == CBN_DROPDOWN ? 1 : 0);
         break;
       }
     case CBN_DBLCLK:
@@ -1170,7 +1186,7 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
         IFnis cb = (IFnis) IupGetCallback(ih, "DBLCLICK_CB");
         if (cb)
         {
-          int pos = SendMessage(ih->handle, CB_GETCURSEL, 0, 0);
+          int pos = (int)SendMessage(ih->handle, CB_GETCURSEL, 0, 0);
           pos++;  /* IUP starts at 1 */
           iupListSingleCallDblClickCb(ih, cb, pos);
         }
@@ -1181,12 +1197,19 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
         IFnsii cb = (IFnsii) IupGetCallback(ih, "ACTION");
         if (cb)
         {
-          int pos = SendMessage(ih->handle, CB_GETCURSEL, 0, 0);
+          int pos = (int)SendMessage(ih->handle, CB_GETCURSEL, 0, 0);
           pos++;  /* IUP starts at 1 */
           iupListSingleCallActionCb(ih, cb, pos);
         }
 
+        /* the edit is not updated yet, so prepare to return correct VALUE during callback */
+        if (ih->data->has_editbox) 
+          iupAttribSet(ih, "_IUPWIN_GETFROMLIST", "1");
+
         iupBaseCallValueChangedCb(ih);
+
+        if (ih->data->has_editbox)
+          iupAttribSet(ih, "_IUPWIN_GETFROMLIST", NULL);
         break;
       }
     }
@@ -1200,7 +1223,7 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
         IFnis cb = (IFnis) IupGetCallback(ih, "DBLCLICK_CB");
         if (cb)
         {
-          int pos = SendMessage(ih->handle, LB_GETCURSEL, 0, 0);
+          int pos = (int)SendMessage(ih->handle, LB_GETCURSEL, 0, 0);
           pos++;  /* IUP starts at 1 */
           iupListSingleCallDblClickCb(ih, cb, pos);
         }
@@ -1213,7 +1236,7 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
           IFnsii cb = (IFnsii) IupGetCallback(ih, "ACTION");
           if (cb)
           {
-            int pos = SendMessage(ih->handle, LB_GETCURSEL, 0, 0);
+            int pos = (int)SendMessage(ih->handle, LB_GETCURSEL, 0, 0);
             pos++;  /* IUP starts at 1 */
             iupListSingleCallActionCb(ih, cb, pos);
           }
@@ -1224,7 +1247,7 @@ static int winListWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
           IFnsii cb = (IFnsii) IupGetCallback(ih, "ACTION");
           if (multi_cb || cb)
           {
-            int sel_count = SendMessage(ih->handle, LB_GETSELCOUNT, 0, 0);
+            int sel_count = (int)SendMessage(ih->handle, LB_GETSELCOUNT, 0, 0);
             int* pos = malloc(sizeof(int)*sel_count);
             SendMessage(ih->handle, LB_GETSELITEMS, sel_count, (LPARAM)pos);
             iupListMultipleCallActionCb(ih, cb, multi_cb, pos, sel_count);
@@ -1278,6 +1301,29 @@ static int winListEditProc(Ihandle* ih, HWND cbedit, UINT msg, WPARAM wp, LPARAM
 {
   int ret = 0;
 
+  if (ih->data->is_dropdown)
+  {
+    switch (msg)
+    {
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+    case WM_KEYUP:
+      {
+        int wincode = (int)wp;
+        if (wincode == VK_ESCAPE || wincode == VK_RETURN)
+        {
+          int dropped = (int)SendMessage(ih->handle, CB_GETDROPPEDSTATE, 0, 0);
+          if (dropped)
+          {
+            if (wincode == VK_RETURN) SendMessage(ih->handle, CB_SHOWDROPDOWN, FALSE, 0);
+            return 0;  /* do not call base procedure to allow internal key processing */
+          }
+        }
+      }
+    }
+  }
+
   if (msg==WM_KEYDOWN) /* process K_ANY before text callbacks */
   {
     ret = iupwinBaseMsgProc(ih, msg, wp, lp, result);
@@ -1314,17 +1360,22 @@ static int winListEditProc(Ihandle* ih, HWND cbedit, UINT msg, WPARAM wp, LPARAM
       {
         ret = 1;
       }
-      else if (!(GetKeyState(VK_CONTROL) & 0x8000 ||
-                 GetKeyState(VK_MENU) & 0x8000 ||
-                 GetKeyState(VK_LWIN) & 0x8000 || 
-                 GetKeyState(VK_RWIN) & 0x8000))
+      else
       {
-        TCHAR insert_value[2];
-        insert_value[0] = c;
-        insert_value[1] = 0;
+        int has_ctrl = GetKeyState(VK_CONTROL) & 0x8000;
+        int has_alt = GetKeyState(VK_MENU) & 0x8000;
+        int has_sys = (GetKeyState(VK_LWIN) & 0x8000) || (GetKeyState(VK_RWIN) & 0x8000);
 
-        if (!winListCallEditCb(ih, cbedit, iupwinStrFromSystem(insert_value), 0))
-          ret = 1;
+        if ((has_ctrl && has_alt && !has_sys) ||
+            (!has_ctrl && !has_alt && !has_sys))
+        {
+          TCHAR insert_value[2];
+          insert_value[0] = c;
+          insert_value[1] = 0;
+
+          if (!winListCallEditCb(ih, cbedit, iupwinStrFromSystem(insert_value), 0))
+            ret = 1;
+        }
       }
 
       PostMessage(cbedit, WM_IUPCARET, 0, 0L);
@@ -1521,6 +1572,29 @@ static LRESULT CALLBACK winListComboListWndProc(HWND hwnd, UINT msg, WPARAM wp, 
 
 static int winListMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *result)
 {
+
+  if (ih->data->is_dropdown)
+  {
+    switch (msg)
+    {
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+    case WM_KEYUP:
+      {
+        int wincode = (int)wp;
+        if (wincode == VK_ESCAPE || wincode == VK_RETURN)
+        {
+          int dropped = (int)SendMessage(ih->handle, CB_GETDROPPEDSTATE, 0, 0);
+          if (dropped)
+          {
+            return 0;  /* do not call base procedure to allow internal key processing */
+          }
+        }
+      }
+    }
+  }
+
   if (!ih->data->is_dropdown && !ih->data->has_editbox)
   {
     switch (msg)
@@ -1649,7 +1723,7 @@ static void winListDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
 
   /* If the item has the focus, draw the focus rectangle */
   if (drawitem->itemState & ODS_FOCUS)
-    iupdrvDrawFocusRect(ih, hDC, 0, 0, width, height);
+    iupdrvPaintFocusRect(ih, hDC, 0, 0, width, height);
 
   iupwinDrawDestroyBitmapDC(&bmpDC);
 }
@@ -1662,7 +1736,10 @@ static void winListLayoutUpdateMethod(Ihandle *ih)
     RECT rect;
     int charheight, calc_h, win_h, win_w, voptions;
 
-    voptions = iupAttribGetInt(ih, "VISIBLE_ITEMS");
+    if (iupAttribGet(ih, "VISIBLEITEMS"))
+      voptions = iupAttribGetInt(ih, "VISIBLEITEMS");
+    else
+      voptions = iupAttribGetInt(ih, "VISIBLE_ITEMS");
     if (voptions <= 0)
       voptions = 1;
 
@@ -1846,7 +1923,7 @@ void iupdrvListInitClass(Iclass* ic)
 
   /* Driver Dependent Attribute functions */
 
-  iupClassRegisterAttribute(ic, "STANDARDFONT", NULL, winListSetStandardFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "FONT", NULL, winListSetFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NOT_MAPPED);  /* inherited */
 
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", NULL, winListSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "TXTBGCOLOR", IUPAF_NOT_MAPPED);
@@ -1860,7 +1937,8 @@ void iupdrvListInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "VALUE", winListGetValueAttrib, winListSetValueAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHOWDROPDOWN", NULL, winListSetShowDropdownAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "TOPITEM", NULL, winListSetTopItemAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "VISIBLE_ITEMS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_DEFAULT);
+  iupClassRegisterAttribute(ic, "VISIBLEITEMS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_DEFAULT);
+  /*OLD*/iupClassRegisterAttribute(ic, "VISIBLE_ITEMS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_DEFAULT);
   iupClassRegisterAttribute(ic, "DROPEXPAND", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SPACING", iupListGetSpacingAttrib, winListSetSpacingAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_NOT_MAPPED);
 

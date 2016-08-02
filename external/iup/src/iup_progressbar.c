@@ -32,7 +32,7 @@ void iProgressBarCropValue(Ihandle* ih)
 
 char* iProgressBarGetValueAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->value);
+  return iupStrReturnDouble(ih->data->value);
 }
 
 char* iProgressBarGetDashedAttrib(Ihandle* ih)
@@ -42,16 +42,26 @@ char* iProgressBarGetDashedAttrib(Ihandle* ih)
 
 static int iProgressBarSetMinAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->vmin = atof(value);
-  iProgressBarCropValue(ih);
-  return 1;
+  if (iupStrToDouble(value, &(ih->data->vmin)))
+    iProgressBarCropValue(ih);
+  return 0;
+}
+
+static char* iProgressBarGetMinAttrib(Ihandle* ih)
+{
+  return iupStrReturnDouble(ih->data->vmin);
 }
 
 static int iProgressBarSetMaxAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->vmax = atof(value);
-  iProgressBarCropValue(ih);
-  return 1;
+  if (iupStrToDouble(value, &(ih->data->vmax)))
+    iProgressBarCropValue(ih);
+  return 0;
+}
+
+static char* iProgressBarGetMaxAttrib(Ihandle* ih)
+{
+  return iupStrReturnDouble(ih->data->vmax);
 }
 
 static int iProgressBarCreateMethod(Ihandle* ih, void **params)
@@ -64,7 +74,7 @@ static int iProgressBarCreateMethod(Ihandle* ih, void **params)
   ih->data->vmax      = 1;
   ih->data->dashed    = 0;
 
-  /* progress bar natural size is 200x30 */
+  /* progress bar default size is 200x30 */
   IupSetAttribute(ih, "RASTERSIZE", "200x30");
 
   return IUP_NOERROR;
@@ -105,8 +115,8 @@ Iclass* iupProgressBarNewClass(void)
   iupBaseRegisterVisualAttrib(ic);
 
   /* IupProgressBar only */
-  iupClassRegisterAttribute(ic, "MIN", NULL, iProgressBarSetMinAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "MAX", NULL, iProgressBarSetMaxAttrib, IUPAF_SAMEASSYSTEM, "1", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MIN", iProgressBarGetMinAttrib, iProgressBarSetMinAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MAX", iProgressBarGetMaxAttrib, iProgressBarSetMaxAttrib, IUPAF_SAMEASSYSTEM, "1", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "ORIENTATION", NULL, NULL, IUPAF_SAMEASSYSTEM, "HORIZONTAL", IUPAF_NOT_MAPPED);
 

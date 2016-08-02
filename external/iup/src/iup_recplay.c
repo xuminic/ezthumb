@@ -38,7 +38,7 @@ static void iRecWriteInt(FILE* file, int value, int mode)
 static void iRecWriteFloat(FILE* file, float value, int mode)
 {
   if (mode == IUP_RECTEXT)
-    fprintf(file, "%.9f ", value);
+    fprintf(file, IUP_FLOAT2STR" ", value);
   else
     fwrite(&value, sizeof(float), 1, file);
 }

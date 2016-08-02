@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 #define VERSION	"0.1"
 
@@ -350,6 +350,7 @@ static	struct	cliopt	clist[] = {
 	{ 'p', NULL,      1, "push/pop current working directory" },
 	{ 'r', NULL,      1, "process directory recurrsively" },
 	{ 's', NULL,      1, "state of the file" },
+	{ 'U', NULL,      0, "user/personal directory" },
 	{   1, "help",    0, "*Display the help message" },
 	{   2, "version", 0, "*Display the version message" },
 	{   3, "dir-fifo", 0, NULL },
@@ -368,6 +369,7 @@ There is NO WARRANTY, to the extent permitted by law.\n";
 int smm_main(void *rtime, int argc, char **argv)
 {
 	void	*rtbuf;
+	char	buf[2048];
 	int	c, d_flags;
 
 	/* stop the compiler complaining */
@@ -420,6 +422,10 @@ int smm_main(void *rtime, int argc, char **argv)
 			break;
 		case 'r':
 			do_path_trek(*++argv, d_flags);
+			break;
+		case 'U':
+			smm_userpath(buf, sizeof(buf));
+			CDB_SHOW(("User Path: %s\n", buf));
 			break;
 		default:
 			CDB_SHOW(("Unknown option. [%c]\n", c));

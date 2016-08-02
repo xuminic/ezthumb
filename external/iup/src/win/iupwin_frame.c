@@ -31,6 +31,7 @@
 
 void iupdrvFrameGetDecorOffset(int *x, int *y)
 {
+  /* LAYOUT_DECORATION_ESTIMATE */
   if (iupwin_comctl32ver6)
   {
     *x = 3;
@@ -46,15 +47,6 @@ void iupdrvFrameGetDecorOffset(int *x, int *y)
 int iupdrvFrameHasClientOffset(void)
 {
   return 1;
-}
-
-static char* winFrameGetClientOffsetAttrib(Ihandle* ih)
-{
-  /* In Windows the position of the child is still 
-     relative to the top-left corner of the frame.
-     So we the decorations were already added. */
-  (void)ih;
-  return "0x0";
 }
 
 static int winFrameSetBgColorAttrib(Ihandle* ih, const char* value)
@@ -86,7 +78,7 @@ static void winFrameDrawText(HDC hDC, const char* text, int x, int y, COLORREF f
   oldcolor = SetTextColor(hDC, fgcolor);
 
   {
-    int len = strlen(text);
+    int len = (int)strlen(text);
     TCHAR* str = iupwinStrToSystemLen(text, &len);
     TextOut(hDC, x, y, str, len);
   }
@@ -244,11 +236,8 @@ void iupdrvFrameInitClass(Iclass* ic)
 
   /* Driver Dependent Attribute functions */
 
-  /* Frame */
-  iupClassRegisterAttribute(ic, "CLIENTOFFSET", winFrameGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
-
   /* Visual */
-  iupClassRegisterAttribute(ic, "BGCOLOR", iupFrameGetBgColorAttrib, winFrameSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_NO_SAVE|IUPAF_DEFAULT);  
+  iupClassRegisterAttribute(ic, "BGCOLOR", iupFrameGetBgColorAttrib, winFrameSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_DEFAULT);  
 
   /* Special */
   iupClassRegisterAttribute(ic, "FGCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "DLGFGCOLOR", IUPAF_NOT_MAPPED);

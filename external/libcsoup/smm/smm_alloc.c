@@ -53,10 +53,10 @@ void *smm_alloc(size_t size)
 
    \retval 0   succeed
 */
-int smm_free(void *ptr)
+void *smm_free(void *ptr)
 {
 	free(ptr);
-	return 0;
+	return NULL;
 }
 
 

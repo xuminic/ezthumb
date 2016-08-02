@@ -22,7 +22,7 @@
 #include <string.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 int memdump_main(void *rtime, int argc, char **argv)
 {

@@ -133,9 +133,9 @@ static int motFrameSetFgColorAttrib(Ihandle* ih, const char* value)
   return 0; 
 }
 
-static int motFrameSetStandardFontAttrib(Ihandle* ih, const char* value)
+static int motFrameSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetStandardFontAttrib(ih, value);
+  iupdrvSetFontAttrib(ih, value);
 
   if (ih->handle)
   {
@@ -157,6 +157,20 @@ static int motFrameSetTitleAttrib(Ihandle* ih, const char* value)
   {
     if (!value) value = "";
     iupmotSetXmString(title_label, XmNlabelString, value);
+    return 1;
+  }
+  return 0;
+}
+
+static int motFrameSetSunkenAttrib(Ihandle* ih, const char* value)
+{
+  if (!iupAttribGetStr(ih, "_IUPFRAME_HAS_TITLE"))
+  {
+    if (iupStrBoolean(value))
+      XtVaSetValues(ih->handle, XmNshadowType, XmSHADOW_IN, NULL);
+    else
+      XtVaSetValues(ih->handle, XmNshadowType, XmSHADOW_ETCHED_IN, NULL);
+
     return 1;
   }
   return 0;
@@ -184,12 +198,6 @@ static int motFrameMapMethod(Ihandle* ih)
     iupAttribSet(ih, "_IUPFRAME_HAS_TITLE", "1");
   else
   {
-    char* value = iupAttribGetStr(ih, "SUNKEN");
-    if (iupStrBoolean(value))
-      iupMOT_SETARG(args, num_args, XmNshadowType, XmSHADOW_IN); 
-    else
-      iupMOT_SETARG(args, num_args, XmNshadowType, XmSHADOW_ETCHED_IN); 
-
     if (iupAttribGet(ih, "BGCOLOR"))
       iupAttribSet(ih, "_IUPFRAME_HAS_BGCOLOR", "1");
   }
@@ -229,6 +237,7 @@ static int motFrameMapMethod(Ihandle* ih)
     iupMOT_SETARG(args, num_args, XmNchildType, XmFRAME_TITLE_CHILD);
     title_label = XtCreateManagedWidget("title_label", xmLabelWidgetClass, ih->handle, args, num_args);
     iupmotSetXmString(title_label, XmNlabelString, title);
+
     iupAttribSet(ih, "_IUPMOT_FRAMELABEL", (char*)title_label);
   }
 
@@ -269,11 +278,12 @@ void iupdrvFrameInitClass(Iclass* ic)
   /* Driver Dependent Attribute functions */
 
   /* Overwrite Common */
-  iupClassRegisterAttribute(ic, "STANDARDFONT", NULL, motFrameSetStandardFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "FONT", NULL, motFrameSetFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NOT_MAPPED);  /* inherited */
 
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", iupFrameGetBgColorAttrib, motFrameSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_DEFAULT);
   iupClassRegisterAttribute(ic, "BACKGROUND", NULL, motFrameSetBackgroundAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_DEFAULT);
+  iupClassRegisterAttribute(ic, "SUNKEN", NULL, motFrameSetSunkenAttrib, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* Special */
   iupClassRegisterAttribute(ic, "FGCOLOR", NULL, motFrameSetFgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGFGCOLOR", IUPAF_DEFAULT);

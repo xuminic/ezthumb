@@ -68,7 +68,7 @@ release:
 	if [ -d $(RELCS) ]; then $(RM) -r $(RELCS); fi
 	-mkdir $(RELCS) $(RELCS)/doc
 	$(CP) ChangeLog Makefile *.h *.sh $(RELCS)
-	$(CP) -a cli main slog smm soup $(RELCS)
+	$(CP) -a cli main slog smm soup snippet $(RELCS)
 	$(CP) doc/Doxyfile $(RELCS)/doc
 	make -C $(RELCS) clean
 	$(RM) $(RELCS).tar.gz

@@ -38,7 +38,8 @@ static int winButtonGetBorder(void)
 
 void iupdrvButtonAddBorders(int *x, int *y)
 {
-  int border_size = winButtonGetBorder()*2;
+  /* LAYOUT_DECORATION_ESTIMATE */
+  int border_size = winButtonGetBorder() * 2;
   (*x) += border_size;
   (*y) += border_size;
 }
@@ -230,7 +231,7 @@ static void winButtonDrawImageText(Ihandle* ih, HDC hDC, int rect_width, int rec
   }
 
   if (ih->data->horiz_alignment == IUP_ALIGN_ACENTER)
-    style |= DT_CENTER;  /* let DrawText do the internal horizontal alignment, usefull for multiple lines */
+    style |= DT_CENTER;  /* let DrawText do the internal horizontal alignment, useful for multiple lines */
   else if (ih->data->horiz_alignment == IUP_ALIGN_ARIGHT)
     style |= DT_RIGHT;
 
@@ -295,7 +296,7 @@ static void winButtonDrawText(Ihandle* ih, HDC hDC, int rect_width, int rect_hei
     y = winButtonCalcAlignPosY(ih->data->vert_alignment, rect_height, height, ypad, shift);
 
     if (ih->data->horiz_alignment == IUP_ALIGN_ACENTER)
-      style |= DT_CENTER;  /* let DrawText do the internal horizontal alignment, usefull for multiple lines */
+      style |= DT_CENTER;  /* let DrawText do the internal horizontal alignment, useful for multiple lines */
     else if (ih->data->horiz_alignment == IUP_ALIGN_ARIGHT)
       style |= DT_RIGHT;
 
@@ -319,6 +320,7 @@ static void winButtonDrawText(Ihandle* ih, HDC hDC, int rect_width, int rect_hei
 
 static void winButtonDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
 { 
+  int has_border = 1;
   HDC hDC;
   iupwinBitmapDC bmpDC;
   int border, draw_border;
@@ -337,11 +339,17 @@ static void winButtonDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
   if (iupAttribGet(ih, "_IUPWINBUT_SELECTED"))
     drawitem->itemState |= ODS_SELECTED;
 
+  if (iupAttribGet(ih, "_IUPWINBUT_ENTERWIN"))
+    drawitem->itemState |= ODS_HOTLIGHT;
+
   border = winButtonGetBorder();
 
-  if (ih->data->type&IUP_BUTTON_IMAGE && 
-      iupAttribGet(ih, "IMPRESS") && 
+  if (ih->data->type & IUP_BUTTON_IMAGE &&
+      iupAttribGet(ih, "IMPRESS") &&
       !iupAttribGetBoolean(ih, "IMPRESSBORDER"))
+    has_border = 0;
+
+  if (!has_border)
   {
     draw_border = 0;
   }
@@ -349,7 +357,7 @@ static void winButtonDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
   {
     if (iupAttribGetBoolean(ih, "FLAT"))
     {
-      if (drawitem->itemState & ODS_HOTLIGHT || iupAttribGet(ih, "_IUPWINBUT_ENTERWIN"))
+      if (drawitem->itemState & ODS_HOTLIGHT)
         draw_border = 1;
       else
         draw_border = 0;
@@ -373,7 +381,7 @@ static void winButtonDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
       iupAttribGetBoolean(ih, "CANFOCUS"))
   {
     border--;
-    iupdrvDrawFocusRect(ih, hDC, border, border, width-2*border, height-2*border);
+    iupdrvPaintFocusRect(ih, hDC, border, border, width - 2 * border, height - 2 * border);
   }
 
   iupwinDrawDestroyBitmapDC(&bmpDC);
@@ -430,7 +438,7 @@ static int winButtonSetActiveAttrib(Ihandle* ih, const char* value)
 
 static int winButtonSetAlignmentAttrib(Ihandle* ih, const char* value)
 {
-  char value1[30]="", value2[30]="";
+  char value1[30], value2[30];
 
   iupStrToStrStr(value, value1, value2, ':');
 
@@ -448,9 +456,10 @@ static int winButtonSetAlignmentAttrib(Ihandle* ih, const char* value)
   else /* "ACENTER" */
     ih->data->vert_alignment = IUP_ALIGN_ACENTER;
 
-  iupdrvRedrawNow(ih);
+  if (ih->handle)
+    iupdrvRedrawNow(ih);
 
-  return 1;
+  return 0;
 }
 
 static char* winButtonGetAlignmentAttrib(Ihandle *ih)
@@ -561,6 +570,12 @@ static int winButtonMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT
     {
       /* Process BUTTON_CB */
       iupwinButtonUp(ih, msg, wp, lp);
+      
+      if (!iupObjectCheck(ih))
+      {
+        *result = 0;
+        return 1;
+      }
 
       if (msg==WM_LBUTTONUP)
       {
@@ -581,7 +596,7 @@ static int winButtonMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT
 
       if (!iupwinIsVistaOrNew() && iupObjectCheck(ih))
       {
-        /* TIPs desapear forever after a button click in XP,
+        /* TIPs disappear forever after a button click in XP,
            so we force an update. */
         char* tip = iupAttribGet(ih, "TIP");
         if (tip)
@@ -602,22 +617,24 @@ static int winButtonMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT
     }
     break;
   case WM_MOUSELEAVE:
-    if (!iupwin_comctl32ver6 && iupAttribGetBoolean(ih, "FLAT"))
-    {
-      iupAttribSet(ih, "_IUPWINBUT_ENTERWIN", NULL);
-      iupdrvRedrawNow(ih);
-    }
-    if (iupAttribGet(ih, "_IUPWINBUT_SELECTED"))
-    {
-      iupAttribSet(ih, "_IUPWINBUT_SELECTED", NULL);
-      iupdrvRedrawNow(ih);
-    }
+    iupAttribSet(ih, "_IUPWINBUT_SELECTED", NULL);
+    iupAttribSet(ih, "_IUPWINBUT_ENTERWIN", NULL);
+    iupdrvRedrawNow(ih);
     break;
   case WM_MOUSEMOVE:
-    if (!iupwin_comctl32ver6 && iupAttribGetBoolean(ih, "FLAT"))
+    if ((!iupwin_comctl32ver6 && iupAttribGetBoolean(ih, "FLAT")) ||
+        !iupAttribGetBoolean(ih, "CANFOCUS"))
     {
       if (!iupAttribGet(ih, "_IUPWINBUT_ENTERWIN"))
       {
+        if (!iupAttribGetBoolean(ih, "CANFOCUS") && LOWORD(wp) & MK_LBUTTON)
+          iupAttribSet(ih, "_IUPWINBUT_SELECTED", "1");
+
+        /* this will not affect the process in iupwinBaseMsgProc */
+
+        /* must be called so WM_MOUSELEAVE will be called */
+        iupwinTrackMouseLeave(ih);
+
         iupAttribSet(ih, "_IUPWINBUT_ENTERWIN", "1");
         iupdrvRedrawNow(ih);
       }
@@ -656,20 +673,26 @@ static int winButtonWmCommand(Ihandle* ih, WPARAM wp, LPARAM lp)
   case BN_DOUBLECLICKED:
   case BN_CLICKED:
     {
-      Icallback cb = IupGetCallback(ih, "ACTION");
-      if (cb)
+      /* BN_CLICKED will NOT be notified when not receiving the focus, but sometimes it does, 
+         so we added a test here also */
+      if (iupAttribGetBoolean(ih, "CANFOCUS"))
       {
-        if (!iupAttribGet(ih, "_IUPBUT_INSIDE_ACTION"))  /* to avoid double calls when pressing enter and a dialog is displayed */
+        Icallback cb = IupGetCallback(ih, "ACTION");
+        if (cb)
         {
-          int ret;
-          iupAttribSet(ih, "_IUPBUT_INSIDE_ACTION", "1");
+          /* to avoid double calls when pressing enter and a dialog is displayed */
+          if (!iupAttribGet(ih, "_IUPBUT_INSIDE_ACTION"))  
+          {
+            int ret;
+            iupAttribSet(ih, "_IUPBUT_INSIDE_ACTION", "1");
 
-          ret = cb(ih);
-          if (ret == IUP_CLOSE)
-            IupExitLoop();
+            ret = cb(ih);
+            if (ret == IUP_CLOSE)
+              IupExitLoop();
 
-          if (ret!=IUP_IGNORE && iupObjectCheck(ih))
-            iupAttribSet(ih, "_IUPBUT_INSIDE_ACTION", NULL);
+            if (ret!=IUP_IGNORE && iupObjectCheck(ih))
+              iupAttribSet(ih, "_IUPBUT_INSIDE_ACTION", NULL);
+          }
         }
       }
     }
@@ -753,7 +776,7 @@ void iupdrvButtonInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "TITLE", NULL, winButtonSetTitleAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
 
   /* IupButton only */
-  iupClassRegisterAttribute(ic, "ALIGNMENT", winButtonGetAlignmentAttrib, winButtonSetAlignmentAttrib, "ACENTER:ACENTER", NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "ALIGNMENT", winButtonGetAlignmentAttrib, winButtonSetAlignmentAttrib, "ACENTER:ACENTER", NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "IMAGE", NULL, winButtonSetImageAttrib, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "IMINACTIVE", NULL, winButtonSetImInactiveAttrib, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "IMPRESS", NULL, winButtonSetImPressAttrib, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);

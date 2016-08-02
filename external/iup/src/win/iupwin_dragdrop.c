@@ -200,6 +200,7 @@ typedef struct _IwinDropSource
 {
   IDropSource ids;
   LONG lRefCount;
+  Ihandle* ih;
 } IwinDropSource;
 
 typedef struct _IwinDropSourceVtbl
@@ -260,12 +261,31 @@ static HRESULT STDMETHODCALLTYPE IwinDropSource_QueryContinueDrag(IwinDropSource
 
 static HRESULT STDMETHODCALLTYPE IwinDropSource_GiveFeedback(IwinDropSource* pThis, DWORD dwEffect)
 {
-  (void)pThis;
-  (void)dwEffect;
+  char* value = iupAttribGet(pThis->ih, "DRAGCURSOR");
+  if (value)
+  {
+    HCURSOR hCur = NULL;
+
+    if (dwEffect & DROPEFFECT_COPY)
+    {
+      char* copy = iupAttribGet(pThis->ih, "DRAGCURSORCOPY");
+      if (copy) 
+        hCur = iupwinGetCursor(pThis->ih, copy);
+    }
+
+    if (!hCur)
+      hCur = iupwinGetCursor(pThis->ih, value);
+
+    if (hCur)
+    {
+      SetCursor(hCur);
+      return S_OK;
+    }
+  }
   return DRAGDROP_S_USEDEFAULTCURSORS;
 }
 
-static IwinDropSource* winCreateDropSource(void)
+static IDropSource* winCreateDropSource(Ihandle* ih)
 {
   static IwinDropSourceVtbl ids_vtbl = {
     IwinDropSource_QueryInterface,
@@ -278,8 +298,15 @@ static IwinDropSource* winCreateDropSource(void)
 
   pDropSource->ids.lpVtbl = (IDropSourceVtbl*)&ids_vtbl;
   pDropSource->lRefCount = 1;
+  pDropSource->ih = ih;
 
-  return pDropSource;
+  return (IDropSource*)pDropSource;
+}
+
+static void winDestroyDropSource(IDropSource* pSrc)
+{
+  pSrc->lpVtbl->Release(pSrc);
+  free(pSrc);
 }
 
 
@@ -364,7 +391,7 @@ static void winGetClipboardFormatName(CLIPFORMAT cf, TCHAR* name, int len);
 static HRESULT STDMETHODCALLTYPE IwinDataObject_GetData(IwinDataObject* pThis, LPFORMATETC pFormatEtc, LPSTGMEDIUM pStgMedium)
 {
   IFns cbDragDataSize;
-  IFnsCi cbDragData;
+  IFnsVi cbDragData;
   int size;
   void *pData;
   TCHAR type[256];
@@ -390,7 +417,7 @@ static HRESULT STDMETHODCALLTYPE IwinDataObject_GetData(IwinDataObject* pThis, L
   pData = GlobalLock(pStgMedium->hGlobal);
 
   /* fill data */
-  cbDragData = (IFnsCi)IupGetCallback(pThis->ih, "DRAGDATA_CB");
+  cbDragData = (IFnsVi)IupGetCallback(pThis->ih, "DRAGDATA_CB");
   cbDragData(pThis->ih, iupwinStrFromSystem(type), pData, size);
 
   GlobalUnlock(pStgMedium->hGlobal);
@@ -467,7 +494,7 @@ static HRESULT STDMETHODCALLTYPE IwinDataObject_EnumDAdvise(IwinDataObject* pThi
   return OLE_E_ADVISENOTSUPPORTED;
 }
 
-static IwinDataObject* winCreateDataObject(CLIPFORMAT *pClipFormat, ULONG nNumFormats, Ihandle* ih)
+static IDataObject* winCreateDataObject(CLIPFORMAT *pClipFormat, ULONG nNumFormats, Ihandle* ih)
 {
   IwinDataObject* pDataObject;
   ULONG i;
@@ -503,7 +530,16 @@ static IwinDataObject* winCreateDataObject(CLIPFORMAT *pClipFormat, ULONG nNumFo
     pDataObject->pFormatEtc[i].tymed = TYMED_HGLOBAL;
   }
 
-  return pDataObject;
+  return (IDataObject*)pDataObject;
+}
+
+static void winDestroyDataObject(IDataObject* pObj)
+{
+  IwinDataObject* pDataObject = (IwinDataObject*)pObj;
+  free(pDataObject->pFormatEtc);
+
+  pObj->lpVtbl->Release(pObj);
+  free(pObj);
 }
 
 
@@ -654,7 +690,7 @@ static HRESULT STDMETHODCALLTYPE IwinDropTarget_DragLeave(IwinDropTarget* pThis)
 
 static void winCallDropDataCB(Ihandle* ih, CLIPFORMAT cf, HGLOBAL hData, int x, int y)
 {
-  IFnsCiii cbDropData = (IFnsCiii)IupGetCallback((Ihandle*)ih, "DROPDATA_CB");
+  IFnsViii cbDropData = (IFnsViii)IupGetCallback((Ihandle*)ih, "DROPDATA_CB");
   if(cbDropData)
   {
     void* targetData = NULL;
@@ -670,7 +706,7 @@ static void winCallDropDataCB(Ihandle* ih, CLIPFORMAT cf, HGLOBAL hData, int x, 
 
     winGetClipboardFormatName(cf, type, 256);
 
-    cbDropData(ih, iupwinStrFromSystem(type), targetData, size, x, y);
+    cbDropData(ih, iupwinStrFromSystem(type), targetData, (int)size, x, y);
 
     GlobalUnlock(hData);
   }
@@ -737,6 +773,14 @@ static IwinDropTarget* winCreateDropTarget(CLIPFORMAT *pClipFormat, ULONG nNumFo
     pDropTarget->pClipFormat[i] = pClipFormat[i];
 
   return pDropTarget;
+}
+
+static void winDestroyDropTarget(IwinDropTarget* pDropTarget)
+{
+  ((IDropTarget*)pDropTarget)->lpVtbl->Release((IDropTarget*)pDropTarget);
+
+  free(pDropTarget->pClipFormat);
+  free(pDropTarget);
 }
 
 
@@ -824,7 +868,7 @@ static int winRegisterProcessDrag(Ihandle *ih)
   CLIPFORMAT *cfList;
   DWORD dwEffect = 0, dwOKEffect;
   IFns cbDragDataSize = (IFns)IupGetCallback(ih, "DRAGDATASIZE_CB");
-  IFnsCi cbDragData = (IFnsCi)IupGetCallback(ih, "DRAGDATA_CB");
+  IFnsVi cbDragData = (IFnsVi)IupGetCallback(ih, "DRAGDATA_CB");
 
   if (!dragList || !cbDragDataSize || !cbDragData)
     return -1;
@@ -846,15 +890,15 @@ static int winRegisterProcessDrag(Ihandle *ih)
     }
   }
 
-  pSrc = (IDropSource*)winCreateDropSource();
-  pObj = (IDataObject*)winCreateDataObject(cfList, (ULONG)j, ih);
+  pSrc = winCreateDropSource(ih);
+  pObj = winCreateDataObject(cfList, (ULONG)j, ih);
 
   /* Process drag, this will stop util drag is done or canceled. */
   dwOKEffect = iupAttribGetBoolean(ih, "DRAGSOURCEMOVE")? DROPEFFECT_MOVE|DROPEFFECT_COPY: DROPEFFECT_COPY;
   DoDragDrop(pObj, pSrc, dwOKEffect, &dwEffect);
 
-  pSrc->lpVtbl->Release(pSrc);
-  pObj->lpVtbl->Release(pObj);
+  winDestroyDropSource(pSrc);
+  winDestroyDataObject(pObj);
   free(cfList);
 
   if (dwEffect == DROPEFFECT_MOVE)
@@ -895,32 +939,26 @@ int iupwinDragStart(Ihandle* ih)
   return 0;
 }
 
-static void winDestroyTypesList(Iarray *list)
-{
-  int i, count = iupArrayCount(list);
-  char** listData = (char**)iupArrayGetData(list);
-  for (i=0; i<count; i++)
-    free(listData[i]);
-  iupArrayDestroy(list);
-}
-
 static Iarray* winCreateTypesList(const char* value)
 {
   Iarray *newList = iupArrayCreate(10, sizeof(char*));
   char** newListData;
   char valueCopy[256];
-  char valueTemp[256];
+  char valueTemp1[256];
+  char valueTemp2[256];
   int i = 0;
 
   strcpy(valueCopy, value);
-  while(iupStrToStrStr(valueCopy, valueTemp, valueCopy, ',') > 0)
+  while (iupStrToStrStr(valueCopy, valueTemp1, valueTemp2, ',') > 0)
   {
     newListData = (char**)iupArrayInc(newList);
-    newListData[i] = iupStrDup(valueTemp);
+    newListData[i] = iupStrDup(valueTemp1);
     i++;
 
-    if(iupStrEqualNoCase(valueCopy, valueTemp))
+    if (iupStrEqualNoCase(valueTemp2, valueTemp1))
       break;
+
+    strcpy(valueCopy, valueTemp2);
   }
 
   if (i == 0)
@@ -930,6 +968,15 @@ static Iarray* winCreateTypesList(const char* value)
   }
 
   return newList;
+}
+
+static void winDestroyTypesList(Iarray *list)
+{
+  int i, count = iupArrayCount(list);
+  char** listData = (char**)iupArrayGetData(list);
+  for (i = 0; i<count; i++)
+    free(listData[i]);
+  iupArrayDestroy(list);
 }
 
 static int winSetDropTypesAttrib(Ihandle* ih, const char* value)
@@ -973,14 +1020,17 @@ static int winSetDropTargetAttrib(Ihandle* ih, const char* value)
   if (pDropTarget)
   {
     RevokeDragDrop(ih->handle);
+
     CoLockObjectExternal((LPUNKNOWN)pDropTarget, FALSE, TRUE);
-    ((IDropTarget*)pDropTarget)->lpVtbl->Release((IDropTarget*)pDropTarget);
     iupAttribSet(ih, "_IUPWIN_DROPTARGET", NULL);
+
+    winDestroyDropTarget(pDropTarget);
   }
 
   if (iupStrBoolean(value))
   {
     pDropTarget = winRegisterDrop(ih);
+
     CoLockObjectExternal((LPUNKNOWN)pDropTarget, TRUE, FALSE);
     RegisterDragDrop(ih->handle, (IDropTarget*)pDropTarget);
     iupAttribSet(ih, "_IUPWIN_DROPTARGET", (char*)pDropTarget);
@@ -1079,9 +1129,10 @@ void iupwinDestroyDragDrop(Ihandle* ih)
   pDropTarget = (IwinDropTarget*)iupAttribGet(ih, "_IUPWIN_DROPTARGET");
   if (pDropTarget)
   {
-    CoLockObjectExternal((LPUNKNOWN)pDropTarget, TRUE, FALSE);
-    ((IDropTarget*)pDropTarget)->lpVtbl->Release((IDropTarget*)pDropTarget);
+    CoLockObjectExternal((LPUNKNOWN)pDropTarget, FALSE, TRUE);
     iupAttribSet(ih, "_IUPWIN_DROPTARGET", NULL);
+
+    winDestroyDropTarget(pDropTarget);
   }
 }
 
@@ -1101,6 +1152,8 @@ void iupdrvRegisterDragDropAttrib(Iclass* ic)
   iupClassRegisterAttribute(ic, "DRAGSOURCE", NULL, winSetDragSourceAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DROPTARGET", NULL, winSetDropTargetAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DRAGSOURCEMOVE", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "DRAGCURSOR", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "DRAGCURSORCOPY", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "DRAGDROP", NULL, winSetDropFilesTargetAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DROPFILESTARGET", NULL, winSetDropFilesTargetAttrib, NULL, NULL, IUPAF_NO_INHERIT);

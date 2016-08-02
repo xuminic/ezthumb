@@ -91,12 +91,15 @@ void iupListSingleCallActionCb(Ihandle* ih, IFnsii cb, int pos)
     if (oldpos != pos)
     {
       iListCallActionCallback(ih, cb, oldpos, 0);
+      iupAttribSetInt(ih, "_IUPLIST_OLDVALUE", pos);
       iListCallActionCallback(ih, cb, pos, 1);
     }
   }
   else
+  {
+    iupAttribSetInt(ih, "_IUPLIST_OLDVALUE", pos);
     iListCallActionCallback(ih, cb, pos, 1);
-  iupAttribSetInt(ih, "_IUPLIST_OLDVALUE", pos);
+  }
 }
 
 void iupListMultipleCallActionCb(Ihandle* ih, IFnsii cb, IFns multi_cb, int* pos, int sel_count)
@@ -104,7 +107,7 @@ void iupListMultipleCallActionCb(Ihandle* ih, IFnsii cb, IFns multi_cb, int* pos
   int i, count = iupdrvListGetCount(ih);
 
   char* old_str = iupAttribGet(ih, "_IUPLIST_OLDVALUE");
-  int old_count = old_str? strlen(old_str): 0;
+  int old_count = old_str? (int)strlen(old_str): 0;
 
   char* str = malloc(count+1);
   memset(str, '-', count);
@@ -413,13 +416,49 @@ static char* iListGetScrollbarAttrib(Ihandle* ih)
   return iupStrReturnBoolean (ih->data->sb); 
 }
 
-static char* iListGetMaskDataAttrib(Ihandle* ih)
+static char* iListGetMaskAttrib(Ihandle* ih)
 {
   if (!ih->data->has_editbox)
     return NULL;
 
-  /* Used only by the OLD iupmask API */
-  return (char*)ih->data->mask;
+  if (ih->data->mask)
+    return iupMaskGetStr(ih->data->mask);
+  else
+    return NULL;
+}
+
+static int iListSetValueMaskedAttrib(Ihandle* ih, const char* value)
+{
+  if (!ih->data->has_editbox)
+    return 0;
+
+  if (value)
+  {
+    if (ih->data->mask && iupMaskCheck(ih->data->mask, value) == 0)
+      return 0; /* abort */
+    IupStoreAttribute(ih, "VALUE", value);
+  }
+  return 0;
+}
+
+static int iListSetMaskNoEmptyAttrib(Ihandle* ih, const char* value)
+{
+  if (ih->data->mask)
+  {
+    int val = iupStrBoolean(value);
+    iupMaskSetNoEmpty(ih->data->mask, val);
+  }
+  return 1;
+}
+
+static int iListSetMaskCaseIAttrib(Ihandle* ih, const char* value)
+{
+  if (ih->data->mask)
+  {
+    int val = iupStrBoolean(value);
+    iupMaskSetCaseI(ih->data->mask, val);
+  }
+  return 1;
 }
 
 static int iListSetMaskAttrib(Ihandle* ih, const char* value)
@@ -430,19 +469,27 @@ static int iListSetMaskAttrib(Ihandle* ih, const char* value)
   if (!value)
   {
     if (ih->data->mask)
+    {
       iupMaskDestroy(ih->data->mask);
+      ih->data->mask = NULL;
+    }
   }
   else
   {
-    int casei = iupAttribGetInt(ih, "MASKCASEI");
-    Imask* mask = iupMaskCreate(value,casei);
+    Imask* mask = iupMaskCreate(value);
     if (mask)
     {
+      int val = iupAttribGetInt(ih, "MASKCASEI");
+      iupMaskSetCaseI(mask, val);
+
+      val = iupAttribGetInt(ih, "MASKNOEMPTY");
+      iupMaskSetNoEmpty(mask, val);
+
       if (ih->data->mask)
         iupMaskDestroy(ih->data->mask);
 
       ih->data->mask = mask;
-      return 1;
+      return 0;
     }
   }
 
@@ -457,9 +504,10 @@ static int iListSetMaskIntAttrib(Ihandle* ih, const char* value)
   if (!value)
   {
     if (ih->data->mask)
+    {
       iupMaskDestroy(ih->data->mask);
-
-    iupAttribSet(ih, "MASK", NULL);
+      ih->data->mask = NULL;
+    }
   }
   else
   {
@@ -469,17 +517,17 @@ static int iListSetMaskIntAttrib(Ihandle* ih, const char* value)
     if (iupStrToIntInt(value, &min, &max, ':')!=2)
       return 0;
 
-    mask = iupMaskCreateInt(min,max);
+    mask = iupMaskCreateInt(min, max);
+    if (mask)
+    {
+      int val = iupAttribGetInt(ih, "MASKNOEMPTY");
+      iupMaskSetNoEmpty(mask, val);
 
-    if (ih->data->mask)
-      iupMaskDestroy(ih->data->mask);
+      if (ih->data->mask)
+        iupMaskDestroy(ih->data->mask);
 
-    ih->data->mask = mask;
-
-    if (min < 0)
-      iupAttribSet(ih, "MASK", IUP_MASK_INT);
-    else
-      iupAttribSet(ih, "MASK", IUP_MASK_UINT);
+      ih->data->mask = mask;
+    }
   }
 
   return 0;
@@ -493,29 +541,71 @@ static int iListSetMaskFloatAttrib(Ihandle* ih, const char* value)
   if (!value)
   {
     if (ih->data->mask)
+    {
       iupMaskDestroy(ih->data->mask);
-
-    iupAttribSet(ih, "MASK", NULL);
+      ih->data->mask = NULL;
+    }
   }
   else
   {
     Imask* mask;
     float min, max;
+    char* decimal_symbol = iupAttribGet(ih, "MASKDECIMALSYMBOL");
+    if (!decimal_symbol)
+      decimal_symbol = IupGetGlobal("DEFAULTDECIMALSYMBOL");
 
     if (iupStrToFloatFloat(value, &min, &max, ':')!=2)
       return 0;
 
-    mask = iupMaskCreateFloat(min,max);
+    mask = iupMaskCreateFloat(min, max, decimal_symbol);
+    if (mask)
+    {
+      int val = iupAttribGetInt(ih, "MASKNOEMPTY");
+      iupMaskSetNoEmpty(mask, val);
 
+      if (ih->data->mask)
+        iupMaskDestroy(ih->data->mask);
+
+      ih->data->mask = mask;
+    }
+  }
+
+  return 0;
+}
+
+static int iListSetMaskRealAttrib(Ihandle* ih, const char* value)
+{
+  if (!ih->data->has_editbox)
+    return 0;
+
+  if (!value)
+  {
     if (ih->data->mask)
+    {
       iupMaskDestroy(ih->data->mask);
+      ih->data->mask = NULL;
+    }
+  }
+  else
+  {
+    Imask* mask;
+    char* decimal_symbol = iupAttribGet(ih, "MASKDECIMALSYMBOL");
+    int positive = 0;
 
-    ih->data->mask = mask;
+    if (iupStrEqualNoCase(value, "UNSIGNED"))
+      positive = 1;
 
-    if (min < 0)
-      iupAttribSet(ih, "MASK", IUP_MASK_FLOAT);
-    else
-      iupAttribSet(ih, "MASK", IUP_MASK_UFLOAT);
+    mask = iupMaskCreateReal(positive, decimal_symbol);
+    if (mask)
+    {
+      int val = iupAttribGetInt(ih, "MASKNOEMPTY");
+      iupMaskSetNoEmpty(mask, val);
+
+      if (ih->data->mask)
+        iupMaskDestroy(ih->data->mask);
+
+      ih->data->mask = mask;
+    }
   }
 
   return 0;
@@ -673,7 +763,7 @@ static int iListDragData_CB(Ihandle *ih, char* type, void *data, int len)
        In this case, unmark all and mark only this item.  */
     if(buffer[pos-1] == '-')
     {
-      int len = strlen(buffer);
+      int len = (int)strlen(buffer);
       IupSetAttribute(ih, "SELECTION", "NONE");
       memset(buffer, '-', len);
       buffer[pos-1] = '+';
@@ -738,7 +828,39 @@ static int iListSetDragDropListAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
+static char* iListGetValueStringAttrib(Ihandle* ih)
+{
+  if (!ih->data->has_editbox && (ih->data->is_dropdown || !ih->data->is_multiple))
+  {
+    int i = IupGetInt(ih, "VALUE");
+    return IupGetAttributeId(ih, "", i);
+  }
+  return NULL;
+}
+
+static int iListSetValueStringAttrib(Ihandle* ih, const char* value)
+{
+  if (!ih->data->has_editbox && (ih->data->is_dropdown || !ih->data->is_multiple))
+  {
+    int i, count = iListGetCount(ih);
+
+    for (i = 1; i <= count; i++)
+    {
+      char* item = IupGetAttributeId(ih, "", i);
+      if (iupStrEqual(value, item))
+      {
+        IupSetInt(ih, "VALUE", i);
+        return 0;
+      }
+    }
+  }
+
+  return 0;
+}
+
+
 /*****************************************************************************************/
+
 
 static int iListCreateMethod(Ihandle* ih, void** params)
 {
@@ -839,11 +961,9 @@ static void iListGetNaturalItemsSize(Ihandle *ih, int *w, int *h)
     if (ih->data->show_image && max_h > *h)  /* use the highest image to compute the natural size */
       *h = max_h;
 
-    iupdrvListAddItemSpace(ih, h);  /* this independs from spacing */
+    iupdrvListAddItemSpace(ih, h);  /* this is independent from spacing */
 
-    //*h += 2*ih->data->spacing;  /* this will be multiplied by the number of lines */
-    /* 20140505 A.Xuming: Temporary solution to go around the IupList too short issue */
-    *h += 2*ih->data->spacing + 1;  /* this will be multiplied by the number of lines */
+    *h += 2*ih->data->spacing;  /* this will be multiplied by the number of lines */
     *w += 2*ih->data->spacing;  /* include also horizontal spacing */
 
     num_lines = count;
@@ -978,16 +1098,20 @@ Iclass* iupListNewClass(void)
   iupClassRegisterAttribute(ic, "DROPDOWN", iListGetDropdownAttrib, iListSetDropdownAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "EDITBOX", iListGetEditboxAttrib, iListSetEditboxAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "COUNT", iListGetCountAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "VALUESTRING", iListGetValueStringAttrib, iListSetValueStringAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttributeId(ic, "INSERTITEM", NULL, iListSetInsertItemAttrib, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "APPENDITEM", NULL, iListSetAppendItemAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "REMOVEITEM", NULL, iListSetRemoveItemAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
-  iupClassRegisterAttribute(ic, "MASKCASEI", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "MASK", NULL, iListSetMaskAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "VALUEMASKED", NULL, iListSetValueMaskedAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MASKCASEI", NULL, iListSetMaskCaseIAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MASKDECIMALSYMBOL", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MASK", iListGetMaskAttrib, iListSetMaskAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MASKINT", NULL, iListSetMaskIntAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MASKFLOAT", NULL, iListSetMaskFloatAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "OLD_MASK_DATA", iListGetMaskDataAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MASKREAL", NULL, iListSetMaskRealAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MASKNOEMPTY", NULL, iListSetMaskNoEmptyAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "VISIBLECOLUMNS", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "VISIBLELINES", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

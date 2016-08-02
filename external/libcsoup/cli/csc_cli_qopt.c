@@ -68,7 +68,8 @@ void *csc_cli_qopt_open(int argc, char **argv)
 */
 int csc_cli_qopt_close(void *ropt)
 {
-	return smm_free(ropt);
+	smm_free(ropt);
+	return 0;
 }
 
 /*!\brief Retrieve the index of the next element to be processed in argv.

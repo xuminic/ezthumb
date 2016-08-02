@@ -47,12 +47,19 @@ static void gtkListComboBoxChanged(GtkComboBox* widget, Ihandle* ih);
 void iupdrvListAddItemSpace(Ihandle* ih, int *h)
 {
   (void)ih;
-  *h += 3;
+  /* FROM:
+    gtk_tree_view_column_cell_get_size
+      height = text_height + 2*focus_line_width;
+    gtk_widget_style_get(ih->handle, "focus-line-width", &focus_line_width, NULL);
+      returns always 1
+  */
+  *h += 2;
 }
 
 void iupdrvListAddBorders(Ihandle* ih, int *x, int *y)
 {
-  int border_size = 2*5;
+  /* LAYOUT_DECORATION_ESTIMATE */
+  int border_size = 2 * 5;
   (*x) += border_size;
   (*y) += border_size;
 
@@ -175,9 +182,9 @@ void iupdrvListRemoveAllItems(Ihandle* ih)
 /*********************************************************************************/
 
 
-static int gtkListSetStandardFontAttrib(Ihandle* ih, const char* value)
+static int gtkListSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetStandardFontAttrib(ih, value);
+  iupdrvSetFontAttrib(ih, value);
 
   if (ih->handle)
   {
@@ -456,7 +463,7 @@ static int gtkListSetValueAttrib(Ihandle* ih, const char* value)
           return 0;
         }
 
-	      len = strlen(value);
+	      len = (int)strlen(value);
         count = iupdrvListGetCount(ih);
         if (len < count) 
           count = len;
@@ -536,13 +543,19 @@ static int gtkListSetPaddingAttrib(Ihandle* ih, const char* value)
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
   if (ih->handle)
   {
+    GtkEntry* entry = (GtkEntry*)iupAttribGet(ih, "_IUPGTK_ENTRY");
+#if GTK_CHECK_VERSION(3, 4, 0)
+    g_object_set(G_OBJECT(entry), "margin-bottom", ih->data->vert_padding, NULL);
+    g_object_set(G_OBJECT(entry), "margin-top", ih->data->vert_padding, NULL);
+    g_object_set(G_OBJECT(entry), "margin-left", ih->data->horiz_padding, NULL);
+    g_object_set(G_OBJECT(entry), "margin-right", ih->data->horiz_padding, NULL);
+#else
 #if GTK_CHECK_VERSION(2, 10, 0)
-    GtkEntry* entry;
     GtkBorder border;
     border.bottom = border.top = (gint16)ih->data->vert_padding;
     border.left = border.right = (gint16)ih->data->horiz_padding;
-    entry = (GtkEntry*)iupAttribGet(ih, "_IUPGTK_ENTRY");
     gtk_entry_set_inner_border(entry, &border);
+#endif
 #endif
     return 0;
   }
@@ -814,7 +827,7 @@ static int gtkListSetAppendAttrib(Ihandle* ih, const char* value)
   if (ih->data->has_editbox)
   {
     GtkEntry* entry = (GtkEntry*)iupAttribGet(ih, "_IUPGTK_ENTRY");
-    gint pos = strlen(gtk_entry_get_text(entry))+1;
+    gint pos = (gint)strlen(gtk_entry_get_text(entry))+1;
     iupAttribSet(ih, "_IUPGTK_DISABLE_TEXT_CB", "1"); /* disable callbacks */
     gtk_editable_insert_text(GTK_EDITABLE(entry), iupgtkStrConvertToSystem(value), -1, &pos);
     iupAttribSet(ih, "_IUPGTK_DISABLE_TEXT_CB", NULL);
@@ -1178,11 +1191,13 @@ static gboolean gtkListEditButtonEvent(GtkWidget *widget, GdkEventButton *evt, I
 static void gtkListEditDeleteText(GtkEditable *editable, int start, int end, Ihandle* ih)
 {
   IFnis cb = (IFnis)IupGetCallback(ih, "EDIT_CB");
+  int ret;
 
   if (iupAttribGet(ih, "_IUPGTK_DISABLE_TEXT_CB"))
     return;
 
-  if (iupEditCallActionCb(ih, cb, NULL, start, end, ih->data->mask, ih->data->nc, 1, iupgtkStrGetUTF8Mode())==0)
+  ret = iupEditCallActionCb(ih, cb, NULL, start, end, ih->data->mask, ih->data->nc, 1, iupgtkStrGetUTF8Mode());
+  if (ret == 0)
     g_signal_stop_emission_by_name(editable, "delete_text");
 }
 
@@ -1414,6 +1429,7 @@ static int gtkListMapMethod(Ihandle* ih)
 #endif
       entry = gtk_bin_get_child(GTK_BIN(ih->handle));
       iupAttribSet(ih, "_IUPGTK_ENTRY", (char*)entry);
+      iupgtkClearSizeStyleCSS(entry);
 
       g_signal_connect(G_OBJECT(entry), "focus-in-event",     G_CALLBACK(iupgtkFocusInOutEvent), ih);
       g_signal_connect(G_OBJECT(entry), "focus-out-event",    G_CALLBACK(iupgtkFocusInOutEvent), ih);
@@ -1514,6 +1530,7 @@ static int gtkListMapMethod(Ihandle* ih)
       gtk_widget_show(entry);
       gtk_box_pack_start(vbox, entry, FALSE, FALSE, 0);
       iupAttribSet(ih, "_IUPGTK_ENTRY", (char*)entry);
+      iupgtkClearSizeStyleCSS(entry);
 
       gtk_widget_show((GtkWidget*)vbox);
       gtk_box_pack_end(vbox, (GtkWidget*)scrolled_window, TRUE, TRUE, 0);
@@ -1606,8 +1623,10 @@ static int gtkListMapMethod(Ihandle* ih)
     g_signal_connect(G_OBJECT(ih->handle), "row-activated", G_CALLBACK(gtkListRowActivated), ih);
     g_signal_connect(G_OBJECT(ih->handle), "motion-notify-event",G_CALLBACK(iupgtkMotionNotifyEvent), ih);
     g_signal_connect(G_OBJECT(ih->handle), "button-press-event", G_CALLBACK(iupgtkButtonEvent), ih);
-    g_signal_connect(G_OBJECT(ih->handle), "button-release-event",G_CALLBACK(iupgtkButtonEvent), ih);
+    g_signal_connect(G_OBJECT(ih->handle), "button-release-event", G_CALLBACK(iupgtkButtonEvent), ih);
   }
+
+  iupgtkClearSizeStyleCSS(ih->handle);
 
   /* Enable internal drag and drop support */
   if(ih->data->show_dragdrop && !ih->data->is_dropdown && !ih->data->is_multiple)
@@ -1645,7 +1664,7 @@ void iupdrvListInitClass(Iclass* ic)
   /* Driver Dependent Attribute functions */
 
   /* Overwrite Common */
-  iupClassRegisterAttribute(ic, "STANDARDFONT", NULL, gtkListSetStandardFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "FONT", NULL, gtkListSetFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NOT_MAPPED);  /* inherited */
 
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", NULL, gtkListSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "TXTBGCOLOR", IUPAF_DEFAULT);
@@ -1677,7 +1696,8 @@ void iupdrvListInitClass(Iclass* ic)
   iupClassRegisterAttributeId(ic, "IMAGE", NULL, gtkListSetImageAttrib, IUPAF_IHANDLENAME|IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
 
   /* Not Supported */
-  iupClassRegisterAttribute(ic, "VISIBLE_ITEMS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_NOT_SUPPORTED);
-  iupClassRegisterAttribute(ic, "DROPEXPAND", NULL, NULL, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_NOT_SUPPORTED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "VISIBLEITEMS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_NOT_SUPPORTED);
+  /*OLD*/iupClassRegisterAttribute(ic, "VISIBLE_ITEMS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_NOT_SUPPORTED);
+  iupClassRegisterAttribute(ic, "DROPEXPAND", NULL, NULL, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_NOT_SUPPORTED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "AUTOREDRAW", NULL, NULL, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_NOT_SUPPORTED|IUPAF_NO_INHERIT);
 }

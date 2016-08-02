@@ -252,7 +252,7 @@ static int motCanvasSetDXAttrib(Ihandle* ih, const char *value)
     Widget sb_horiz = (Widget)iupAttribGet(ih, "_IUPMOT_SBHORIZ");
     if (!sb_horiz) return 1;
 
-    if (!iupStrToFloat(value, &dx))
+    if (!iupStrToFloatDef(value, &dx, 0.1f))
       return 1;
 
     xmin = iupAttribGetFloat(ih, "XMIN");
@@ -285,13 +285,14 @@ static int motCanvasSetDXAttrib(Ihandle* ih, const char *value)
           XtUnmanageChild(sb_horiz);
           motCanvasUpdateScrollLayout(ih);
         }
+
+        iupAttribSet(ih, "XHIDDEN", "YES");
       }
       else
         XtSetSensitive(sb_horiz, False);
 
       ih->data->posx = (float)xmin;
       XtVaSetValues(sb_horiz, XmNvalue, IUP_SB_MIN, NULL);
-      return 1;
     }
     else
     {
@@ -301,15 +302,17 @@ static int motCanvasSetDXAttrib(Ihandle* ih, const char *value)
         motCanvasUpdateScrollLayout(ih);
       }
       XtSetSensitive(sb_horiz, True);
+
+      motCanvasSetScrollInfo(sb_horiz, IUP_SB_MIN, IUP_SB_MAX, iposx, ipagex, ilinex);
+
+      /* update position because it could have being changed */
+      iupCanvasCalcScrollRealPos(xmin, xmax, &posx,
+                                 IUP_SB_MIN, IUP_SB_MAX, ipagex, &iposx);
+
+      iupAttribSet(ih, "XHIDDEN", "NO");
+
+      ih->data->posx = (float)posx;
     }
-
-    motCanvasSetScrollInfo(sb_horiz, IUP_SB_MIN, IUP_SB_MAX, iposx, ipagex, ilinex);
-
-    /* update position because it could be corrected */
-    iupCanvasCalcScrollRealPos(xmin, xmax, &posx, 
-                               IUP_SB_MIN, IUP_SB_MAX, ipagex, &iposx);
-
-    ih->data->posx = (float)posx;
   }
   return 1;
 }
@@ -353,7 +356,7 @@ static int motCanvasSetDYAttrib(Ihandle* ih, const char *value)
     Widget sb_vert = (Widget)iupAttribGet(ih, "_IUPMOT_SBVERT");
     if (!sb_vert) return 1;
 
-    if (!iupStrToFloat(value, &dy))
+    if (!iupStrToFloatDef(value, &dy, 0.1f))
       return 1;
 
     ymin = iupAttribGetFloat(ih, "YMIN");
@@ -386,13 +389,14 @@ static int motCanvasSetDYAttrib(Ihandle* ih, const char *value)
           XtUnmanageChild(sb_vert);
           motCanvasUpdateScrollLayout(ih);
         }
+
+        iupAttribSet(ih, "YHIDDEN", "YES");
       }
       else
         XtSetSensitive(sb_vert, False);
 
       ih->data->posy = (float)ymin;
       XtVaSetValues(sb_vert, XmNvalue, IUP_SB_MIN, NULL);
-      return 1;
     }
     else
     {
@@ -402,15 +406,17 @@ static int motCanvasSetDYAttrib(Ihandle* ih, const char *value)
         motCanvasUpdateScrollLayout(ih);
       }
       XtSetSensitive(sb_vert, True);
+
+      motCanvasSetScrollInfo(sb_vert, IUP_SB_MIN, IUP_SB_MAX, iposy, ipagey, iliney);
+
+      /* update position because it could have being changed */
+      iupCanvasCalcScrollRealPos(ymin, ymax, &posy,
+                                 IUP_SB_MIN, IUP_SB_MAX, ipagey, &iposy);
+
+      iupAttribSet(ih, "YHIDDEN", "NO");
+
+      ih->data->posy = (float)posy;
     }
-
-    motCanvasSetScrollInfo(sb_vert, IUP_SB_MIN, IUP_SB_MAX, iposy, ipagey, iliney);
-
-    /* update position because it could be corrected */
-    iupCanvasCalcScrollRealPos(ymin, ymax, &posy, 
-                               IUP_SB_MIN, IUP_SB_MAX, ipagey, &iposy);
-
-    ih->data->posy = (float)posy;
   }
   return 1;
 }
@@ -679,6 +685,9 @@ static int motCanvasMapMethod(Ihandle* ih)
   /* initialize the widget */
   XtRealizeWidget(sb_win);
 
+  motCanvasSetDXAttrib(ih, NULL);
+  motCanvasSetDYAttrib(ih, NULL);
+
   return IUP_NOERROR;
 }
 
@@ -696,8 +705,8 @@ void iupdrvCanvasInitClass(Iclass* ic)
   /* IupCanvas only */
   iupClassRegisterAttribute(ic, "DRAWSIZE", motCanvasGetDrawSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
 
-  iupClassRegisterAttribute(ic, "DX", NULL, motCanvasSetDXAttrib, "0.1", NULL, IUPAF_NO_INHERIT);  /* force new default value */
-  iupClassRegisterAttribute(ic, "DY", NULL, motCanvasSetDYAttrib, "0.1", NULL, IUPAF_NO_INHERIT);  /* force new default value */
+  iupClassRegisterAttribute(ic, "DX", NULL, motCanvasSetDXAttrib, NULL, NULL, IUPAF_NO_INHERIT);  /* force new default value */
+  iupClassRegisterAttribute(ic, "DY", NULL, motCanvasSetDYAttrib, NULL, NULL, IUPAF_NO_INHERIT);  /* force new default value */
   iupClassRegisterAttribute(ic, "POSX", iupCanvasGetPosXAttrib, motCanvasSetPosXAttrib, "0", NULL, IUPAF_NO_INHERIT);  /* force new default value */
   iupClassRegisterAttribute(ic, "POSY", iupCanvasGetPosYAttrib, motCanvasSetPosYAttrib, "0", NULL, IUPAF_NO_INHERIT);  /* force new default value */
 

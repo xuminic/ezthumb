@@ -27,13 +27,17 @@
 
 static char *ezthumb_slog_prefix(void *self, int cw);
 
+static int slog_trans_date_dummy(char *buf, int blen) { return 0; }
+static int slog_trans_module_dummy(int cw, char *buf, int blen) { return 0; }
+
 SMMDBG	ezthumb_debug_control = {
 	SLOG_MAGIC,				/* the magic word */
 	SLOG_MODUL_ALL(SLOG_LVL_ERROR),		/* control word in host */
 	SLOG_OPT_ALL,				/* option */
 	NULL, NULL,				/* file name and FILEP */
 	(void*) -1,				/* standard i/o */
-	ezthumb_slog_prefix,			/* generating the prefix */
+	slog_trans_date_dummy,
+	slog_trans_module_dummy,
 	NULL, NULL,				/* socket extension */
 	NULL, NULL, NULL			/* mutex setting */
 };

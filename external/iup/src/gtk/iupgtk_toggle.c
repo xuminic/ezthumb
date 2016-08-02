@@ -43,16 +43,28 @@ static GtkWidget* gtk_button_get_image(GtkButton *button)
 }
 #endif
 
-void iupdrvToggleAddCheckBox(int *x, int *y)
-{
 #ifdef HILDON
-  (*x) += 30+4;
-  if ((*y) < 30) (*y) = 30; /* minimum height */
+#define IUP_TOGGLE_BOX 30
 #else
-  (*x) += 16+4;
-  if ((*y) < 16) (*y) = 16; /* minimum height */
+#if GTK_CHECK_VERSION(3, 0, 0)
+#define IUP_TOGGLE_BOX 18
+#else
+#define IUP_TOGGLE_BOX 16
 #endif
-  (*y) += 4;
+#endif
+
+void iupdrvToggleAddCheckBox(int *x, int *y, const char* str)
+{
+  /* LAYOUT_DECORATION_ESTIMATE */
+  int check_box = IUP_TOGGLE_BOX;
+
+  /* has margins too */
+  (*x) += 2 + check_box + 2;
+  if ((*y) < 2 + check_box + 2) (*y) = 2 + check_box + 2; /* minimum height */
+  else (*y) += 2+2;
+
+  if (str && str[0]) /* add spacing between check box and text */
+    (*x) += 8;
 }
 
 static int gtkToggleGetCheck(Ihandle* ih)
@@ -96,7 +108,7 @@ static void gtkToggleUpdateImage(Ihandle* ih, int active, int check)
       gtkToggleSetPixbuf(ih, name, 0);
     else
     {
-      /* if not defined then automaticaly create one based on IMAGE */
+      /* if not defined then automatically create one based on IMAGE */
       name = iupAttribGet(ih, "IMAGE");
       gtkToggleSetPixbuf(ih, name, 1); /* make_inactive */
     }
@@ -111,7 +123,7 @@ static void gtkToggleUpdateImage(Ihandle* ih, int active, int check)
         gtkToggleSetPixbuf(ih, name, 0);
       else
       {
-        /* if not defined then automaticaly create one based on IMAGE */
+        /* if not defined then automatically create one based on IMAGE */
         name = iupAttribGet(ih, "IMAGE");
         gtkToggleSetPixbuf(ih, name, 0);
       }
@@ -202,7 +214,7 @@ static int gtkToggleSetAlignmentAttrib(Ihandle* ih, const char* value)
 {
   GtkButton* button = (GtkButton*)ih->handle;
   float xalign, yalign;
-  char value1[30]="", value2[30]="";
+  char value1[30], value2[30];
 
   if (ih->data->type == IUP_TOGGLE_TEXT)
     return 0;
@@ -224,6 +236,7 @@ static int gtkToggleSetAlignmentAttrib(Ihandle* ih, const char* value)
     yalign = 0.5f;
 
   gtk_button_set_alignment(button, xalign, yalign);
+  /* TODO:   g_object_set(widget, "xalign", xalign, "yalign", yalign, NULL); */
 
   return 1;
 }
@@ -233,9 +246,16 @@ static int gtkToggleSetPaddingAttrib(Ihandle* ih, const char* value)
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
   if (ih->handle && ih->data->type == IUP_TOGGLE_IMAGE)
   {
+#if GTK_CHECK_VERSION(3, 14, 0)
+    g_object_set(G_OBJECT(ih->handle), "margin-bottom", ih->data->vert_padding, NULL);
+    g_object_set(G_OBJECT(ih->handle), "margin-top", ih->data->vert_padding, NULL);
+    g_object_set(G_OBJECT(ih->handle), "margin-left", ih->data->horiz_padding, NULL);
+    g_object_set(G_OBJECT(ih->handle), "margin-right", ih->data->horiz_padding, NULL);
+#else
     GtkButton* button = (GtkButton*)ih->handle;
     GtkMisc* misc = (GtkMisc*)gtk_button_get_image(button);
     gtk_misc_set_padding(misc, ih->data->horiz_padding, ih->data->vert_padding);
+#endif
     return 0;
   }
   else
@@ -256,9 +276,9 @@ static int gtkToggleSetFgColorAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-static int gtkToggleSetStandardFontAttrib(Ihandle* ih, const char* value)
+static int gtkToggleSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetStandardFontAttrib(ih, value);
+  iupdrvSetFontAttrib(ih, value);
 
   if (ih->handle)
   {
@@ -452,7 +472,7 @@ static int gtkToggleMapMethod(Ihandle* ih)
     return IUP_ERROR;
 
   if (radio)
-    ih->data->radio = 1;
+    ih->data->is_radio = 1;
 
   value = iupAttribGet(ih, "IMAGE");
   if (value)
@@ -460,7 +480,7 @@ static int gtkToggleMapMethod(Ihandle* ih)
   else
     ih->data->type = IUP_TOGGLE_TEXT;
 
-  if (radio)
+  if (ih->data->is_radio)
   {
     GtkRadioButton* last_tg = (GtkRadioButton*)iupAttribGet(radio, "_IUPGTK_LASTRADIOBUTTON");
     if (last_tg)
@@ -468,6 +488,10 @@ static int gtkToggleMapMethod(Ihandle* ih)
     else
       ih->handle = gtk_radio_button_new(NULL);
     iupAttribSet(radio, "_IUPGTK_LASTRADIOBUTTON", (char*)ih->handle);
+
+    /* make sure it has at least one name */
+    if (!iupAttribGetHandleName(ih))
+      iupAttribSetHandleName(ih);
   }
   else
   {
@@ -495,6 +519,8 @@ static int gtkToggleMapMethod(Ihandle* ih)
     gtk_button_set_image((GtkButton*)ih->handle, gtk_image_new());
     gtk_toggle_button_set_mode((GtkToggleButton*)ih->handle, FALSE);
   }
+
+  iupgtkClearSizeStyleCSS(ih->handle);
 
   /* add to the parent, all GTK controls must call this. */
   iupgtkAddToParent(ih);
@@ -550,7 +576,7 @@ void iupdrvToggleInitClass(Iclass* ic)
   /* Driver Dependent Attribute functions */
 
   /* Overwrite Common */
-  iupClassRegisterAttribute(ic, "STANDARDFONT", NULL, gtkToggleSetStandardFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "FONT", NULL, gtkToggleSetFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NOT_MAPPED);  /* inherited */
 
   /* Overwrite Visual */
   iupClassRegisterAttribute(ic, "ACTIVE", iupBaseGetActiveAttrib, gtkToggleSetActiveAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_DEFAULT);

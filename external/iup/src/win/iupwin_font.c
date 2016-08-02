@@ -27,19 +27,19 @@
 
 typedef struct IwinFont_
 {
-  char standardfont[200];
+  char font[200];
   HFONT hFont;
   int charwidth, charheight;
 } IwinFont;
 
 static Iarray* win_fonts = NULL;
 
-static IwinFont* winFindFont(const char *standardfont)
+static IwinFont* winFindFont(const char *font)
 {
   HFONT hFont;
-  int height_pixels;
+  int height_pixels;  /* negative value */
   char typeface[50] = "";
-  int height = 8;
+  int size = 8;
   int is_bold = 0,
     is_italic = 0, 
     is_underline = 0,
@@ -48,15 +48,15 @@ static IwinFont* winFindFont(const char *standardfont)
   int i, count = iupArrayCount(win_fonts);
   const char* mapped_name;
 
-  /* Check if the standardfont already exists in cache */
+  /* Check if the font already exists in cache */
   IwinFont* fonts = (IwinFont*)iupArrayGetData(win_fonts);
   for (i = 0; i < count; i++)
   {
-    if (iupStrEqualNoCase(standardfont, fonts[i].standardfont))
+    if (iupStrEqualNoCase(font, fonts[i].font))
       return &fonts[i];
   }
 
-  if (!iupGetFontInfo(standardfont, typeface, &height, &is_bold, &is_italic, &is_underline, &is_strikeout))
+  if (!iupGetFontInfo(font, typeface, &size, &is_bold, &is_italic, &is_underline, &is_strikeout))
     return NULL;
 
   /* Map standard names to native names */
@@ -65,10 +65,10 @@ static IwinFont* winFindFont(const char *standardfont)
     strcpy(typeface, mapped_name);
 
   /* get in pixels */
-  if (height < 0)  
-    height_pixels = height;    /* already in pixels */
+  if (size < 0)  
+    height_pixels = size;    /* already in pixels */
   else
-    height_pixels = -iupWIN_PT2PIXEL(height, res);
+    height_pixels = -iupWIN_PT2PIXEL(size, res);
 
   if (height_pixels == 0)
     return NULL;
@@ -87,19 +87,20 @@ static IwinFont* winFindFont(const char *standardfont)
   /* create room in the array */
   fonts = (IwinFont*)iupArrayInc(win_fonts);
 
-  strcpy(fonts[i].standardfont, standardfont);
+  strcpy(fonts[i].font, font);
   fonts[i].hFont = hFont;
 
   {
     HDC hdc = GetDC(NULL);
     HFONT oldfont = (HFONT)SelectObject(hdc, hFont);
 
-    {
-      TEXTMETRIC tm;
-      GetTextMetrics(hdc, &tm);
-      fonts[i].charwidth = tm.tmAveCharWidth; 
-      fonts[i].charheight = tm.tmHeight;
-    }
+    TEXTMETRIC tm;
+    GetTextMetrics(hdc, &tm);
+    /* NOTICE that this is different from CD.
+       In IUP we need "average" width,
+       in CD is "maximum" width. */
+    fonts[i].charwidth = tm.tmAveCharWidth; 
+    fonts[i].charheight = tm.tmHeight;
 
     SelectObject(hdc, oldfont);
     ReleaseDC(NULL, hdc);
@@ -116,14 +117,14 @@ static void winFontFromLogFontA(LOGFONTA* logfont, char* font)
   int is_strikeout = logfont->lfStrikeOut;
   int height_pixels = logfont->lfHeight;  /* negative value */
   int res = iupwinGetScreenRes();
-  int height = iupWIN_PIXEL2PT(-height_pixels, res);  /* return in points */
+  int size = iupWIN_PIXEL2PT(-height_pixels, res);  /* return in points */
 
   sprintf(font, "%s, %s%s%s%s %d", logfont->lfFaceName, 
                                    is_bold?"Bold ":"", 
                                    is_italic?"Italic ":"", 
                                    is_underline?"Underline ":"", 
                                    is_strikeout?"Strikeout ":"", 
-                                   height);
+                                   size);
 }
 
 char* iupdrvGetSystemFont(void)
@@ -148,12 +149,12 @@ char* iupwinFindHFont(HFONT hFont)
 {
   int i, count = iupArrayCount(win_fonts);
 
-  /* Check if the standardfont already exists in cache */
+  /* Check if the font already exists in cache */
   IwinFont* fonts = (IwinFont*)iupArrayGetData(win_fonts);
   for (i = 0; i < count; i++)
   {
     if (hFont == fonts[i].hFont)
-      return fonts[i].standardfont;
+      return fonts[i].font;
   }
 
   return NULL;
@@ -185,7 +186,7 @@ static IwinFont* winFontGet(Ihandle *ih)
 {
   IwinFont* winfont = (IwinFont*)iupAttribGet(ih, "_IUP_WINFONT");
   if (!winfont)
-    winfont = winFontCreateNativeFont(ih, iupGetFontAttrib(ih));
+    winfont = winFontCreateNativeFont(ih, iupGetFontValue(ih));
   return winfont;
 }
 
@@ -198,14 +199,14 @@ char* iupwinGetHFontAttrib(Ihandle *ih)
     return (char*)winfont->hFont;
 }
 
-int iupdrvSetStandardFontAttrib(Ihandle* ih, const char* value)
+int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
 {
   IwinFont* winfont = winFontCreateNativeFont(ih, value);
   if (!winfont)
     return 1;
 
   /* If FONT is changed, must update the SIZE attribute */
-  iupBaseUpdateSizeFromFont(ih);
+  iupBaseUpdateAttribFromFont(ih);
 
   /* FONT attribute must be able to be set before mapping, 
       so the font is enable for size calculation. */
@@ -310,9 +311,9 @@ int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
 
   line_end = strchr(str, '\n');
   if (line_end)
-    len = line_end-str;
+    len = (int)(line_end-str);
   else
-    len = strlen(str);
+    len = (int)strlen(str);
 
   wstr = iupwinStrToSystemLen(str, &len);
   GetTextExtentPoint32(hdc, wstr, len, &size);

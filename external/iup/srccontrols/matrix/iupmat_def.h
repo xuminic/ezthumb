@@ -103,9 +103,11 @@ struct _IcontrolData
   Ihandle* texth;   /* Text handle                    */
   Ihandle* droph;   /* Dropdown handle                */
   Ihandle* datah;   /* Current active edition element, may be equal to texth or droph */
+  int editing,
+    edit_hide_onfocus, edit_lin, edit_col,
+    edit_hidden_byfocus;  /* Used by MatrixList */
 
-  cdCanvas* cddbuffer;
-  cdCanvas* cdcanvas;
+  cdCanvas* cd_canvas;
 
   ImatLinColData lines;
   ImatLinColData columns;
@@ -117,7 +119,7 @@ struct _IcontrolData
   int need_calcsize;
   int need_redraw;
   int inside_markedit_cb;   /* avoid recursion */
-  int last_sort_index;
+  int last_sort_col;
 
   /* attributes */
   int mark_continuous, mark_mode, mark_multiple;
@@ -127,15 +129,13 @@ struct _IcontrolData
   int undo_redo, show_fill_value;
 
   /* Mouse and Keyboard AUX */
-  int leftpressed;  /* left mouse button is pressed */
-  int dclick;       /* left mouse button was double clicked */
+  int button1edit;
   int homekeycount, endkeycount;  /* numbers of times that key was pressed */
 
   /* ColRes AUX */
   int colres_dragging,   /* indicates if it is being made a column resize  */
       colres_drag_col,   /* column being resized, handler is at right of the column */
-      colres_drag_col_start_x, /* handler start position */
-      colres_drag_col_last_x;  /* previous position */
+      colres_drag_col_start_x; /* handler start position */
   long colres_color;
 
   /* Mark AUX */
@@ -143,6 +143,7 @@ struct _IcontrolData
       mark_lin2, mark_col2,  /* used to store the end cell when a block was marked */
       mark_full1,            /* indicate if full lines or columns is being selected */
       mark_full2;
+  int mark_block;            /* inside MarkBlockBegin/MarkBlockEnd */
 
   /* Draw AUX, valid only after iupMatrixPrepareDrawData */
   sIFnii font_cb, type_cb;

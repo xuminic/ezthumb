@@ -116,4 +116,7 @@
     </ClInclude>
     <ClInclude Include="..\include\iuptuio.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\srctuio\iuptuio.def" />
+  </ItemGroup>
 </Project>

@@ -177,7 +177,7 @@ static int winLabelSetAlignmentAttrib(Ihandle* ih, const char* value)
 {
   if (ih->data->type != IUP_LABEL_SEP_HORIZ && ih->data->type != IUP_LABEL_SEP_VERT)
   {
-    char value1[30] = "", value2[30] = "";
+    char value1[30], value2[30];
 
     iupStrToStrStr(value, value1, value2, ':');
 
@@ -313,6 +313,16 @@ static int winLabelMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT 
       }
       break;
     }
+  case WM_NCHITTEST:
+    {
+      if (iupAttribGetBoolean(ih, "HTTRANSPARENT"))
+      {
+        *result = HTTRANSPARENT;
+        return 1;
+      }
+
+      break;
+    }
   }
 
   return iupwinBaseMsgProc(ih, msg, wp, lp, result);
@@ -395,6 +405,9 @@ void iupdrvLabelInitClass(Iclass* ic)
   /* IupLabel Windows and GTK only */
   iupClassRegisterAttribute(ic, "WORDWRAP", NULL, winLabelSetWordWrapAttrib, NULL, NULL, IUPAF_DEFAULT);
   iupClassRegisterAttribute(ic, "ELLIPSIS", NULL, winLabelSetEllipsisAttrib, NULL, NULL, IUPAF_DEFAULT);
+
+  /* IupLabel Windows only */
+  iupClassRegisterAttribute(ic, "HTTRANSPARENT", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* Not Supported */
   iupClassRegisterAttribute(ic, "MARKUP", NULL, NULL, NULL, NULL, IUPAF_NOT_SUPPORTED|IUPAF_NO_INHERIT);

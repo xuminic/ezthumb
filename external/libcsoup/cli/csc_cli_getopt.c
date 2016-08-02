@@ -72,7 +72,8 @@ void *csc_cli_getopt_open(struct cliopt *optbl)
 */
 int csc_cli_getopt_close(void *clibuf)
 {
-	return smm_free(clibuf);
+	smm_free(clibuf);
+	return 0;
 }
 
 /*!\brief Parse command-line options

@@ -45,8 +45,8 @@ typedef struct Iclass_ Iclass;
 struct Iclass_
 {
   /* Class configuration parameters. */
-  char* name;     /**< class name. No default, must be initialized. */
-  char* format;   /**< Creation parameters format of the class. \n
+  const char* name;     /**< class name. No default, must be initialized. */
+  const char* format;   /**< Creation parameters format of the class. \n
                    * Used only for LED parsing. \n
                    * It can have none (NULL), one or more of the following.
                    * - "b" = (unsigned char) - byte
@@ -69,7 +69,7 @@ struct Iclass_
 
   Iclass* parent; /**< class parent to implement inheritance.
                    * Class name must be different. \n
-                   * Creation parameters should be the same or repace the parents creation function. \n
+                   * Creation parameters should be the same or replace the parents creation function. \n
                    * Native type should be the same.  \n
                    * Child type should be a more restrictive or equal type (many->one->none). \n
                    * Attribute functions will have only one common table. \n
@@ -145,7 +145,7 @@ struct Iclass_
    * Called only from IupDetach or IupReparent. 
    * The child is already detached.
    */
-  void (*ChildRemoved)(Ihandle* ih, Ihandle* child);
+  void(*ChildRemoved)(Ihandle* ih, Ihandle* child, int pos);
 
 
   /** Method that update size and position of the native control. \n
@@ -196,7 +196,7 @@ struct Iclass_
 
 /** Allocates memory for the Iclass structure and 
  * initializes the attribute handling functions table. \n
- * If parent is spcified then a new instance of the parent class is created
+ * If parent is specified then a new instance of the parent class is created
  * and set as the actual parent class.
  * \ingroup iclass */
 Iclass* iupClassNew(Iclass* ic_parent);
@@ -278,7 +278,8 @@ typedef enum _IattribFlags{
   IUPAF_CALLBACK=256,  /**< is a callback, not an attribute */
   IUPAF_NO_SAVE=512,   /**< can NOT be directly saved, should have at least manual processing */
   IUPAF_NOT_SUPPORTED=1024,  /**< not supported in that driver */
-  IUPAF_IHANDLENAME=2048     /**< is an Ihandle* name, associated with IupSetHandle */
+  IUPAF_IHANDLENAME=2048,    /**< is an Ihandle* name, associated with IupSetHandle */
+  IUPAF_IHANDLE=4096         /**< is an Ihandle* */
 } IattribFlags;
 
 #define IUPAF_SAMEASSYSTEM ((char*)-1)  /**< means that the default value is the same as the system default value, used only in \ref iupClassRegisterAttribute */
@@ -338,16 +339,17 @@ void iupClassRegisterReplaceAttribFlags(Iclass* ic, const char* name, int _flags
 
 /** Register the parameters of a callback. \n
  * Format follows the \ref iupcbs.h header definitions. \n
- * Notice that these definitions are similiar to the class registration
+ * Notice that these definitions are similar to the class registration
  * but have several differences and conflicts, for backward compatibility reasons. \n
  * It can have none, one or more of the following. \n
  * - "c" = (unsigned char) - byte
  * - "i" = (int) - integer
- * - "I" = (int*) - array of integer
+ * - "I" = (int*) - array of integers or pointer to integer
  * - "f" = (float) - real
  * - "d" = (double) - real
  * - "s" = (char*) - string 
- * - "C" = (void*) - generic pointer 
+ * - "V" = (void*) - generic pointer 
+ * - "C" = (struct _cdCanvas*) - cdCanvas* structure, used along with the CD library
  * - "n" = (Ihandle*) - element handle
  * The default return value for all callbacks is "i" (int), 
  * but a different return value can be specified using one of the above parameters, 
@@ -410,7 +412,7 @@ void iupClassObjectChildAdded(Ihandle* ih, Ihandle* child);
 /** Calls \ref Iclass::ChildRemoved method. 
  * \ingroup iclassobject
  */
-void iupClassObjectChildRemoved(Ihandle* ih, Ihandle* child);
+void iupClassObjectChildRemoved(Ihandle* ih, Ihandle* child, int pos);
 
 /** Calls \ref Iclass::LayoutUpdate method. 
  * \ingroup iclassobject
@@ -457,15 +459,24 @@ void  iupClassObjectGetAttributeInfo(Ihandle* ih, const char* name, char* *def_v
 /* Used only in iupAttribIsNotString */
 int   iupClassObjectAttribIsNotString(Ihandle* ih, const char* name);
 
+/* Used only in iupAttribIsIhandle */
+int   iupClassObjectAttribIsIhandle(Ihandle* ih, const char* name);
+
 /* Used only in iupAttribUpdateFromParent */
 int   iupClassObjectCurAttribIsInherit(Iclass* ic);
 
 /* Used in iupObjectCreate and IupMap */
 void iupClassObjectEnsureDefaultAttributes(Ihandle* ih);
 
+/* Used in iupRegisterUpdateClasses */
+void iupClassUpdate(Iclass* ic);
+
 /* Used in IupLayoutDialog */
 int iupClassAttribIsRegistered(Iclass* ic, const char* name);
 void iupClassGetAttribNameInfo(Iclass* ic, const char* name, char* *def_value, int *flags);
+
+/* Used in iupClassRegisterAttribute and iGlobalChangingDefaultColor */
+int iupClassIsGlobalDefault(const char* name, int colors);
 
 
 /* Other functions declared in <iup.h> and implemented here. 

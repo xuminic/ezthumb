@@ -159,6 +159,9 @@ void iupMatrixScrollToVisible(Ihandle* ih, int lin, int col)
 
     iMatrixScrollCallScrollTopCb(ih);
 
+    if (!ih->data->edit_hide_onfocus && ih->data->editing)
+        iupMatrixEditUpdatePos(ih);
+
     iupMatrixDraw(ih, 1);
   }
 }
@@ -170,7 +173,12 @@ void iupMatrixScrollMove(iupMatrixScrollMoveFunc func, Ihandle* ih, int mode, fl
   int old_lines_first_offset = ih->data->lines.first_offset;
   int old_columns_first_offset = ih->data->columns.first_offset;
 
-  iupMatrixEditHide(ih);
+  if (ih->data->edit_hide_onfocus)
+  {
+    ih->data->edit_hidden_byfocus = 1;
+    iupMatrixEditHide(ih);
+    ih->data->edit_hidden_byfocus = 0;
+  }
 
   func(ih, mode, pos, m);
 
@@ -185,6 +193,9 @@ void iupMatrixScrollMove(iupMatrixScrollMoveFunc func, Ihandle* ih, int mode, fl
       iupMatrixAuxUpdateScrollPos(ih, IMAT_PROCESS_LIN);
 
     iMatrixScrollCallScrollTopCb(ih);
+
+    if (!ih->data->edit_hide_onfocus && ih->data->editing)
+        iupMatrixEditUpdatePos(ih);
 
     iupMatrixDraw(ih, 0);
   }

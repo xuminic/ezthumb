@@ -141,7 +141,7 @@ static int iMatrixExStrGetInterval(const char* interval, int num_lin, char* sele
   memset(selection, '0', num_lin+1);
   *selection_count = 0;
 
-  len = strlen(interval);
+  len = (int)strlen(interval);
 
   do
   {

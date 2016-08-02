@@ -6,8 +6,8 @@
 iup.callbacks = {} -- storage for the C callbacks
 
 function iup.CallMethod(name, ...)
-  local handle = ... -- the first argument is always the handle
-  local lua_func = handle[name] -- use "gettable" to retrieve the Lua callback
+  local ih = ... -- the first argument is always the iupHandle
+  local lua_func = ih[name] -- use "gettable" to retrieve the Lua callback
   if (not lua_func) then
     return
   end
@@ -16,7 +16,7 @@ function iup.CallMethod(name, ...)
     return lua_func(...)
   elseif type(lua_func) == "string" then  
     local temp = self
-    self = handle
+    self = ih
     local result = iup.dostring(lua_func)
     self = temp
     return result
@@ -72,79 +72,92 @@ end
 -- Meta Methods 
 ------------------------------------------------------------------------------
 
+------------------------------------------------------------------------------
+-- this is a Lua table for control construction, see iup.WIDGET and iup.BOX
+-- not used by applications
 
-local widget_gettable = function(object, index)
-  local p = object
+-- implements class inheritance for iupWidget
+local widget_gettable = function(widget, index)
+  local p = widget
   local v
-  while 1 do
+  while p do
     v = rawget(p, index)
-    if v then return v end
+    if v then 
+      return v 
+    end
+
     p = rawget(p, "parent")
-      if not p then return nil end
   end
+  return nil
 end
 
-iup.NewClass("iup widget")
-iup.SetMethod("iup widget", "__index", widget_gettable)
+iup.NewClass("iupWidget")
+iup.SetMethod("iupWidget", "__index", widget_gettable)
 
 
-local ihandle_gettable = function(handle, index)
+------------------------------------------------------------------------------
+-- this is an Ihandle* with enhancements
+
+local ihandle_gettable = function(ih, index)
   local INDEX = string.upper(index)
   if (iup.callbacks[INDEX]) then 
-   local object = iup.GetWidget(handle)
-   if (not object or type(object)~="table") then error("invalid iup handle") end
-   return object[index]
+    local widget = iup.GetWidget(ih)
+    if (not widget or type(widget)~="table") then error("invalid IUP handle") end
+    return widget[index]
   else
-    local value = iup.GetAttribute(handle, INDEX)
+    local value = iup.GetAttribute(ih, INDEX)
     if (not value) then
-      local object = iup.GetWidget(handle)
-      if (not object or type(object)~="table") then error("invalid iup handle") end
-      return object[index]
+      local widget = iup.GetWidget(ih)
+      if (not widget or type(widget)~="table") then error("invalid IUP handle") end
+      return widget[index]
     elseif type(value)== "number" or type(value) == "string" then
       local ih = iup.GetHandle(value)
-      if ih then return ih
-      else return value end
+      if ih then 
+        return ih
+      else 
+        return value 
+      end
     else
       return value 
     end
   end
 end
 
-local ihandle_settable = function(handle, index, value)
+local ihandle_settable = function(ih, index, value)
   local ti = type(index)
   local tv = type(value)
-  local object = iup.GetWidget(handle)
-  if (not object or type(object)~="table") then error("invalid iup handle") end
+  local widget = iup.GetWidget(ih)
+  if (not widget or type(widget)~="table") then error("invalid IUP handle") end
   if ti == "number" or ti == "string" then -- check if a valid C name
     local INDEX = string.upper(index)
     local cb = iup.callbacks[INDEX]
     if (cb) then -- if a callback name
       local c_func = cb[1]
       if (not c_func) then
-        c_func = cb[iup.GetClassName(handle)]
+        c_func = cb[iup.GetClassName(ih)]
       end
-      iup.SetCallback(handle, INDEX, c_func, value) -- set the pre-defined C callback
-      object[index] = value -- store also in Lua
-    elseif iup.GetClass(value) == "iup handle" then -- if a iup handle
+      iup.SetCallback(ih, INDEX, c_func, value) -- set the pre-defined C callback
+      widget[index] = value -- store also in Lua
+    elseif iup.GetClass(value) == "iupHandle" then -- if an iupHandle
       local name = iup.SetHandleName(value)
-      iup.SetAttribute(handle, INDEX, name)
-      object[index] = nil -- if there was something in Lua remove it
+      iup.SetAttribute(ih, INDEX, name)
+      widget[index] = nil -- if there was something in Lua remove it
     elseif tv == "string" or tv == "number" or tv == "nil" then -- if a common value
-      iup.SetAttribute(handle, INDEX, value)
-      object[index] = nil -- if there was something in Lua remove it
+      iup.SetAttribute(ih, INDEX, value)
+      widget[index] = nil -- if there was something in Lua remove it
     else
-      object[index] = value -- store also in Lua
+      widget[index] = value -- store only in Lua
     end
   else
-    object[index] = value -- store also in Lua
+    widget[index] = value -- store only in Lua
   end
 end
 
-iup.NewClass("iup handle")
-iup.SetMethod("iup handle", "__index", ihandle_gettable)
-iup.SetMethod("iup handle", "__newindex", ihandle_settable)
-iup.SetMethod("iup handle", "__tostring", iup.ihandle_tostring) -- implemented in C
-iup.SetMethod("iup handle", "__eq", iup.ihandle_compare) -- implemented in C
+iup.NewClass("iupHandle")
+iup.SetMethod("iupHandle", "__index", ihandle_gettable)
+iup.SetMethod("iupHandle", "__newindex", ihandle_settable)
+iup.SetMethod("iupHandle", "__tostring", iup.ihandle_tostring) -- implemented in C
+iup.SetMethod("iupHandle", "__eq", iup.ihandle_compare) -- implemented in C
 
 
 ------------------------------------------------------------------------------
@@ -163,29 +176,37 @@ end
 
 function iup.RegisterWidget(ctrl) -- called by all the controls initialization functions
   iup[ctrl.nick] = function(param)
-    if (not ctrl.constructor) then print(ctrl.nick) end
+    if (not ctrl.constructor) then 
+      error("IUP constructor missing for:" .. ctrl.nick) 
+    end
     return ctrl:constructor(param)
   end
 end
 
-function iup.RegisterHandle(handle, typename)
+function iup.RegisterHandle(ih, typename)
 
-  iup.SetClass(handle, "iup handle")
+  iup.SetClass(ih, "iupHandle")
   
-  local object = iup.GetWidget(handle)
-  if not object then
-
+  local widget = iup.GetWidget(ih)
+  if not widget then
     local class = iup[string.upper(typename)]
     if not class then
-      class = WIDGET
+      if (iup.IsContainer(ih)) then
+        class = iup.BOX
+      else
+        class = iup.WIDGET
+      end
     end
 
-    local object = { parent=class, handle=handle }
-    iup.SetClass(object, "iup widget")
-    iup.SetWidget(handle, object)
+    local widget = { 
+      parent = class, 
+      ihandle = ih 
+      }
+    iup.SetClass(widget, "iupWidget")
+    iup.SetWidget(ih, widget)
   end
   
-  return handle
+  return ih
 end
 
 ------------------------------------------------------------------------------
@@ -196,56 +217,60 @@ iup.WIDGET = {
   callback = {}
 }
 
-function iup.WIDGET.show(object)
-  iup.Show(object.handle)
-end
-
-function iup.WIDGET.hide(object)
-  iup.Hide(object.handle)
-end
-
-function iup.WIDGET.map(object)
-  iup.Map(object.handle)
-end
-
-function iup.WIDGET.unmap(object)
-  iup.Unmap(object.handle)
-end
-
-function iup.WIDGET.destroy(object)
-  iup.Destroy(object.handle)
-end
-
 function iup.WIDGET.constructor(class, param)
-  local handle = class:createElement(param)
-  local object = { 
+  local ih = class:createElement(param)  -- all classes must define createElement
+  local widget = { 
     parent = class,
-    handle = handle
+    ihandle = ih
   }
-  iup.SetClass(handle, "iup handle")
-  iup.SetClass(object, "iup widget")
-  iup.SetWidget(handle, object)
-  object:setAttributes(param)
-  return handle
+  iup.SetClass(ih, "iupHandle")
+  iup.SetClass(widget, "iupWidget")
+  iup.SetWidget(ih, widget)
+  widget:setAttributes(param)
+  return ih
 end
 
-function iup.WIDGET.setAttributes(object, param)
-  local handle = object.handle
+function iup.WIDGET.setAttributes(widget, param)
+  local ih = widget.ihandle
   for i,v in pairs(param) do 
-    if type(i) == "number" and iup.GetClass(v) == "iup handle" then
+    if type(i) == "number" and iup.GetClass(v) == "iupHandle" then
       -- We should not set this or other elements (such as iuptext)
       -- will erroneosly inherit it
-      rawset(object, i, v)
+      rawset(widget, i, v)
     else
       -- this will call settable metamethod
-      handle[i] = v
+      ih[i] = v
     end
   end
 end
 
--- all the objects in the hierarchy must be "iup widget"
+function iup.WIDGET.show(ih)
+  iup.Show(ih)
+end
+
+function iup.WIDGET.hide(ih)
+  iup.Hide(ih)
+end
+
+function iup.WIDGET.map(ih)
+  iup.Map(ih)
+end
+
+function iup.WIDGET.unmap(ih)
+  iup.Unmap(ih)
+end
+
+function iup.WIDGET.detach(ih)
+  iup.Detach(ih)
+end
+
+function iup.WIDGET.destroy(ih)
+  iup.Destroy(ih)
+end
+
+-- all the objects in the hierarchy must be "iupWidget"
 -- Must repeat this call for every new widget
-iup.SetClass(iup.WIDGET, "iup widget")
+iup.SetClass(iup.WIDGET, "iupWidget")
 
 
 ------------------------------------------------------------------------------
@@ -256,61 +281,32 @@ iup.BOX = {
   parent = iup.WIDGET
 }
 
-function iup.BOX.setAttributes(object, param)
-  local handle = rawget(object, "handle")
+function iup.BOX.setAttributes(widget, param)
+  -- iup.Append will be automatically called after createElement
+  -- no need to pass elements in the constructor of boxes
+  local ih = widget.ihandle
   local n = #param
   for i = 1, n do
-    if iup.GetClass(param[i]) == "iup handle" then 
-      iup.Append(handle, param[i]) 
+    if iup.GetClass(param[i]) == "iupHandle" then 
+      iup.Append(ih, param[i]) 
     end
   end
-  iup.WIDGET.setAttributes(object, param)
+  iup.WIDGET.setAttributes(widget, param)
 end
 
-iup.SetClass(iup.BOX, "iup widget")
+function iup.BOX.append(ih, child)
+  return iup.Append(ih, child)
+end
 
+function iup.BOX.insert(ih, ref_child, child)
+  return iup.Insert(ih, ref_child, child)
+end
+
+iup.SetClass(iup.BOX, "iupWidget")
 
 ------------------------------------------------------------------------------
 -- Compatibility functions.
 ------------------------------------------------------------------------------
-
-iup.error_message_popup = nil
-
-function iup._ERRORMESSAGE(msg,traceback)
-  msg = msg..(traceback or "")
-  if (iup.error_message_popup) then
-    iup.error_message_popup.value = msg
-  else  
-    local bt = iup.button{title="Ok", size="60", action="iup.error_message_popup = nil; return iup.CLOSE"}
-    local ml = iup.multiline{expand="YES", readonly="YES", value=msg, size="300x150"}
-    local vb = iup.vbox{ml, bt; alignment="ACENTER", margin="10x10", gap="10"}
-    local dg = iup.dialog{vb; title="Error Message",defaultesc=bt,defaultenter=bt,startfocus=bt}
-    iup.error_message_popup = ml
-    dg:popup(CENTER, CENTER)
-    dg:destroy()
-    iup.error_message_popup = nil
-  end
-end
-
-iup.pack = function (...) return {...} end
-
-function iup.protectedcall(f, msg)
-  if not f then 
-    iup._ERRORMESSAGE(msg)
-    return 
-  end
-  local ret = iup.pack(pcall(f))
-  if not ret[1] then 
-    iup._ERRORMESSAGE(ret[2])
-    return
-  else  
-    table.remove(ret, 1)
-    return unpack(ret)   --must replace this by table.unpack when 5.1 is not supported
-  end
-end
-
-function iup.dostring(s) return iup.protectedcall(loadstring(s)) end
-function iup.dofile(f) return iup.protectedcall(loadfile(f)) end
 
 function iup.RGB(r, g, b)
   return string.format("%d %d %d", 255*r, 255*g, 255*b)
@@ -319,9 +315,9 @@ end
 -- This will allow both names to be used in the same application
 -- also will allow static linking to work with require for the main library (only)
 if _G.package then
-   _G.package.loaded["iuplua"] = iup
-   iup._M = iup
-   iup._PACKAGE = "iuplua"
+  _G.package.loaded["iuplua"] = iup
+  iup._M = iup
+  iup._PACKAGE = "iuplua"
 end
 
 function iup.layoutdialog(obj)

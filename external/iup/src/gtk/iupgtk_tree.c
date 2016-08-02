@@ -709,13 +709,19 @@ void iupdrvTreeAddNode(Ihandle* ih, int id, int kind, const char* title, int add
       /* MarkStart node */
       iupAttribSet(ih, "_IUPTREE_MARKSTART_NODE", (char*)iterNewItem.user_data);
 
+      iupAttribSet(ih, "_IUPTREE_IGNORE_SELECTION_CB", "1");
+
       /* Set the default VALUE (focus) */
       path = gtk_tree_model_get_path(GTK_TREE_MODEL(store), &iterNewItem);
       gtk_tree_view_set_cursor(GTK_TREE_VIEW(ih->handle), path, NULL, FALSE);
       gtk_tree_path_free(path);
 
-      /* set_cursor will also select the node, so unselect it here */
-      gtkTreeSelectNode(GTK_TREE_MODEL(store), gtk_tree_view_get_selection(GTK_TREE_VIEW(ih->handle)), &iterNewItem, 0);
+      /* when single selection when focus is set, node is also selected */
+      /* set_cursor will also select the node, so unselect it here if not single */
+      if (ih->data->mark_mode != ITREE_MARK_SINGLE)
+        gtkTreeSelectNode(GTK_TREE_MODEL(store), gtk_tree_view_get_selection(GTK_TREE_VIEW(ih->handle)), &iterNewItem, 0);
+
+      iupAttribSet(ih, "_IUPTREE_IGNORE_SELECTION_CB", NULL);
     }
   }
 }
@@ -1275,7 +1281,7 @@ static int gtkTreeSetMarkedNodesAttrib(Ihandle* ih, const char* value)
   if (ih->data->mark_mode==ITREE_MARK_SINGLE || !value)
     return 0;
 
-  count = strlen(value);
+  count = (int)strlen(value);
   if (count > ih->data->node_count)
     count = ih->data->node_count;
 
@@ -1882,7 +1888,7 @@ static void gtkTreeCellTextEditingStarted(GtkCellRenderer *cell, GtkCellEditable
   cbShowRename = (IFni)IupGetCallback(ih, "SHOWRENAME_CB");
   if (cbShowRename && cbShowRename(ih, gtkTreeFindNodeId(ih, &iterItem))==IUP_IGNORE)
   {
-    /* TODO: non of these worked:
+    /* TODO: none of these worked:
     gtk_cell_renderer_stop_editing(cell, TRUE);
     gtk_cell_editable_editing_done(editable);  */
     gtk_editable_set_editable(GTK_EDITABLE(editable), FALSE);
@@ -2019,7 +2025,9 @@ static void gtkTreeDragDataReceived(GtkWidget *widget, GdkDragContext *context, 
         gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(ih->handle), pathNew, NULL, FALSE, 0, 0);
 
         /* unselect all, select new node and focus */
+        iupAttribSet(ih, "_IUPTREE_IGNORE_SELECTION_CB", "1");
         gtk_tree_view_set_cursor(GTK_TREE_VIEW(ih->handle), pathNew, NULL, FALSE);
+        iupAttribSet(ih, "_IUPTREE_IGNORE_SELECTION_CB", NULL);
 
         gtk_tree_path_free(pathNew);
       }
@@ -2472,9 +2480,14 @@ static void gtkTreeEnableDragDrop(Ihandle* ih)
 static void gtkTreeToggleCB(Ihandle *ih, GtkTreeIter *iterItem, int check)
 {
   IFnii cbToggle = (IFnii)IupGetCallback(ih, "TOGGLEVALUE_CB");
-
   if (cbToggle)
     cbToggle(ih, gtkTreeFindNodeId(ih, iterItem), check);
+
+  if (iupAttribGetBoolean(ih, "MARKWHENTOGGLE"))
+  {
+    int id = gtkTreeFindNodeId(ih, iterItem);
+    IupSetAttributeId(ih, "MARKED", id, check? "Yes" : "No");
+  }
 }
 
 static void gtkTreeToggled(GtkCellRendererToggle *cell_renderer, gchar *path, Ihandle *ih)
@@ -2840,9 +2853,9 @@ static int gtkTreeMapMethod(Ihandle* ih)
   gtk_widget_realize(ih->handle);
 
   /* Initialize the default images */
-  ih->data->def_image_leaf = iupImageGetImage("IMGLEAF", ih, 0);
-  ih->data->def_image_collapsed = iupImageGetImage("IMGCOLLAPSED", ih, 0);
-  ih->data->def_image_expanded = iupImageGetImage("IMGEXPANDED", ih, 0);
+  ih->data->def_image_leaf = iupImageGetImage(iupAttribGetStr(ih, "IMAGELEAF"), ih, 0);
+  ih->data->def_image_collapsed = iupImageGetImage(iupAttribGetStr(ih, "IMAGEBRANCHCOLLAPSED"), ih, 0);
+  ih->data->def_image_expanded = iupImageGetImage(iupAttribGetStr(ih, "IMAGEBRANCHEXPANDED"), ih, 0);
 
   if (iupAttribGetInt(ih, "ADDROOT"))
     iupdrvTreeAddNode(ih, -1, ITREE_BRANCH, "", 0);
@@ -2898,7 +2911,6 @@ void iupdrvTreeInitClass(Iclass* ic)
   iupClassRegisterAttributeId(ic, "KIND",   gtkTreeGetKindAttrib,   NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "PARENT", gtkTreeGetParentAttrib, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "COLOR",  gtkTreeGetColorAttrib,  gtkTreeSetColorAttrib, IUPAF_NO_INHERIT);
-  iupClassRegisterAttributeId(ic, "NAME",   gtkTreeGetTitleAttrib,  gtkTreeSetTitleAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "TITLE",  gtkTreeGetTitleAttrib,  gtkTreeSetTitleAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "TOGGLEVALUE", gtkTreeGetToggleValueAttrib, gtkTreeSetToggleValueAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "TOGGLEVISIBLE", gtkTreeGetToggleVisibleAttrib, gtkTreeSetToggleVisibleAttrib, IUPAF_NO_INHERIT);
@@ -2915,6 +2927,8 @@ void iupdrvTreeInitClass(Iclass* ic)
   iupClassRegisterAttribute  (ic, "STARTING",  NULL, gtkTreeSetMarkStartAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute  (ic, "MARKSTART", NULL, gtkTreeSetMarkStartAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute  (ic, "MARKEDNODES", gtkTreeGetMarkedNodesAttrib, gtkTreeSetMarkedNodesAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "MARKWHENTOGGLE", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute  (ic, "VALUE", gtkTreeGetValueAttrib, gtkTreeSetValueAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
 

@@ -25,6 +25,7 @@
 #include "iup_key.h"
 #include "iup_image.h"
 #include "iup_drv.h"
+#include "iup_assert.h"
 
 #include "iupgtk_drv.h"
 
@@ -53,9 +54,12 @@ static void iup_gtk_fixed_class_init (iupGtkFixedClass *_class)
   widget_class->get_preferred_height = iup_gtk_fixed_get_preferred_size;
 }
 
+static int iupGtkFixedWindow = 0;
+
 static void iup_gtk_fixed_init (iupGtkFixed *fixed)
 {
-  (void)fixed;
+  if (iupGtkFixedWindow)
+    gtk_widget_set_has_window(GTK_WIDGET(fixed), TRUE);
 }
 
 static void iup_gtk_fixed_get_preferred_size (GtkWidget *widget, gint *minimum, gint *natural)
@@ -72,29 +76,29 @@ static GtkWidget* iup_gtk_fixed_new(void)
 }
 #endif
 
-/* WARNING: in GTK there are many controls that are not native windows, 
-   so it GdkWindow will NOT return a native window exclusive of that control,
-   in fact it can return a base native window shared by many controls.
-   IupCanvas is a special case that uses an exclusive native window. */
-
-/* GTK only has absolute positioning using a native container,
-   so all elements returned by iupChildTreeGetNativeParentHandle should be a native container. 
-   If not looks in the native parent. */
-static GtkWidget* gtkGetNativeContainer(Ihandle* ih)
+/* WARNING: in GTK there are many controls that are not native windows,
+so theirs GdkWindow will NOT return a native window exclusive of that control,
+in fact it can return a base native window shared by many controls.
+IupCanvas is a special case that uses an exclusive native window. */
+GtkWidget* iupgtkNativeContainerNew(int has_window)
 {
-  GtkWidget* widget = iupChildTreeGetNativeParentHandle(ih);
-  while (widget && !GTK_IS_FIXED(widget))
-    widget = gtk_widget_get_parent(widget);
-  return widget;
-}
+  GtkWidget* widget;
 
-GtkWidget* iupgtkNativeContainerNew(void)
-{
 #if GTK_CHECK_VERSION(3, 0, 0)
-  return iup_gtk_fixed_new();
+  iupGtkFixedWindow = has_window;
+  widget = iup_gtk_fixed_new();
+  iupGtkFixedWindow = 0;
 #else
-  return gtk_fixed_new();
+  widget = gtk_fixed_new();
 #endif
+
+#if GTK_CHECK_VERSION(2, 18, 0)
+  gtk_widget_set_has_window(widget, has_window);
+#else
+  gtk_fixed_set_has_window(GTK_FIXED(widget), has_window);
+#endif
+
+  return widget;
 }
 
 void iupgtkNativeContainerAdd(GtkWidget* container, GtkWidget* widget)
@@ -107,13 +111,15 @@ void iupgtkNativeContainerMove(GtkWidget* container, GtkWidget* widget, int x, i
   gtk_fixed_move(GTK_FIXED(container), widget, x, y);
 }
 
-void iupgtkNativeContainerSetHasWindow(GtkWidget* container, int has_window)
+/* GTK only has absolute positioning using a native container,
+so all elements returned by iupChildTreeGetNativeParentHandle should be a native container.
+If not looks in the native parent. */
+static GtkWidget* gtkGetNativeParent(Ihandle* ih)
 {
-#if GTK_CHECK_VERSION(2, 18, 0)
-  gtk_widget_set_has_window(container, has_window);
-#else
-  gtk_fixed_set_has_window(GTK_FIXED(container), has_window);
-#endif
+  GtkWidget* widget = iupChildTreeGetNativeParentHandle(ih);
+  while (widget && !GTK_IS_FIXED(widget))
+    widget = gtk_widget_get_parent(widget);
+  return widget;
 }
 
 const char* iupgtkGetWidgetClassName(GtkWidget* widget)
@@ -136,7 +142,7 @@ void iupdrvActivate(Ihandle* ih)
 void iupdrvReparent(Ihandle* ih)
 {
   GtkWidget* old_parent;
-  GtkWidget* new_parent = gtkGetNativeContainer(ih);
+  GtkWidget* new_parent = gtkGetNativeParent(ih);
   GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT");  /* here is used as the native child because is the outermost component of the elemement */
   if (!widget) widget = ih->handle;
   old_parent = gtk_widget_get_parent(widget);
@@ -149,7 +155,7 @@ void iupdrvReparent(Ihandle* ih)
 
 void iupgtkAddToParent(Ihandle* ih)
 {
-  GtkWidget* parent = gtkGetNativeContainer(ih);
+  GtkWidget* parent = gtkGetNativeParent(ih);
   GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT"); /* here is used as the native child because is the outermost component of the elemement */
   if (!widget) widget = ih->handle;
 
@@ -159,12 +165,14 @@ void iupgtkAddToParent(Ihandle* ih)
 void iupgtkSetPosSize(GtkContainer* parent, GtkWidget* widget, int x, int y, int width, int height)
 {
   iupgtkNativeContainerMove((GtkWidget*)parent, widget, x, y);
-  gtk_widget_set_size_request(widget, width, height);
+
+  if (width > 0 && height > 0)
+    gtk_widget_set_size_request(widget, width, height);
 }
 
 void iupdrvBaseLayoutUpdateMethod(Ihandle *ih)
 {
-  GtkWidget* parent = gtkGetNativeContainer(ih);
+  GtkWidget* parent = gtkGetNativeParent(ih);
   GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   if (!widget) widget = ih->handle;
 
@@ -175,12 +183,17 @@ void iupdrvBaseUnMapMethod(Ihandle* ih)
 {
   GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   if (!widget) widget = ih->handle;
+  gtk_widget_hide(widget);
   gtk_widget_unrealize(widget);
   gtk_widget_destroy(widget);   /* To match the call to gtk_*****_new     */
 }
 
 void iupdrvPostRedraw(Ihandle *ih)
 {
+  GdkWindow* window = iupgtkGetWindow(ih->handle);
+  if (window)
+    gdk_window_invalidate_rect(window, NULL, TRUE);
+
   /* Post a REDRAW */
   gtk_widget_queue_draw(ih->handle);
 }
@@ -188,11 +201,15 @@ void iupdrvPostRedraw(Ihandle *ih)
 void iupdrvRedrawNow(Ihandle *ih)
 {
   GdkWindow* window = iupgtkGetWindow(ih->handle);
+  if (window)
+    gdk_window_invalidate_rect(window, NULL, TRUE);
+
   /* Post a REDRAW */
   gtk_widget_queue_draw(ih->handle);
+
   /* Force a REDRAW */
   if (window)
-    gdk_window_process_updates(window, FALSE);
+    gdk_window_process_updates(window, TRUE);
 }
 
 static GtkWidget* gtkGetWindowedParent(GtkWidget* widget)
@@ -650,30 +667,32 @@ int iupdrvGetScrollbarSize(void)
 {
   static int size = 0;
 
+  if (iupStrBoolean(IupGetGlobal("OVERLAYSCROLLBAR")))
+    return 1;
+
   if (size == 0)
   {
-    GtkRequisition requisition;
-    GtkWidget* win = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gint slider_width, trough_border;
+
 #if GTK_CHECK_VERSION(3, 0, 0)
     GtkWidget* sb = gtk_scrollbar_new(GTK_ORIENTATION_VERTICAL, NULL);
 #else
     GtkWidget* sb = gtk_vscrollbar_new(NULL);
 #endif
-    gtk_container_add((GtkContainer*)win, sb);
-    gtk_widget_realize(win);
-#if GTK_CHECK_VERSION(3, 0, 0)
-    gtk_widget_get_preferred_size(sb, NULL, &requisition);
-#else
-    gtk_widget_size_request(sb, &requisition);
-#endif
-    size = requisition.width+1;
-    gtk_widget_destroy(win);
+
+    gtk_widget_style_get(sb, "slider-width", &slider_width,
+                             "trough-border", &trough_border,
+                             NULL);
+
+    size = trough_border * 2 + slider_width;
+
+    gtk_widget_destroy(sb);
   }
 
   return size;
 }
 
-void iupdrvDrawFocusRect(Ihandle* ih, void* _gc, int x, int y, int w, int h)
+void iupdrvPaintFocusRect(Ihandle* ih, void* _gc, int x, int y, int w, int h)
 {
 #if GTK_CHECK_VERSION(3, 0, 0)
   cairo_t* cr = (cairo_t*)_gc;
@@ -975,6 +994,19 @@ void iupgtkWindowGetPointer(GdkWindow *window, int *x, int *y, GdkModifierType *
   gdk_window_get_device_position(window, device, x, y, mask);
 #else
   gdk_window_get_pointer(window, x, y, mask);
+#endif
+}
+
+void iupgtkClearSizeStyleCSS(GtkWidget* widget)
+{
+#if GTK_CHECK_VERSION(3, 0, 0)
+  GtkStyleContext *context = gtk_widget_get_style_context(widget);
+  const char* str = "*{ padding-bottom: 0px ; padding-top: 0px; padding-left: 2px;  padding-right: 2px; "
+                        "margin-bottom: 0px;  margin-top: 0px;  margin-left: 0px;   margin-right: 0px; }";
+  GtkCssProvider *provider = gtk_css_provider_new();
+  gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(provider), str, -1, NULL);
+  gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(provider);
 #endif
 }
 

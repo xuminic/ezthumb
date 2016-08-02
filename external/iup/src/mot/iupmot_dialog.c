@@ -817,8 +817,8 @@ static void motDialogDestroyCallback(Widget w, Ihandle *ih, XtPointer call_data)
   if (iupObjectCheck(ih))
     IupDestroy(ih);
 
-  /* this callback is usefull to destroy children dialogs when the parent is destroyed. */
-  /* The application is responsable for destroying the children before this happen.     */
+  /* this callback is useful to destroy children dialogs when the parent is destroyed. */
+  /* The application is responsible for destroying the children before this happen.     */
   (void)w;
   (void)call_data;
 }
@@ -832,12 +832,21 @@ static void motDialogDestroyCallback(Widget w, Ihandle *ih, XtPointer call_data)
    the menu that it is inside the dialog. */
 static void motDialogSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 {
-  int menu_h = motDialogGetMenuSize(ih);
-  (void)x;
-  (void)y;
+  if (ih->firstchild)
+  {
+    char* offset = iupAttribGet(ih, "CHILDOFFSET");
 
-  /* Child coordinates are relative to client left-top corner. */
-  iupBaseSetPosition(ih->firstchild, 0, menu_h);
+    /* Native container, position is reset */
+    x = 0;
+    y = 0;
+
+    if (offset) iupStrToIntInt(offset, &x, &y, 'x');
+
+    y += motDialogGetMenuSize(ih);
+
+    /* Child coordinates are relative to client left-top corner. */
+    iupBaseSetPosition(ih->firstchild, x, y);
+  }
 }
 
 static void* motDialogGetInnerNativeContainerHandleMethod(Ihandle* ih, Ihandle* child)

@@ -24,15 +24,29 @@ typedef struct _Imask Imask;
 /** Creates a mask given a string.  \n
  * If casei is true, will turn the mask case insensitive.
  * \ingroup mask */
-Imask* iupMaskCreate(const char* mask_str, int casei);
+Imask* iupMaskCreate(const char* mask_str);
 
 /** Creates an integer mask with limits.
  * \ingroup mask */
 Imask* iupMaskCreateInt(int min, int max);
 
-/** Creates a float mask with limits.
+/** Creates a real mask with limits.
  * \ingroup mask */
-Imask* iupMaskCreateFloat(float min, float max);
+Imask* iupMaskCreateFloat(float min, float max, const char* decimal_symbol);
+
+/** Creates a real mask.
+* \ingroup mask */
+Imask* iupMaskCreateReal(int positive, const char* decimal_symbol);
+
+/** If casei is 1, will turn the mask case insensitive.
+* Default is case sensitive.
+* \ingroup mask */
+void iupMaskSetCaseI(Imask* mask, int casei);
+
+/** If noempty is 1, the value can NOT be empty.
+* Default can be empty.
+* \ingroup mask */
+void iupMaskSetNoEmpty(Imask* mask, int noempty);
 
 /** Destroys the mask.
  * \ingroup mask */

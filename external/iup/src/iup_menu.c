@@ -82,10 +82,7 @@ static void iMenuAdjustPos(int *x, int *y)
     iupdrvGetScreenSize(&screen_width, &screen_height);
 
   if (*x == IUP_MOUSEPOS || *y == IUP_MOUSEPOS)
-  {
     iupdrvGetCursorPos(&cursor_x, &cursor_y);
-    iupdrvAddScreenOffset(&cursor_x, &cursor_y, -1);  /* de-compensate for add offset bellow */
-  }
 
   switch (*x)
   {
@@ -129,7 +126,7 @@ char* iupMenuProcessTitle(Ihandle* ih, const char* title)
   char* key = iupAttribGet(ih, "KEY");  /* NOT the same definition as the global KEY attribute */
   if (!key) return (char*)title;
 
-  str = strchr(title, (int)key);
+  str = strchr(title, (int)(*key));
   if (str)
   {
     int len = strlen(title);

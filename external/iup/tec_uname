@@ -9,7 +9,7 @@ Pause()
 
 ComputeTecUname()
 {
-  # Base Defintions
+  # Base Definitions
   TEC_SYSNAME=`uname -s`
   TEC_SYSVERSION=`uname -r|cut -f1 -d.`
   TEC_SYSMINOR=`uname -r|cut -f2 -d.`
@@ -83,24 +83,28 @@ ComputeTecUname()
     fi
   fi
 
-  # Linux and PowerPC
   if [ $TEC_SYSNAME == Linux ]; then
+    # Linux and PowerPC
     if [ $TEC_SYSARCH == ppc ]; then
       TEC_UNAME=$TEC_UNAME'ppc'
     fi
-  fi
 
-  # 64-bits Linux
-  if [ $TEC_SYSNAME == Linux ]; then
+    # 64-bits Linux
     if [ $TEC_SYSARCH == x64 ]; then
       BUILD_64=Yes
       TEC_UNAME=$TEC_UNAME'_64'
     fi
 
+    # Itanium Linux
     if [ $TEC_SYSARCH == ia64 ]; then
       BUILD_64=Yes
       TEC_UNAME=$TEC_UNAME'_ia64'
     fi
+    
+    # Linux Distribution
+    TEC_DISTNAME=`lsb_release -is`
+    TEC_DISTVERSION=`lsb_release -rs|cut -f1 -d.`
+    TEC_DIST=$TEC_DISTNAME$TEC_DISTVERSION
   fi
 
   # 64-bits FreeBSD
@@ -120,16 +124,18 @@ ComputeTecUname()
 
   # MacOS and Intel
   if [ $TEC_SYSNAME == MacOS ]; then
-    if [ $TEC_SYSMINOR == 6 ]; then
-      TEC_SYSARCH=x64
-    else
-    if [ $TEC_SYSMINOR == 7 ]; then
-      TEC_SYSARCH=x64
-    else
+    if [ $TEC_SYSMINOR == 5 ]; then
       if [ $TEC_SYSARCH == x86 ]; then
         TEC_UNAME=$TEC_UNAME'x86'
       fi
-    fi
+    else
+      if [ $TEC_SYSMINOR == 4 ]; then
+        if [ $TEC_SYSARCH == x86 ]; then
+          TEC_UNAME=$TEC_UNAME'x86'
+        fi
+      else
+        TEC_SYSARCH=x64
+      fi
     fi
   fi
 }
@@ -149,11 +155,35 @@ ComputeSystemPaths()
   TEC_SYSTEM_INC=/usr/include
   
   if [ $TEC_SYSNAME == Haiku ]; then
-  	TEC_SYSTEM_LIB=`finddir B_SYSTEM_LIB_DIRECTORY`
-  	TEC_SYSTEM_INC=`finddir B_SYSTEM_HEADERS_DIRECTORY`
+    TEC_SYSTEM_LIB=`finddir B_SYSTEM_LIB_DIRECTORY`
+    TEC_SYSTEM_INC=`finddir B_SYSTEM_HEADERS_DIRECTORY`
   fi
 
   TEC_LUA_LIB=$TEC_SYSTEM_LIB/lua/$LUA_VER
+}
+
+ComputeLuaVersion()
+{
+  if [ -n "$USE_LUA51" ]; then
+    LUA_VER=5.1
+    LUA_SFX=51
+  fi
+
+  if [ -n "$USE_LUA52" ]; then
+    LUA_VER=5.2
+    LUA_SFX=52
+  fi
+  
+  if [ -n "$USE_LUA53" ]; then
+    LUA_VER=5.3
+    LUA_SFX=53
+  fi
+
+  # Default Lua version  
+  if [ -z "$LUA_VER" ]; then
+    LUA_VER=5.1
+    LUA_SFX=51
+  fi
 }
 
 PrintInfo()

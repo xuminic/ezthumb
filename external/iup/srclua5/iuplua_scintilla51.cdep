@@ -1,6 +1,0 @@
-$(OBJDIR)/il_scintilla.o: il_scintilla.c /cygdrive/d/tecgraf/lua5.1/include/lua.h \
- /cygdrive/d/tecgraf/lua5.1/include/luaconf.h \
- /cygdrive/d/tecgraf/lua5.1/include/lauxlib.h \
- /cygdrive/d/tecgraf/lua5.1/include/lua.h ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
- ../include/iup_scintilla.h il.h lh/scintilla.lh

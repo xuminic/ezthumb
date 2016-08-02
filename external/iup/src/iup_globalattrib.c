@@ -12,6 +12,8 @@
 
 #include "iup_table.h"
 #include "iup_globalattrib.h"
+#include "iup_table.h"
+#include "iup_class.h"
 #include "iup_drv.h"
 #include "iup_drvfont.h"
 #include "iup_drvinfo.h"
@@ -35,12 +37,7 @@ void iupGlobalAttribFinish(void)
 
 static int iGlobalChangingDefaultColor(const char *name)
 {
-  if (iupStrEqual(name, "DLGBGCOLOR") ||
-      iupStrEqual(name, "DLGFGCOLOR") ||
-      iupStrEqual(name, "MENUBGCOLOR") ||
-      iupStrEqual(name, "MENUFGCOLOR") ||
-      iupStrEqual(name, "TXTBGCOLOR") ||
-      iupStrEqual(name, "TXTFGCOLOR"))
+  if (iupClassIsGlobalDefault(name, 1))
   {
     char str[50] = "_IUP_USER_DEFAULT_";
     strcat(str, name);
@@ -62,7 +59,7 @@ void iupGlobalSetDefaultColorAttrib(const char* name, int r, int g, int b)
   if (!iupGlobalDefaultColorChanged(name))
   {
     char value[50];
-    sprintf(value, "%3d %3d %3d", r, g, b);
+    sprintf(value, "%d %d %d", r, g, b);
     iupTableSet(iglobal_table, name, (void*)value, IUPTABLE_STRING);
   }
 }
@@ -85,6 +82,16 @@ static void iGlobalSet(const char *name, const char *value, int store)
   if (iupStrEqual(name, "DEFAULTFONTSIZE"))
   {
     iupSetDefaultFontSizeGlobalAttrib(value);
+    return;
+  }
+  if (iupStrEqual(name, "DEFAULTFONTSTYLE"))
+  {
+    iupSetDefaultFontStyleGlobalAttrib(value);
+    return;
+  }
+  if (iupStrEqual(name, "DEFAULTFONTFACE"))
+  {
+    iupSetDefaultFontFaceGlobalAttrib(value);
     return;
   }
   if (iupStrEqual(name, "KEYPRESS"))
@@ -110,8 +117,12 @@ static void iGlobalSet(const char *name, const char *value, int store)
   }
   if (iupStrEqual(name, "LANGUAGE"))
   {
-    iupStrMessageUpdateLanguage(value);
-    iGlobalTableSet(name, value, store);
+    char* old_language = (char*)iupTableGet(iglobal_table, "LANGUAGE");
+    if (!iupStrEqualNoCase(old_language, value))  /* if different than the current */
+    {
+      iGlobalTableSet(name, value, store);
+      iupStrMessageUpdateLanguage(value);
+    }
     return;
   }
   if (iupStrEqual(name, "CURSORPOS"))
@@ -160,6 +171,10 @@ char* IupGetGlobal(const char *name)
 
   if (iupStrEqual(name, "DEFAULTFONTSIZE"))
     return iupGetDefaultFontSizeGlobalAttrib();
+  if (iupStrEqual(name, "DEFAULTFONTSTYLE"))
+    return iupGetDefaultFontStyleGlobalAttrib();
+  if (iupStrEqual(name, "DEFAULTFONTFACE"))
+    return iupGetDefaultFontFaceGlobalAttrib();
   if (iupStrEqual(name, "CURSORPOS"))
   {
     int x, y;

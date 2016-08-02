@@ -248,6 +248,16 @@ Ihandle* IupSpin(void)
                                       SPINBOX
 **************************************************************************************/
 
+static char* iSpinboxGetClientSizeAttrib(Ihandle* ih)
+{
+  int width = ih->currentwidth;
+  int height = ih->currentheight;
+  width -= ih->firstchild->currentwidth;
+  if (width < 0) width = 0;
+  if (height < 0) height = 0;
+  return iupStrReturnIntInt(width, height, 'x');
+}
+
 static void iSpinboxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   /* update spin natural size */
@@ -278,7 +288,9 @@ static void iSpinboxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
   if (ih->firstchild->brother)
   {
     /* child */
-    iupBaseSetCurrentSize(ih->firstchild->brother, ih->currentwidth-ih->firstchild->naturalwidth, ih->currentheight, shrink);
+    int width = ih->currentwidth - ih->firstchild->naturalwidth;
+    if (width < 0) width = 0;
+    iupBaseSetCurrentSize(ih->firstchild->brother, width, ih->currentheight, shrink);
   }
 }
 
@@ -338,7 +350,7 @@ Iclass* iupSpinboxNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name = "spinbox";
-  ic->format = "h"; /* one Ihandle */
+  ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDMANY+2;  /* spin+child */
   ic->is_interactive = 0;
@@ -357,7 +369,7 @@ Iclass* iupSpinboxNewClass(void)
   iupBaseRegisterCommonAttrib(ic);
 
   /* Base Container */
-  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetRasterSizeAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_READONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTSIZE", iSpinboxGetClientSizeAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_READONLY | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 

@@ -8,13 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#undef CD_NO_OLD_INTERFACE
-
 #include "iup.h"
 #include "iupcbs.h"
 #include "iupkey.h"
 
 #include <cd.h>
+#include <cd_old.h>
 #include <cdiup.h>
 #include <cddbuf.h>
 
@@ -34,8 +33,7 @@ struct _IcontrolData
 {
   iupCanvas canvas;  /* from IupCanvas (must reserve it) */
 
-  cdCanvas* cdcanvas;        /* cd canvas for drawing                 */
-  cdCanvas* cddbuffer;       /* image canvas for double buffering     */
+  cdCanvas* cd_canvas;       /* image canvas for double buffering     */
   int w;                     /* control width (pixels)                */
   int h;                     /* control height (pixels)               */
   int clipped;               /* cells bounding box clipping activated */
@@ -362,7 +360,6 @@ static void iCellsAdjustScroll(Ihandle* ih, int canvas_w, int canvas_h)
 /* Function used to call the client; is used when a cell must be repainted. */
 static void iCellsCallDrawCb(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, int i, int j)
 {
-  int cxmin, cxmax, cymin, cymax;
   int oldxmin, oldxmax, oldymin, oldymax, oldclip;
   int w = ih->data->w;
   int h = ih->data->h;
@@ -370,36 +367,37 @@ static void iCellsCallDrawCb(Ihandle* ih, int xmin, int xmax, int ymin, int ymax
   cdCanvas* old_cnv = cdActiveCanvas();
 
   /* Getting clipping area for post restore */
-  oldclip = cdCanvasClip(ih->data->cddbuffer, CD_QUERY);
-  cdCanvasGetClipArea(ih->data->cddbuffer, &oldxmin, &oldxmax, &oldymin, &oldymax);
+  oldclip = cdCanvasClip(ih->data->cd_canvas, CD_QUERY);
+  cdCanvasGetClipArea(ih->data->cd_canvas, &oldxmin, &oldxmax, &oldymin, &oldymax);
 
   if (ih->data->clipped)  /* Clipping the cell area */
   { 
-     cdCanvasClip(ih->data->cddbuffer, CD_CLIPAREA);
-     cxmin = xmin < 0 ? 0 : xmin;
-     cymin = ymin < 0 ? 0 : ymin;
-     cxmax = xmax > w ? w : xmax;
-     cymax = ymax > h ? h : ymax;
-     cdCanvasClipArea(ih->data->cddbuffer, xmin, xmax, ymin, ymax);
+    int cxmin, cxmax, cymin, cymax;
+    cdCanvasClip(ih->data->cd_canvas, CD_CLIPAREA);
+    cxmin = xmin < 0 ? 0 : xmin;
+    cymin = ymin < 0 ? 0 : ymin;
+    cxmax = xmax > w ? w : xmax;
+    cymax = ymax > h ? h : ymax;
+    cdCanvasClipArea(ih->data->cd_canvas, cxmin, cxmax, cymin, cymax);
   }
 
   draw_cb = (IFniiiiiiC)IupGetCallback(ih, "DRAW_CB");
   if (draw_cb)
   {
-    if (old_cnv != ih->data->cddbuffer) /* backward compatibility code */
-      cdActivate(ih->data->cddbuffer);
+    if (old_cnv != ih->data->cd_canvas) /* backward compatibility code */
+      cdActivate(ih->data->cd_canvas);
 
-    draw_cb(ih, i, j, xmin, xmax, ymin, ymax, ih->data->cddbuffer);
+    draw_cb(ih, i, j, xmin, xmax, ymin, ymax, ih->data->cd_canvas);
 
-    if (old_cnv && old_cnv != ih->data->cddbuffer)
+    if (old_cnv && old_cnv != ih->data->cd_canvas)
     {
       cdActivate(old_cnv);
-      cdCanvasActivate(ih->data->cddbuffer);
+      cdCanvasActivate(ih->data->cd_canvas);
     }
   }
 
-  cdCanvasClip(ih->data->cddbuffer, oldclip);
-  cdCanvasClipArea(ih->data->cddbuffer, oldxmin, oldxmax, oldymin, oldymax);
+  cdCanvasClip(ih->data->cd_canvas, oldclip);
+  cdCanvasClipArea(ih->data->cd_canvas, oldxmin, oldxmax, oldymin, oldymax);
 }
 
 /* Render function for one cell in a given coordinate.  */
@@ -440,8 +438,8 @@ static void iCellsRenderCellIn(Ihandle* ih, int i, int j, int xmin, int xmax, in
   /* Drawing a box in cell's area */
   if (ih->data->boxed)
   { 
-     cdCanvasForeground(ih->data->cddbuffer, CD_BLACK);
-     cdCanvasRect(ih->data->cddbuffer, xmin, xmax, ymin, ymax);
+     cdCanvasForeground(ih->data->cd_canvas, CD_BLACK);
+     cdCanvasRect(ih->data->cd_canvas, xmin, xmax, ymin, ymax);
   }
 }
 
@@ -483,8 +481,8 @@ static void iCellsRenderCells(Ihandle* ih)
   int nlines = iCellsGetNLines(ih);
   int ncols  = iCellsGetNCols(ih);
 
-  cdCanvasBackground(ih->data->cddbuffer, ih->data->bgcolor); 
-  cdCanvasClear(ih->data->cddbuffer);
+  cdCanvasBackground(ih->data->cd_canvas, ih->data->bgcolor); 
+  cdCanvasClear(ih->data->cd_canvas);
 
   /* Repainting the four parts of the cells: common cells, non-scrollable
    * columns, non-scrollable lines, and non-scrollable margin 
@@ -497,7 +495,7 @@ static void iCellsRenderCells(Ihandle* ih)
 
 static void iCellsRepaint(Ihandle* ih)
 {
-  if (ih->data->cddbuffer == NULL)
+  if (ih->data->cd_canvas == NULL)
     return;
 
   /* If object is buffering, it will not be drawn */
@@ -508,16 +506,16 @@ static void iCellsRepaint(Ihandle* ih)
   iCellsRenderCells(ih);
 
   /* update display */
-  cdCanvasFlush(ih->data->cddbuffer);
+  cdCanvasFlush(ih->data->cd_canvas);
 }
 
 static int iCellsRedraw_CB(Ihandle* ih)
 {
-  if (ih->data->cddbuffer == NULL)
+  if (!ih->data->cd_canvas)
     return IUP_DEFAULT;
 
   /* update display */
-  cdCanvasFlush(ih->data->cddbuffer);
+  cdCanvasFlush(ih->data->cd_canvas);
   return IUP_DEFAULT;
 }
 
@@ -663,21 +661,9 @@ static int iCellsResize_CB(Ihandle* ih, int w, int h)
   IupSetInt(ih, "DX", w);
   IupSetInt(ih, "DY", h);
 
-  if (!ih->data->cddbuffer)
-  {
-    /* update canvas size */
-    cdCanvasActivate(ih->data->cdcanvas);
-
-    /* this can fail if canvas size is zero */
-    ih->data->cddbuffer = cdCreateCanvas(CD_DBUFFER, ih->data->cdcanvas);
-  }
-
-  if (!ih->data->cddbuffer)
-    return IUP_DEFAULT;
-
   /* update canvas size */
-  cdCanvasActivate(ih->data->cddbuffer);
-  cdCanvasGetSize(ih->data->cddbuffer, &ih->data->w, &ih->data->h, NULL, NULL);
+  cdCanvasActivate(ih->data->cd_canvas);
+  cdCanvasGetSize(ih->data->cd_canvas, &ih->data->w, &ih->data->h, NULL, NULL);
 
   /* update render */
   iCellsRenderCells(ih);
@@ -704,12 +690,13 @@ static int iCellsButton_CB(Ihandle* ih, int b, int m, int x, int y, char* r)
 
 static char* iCellsGetImageCanvasAttrib(Ihandle* ih)
 {
-  return (char*)ih->data->cddbuffer;
+  return (char*)ih->data->cd_canvas;
 }
 
 static char* iCellsGetCanvasAttrib(Ihandle* ih)
 {
-  return (char*)ih->data->cdcanvas;
+  cdCanvas* cd_canvas_front = (cdCanvas*)IupGetAttribute(ih, "_CD_CANVAS");  /* front buffer canvas */
+  return (char*)cd_canvas_front;
 }
 
 static char* iCellsGetFirstLineAttrib(Ihandle* ih)
@@ -843,28 +830,19 @@ static int iCellsSetFullVisibleAttrib(Ihandle* ih, const char* value)
 
 static int iCellsMapMethod(Ihandle* ih)
 {
-  ih->data->cdcanvas = cdCreateCanvas(CD_IUP, ih);
-  if (!ih->data->cdcanvas)
+  ih->data->cd_canvas = cdCreateCanvas(CD_IUPDBUFFER, ih);
+  if (!ih->data->cd_canvas)
     return IUP_ERROR;
-
-  /* this can fail if canvas size is zero */
-  ih->data->cddbuffer = cdCreateCanvas(CD_DBUFFER, ih->data->cdcanvas);
 
   return IUP_NOERROR;
 }
 
 static void iCellsUnMapMethod(Ihandle* ih)
 {
-  if (ih->data->cddbuffer)
+  if (ih->data->cd_canvas)
   {
-    cdKillCanvas(ih->data->cddbuffer);
-    ih->data->cddbuffer = NULL;
-  }
-
-  if (ih->data->cdcanvas)
-  {
-    cdKillCanvas(ih->data->cdcanvas);
-    ih->data->cdcanvas = NULL;
+    cdKillCanvas(ih->data->cd_canvas);
+    ih->data->cd_canvas = NULL;
   }
 }
 

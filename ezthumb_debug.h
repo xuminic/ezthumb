@@ -61,7 +61,7 @@ char *ezthumb_slog_format(char *fmt, ...);
 #endif
 
 
-#define EDB_SHOW_CW(cw)		(SLOG_MODUL_GET(cw)|SLOG_FLUSH|SLOG_LVL_SHOWOFF)
+#define EDB_SHOW_CW(cw)		(SLOG_MODUL_GET(cw)|SLOG_FLUSH|SLOG_LVL_AUTO)
 
 #ifdef	CSOUP_DEBUG_LOCAL
 #define EDB_SHOW(x)		ezthumb_slog_puts(&ezthumb_debug_control, \

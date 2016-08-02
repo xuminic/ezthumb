@@ -70,7 +70,8 @@ static int motProgressBarSetValueAttrib(Ihandle* ih, const char* value)
   if (!value)
     ih->data->value = 0;
   else
-    ih->data->value = atof(value);
+    iupStrToDouble(value, &(ih->data->value));
+
   iProgressBarCropValue(ih);
 
   XtVaSetValues(ih->handle, XmNvalue, (int)(SHRT_MAX * (ih->data->value - ih->data->vmin) / (ih->data->vmax - ih->data->vmin)), NULL);
@@ -154,11 +155,11 @@ static int motProgressBarMapMethod(Ihandle* ih)
   {
     iupMOT_SETARG(args, num_args, XmNorientation, XmVERTICAL);
 
-    if (ih->currentheight < ih->currentwidth)
+    if (ih->userheight < ih->userwidth)
     {
-      int tmp = ih->currentheight;
-      ih->currentheight = ih->currentwidth;
-      ih->currentwidth = tmp;
+      int tmp = ih->userheight;
+      ih->userheight = ih->userwidth;
+      ih->userwidth = tmp;
     }
   }
   else

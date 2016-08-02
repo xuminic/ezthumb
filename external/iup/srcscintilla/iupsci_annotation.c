@@ -9,7 +9,7 @@
 #include <string.h>
 #include <math.h>
 
-#undef SCI_NAMESPACE
+
 #include <Scintilla.h>
 
 #include "iup.h"
@@ -38,15 +38,15 @@ SCI_ANNOTATIONGETSTYLEOFFSET
 
 static int iScintillaSetAnnotationTextAttribId(Ihandle* ih, int line, const char* value)
 {
-  iupScintillaSendMessage(ih, SCI_ANNOTATIONSETTEXT, line, (sptr_t)value);
+  IupScintillaSendMessage(ih, SCI_ANNOTATIONSETTEXT, line, (sptr_t)value);
   return 0;
 }
 
 static char* iScintillaGetAnnotationTextAttribId(Ihandle* ih, int line)
 {
-  int len = iupScintillaSendMessage(ih, SCI_ANNOTATIONGETTEXT, line, 0);
+  int len = IupScintillaSendMessage(ih, SCI_ANNOTATIONGETTEXT, line, 0);
   char* str = iupStrGetMemory(len+1);
-  iupScintillaSendMessage(ih, SCI_ANNOTATIONGETTEXT, line, (sptr_t)str);
+  IupScintillaSendMessage(ih, SCI_ANNOTATIONGETTEXT, line, (sptr_t)str);
   return str;
 }
 
@@ -54,13 +54,13 @@ static int iScintillaSetAnnotationStyleAttribId(Ihandle* ih, int line, const cha
 {
   int style;
   iupStrToInt(value, &style);
-  iupScintillaSendMessage(ih, SCI_ANNOTATIONSETSTYLE, line, style);
+  IupScintillaSendMessage(ih, SCI_ANNOTATIONSETSTYLE, line, style);
   return 0;
 }
 
 static char* iScintillaGetAnnotationStyleAttribId(Ihandle* ih, int line)
 {
-  int style = iupScintillaSendMessage(ih, SCI_ANNOTATIONGETSTYLE, line, 0);
+  int style = IupScintillaSendMessage(ih, SCI_ANNOTATIONGETSTYLE, line, 0);
   return iupStrReturnInt(style);
 }
 
@@ -68,32 +68,32 @@ static int iScintillaSetAnnotationStyleOffsetAttrib(Ihandle* ih, const char* val
 {
   int style_offset;
   iupStrToInt(value, &style_offset);
-  iupScintillaSendMessage(ih, SCI_ANNOTATIONSETSTYLEOFFSET, style_offset, 0);
+  IupScintillaSendMessage(ih, SCI_ANNOTATIONSETSTYLEOFFSET, style_offset, 0);
   return 0;
 }
 
 static char* iScintillaGetAnnotationStyleOffsetAttrib(Ihandle* ih)
 {
-  int style = iupScintillaSendMessage(ih, SCI_ANNOTATIONGETSTYLEOFFSET, 0, 0);
+  int style = IupScintillaSendMessage(ih, SCI_ANNOTATIONGETSTYLEOFFSET, 0, 0);
   return iupStrReturnInt(style);
 }
 
 static int iScintillaSetAnnotationVisibleAttrib(Ihandle *ih, const char *value)
 {
   if (iupStrEqualNoCase(value, "STANDARD"))
-    iupScintillaSendMessage(ih, SCI_ANNOTATIONSETVISIBLE, ANNOTATION_STANDARD, 0);
+    IupScintillaSendMessage(ih, SCI_ANNOTATIONSETVISIBLE, ANNOTATION_STANDARD, 0);
   else if (iupStrEqualNoCase(value, "BOXED"))
-    iupScintillaSendMessage(ih, SCI_ANNOTATIONSETVISIBLE, ANNOTATION_BOXED, 0);
+    IupScintillaSendMessage(ih, SCI_ANNOTATIONSETVISIBLE, ANNOTATION_BOXED, 0);
   else  /* "HIDDEN" */
-    iupScintillaSendMessage(ih, SCI_ANNOTATIONSETVISIBLE, ANNOTATION_HIDDEN, 0);
+    IupScintillaSendMessage(ih, SCI_ANNOTATIONSETVISIBLE, ANNOTATION_HIDDEN, 0);
   return 0;
 }
 
 static char* iScintillaGetAnnotationVisibleAttrib(Ihandle* ih)
 {
-  if (iupScintillaSendMessage(ih, SCI_ANNOTATIONGETVISIBLE, 0, 0) == ANNOTATION_STANDARD)
+  if (IupScintillaSendMessage(ih, SCI_ANNOTATIONGETVISIBLE, 0, 0) == ANNOTATION_STANDARD)
     return "STANDARD";
-  else if (iupScintillaSendMessage(ih, SCI_ANNOTATIONGETVISIBLE, 0, 0) == ANNOTATION_BOXED)
+  else if (IupScintillaSendMessage(ih, SCI_ANNOTATIONGETVISIBLE, 0, 0) == ANNOTATION_BOXED)
     return "BOXED";
   else  /* ANNOTATION_HIDDEN */
     return "HIDDEN";
@@ -102,7 +102,7 @@ static char* iScintillaGetAnnotationVisibleAttrib(Ihandle* ih)
 static int iScintillaSetAnnotationClearAllAttrib(Ihandle* ih, const char* value)
 {
   (void)value;
-  iupScintillaSendMessage(ih, SCI_ANNOTATIONCLEARALL, 0, 0);
+  IupScintillaSendMessage(ih, SCI_ANNOTATIONCLEARALL, 0, 0);
   return 0;
 }
 

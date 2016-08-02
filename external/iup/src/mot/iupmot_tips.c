@@ -38,7 +38,7 @@ typedef struct _Imottips
   Ihandle*      ih;
 } Imottips;
 
-static Imottips mot_tips = {0, 0, 0, 0, 0, 0};
+static Imottips mot_tips = {0, 0, 0, 0, 0, 0, 0, 0};
 
 static void motTipsShow(void)
 {

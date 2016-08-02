@@ -1,6 +1,0 @@
-$(OBJDIR)/iuplua_glcanvas.o: iuplua_glcanvas.c \
- /cygdrive/d/tecgraf/lua/include/lua.h \
- /cygdrive/d/tecgraf/lua/include/lauxlib.h \
- /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../include/iupgl.h \
- ../include/iuplua.h ../include/iupluagl.h il.h

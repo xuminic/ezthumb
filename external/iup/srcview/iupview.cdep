@@ -1,4 +1,0 @@
-$(OBJDIR)/iup_view.o: iup_view.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h ../include/iupcontrols.h ../include/iupgl.h \
- ../src/iup_str.h ../src/iup_object.h ../src/iup_class.h \
- ../src/iup_table.h ../src/iup_classbase.h ../include/iupim.h

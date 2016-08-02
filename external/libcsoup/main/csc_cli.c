@@ -6,7 +6,7 @@
 #include <time.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 static	char	*argpool[] = {
 	"The quick brown fox jumps over the lazy dog",

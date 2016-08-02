@@ -2,7 +2,7 @@ PROJNAME = iup
 LIBNAME = iupcontrols
 OPT = YES
 
-INCLUDES = ../include ../src .
+INCLUDES = ../include ../src . ../srccd
 
 SRCCOLOR = iup_colorbrowser.c iup_colorhsi.c iup_colorbrowserdlg.c
 SRCCOLOR := $(addprefix color/, $(SRCCOLOR))
@@ -12,8 +12,8 @@ SRCMATRIX = iupmat_key.c iupmat_mark.c iupmat_aux.c iupmat_mem.c iupmat_mouse.c 
             iupmat_scroll.c iupmat_edit.c iupmat_ex.c
 SRCMATRIX := $(addprefix matrix/, $(SRCMATRIX))
 
-SRC = iup_cdutil.c iup_gauge.c iup_cells.c iup_colorbar.c iup_controls.c \
-      iup_dial.c iup_oldmask.c iup_matrixlist.c \
+SRC = iup_gauge.c iup_cells.c iup_colorbar.c iup_controls.c \
+      iup_dial.c iup_matrixlist.c \
       $(SRCCOLOR) $(SRCMATRIX)
 
 LIBS = iup iupcd

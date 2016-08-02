@@ -75,7 +75,7 @@ static int iMatrixExUndoDataSwap(ImatExData* matex_data, IundoData* undo_data)
 
     value = (char*)iupTableGetCurr(undo_data->data_table);
 
-    old_value = iupStrDup(iupMatrixExGetCellValue(matex_data->ih, lin, col, 0));
+    old_value = iupStrDup(iupMatrixExGetCellValue(matex_data->ih, lin, col, 0));  /* get internal value */
 
     iupMatrixExSetCellValue(matex_data->ih, lin, col, value);
 
@@ -382,8 +382,8 @@ static Ihandle* iMatrixExUndoCreateDialog(ImatExData* matex_data)
   parent = IupGetDialog(matex_data->ih);
 
   dlg = IupDialog(list);
-  IupSetAttribute(dlg, "MAXBOX" ,"NO" );
-  IupSetAttribute(dlg, "MINBOX" ,"NO" );
+  IupSetAttribute(dlg, "MAXBOX" ,"NO");
+  IupSetAttribute(dlg, "MINBOX" ,"NO");
   IupSetAttribute(dlg, "TOOLBOX","YES");
   IupSetStrAttribute(dlg, "TITLE"  ,"_@IUP_UNDOLIST");
   IupSetAttributeHandle(dlg,"PARENTDIALOG", parent);
@@ -407,23 +407,9 @@ void iupMatrixExUndoShowDialog(ImatExData* matex_data)
   IupDestroy(dlg_undo);
 }
 
-void iupMatrixExRegisterUndo(Iclass* ic)
+void iupMatrixExSetClassUpdateUndo(Iclass* ic)
 {
-  /* Already defined in IupMatrix, redefined here */
-  if (!iMatrixSetUndoRedoAttrib)
-    iupClassRegisterGetAttribute(ic, "UNDOREDO", NULL, &iMatrixSetUndoRedoAttrib, NULL, NULL, NULL);
-  iupClassRegisterReplaceAttribFunc(ic, "UNDOREDO", NULL, iMatrixExSetUndoRedoAttrib);
-
-  iupClassRegisterAttribute(ic, "UNDO", iMatrixGetUndoAttrib, iMatrixSetUndoAttrib, NULL, NULL, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "REDO", iMatrixGetRedoAttrib, iMatrixSetRedoAttrib, NULL, NULL, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "UNDOCLEAR", NULL, iMatrixSetUndoClearAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttributeId(ic, "UNDONAME", iMatrixGetUndoNameAttrib, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "UNDOCOUNT", iMatrixGetUndoCountAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
-
-  /* Internal attributes */
-  iupClassRegisterAttributeId2(ic, "UNDOPUSHCELL", NULL, iMatrixSetUndoPushCellAttrib, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "UNDOPUSHBEGIN", NULL, iMatrixSetUndoPushBeginAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "UNDOPUSHEND", NULL, iMatrixSetUndoPushEndAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
+  (void)ic;
 
   if (iupStrEqualNoCase(IupGetGlobal("LANGUAGE"), "ENGLISH"))
   {
@@ -463,5 +449,24 @@ void iupMatrixExRegisterUndo(Iclass* ic)
       IupSetLanguageString("IUP_EDITCELL", "Editar Célula");
     }
   }
+}
+
+void iupMatrixExRegisterUndo(Iclass* ic)
+{
+  /* Already defined in IupMatrix, redefined here */
+  if (!iMatrixSetUndoRedoAttrib)
+    iupClassRegisterGetAttribute(ic, "UNDOREDO", NULL, &iMatrixSetUndoRedoAttrib, NULL, NULL, NULL);
+  iupClassRegisterReplaceAttribFunc(ic, "UNDOREDO", NULL, iMatrixExSetUndoRedoAttrib);
+
+  iupClassRegisterAttribute(ic, "UNDO", iMatrixGetUndoAttrib, iMatrixSetUndoAttrib, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "REDO", iMatrixGetRedoAttrib, iMatrixSetRedoAttrib, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "UNDOCLEAR", NULL, iMatrixSetUndoClearAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttributeId(ic, "UNDONAME", iMatrixGetUndoNameAttrib, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "UNDOCOUNT", iMatrixGetUndoCountAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
+
+  /* Internal attributes */
+  iupClassRegisterAttributeId2(ic, "UNDOPUSHCELL", NULL, iMatrixSetUndoPushCellAttrib, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "UNDOPUSHBEGIN", NULL, iMatrixSetUndoPushBeginAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "UNDOPUSHEND", NULL, iMatrixSetUndoPushEndAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
 }
 

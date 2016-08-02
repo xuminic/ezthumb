@@ -84,7 +84,11 @@ int iupdrvBaseSetTipAttrib(Ihandle* ih, const char* value)
   }
 
   if (value)
-    winTipsSendMessage(ih, tips_hwnd, TTM_ADDTOOL);
+  {
+    int tool_exists = (int)SendMessage(tips_hwnd, TTM_GETCURRENTTOOL, 0, 0);
+    if (!tool_exists)
+      winTipsSendMessage(ih, tips_hwnd, TTM_ADDTOOL);
+  }
   else
     winTipsSendMessage(ih, tips_hwnd, TTM_DELTOOL);
 
@@ -125,7 +129,7 @@ char* iupdrvBaseGetTipVisibleAttrib(Ihandle* ih)
   if (!tips_hwnd)
     return NULL;
 
-  return iupStrReturnBoolean (IsWindowVisible(tips_hwnd)); 
+  return iupStrReturnBoolean(IsWindowVisible(tips_hwnd)); 
 }
 
 void iupwinTipsUpdateInfo(Ihandle* ih, HWND tips_hwnd)
@@ -189,7 +193,7 @@ void iupwinTipsUpdateInfo(Ihandle* ih, HWND tips_hwnd)
 
   {
     int delay = IupGetInt(ih, "TIPDELAY"); /* must use IupGetInt to use inheritance */
-    int tip_delay = SendMessage(tips_hwnd, TTM_GETDELAYTIME, TTDT_AUTOPOP, 0);
+    int tip_delay = (int)SendMessage(tips_hwnd, TTM_GETDELAYTIME, TTDT_AUTOPOP, 0);
     if (delay != tip_delay)
       SendMessage(tips_hwnd, TTM_SETDELAYTIME, TTDT_AUTOPOP, (LPARAM)MAKELONG(delay, 0));
   }
@@ -250,7 +254,7 @@ void iupwinTipsGetDispInfo(LPARAM lp)
     cb(ih, x, y);
   }
 
-  tips_info->lpszText = iupwinStrToSystem(IupGetAttribute(ih, "TIP"));  /* must use IupGetAttribute to use inheritance */
+  tips_info->lpszText = iupwinStrToSystem(iupAttribGet(ih, "TIP"));
 
   iupwinTipsUpdateInfo(ih, tips_hwnd);
 }

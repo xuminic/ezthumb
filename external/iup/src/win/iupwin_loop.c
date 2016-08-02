@@ -154,5 +154,5 @@ void IupFlush(void)
 
   /* re post the quit message if still inside MainLoop */
   if (post_quit && win_main_loop>0)
-    PostQuitMessage(0);
+    IupExitLoop();
 }

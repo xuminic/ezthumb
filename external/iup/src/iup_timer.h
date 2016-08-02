@@ -16,6 +16,8 @@ void iupdrvTimerStop(Ihandle* ih);
 void iupdrvTimerRun(Ihandle* ih);
 void iupdrvTimerInitClass(Iclass* ic);
 
+long long iupTimerGetLongLong(Ihandle* ih, const char* name);
+
 
 #ifdef __cplusplus
 }

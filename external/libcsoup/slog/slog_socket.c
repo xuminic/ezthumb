@@ -18,7 +18,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(CSOUP_MOD_SLOG, SLOG_LVL_INFO)
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -37,7 +36,8 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "csoup_internal.h"
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(CSOUP_MOD_SLOG, SLOG_LVL_INFO)
+#include "libcsoup_debug.h"
 
 struct	slog_socket	{
 	pthread_t	listenner;

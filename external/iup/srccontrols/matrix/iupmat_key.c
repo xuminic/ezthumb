@@ -36,7 +36,7 @@ static void iMatrixKeyCheckMarkStart(Ihandle* ih, int c, int mark_key)
   if (c==mark_key && ih->data->mark_multiple && ih->data->mark_mode != IMAT_MARK_NO)
   {
     if (ih->data->mark_lin1==-1 && ih->data->mark_col1==-1)
-      iupMatrixMarkBlockBegin(ih, 0, ih->data->lines.focus_cell, ih->data->columns.focus_cell);
+      iupMatrixMarkBlockSet(ih, 0, ih->data->lines.focus_cell, ih->data->columns.focus_cell);
   }
 }
 
@@ -47,7 +47,7 @@ static void iMatrixKeyCheckMarkEnd(Ihandle* ih, int c, int mark_key)
     if (c==mark_key)
     {
       if (ih->data->mark_lin1!=-1 && ih->data->mark_col1!=-1)
-        iupMatrixMarkBlockEnd(ih, ih->data->lines.focus_cell, ih->data->columns.focus_cell);
+        iupMatrixMarkBlockInc(ih, ih->data->lines.focus_cell, ih->data->columns.focus_cell);
     }
     else
       iupMatrixMarkBlockReset(ih);
@@ -56,7 +56,15 @@ static void iMatrixKeyCheckMarkEnd(Ihandle* ih, int c, int mark_key)
 
 int iupMatrixProcessKeyPress(Ihandle* ih, int c)
 {
-  int ret = IUP_IGNORE; /* default for processed keys */
+  switch (iup_XkeyBase(c))
+  {
+  case K_LSHIFT:
+  case K_RSHIFT:
+  case K_LCTRL:
+  case K_RCTRL:
+    /* won't scroll for shift+ctrl keys */
+    return IUP_DEFAULT;
+  }
 
   /* If the focus is not visible, a scroll is done for that the focus to be visible */
   if (!iupMatrixAuxIsCellStartVisible(ih, ih->data->lines.focus_cell, ih->data->columns.focus_cell))
@@ -90,7 +98,7 @@ int iupMatrixProcessKeyPress(Ihandle* ih, int c)
 
     case K_sTAB:
     case K_TAB:
-      return IUP_CONTINUE;  /* do not redraw */
+      return IUP_CONTINUE;  /* do not redraw, but forwards tab processing */
 
     case K_sLEFT:
     case K_cLEFT:
@@ -158,19 +166,37 @@ int iupMatrixProcessKeyPress(Ihandle* ih, int c)
 
     case K_F2:
     case K_SP:
-    case K_CR:
     case K_sCR:
       if (iupMatrixEditShow(ih))
         return IUP_IGNORE; /* do not redraw */
       break;
 
+    case K_CR:
+      if (!ih->data->edit_hide_onfocus && ih->data->editing)
+        iupMatrixEditConfirm(ih);
+      else
+      {
+        if (iupMatrixEditShow(ih))
+          return IUP_IGNORE; /* do not redraw */
+        else
+          return IUP_DEFAULT; /* allow the dialog to process defaultenter */
+      }
+      break;
+
+    case K_ESC:
+      if (!ih->data->edit_hide_onfocus && ih->data->editing)
+        iupMatrixEditAbort(ih);
+      else
+        return IUP_DEFAULT; /* allow the dialog to process defaultesc */
+      break;
+
     case K_sDEL:
     case K_DEL:
-      {
-        IupSetAttribute(ih, "CLEARVALUE", "MARKED");
-        break;
-      }
+      IupSetAttribute(ih, "CLEARVALUE", "MARKED");
+      break;
+
     default:
+    {
       /* if a valid character is pressed enter edition mode */
       if (iup_isprint(c))
       {
@@ -178,7 +204,7 @@ int iupMatrixProcessKeyPress(Ihandle* ih, int c)
         {
           if (ih->data->datah == ih->data->texth)
           {
-            char value[2] = {0,0};
+            char value[2] = { 0, 0 };
             value[0] = (char)c;
             IupStoreAttribute(ih->data->datah, "VALUEMASKED", value);
             IupSetAttribute(ih->data->datah, "CARET", "2");
@@ -186,12 +212,14 @@ int iupMatrixProcessKeyPress(Ihandle* ih, int c)
           return IUP_IGNORE; /* do not redraw */
         }
       }
-      ret = IUP_DEFAULT; /* unprocessed keys */
-      break;
+
+      iupMatrixDrawUpdate(ih);
+      return IUP_DEFAULT;
+    }
   }
 
-  iupMatrixDrawUpdate(ih);  
-  return ret;
+  iupMatrixDrawUpdate(ih);
+  return IUP_IGNORE;  /* ignore processed keys */
 }
 
 void iupMatrixKeyResetHomeEndCount(Ihandle* ih)
@@ -226,8 +254,8 @@ int iupMatrixKeyPress_CB(Ihandle* ih, int c, int press)
     }
     else
     {
-      c = cb(ih, c, ih->data->lines.focus_cell, ih->data->columns.focus_cell, 0,
-             iupMatrixGetValue(ih, ih->data->lines.focus_cell, ih->data->columns.focus_cell));
+      char* value = iupMatrixGetValue(ih, ih->data->lines.focus_cell, ih->data->columns.focus_cell);
+      c = cb(ih, c, ih->data->lines.focus_cell, ih->data->columns.focus_cell, 0, value);
     }
 
     if (c == IUP_IGNORE || c == IUP_CLOSE || c == IUP_CONTINUE)

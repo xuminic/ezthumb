@@ -33,46 +33,46 @@ void iupValCropValue(Ihandle* ih)
 
 char* iupValGetShowTicksAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->show_ticks);
+  return iupStrReturnDouble(ih->data->show_ticks);
 }
 
 char* iupValGetValueAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->val);
+  return iupStrReturnDouble(ih->data->val);
 }
 
 char* iupValGetStepAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->step);
+  return iupStrReturnDouble(ih->data->step);
 }
 
 char* iupValGetPageStepAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->pagestep);
+  return iupStrReturnDouble(ih->data->pagestep);
 }
 
 static int iValSetMaxAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->vmax = atof(value);
-  iupValCropValue(ih);
+  if (iupStrToDouble(value, &(ih->data->vmax)))
+    iupValCropValue(ih);
   return 0; /* do not store value in hash table */
 }
 
 static char* iValGetMaxAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->vmax);
+  return iupStrReturnDouble(ih->data->vmax);
 }
 
 static int iValSetMinAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->vmin = atof(value);
-  iupValCropValue(ih);
+  if (iupStrToDouble(value, &(ih->data->vmin)))
+    iupValCropValue(ih);
   return 0; /* do not store value in hash table */
 }
 
 static char* iValGetMinAttrib(Ihandle* ih)
 {
-  return iupStrReturnFloat((float)ih->data->vmin);
+  return iupStrReturnDouble(ih->data->vmin);
 }
 
 static int iValSetOrientationAttrib(Ihandle* ih, const char *value)

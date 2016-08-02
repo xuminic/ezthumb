@@ -5,7 +5,7 @@ CP      = cp
 RM      = rm -f
 
 ifndef	CFLAGS
-CFLAGS	= -Wall -Wextra
+CFLAGS	= -Wall -Wextra -DDEBUG -DCFG_CDLL_SAFE
 endif
 CFLAGS	+= -I.. -I.
 
@@ -14,7 +14,7 @@ EXLIBS	= -lpthread
 endif
 
 SRCS	= main.c fixtoken.c memdump.c slog.c crc.c fontpath.c config.c \
-	  csc_cdll.c csc_cli.c smm.c coo_frmwk.c strings.c
+	  csc_cdll.c csc_cli.c smm.c strings.c
 
 TARGET	= csoup
 

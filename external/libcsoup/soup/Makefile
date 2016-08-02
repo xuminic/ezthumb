@@ -22,11 +22,14 @@ SRCS	:= csc_cdll.c		\
 	   csc_isdelim.c	\
 	   csc_iso639.c		\
 	   csc_memdump.c	\
+	   csc_strbival.c	\
 	   csc_strbody.c	\
 	   csc_strcmp_list.c	\
 	   csc_strcmp_param.c	\
 	   csc_strcpy_alloc.c	\
 	   csc_strfill.c	\
+	   csc_strinsert.c	\
+	   csc_strlcat.c	\
 	   csc_strlcpy.c	\
 	   csc_ziptoken.c
 

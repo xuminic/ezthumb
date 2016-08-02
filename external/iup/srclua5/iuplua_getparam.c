@@ -14,7 +14,6 @@
 
 #include "iuplua.h"
 #include "il.h"
-#include "il_controls.h"
 
 
 /* Used only by the Lua binding */
@@ -37,12 +36,11 @@ static int param_action(Ihandle* dialog, int param_index, void* user_data)
   {
     lua_State *L = gp->L;
     lua_rawgeti(L, LUA_REGISTRYINDEX, gp->func_ref);
-    iuplua_plugstate(L, dialog);
     iuplua_pushihandle(L, dialog);
     lua_pushinteger(L, param_index);
-    if (iuplua_call_raw(L, 2, 1) == 0)    /* 2 args, 1 return */
+    if (iuplua_call_raw(L, 2, 1) == LUA_OK)    /* 2 args, 1 return */
     {
-      ret = lua_tointeger(L,-1);
+      ret = (int)lua_tointeger(L, -1);
       lua_pop(L, 1);
     }
   }
@@ -55,8 +53,9 @@ static int GetParam(lua_State *L)
   const char* title = luaL_checkstring(L, 1);
   void* user_data = (void*)&gp;
   const char* format = luaL_checkstring(L, 3);
-  int param_count, param_extra, i, size, ret,
-      line_size = 0, lua_param_start = 4, max_str;
+  size_t size, max_str;
+  int param_count, param_extra, i, ret,
+      line_size = 0, lua_param_start = 4;
   const char* f = format;
   const char* s;
   void* param_data[50];
@@ -77,17 +76,14 @@ static int GetParam(lua_State *L)
 
     switch(t)
     {
+    case 'x':
     case 'u':
     case 't':
       f += line_size;
       i--; /* compensate next increment */
       continue; /* notice this will go to the next i */
-    case 'h':
-      param_data[i] = malloc(sizeof(Ihandle*));
-      *(Ihandle**)(param_data[i]) = iuplua_checkihandle(L, lua_param_start); lua_param_start++;
-      break;
     case 'b':
-/*  TO DO: add this code some day:
+      /*  TODO: add this code some day:
       if (lua_isboolean(L, lua_param_start))
       {
         param_data[i] = malloc(sizeof(int));
@@ -99,13 +95,23 @@ static int GetParam(lua_State *L)
     case 'o':
     case 'l':
       param_data[i] = malloc(sizeof(int));
-      *(int*)(param_data[i]) = luaL_checkint(L, lua_param_start); lua_param_start++;
+      *(int*)(param_data[i]) = (int)luaL_checkinteger(L, lua_param_start); lua_param_start++;
       break;
     case 'a':
     case 'r':
       param_data[i] = malloc(sizeof(float));
       *(float*)(param_data[i]) = (float)luaL_checknumber(L, lua_param_start); lua_param_start++;
       break;
+    case 'A':
+    case 'R':
+      param_data[i] = malloc(sizeof(double));
+      *(double*)(param_data[i]) = (double)luaL_checknumber(L, lua_param_start); lua_param_start++;
+      break;
+    case 'h':
+      param_data[i] = malloc(sizeof(Ihandle*));
+      *(Ihandle**)(param_data[i]) = iuplua_checkihandle(L, lua_param_start); lua_param_start++;
+      break;
+    case 'd':
     case 'f':
     case 's':
     case 'm':
@@ -116,8 +122,7 @@ static int GetParam(lua_State *L)
         max_str = 4096;
       else if (t == 'm')
         max_str = 10240;
-      s = luaL_checkstring(L, lua_param_start); lua_param_start++;
-      size = strlen(s);
+      s = luaL_checklstring(L, lua_param_start, &size); lua_param_start++;
       if (size < max_str)
         param_data[i] = malloc(max_str);
       else
@@ -153,10 +158,15 @@ static int GetParam(lua_State *L)
       case 'l':
         lua_pushinteger(L, *(int*)(param_data[i]));
         break;
+      case 'A':
+      case 'R':
+        lua_pushnumber(L, *(double*)(param_data[i]));
+        break;
       case 'a':
       case 'r':
         lua_pushnumber(L, *(float*)(param_data[i]));
         break;
+      case 'd':
       case 'f':
       case 'n':
       case 'c':
@@ -185,10 +195,18 @@ static int GetParam(lua_State *L)
 static int GetParamParam(lua_State *L)
 {
   Ihandle *dialog = iuplua_checkihandle(L, 1);
-  int param_index = luaL_checkint(L, 2);
+  int param_index = (int)luaL_checkinteger(L, 2);
   Ihandle* param = (Ihandle*)IupGetAttributeId(dialog, "PARAM", param_index);
-  iuplua_plugstate(L, param);
   iuplua_pushihandle(L, param);
+  return 1;
+}
+
+static int GetParamHandle(lua_State *L)
+{
+  Ihandle *param = iuplua_checkihandle(L, 1);
+  const char* name = luaL_checkstring(L, 2);
+  Ihandle* control = (Ihandle*)IupGetAttribute(param, name);
+  iuplua_pushihandle(L, control);
   return 1;
 }
 
@@ -196,4 +214,8 @@ void iupgetparamlua_open(lua_State * L)
 {
   iuplua_register(L, GetParam, "GetParam");
   iuplua_register(L, GetParamParam, "GetParamParam");
+  iuplua_register(L, GetParamHandle, "GetParamHandle");
+
+  iupparamlua_open(L);
+  iupparamboxlua_open(L);
 }

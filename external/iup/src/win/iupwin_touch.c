@@ -125,6 +125,18 @@ void iupwinTouchProcessInput(Ihandle* ih, int count, void* lp)
             if (cb(ih, ti->dwID, x, y, state)==IUP_CLOSE)
             {
               IupExitLoop();
+
+              if (mcb)
+              {
+                free(px);
+                free(py);
+                free(pid);
+                free(pstate);
+              }
+
+              winCloseTouchInputHandle(hTouchInput);
+              free(ti);
+
               return;
             }
           }

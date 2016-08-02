@@ -15,7 +15,7 @@ extern "C" {
 void iupdrvButtonAddBorders(int *x, int *y);  /* reuse button borders */
 
 void iupdrvToggleInitClass(Iclass* ic);
-void iupdrvToggleAddCheckBox(int *x, int *y);
+void iupdrvToggleAddCheckBox(int *x, int *y, const char* str);
 
 Ihandle *iupRadioFindToggleParent(Ihandle* ih_toggle);
 char* iupToggleGetPaddingAttrib(Ihandle* ih);
@@ -25,7 +25,7 @@ enum {IUP_TOGGLE_IMAGE, IUP_TOGGLE_TEXT};
 struct _IcontrolData 
 {
   int type,                         /* the 2 toggle possibilities */
-      radio,
+      is_radio,
       flat,
       horiz_padding, vert_padding;  /* toggle margin for images */
 };

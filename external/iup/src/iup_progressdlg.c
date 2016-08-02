@@ -32,7 +32,7 @@ typedef struct _IprogressDlgData
   int state,          /* flag indicating if it was interrupted */
       percent,         /* current percent value */
       count, total_count,
-      last_clock;      /* last time it was updated */
+      last_clock, last_percent;      /* last time it was updated */
 } IprogressDlgData;
 
 
@@ -48,7 +48,7 @@ static void iProgressDlgSetPercent(IprogressDlgData* progress_data, int percent)
 
   /* only set if a significant amount of time passed */
   cur_clock = (int)clock();
-  if (cur_clock > progress_data->last_clock + MIN_CLOCK)
+  if (cur_clock > progress_data->last_clock + MIN_CLOCK || progress_data->percent < progress_data->last_percent + 10)
   {
     /* avoid duplicate updates */
     if (percent != progress_data->percent)
@@ -56,6 +56,7 @@ static void iProgressDlgSetPercent(IprogressDlgData* progress_data, int percent)
       IupSetInt(progress_data->progress, "VALUE", percent);
       IupFlush();
       progress_data->last_clock = (int)clock();
+      progress_data->last_percent = percent;
     }
   }
 
@@ -158,6 +159,7 @@ static int iProgressDlgSetStateAttrib(Ihandle *ih, const char* value)
   {
     progress_data->state = 0;
     progress_data->percent = 0;
+    progress_data->last_percent = 0;
     progress_data->count = 0;
     IupSetAttribute(progress_data->progress, "VALUE", "0");
     iProgressDlgStopMarquee(progress_data);
@@ -240,8 +242,8 @@ static int iProgressDlgCreateMethod(Ihandle* ih, void** params)
   IupSetAttribute(marquee,"MARQUEE","Yes");
   IupSetAttribute(marquee,"VISIBLE","No");
 
-  cancel = IupButton(IupGetLanguageString("IUP_CANCEL"), NULL);
-  IupSetAttribute(cancel,"PADDING","5x3");
+  cancel = IupButton("_@IUP_CANCEL", NULL);
+  IupSetAttribute(cancel,"PADDING",IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(cancel, "ACTION", (Icallback) iProgressDlgCancel_CB);
   IupSetAttributeHandle(ih, "DEFAULTESC", cancel);
 
@@ -262,6 +264,7 @@ static int iProgressDlgCreateMethod(Ihandle* ih, void** params)
 
   progress_data->total_count = 1;
   progress_data->last_clock = clock();
+  progress_data->last_percent = 0;
 
   (void)params;
   return IUP_NOERROR;

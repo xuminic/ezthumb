@@ -50,7 +50,7 @@ static void iChildDetach(Ihandle* parent, Ihandle* child)
   Ihandle *c, 
           *c_prev = NULL;
 
-  /* Cleans the child entry inside the parent's child list */
+  /* Removes the child entry inside the parent's child list */
   for (c = parent->firstchild; c; c = c->brother)
   {
     if (c == child) /* Found the right child */
@@ -72,6 +72,7 @@ static void iChildDetach(Ihandle* parent, Ihandle* child)
 void IupDetach(Ihandle *child)
 {
   Ihandle *parent, *top_parent;
+  int pos;
 
   iupASSERT(iupObjectCheck(child));
   if (!iupObjectCheck(child))
@@ -86,14 +87,18 @@ void IupDetach(Ihandle *child)
   parent = child->parent;
   top_parent = iupChildTreeGetNativeParent(child);
 
-  iChildDetach(parent, child);
-  iupClassObjectChildRemoved(parent, child);
+  pos = IupGetChildPos(parent, child);
 
+  iChildDetach(parent, child);
+  iupClassObjectChildRemoved(parent, child, pos);
+
+  /* notify also internal parents up to the native parent 
+     TODO: this is weird, do we still need it? */
   while (parent && parent != top_parent)
   {
     parent = parent->parent;
     if (parent)
-      iupClassObjectChildRemoved(parent, child);
+      iupClassObjectChildRemoved(parent, child, pos);
   }
 }
 
@@ -123,7 +128,7 @@ static int iChildTreeCheckInside(Ihandle* parent, Ihandle* child)
 
   return iChildFindRec(parent, child);
 }
-#endif
+#endif  /* IUP_ASSERT */
 
 static int iChildFind(Ihandle* parent, Ihandle* child)
 {
@@ -333,6 +338,7 @@ int IupReparent(Ihandle* child, Ihandle* parent, Ihandle* ref_child)
 {
   Ihandle* top_parent = parent;
   Ihandle* old_parent;
+  int pos;
 
   iupASSERT(iupObjectCheck(parent));
   if (!iupObjectCheck(parent))
@@ -370,8 +376,11 @@ int IupReparent(Ihandle* child, Ihandle* parent, Ihandle* ref_child)
 
   /* detach from old parent */
   old_parent = child->parent;
+
+  pos = IupGetChildPos(old_parent, child);
+
   iChildDetach(old_parent, child);
-  iupClassObjectChildRemoved(old_parent, child);
+  iupClassObjectChildRemoved(old_parent, child, pos);
 
  
   /* attach to new parent */
@@ -463,14 +472,22 @@ int IupGetChildCount(Ihandle* ih)
 
 Ihandle* IupGetNextChild(Ihandle* ih, Ihandle* child)
 {
-  iupASSERT(iupObjectCheck(ih));
-  if (!iupObjectCheck(ih))
-    return NULL;
-
   if (!child)
+  {
+    iupASSERT(iupObjectCheck(ih));
+    if (!iupObjectCheck(ih))
+      return NULL;
+
     return ih->firstchild;
+  }
   else
+  {
+    iupASSERT(iupObjectCheck(child));
+    if (!iupObjectCheck(child))
+      return NULL;
+
     return child->brother;
+  }
 }
 
 Ihandle* IupGetBrother(Ihandle* ih)

@@ -48,12 +48,22 @@ static int iRadioFindToggleChild(Ihandle* ih, Ihandle* ih_toggle)
   return 0;
 }
 
+static int iRadioChildIsToggle(Ihandle* child)
+{
+  if (IupClassMatch(child, "toggle") || 
+      IupClassMatch(child, "gltoggle") ||
+      (IupClassMatch(child, "flatbutton") && iupAttribGetBoolean(child, "TOGGLE")))
+    return 1;
+  else
+    return 0;
+}
+
 static Ihandle* iRadioGetToggleChildOn(Ihandle* ih)
 {
   Ihandle* child;
 
-  if (IupClassMatch(ih, "toggle") &&   /* found child that is a toggle and it is ON */
-      IupGetInt(ih, "VALUE"))
+  /* found child that is a toggle and it is ON */
+  if (iRadioChildIsToggle(ih) && IupGetInt(ih, "VALUE"))
     return ih;
 
   for (child = ih->firstchild; child; child = child->brother)
@@ -75,7 +85,7 @@ static int iRadioSetValueHandleAttrib(Ihandle* ih, const char* value)
   if (!iupObjectCheck(ih_toggle))
     return 0;
 
-  if (!IupClassMatch(ih_toggle, "toggle"))
+  if (!iRadioChildIsToggle(ih_toggle))
     return 0;
 
   if (iRadioFindToggleChild(ih->firstchild, ih_toggle))
@@ -167,7 +177,7 @@ Iclass* iupRadioNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name = "radio";
-  ic->format = "h"; /* one ihandle */
+  ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDMANY+1;  /* one child */
   ic->is_interactive = 0;
@@ -185,12 +195,12 @@ Iclass* iupRadioNewClass(void)
 
   /* Base Container */
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetRasterSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetCurrentSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   /* Radio only */
   iupClassRegisterAttribute(ic, "VALUE", iRadioGetValueAttrib, iRadioSetValueAttrib, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "VALUE_HANDLE", iRadioGetValueHandleAttrib, iRadioSetValueHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT|IUPAF_NO_STRING);
+  iupClassRegisterAttribute(ic, "VALUE_HANDLE", iRadioGetValueHandleAttrib, iRadioSetValueHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
 
   return ic;
 }

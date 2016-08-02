@@ -59,9 +59,10 @@
 #include <string.h>
 #include <stdarg.h>
 
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
 #include "libcsoup.h"
-#include "csoup_internal.h"
+
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
+#include "libcsoup_debug.h"
 
 #define	CFGF_BLOCK_WID		36
 #define CFGF_BLOCK_MAGIC	"BINARY:"
@@ -707,7 +708,8 @@ KEYCB *csc_cfg_kcb_alloc(int psize)
 
 int csc_cfg_kcb_free(KEYCB *kcb)
 {
-	return smm_free(kcb->self);
+	smm_free(kcb->self);
+	return 0;
 }
 
 

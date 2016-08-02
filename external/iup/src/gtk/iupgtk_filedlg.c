@@ -63,49 +63,70 @@ static char* gtkFileDlgGetNextStr(char* str)
 
 static void gtkFileDlgGetMultipleFiles(Ihandle* ih, GSList* list)
 {
-  int len, cur_len, dir_len = -1;
-  char *filename, *all_names;
-  Iarray* names_array = iupArrayCreate(1024, 1);  /* just set an initial size, but count is 0 */
+  char *filename = iupgtkStrConvertFromFilename((char*)list->data);
 
-  while (list)
+  char* dir = iupStrFileGetPath(filename);
+  int dir_len = (int)strlen(dir);
+  iupAttribSetStr(ih, "DIRECTORY", dir);
+
+  /* check if just one file is selected */
+  if (!list->next)
   {
-    filename = (char*)list->data;
-    len = strlen(filename);
+    iupAttribSetStrId(ih, "MULTIVALUE", 0, dir);
+    iupAttribSetStrId(ih, "MULTIVALUE", 1, filename + dir_len);
 
-    if (dir_len == -1)
+    iupAttribSetStr(ih, "VALUE", filename);  /* here value is not separated by '|' */
+
+    iupAttribSetInt(ih, "MULTIVALUECOUNT", 2);
+
+    g_free(list->data);  /* must release also the list item */
+  }
+  else
+  {
+    Iarray* names_array = iupArrayCreate(1024, 1);  /* just set an initial size, but count is 0 */
+    char *all_names;
+    int cur_len, count = 0;
+
+    int len = dir_len;
+    if (dir[dir_len - 1] == '/' || dir[dir_len - 1] == '\\') len--;  /* remove last '/' */
+
+    all_names = iupArrayAdd(names_array, len + 1);
+    memcpy(all_names, dir, len);  /* does NOT includes last separator */
+    all_names[len] = '|';
+
+    iupAttribSetStrId(ih, "MULTIVALUE", count, dir);  /* here count=0 always */  /* same as directory, includes last separator */
+    count++;
+
+    while (list)
     {
-      dir_len = len;
-
-      while (dir_len && (filename[dir_len] != '/' && filename[dir_len] != '\\'))
-        dir_len--;
+      filename = iupgtkStrConvertFromFilename((char*)list->data);
+      len = (int)strlen(filename) - dir_len;
 
       cur_len = iupArrayCount(names_array);
-      all_names = iupArrayAdd(names_array, dir_len+1);
-      memcpy(all_names+cur_len, filename, dir_len);
-      all_names[cur_len+dir_len] = '0';
-      iupAttribSetStr(ih, "DIRECTORY", all_names);
-      all_names[cur_len+dir_len] = '|';
 
-      dir_len++; /* skip separator */
+      all_names = iupArrayAdd(names_array, len + 1);
+      memcpy(all_names + cur_len, filename + dir_len, len);
+      all_names[cur_len + len] = '|';
+
+      iupAttribSetStrId(ih, "MULTIVALUE", count, filename + dir_len);
+      count++;
+
+      g_free(list->data);  /* must release also the list item */
+      list = list->next;
     }
-    len -= dir_len; /* remove directory */
+
+    iupAttribSetInt(ih, "MULTIVALUECOUNT", count);
 
     cur_len = iupArrayCount(names_array);
-    all_names = iupArrayAdd(names_array, len+1);
-    memcpy(all_names+cur_len, filename+dir_len, len);
-    all_names[cur_len+len] = '|';
+    all_names = iupArrayInc(names_array);
+    all_names[cur_len + 1] = 0;
 
-    g_free(filename);
-    list = list->next;
+    iupAttribSetStr(ih, "VALUE", all_names);
+
+    iupArrayDestroy(names_array);
   }
 
-  cur_len = iupArrayCount(names_array);
-  all_names = iupArrayInc(names_array);
-  all_names[cur_len+1] = 0;
-
-  iupAttribSetStr(ih, "VALUE", iupgtkStrConvertFromFilename(all_names));
-
-  iupArrayDestroy(names_array);
+  free(dir);
 }
 
 #ifdef GTK_MAC
@@ -139,6 +160,8 @@ static void gtkFileDlgPreviewRealize(GtkWidget *widget, Ihandle *ih)
   iupAttribSet(ih, "PREVIEWDC", iupgtkGetNativeGraphicsContext(widget));
   iupAttribSet(ih, "WID", (char*)widget);
 
+  iupAttribSet(ih, "DRAWABLE", (char*)iupgtkGetWindow(widget));
+
 #ifndef GTK_MAC
   #ifdef WIN32                                 
     iupAttribSet(ih, "HWND", (char*)GDK_WINDOW_HWND(iupgtkGetWindow(widget)));
@@ -169,24 +192,30 @@ static gboolean gtkFileDlgPreviewConfigureEvent(GtkWidget *widget, GdkEventConfi
 }
 
 #if GTK_CHECK_VERSION(3, 0, 0)
-static gboolean gtkFileDlgPreviewDraw(GtkWidget *widget, cairo_t *evt, Ihandle *ih)
+static gboolean gtkFileDlgPreviewDraw(GtkWidget *widget, cairo_t *cr, Ihandle *ih)
 #else
 static gboolean gtkFileDlgPreviewExposeEvent(GtkWidget *widget, GdkEventExpose *evt, Ihandle *ih)
 #endif
 {
   GtkFileChooser *file_chooser = (GtkFileChooser*)iupAttribGet(ih, "_IUPDLG_FILE_CHOOSER");
   char *filename = gtk_file_chooser_get_preview_filename(file_chooser);
+  IFnss cb = (IFnss)IupGetCallback(ih, "FILE_CB");
+
+#if GTK_CHECK_VERSION(3, 0, 0)
+  iupAttribSet(ih, "CAIRO_CR", (char*)cr);
+#else
+  (void)evt;
+#endif
 
   /* callback here always exists */
-  IFnss cb = (IFnss)IupGetCallback(ih, "FILE_CB");
   if (gtkIsFile(filename))
     cb(ih, iupgtkStrConvertFromFilename(filename), "PAINT");
   else
     cb(ih, NULL, "PAINT");
 
-  g_free (filename);
+  iupAttribSet(ih, "CAIRO_CR", NULL);
+  g_free(filename);
  
-  (void)evt;
   (void)widget;
   return TRUE;  /* stop other handlers */
 }
@@ -207,12 +236,34 @@ static void gtkFileDlgUpdatePreview(GtkFileChooser *file_chooser, Ihandle* ih)
   gtk_file_chooser_set_preview_widget_active(file_chooser, TRUE);
 }
   
+static char* gtkFileCheckExt(Ihandle* ih, const char* filename)
+{
+  char* ext = iupAttribGet(ih, "EXTDEFAULT");
+  if (ext)
+  {
+    int len = (int)strlen(filename);
+    int ext_len = (int)strlen(ext);
+    if (filename[len - ext_len - 1] != '.')
+    {
+      char* new_filename = g_malloc(len + ext_len + 1 + 1);
+      memcpy(new_filename, filename, len);
+      new_filename[len] = '.';
+      memcpy(new_filename + len + 1, ext, ext_len);
+      new_filename[len + ext_len + 1] = 0;
+      return new_filename;
+    }
+  }
+
+  return (char*)filename;
+}
+
 static int gtkFileDlgPopup(Ihandle* ih, int x, int y)
 {
   InativeHandle* parent = iupDialogGetNativeParent(ih);
   GtkWidget* dialog;
   GtkWidget* preview_canvas = NULL;
   GtkFileChooserAction action;
+  const char *ok, *cancel, *open, *save, *help;
   IFnss file_cb;
   char* value;
   int response, filter_count = 0;
@@ -231,36 +282,58 @@ static int gtkFileDlgPopup(Ihandle* ih, int x, int y)
   value = iupAttribGet(ih, "TITLE");
   if (!value)
   {
-    GtkStockItem item;
-
+#if GTK_CHECK_VERSION(3, 10, 0)
+    if (action == GTK_FILE_CHOOSER_ACTION_SAVE)
+      value = "Save _As";
+    else
+      value = "_Open";
+#else
     if (action == GTK_FILE_CHOOSER_ACTION_SAVE)
       value = GTK_STOCK_SAVE_AS;
     else
       value = GTK_STOCK_OPEN;
 
-    gtk_stock_lookup(value, &item);
-    value = item.label;
+    {
+      GtkStockItem item;
+      gtk_stock_lookup(value, &item);
+      value = item.label;
+    }
+#endif
 
     iupAttribSetStr(ih, "TITLE", iupgtkStrConvertFromSystem(value));
     value = iupAttribGet(ih, "TITLE");
     iupStrRemoveChar(value, '_');
   }
 
+#if GTK_CHECK_VERSION(3, 10, 0)
+  ok = "_OK";
+  cancel = "_Cancel";
+  save = "_Save";
+  open = "_Open";
+  help = "_Help";
+#else
+  ok = GTK_STOCK_OK;
+  cancel = GTK_STOCK_CANCEL;
+  save = GTK_STOCK_SAVE;
+  open = GTK_STOCK_OPEN;
+  help = GTK_STOCK_HELP;
+#endif
+
   dialog = gtk_file_chooser_dialog_new(iupgtkStrConvertToSystem(value), (GtkWindow*)parent, action, 
-                                       GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, 
+                                       cancel, GTK_RESPONSE_CANCEL, 
                                        NULL);
   if (!dialog)
     return IUP_ERROR;
 
   if (action == GTK_FILE_CHOOSER_ACTION_SAVE)
-    gtk_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_SAVE, GTK_RESPONSE_OK);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), save, GTK_RESPONSE_OK);
   else if (action == GTK_FILE_CHOOSER_ACTION_OPEN)
-    gtk_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_OPEN, GTK_RESPONSE_OK);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), open, GTK_RESPONSE_OK);
   else
-    gtk_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_OK, GTK_RESPONSE_OK);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), ok, GTK_RESPONSE_OK);
 
   if (IupGetCallback(ih, "HELP_CB"))
-    gtk_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_HELP, GTK_RESPONSE_HELP);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), help, GTK_RESPONSE_HELP);
 
 #if GTK_CHECK_VERSION(2, 6, 0)
   if (iupAttribGetBoolean(ih, "SHOWHIDDEN"))
@@ -277,14 +350,14 @@ static int gtkFileDlgPopup(Ihandle* ih, int x, int y)
 
   /* just check for the path inside FILE */
   value = iupAttribGet(ih, "FILE");
-  if (value && (value[0] == '/' || value[1] == ':'))
+  if (value && value[0] != 0 && (value[0] == '/' || value[1] == ':'))
   {
     char* dir = iupStrFileGetPath(value);
-    int len = strlen(dir);
+    int len = (int)strlen(dir);
     iupAttribSetStr(ih, "DIRECTORY", dir);
     free(dir);
 
-    iupAttribSetStr(ih, "FILE", value+len);  /* remove DIRECTORY from FILE */
+    iupAttribSetStr(ih, "FILE", value+len);  /* remove directory from value */
   }
 
   value = iupAttribGet(ih, "DIRECTORY");
@@ -526,21 +599,7 @@ static int gtkFileDlgPopup(Ihandle* ih, int x, int y)
     {
       GSList* file_list = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(dialog));
 
-      if (file_list->next) /* if more than one file */
-        gtkFileDlgGetMultipleFiles(ih, file_list);
-      else
-      {
-        char* filename = (char*)file_list->data;
-        iupAttribSetStr(ih, "VALUE", iupgtkStrConvertFromFilename(filename));
-        g_free(filename);
-
-        /* store the DIRECTORY */
-        {
-          char* dir = iupStrFileGetPath(iupAttribGet(ih, "VALUE"));
-          iupAttribSetStr(ih, "DIRECTORY", dir);
-          free(dir);
-        }
-      }
+      gtkFileDlgGetMultipleFiles(ih, file_list);
 
       g_slist_free(file_list);
       file_exist = 1;
@@ -549,11 +608,12 @@ static int gtkFileDlgPopup(Ihandle* ih, int x, int y)
     else
     {
       char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+      filename = gtkFileCheckExt(ih, filename);
       iupAttribSetStr(ih, "VALUE", iupgtkStrConvertFromFilename(filename));
       file_exist = gtkIsFile(filename);
       dir_exist = gtkIsDirectory(filename);
 
-      /* store the DIRECTORY */
+      /* store the directory */
       {
         char* dir = iupStrFileGetPath(filename);
         iupAttribSetStr(ih, "DIRECTORY", dir);
@@ -610,9 +670,11 @@ void iupdrvFileDlgInitClass(Iclass* ic)
 {
   ic->DlgPopup = gtkFileDlgPopup;
 
+  iupClassRegisterAttribute(ic, "EXTDEFAULT", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MULTIPLEFILES", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+
   /* IupFileDialog Windows and GTK Only */
   iupClassRegisterAttribute(ic, "EXTFILTER", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTERINFO", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTERUSED", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "MULTIPLEFILES", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

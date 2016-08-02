@@ -12,10 +12,13 @@
 #include <cd.h>
 #include <cdiup.h>
 #include <cdnative.h>
+#include <cddbuf.h>
+#include <cdirgb.h>
+
 
 /* IMPORTANT: this module does NOT depends on the internal cdCanvas structure.
    It depends ONLY on the internal cdContext structure. 
-   So no need to rebuild IUPCD if cdCanvas was not changed. */
+   So no need to rebuild IUPCD when cdCanvas is changed. */
 #include <cd_private.h>
 
 
@@ -72,7 +75,7 @@ static cdContext cdIupContext;
 
 cdContext* cdContextIup(void)
 {
-  /* call cdContextNativeWindow every time, because of ContextPlus */
+  /* call this every time, because of ContextPlus */
   cdContext* ctx = cdContextNativeWindow();
 
   cdcreatecanvasNATIVE = ctx->cxCreateCanvas;
@@ -81,4 +84,86 @@ cdContext* cdContextIup(void)
   cdIupContext.cxCreateCanvas = cdcreatecanvasIUP;
 
   return &cdIupContext;
+}
+
+
+/****************************************************************************/
+/****************************************************************************/
+
+
+static void(*cdcreatecanvasDBUFFER)(cdCanvas* canvas, void* data) = NULL;
+
+static void cdcreatecanvasIUP_DBUFFER(cdCanvas* canvas, Ihandle *ih_canvas)
+{
+  cdCanvas* canvas_dbuffer = cdCreateCanvas(CD_IUP, ih_canvas);
+  if (!canvas_dbuffer)
+    return;
+
+  cdcreatecanvasDBUFFER(canvas, canvas_dbuffer);
+
+  IupSetAttribute(ih_canvas, "_CD_CANVAS_DBUFFER", (char*)canvas);
+
+  {
+    int utf8mode = IupGetInt(NULL, "UTF8MODE");
+    if (utf8mode)
+      cdCanvasSetAttribute(canvas, "UTF8MODE", "1");
+  }
+
+  cdCanvasSetAttribute(canvas, "KILLDBUFFER", "1");  /* automatic kill the canvas_dbuffer */
+}
+
+static cdContext cdIupContextDBuffer;
+
+cdContext* cdContextIupDBuffer(void)
+{
+  /* call this every time, because of ContextPlus */
+  cdContext* ctx = cdContextDBuffer();
+
+  cdcreatecanvasDBUFFER = ctx->cxCreateCanvas;
+
+  cdIupContextDBuffer = *ctx;
+  cdIupContextDBuffer.cxCreateCanvas = cdcreatecanvasIUP_DBUFFER;
+
+  return &cdIupContextDBuffer;
+}
+
+
+/****************************************************************************/
+/****************************************************************************/
+
+
+static void(*cdcreatecanvasDBUFFERRGB)(cdCanvas* canvas, void* data) = NULL;
+
+static void cdcreatecanvasIUP_DBUFFERRGB(cdCanvas* canvas, Ihandle *ih_canvas)
+{
+  cdCanvas* canvas_dbuffer = cdCreateCanvas(CD_IUP, ih_canvas);
+  if (!canvas_dbuffer)
+    return;
+
+  cdcreatecanvasDBUFFERRGB(canvas, canvas_dbuffer);
+
+  IupSetAttribute(ih_canvas, "_CD_CANVAS_DBUFFER", (char*)canvas);
+
+  {
+    int utf8mode = IupGetInt(NULL, "UTF8MODE");
+    if (utf8mode)
+      cdCanvasSetAttribute(canvas, "UTF8MODE", "1");
+  }
+
+  cdCanvasSetAttribute(canvas, "KILLDBUFFER", "1");  /* automatic kill the canvas_dbuffer */
+}
+
+static cdContext cdIupContextDBufferRGB;
+
+cdContext* cdContextIupDBufferRGB(void)
+{
+  /* call this every time, because of ContextPlus */
+  cdContext* ctx = cdContextDBufferRGB();
+
+  cdcreatecanvasDBUFFERRGB = ctx->cxCreateCanvas;
+
+  cdIupContextDBufferRGB = *ctx;
+  cdIupContextDBufferRGB.cxCreateCanvas = cdcreatecanvasIUP_DBUFFERRGB;
+
+  return &cdIupContextDBufferRGB;
 }

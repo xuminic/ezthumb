@@ -205,10 +205,10 @@ void iupTreeUpdateImages(Ihandle *ih)
 void iupTreeSelectLastCollapsedBranch(Ihandle* ih, int *last_id)
 {
   /* if last selected item is a branch, then select its children */
-  if (iupStrEqual(IupTreeGetAttribute(ih, "KIND", *last_id), "BRANCH") && 
-      iupStrEqual(IupTreeGetAttribute(ih, "STATE", *last_id), "COLLAPSED"))
+  if (iupStrEqual(IupGetAttributeId(ih, "KIND", *last_id), "BRANCH") && 
+      iupStrEqual(IupGetAttributeId(ih, "STATE", *last_id), "COLLAPSED"))
   {
-    int childcount = IupTreeGetInt(ih, "CHILDCOUNT", *last_id);
+    int childcount = IupGetIntId(ih, "CHILDCOUNT", *last_id);
     if (childcount > 0)
     {
       int start = *last_id + 1;
@@ -247,7 +247,7 @@ int iupTreeFindNodeId(Ihandle* ih, InodeHandle* node_handle)
     node_cache++;
 
   if (node_cache->node_handle != NULL)
-    return node_cache - ih->data->node_cache;
+    return (int)(node_cache - ih->data->node_cache);
   else
     return -1;
 }
@@ -268,7 +268,7 @@ static int iTreeFindUserDataId(Ihandle* ih, void* userdata)
     node_cache++;
 
   if (node_cache->node_handle != NULL)
-    return node_cache - ih->data->node_cache;
+    return (int)(node_cache - ih->data->node_cache);
   else
     return -1;
 }
@@ -769,6 +769,50 @@ static int iTreeSetDragDropTreeAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
+static int iTreeSetTitleFontStyleAttrib(Ihandle* ih, int id, const char* value)
+{
+  int size = 0;
+  int is_bold = 0,
+    is_italic = 0,
+    is_underline = 0,
+    is_strikeout = 0;
+  char typeface[1024];
+  char* font;
+
+  if (!value)
+    return 0;
+
+  font = IupGetAttributeId(ih, "TITLEFONT", id);
+  if (!font)
+    font = IupGetAttribute(ih, "FONT");
+
+  if (!iupGetFontInfo(font, typeface, &size, &is_bold, &is_italic, &is_underline, &is_strikeout))
+    return 0;
+
+  IupSetfAttributeId(ih, "TITLEFONT", id, "%s, %s %d", typeface, value, size);
+
+  return 0;
+}
+
+static char* iTreeGetTitleFontStyleAttrib(Ihandle* ih, int id)
+{
+  int size = 0;
+  int is_bold = 0,
+    is_italic = 0,
+    is_underline = 0,
+    is_strikeout = 0;
+  char typeface[1024];
+
+  char* font = IupGetAttributeId(ih, "TITLEFONT", id);
+  if (!font)
+    font = IupGetAttribute(ih, "FONT");
+
+  if (!iupGetFontInfo(font, typeface, &size, &is_bold, &is_italic, &is_underline, &is_strikeout))
+    return NULL;
+
+  return iupStrReturnStrf("%s%s%s%s", is_bold ? "Bold " : "", is_italic ? "Italic " : "", is_underline ? "Underline " : "", is_strikeout ? "Strikeout " : "");
+}
+
 
 /*************************************************************************/
 
@@ -871,7 +915,8 @@ Iclass* iupTreeNewClass(void)
   /* IupTree Attributes - NODES */
   iupClassRegisterAttributeId(ic, "TOTALCHILDCOUNT", iTreeGetTotalChildCountAttrib,   NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "USERDATA", iTreeGetUserDataAttrib, iTreeSetUserDataAttrib, IUPAF_NO_STRING|IUPAF_NO_INHERIT);
-  
+  iupClassRegisterAttributeId(ic, "TITLEFONTSTYLE", iTreeGetTitleFontStyleAttrib, iTreeSetTitleFontStyleAttrib, IUPAF_NO_INHERIT);
+
   /* Default node images */
   if (!IupGetHandle("IMGLEAF") || !IupGetHandle("IMGBLANK") || !IupGetHandle("IMGPAPER"))
     iTreeInitializeImages();
@@ -881,52 +926,9 @@ Iclass* iupTreeNewClass(void)
   return ic;
 }
 
-/********************************************************************************************/
-
-void IupTreeSetAttribute(Ihandle* ih, const char* a, int id, const char* v)
-{
-  IupSetAttributeId(ih, a, id, v);
-}
-
-void IupTreeStoreAttribute(Ihandle* ih, const char* a, int id, const char* v)
-{
-  IupStoreAttributeId(ih, a, id, v);
-}
-
-char* IupTreeGetAttribute(Ihandle* ih, const char* a, int id)
-{
-  return IupGetAttributeId(ih, a, id);
-}
-
-int IupTreeGetInt(Ihandle* ih, const char* a, int id)
-{
-  return IupGetIntId(ih, a, id);
-}
-
-float IupTreeGetFloat(Ihandle* ih, const char* a, int id)
-{
-  return IupGetFloatId(ih, a, id);
-}
-
-void IupTreeSetfAttribute(Ihandle* ih, const char* a, int id, const char* f, ...)
-{
-  int size;
-  char* v = iupStrGetLargeMem(&size);
-  va_list arglist;
-  va_start(arglist, f);
-  vsnprintf(v, size, f, arglist);
-  va_end(arglist);
-  IupStoreAttributeId(ih, a, id, v);
-}
-
-void IupTreeSetAttributeHandle(Ihandle* ih, const char* a, int id, Ihandle* ih_named)
-{
-  char attr[50];
-  sprintf(attr, "%s%d", a, id);
-  IupSetAttributeHandle(ih, attr, ih_named);
-}
 
 /************************************************************************************/
+
 
 int IupTreeSetUserId(Ihandle* ih, int id, void* userdata)
 {
@@ -962,4 +964,11 @@ void* IupTreeGetUserId(Ihandle* ih, int id)
     return ih->data->node_cache[id].userdata;
 
   return NULL;
+}
+
+void IupTreeSetAttributeHandle(Ihandle* ih, const char* a, int id, Ihandle* ih_named)
+{
+  char attr[50];
+  sprintf(attr, "%s%d", a, id);
+  IupSetAttributeHandle(ih, attr, ih_named);
 }

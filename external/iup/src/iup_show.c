@@ -59,16 +59,21 @@ int IupMap(Ihandle* ih)
   if (!iupObjectCheck(ih))
     return IUP_INVALID;
 
-  /* calculate position and size for all children */
-  if (ih->iclass->nativetype == IUP_TYPEDIALOG)
-    iupLayoutCompute(ih);
-
-  /* already mapped */
+  /* already mapped, only update the dialog layout */
   if (ih->handle)
   {
-    if (ih->iclass->nativetype == IUP_TYPEDIALOG)
-      iupLayoutUpdate(ih);
+    /* if the dialog is visible, then it will be reflected in the user interface */
 
+    /* the result is equivalent of calling IupRefresh(ih) when it is a dialog */
+    if (ih->iclass->nativetype == IUP_TYPEDIALOG)
+    {
+      /* calculate position and size for all children */
+      iupLayoutCompute(ih);
+      /* moves and resizes the elements to reflect the layout computation */
+      iupLayoutUpdate(ih);
+    }
+
+    /* does nothing if not a dialog and already mapped */
     return IUP_NOERROR;
   }
 
@@ -83,11 +88,11 @@ int IupMap(Ihandle* ih)
     return IUP_ERROR;
   }
 
-  /* update FONT, must be before several others, so we do it here */
+  /* update FONT, must be before several other attributes, so we do it here */
   if (ih->iclass->nativetype != IUP_TYPEVOID &&
       ih->iclass->nativetype != IUP_TYPEIMAGE &&
       ih->iclass->nativetype != IUP_TYPEMENU)
-    iupUpdateStandardFontAttrib(ih);
+    iupUpdateFontAttrib(ih);
 
   /* ensure attributes default values, at this time only the ones that need to be set after map */
   iupClassObjectEnsureDefaultAttributes(ih);
@@ -114,10 +119,14 @@ int IupMap(Ihandle* ih)
     iupAttribUpdateChildren(ih);
   }
 
-  /* moves and resizes the elements to reflect the layout computation */
-  /* if the dialog is visible will be reflected in the user interface */
+  /* the result is equivalent of calling IupRefresh(ih) when it is a dialog */
   if (ih->iclass->nativetype == IUP_TYPEDIALOG)
+  {
+    /* calculate position and size for all children */
+    iupLayoutCompute(ih);
+    /* moves and resizes the elements to reflect the layout computation */
     iupLayoutUpdate(ih);
+  }
 
   /* only call MAP_CB for controls that have a native representation */
   if (ih->iclass->nativetype != IUP_TYPEVOID)

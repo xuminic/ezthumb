@@ -101,24 +101,18 @@ static void iSboxShakeControls(Ihandle* ih)
   {
     if (new_w != ih->data->w)
     {
-      if (new_w > ih->naturalwidth)
-        iSboxSaveDimension(ih, new_w, ih->data->h);
-      else 
-        iSboxSaveDimension(ih, new_w, ih->naturalwidth);
+      iSboxSaveDimension(ih, new_w, ih->data->h);
+      IupRefresh(ih);  /* may affect all the elements in the dialog */
     }
   }
   else if (ih->data->direction == ISBOX_SOUTH || ih->data->direction == ISBOX_NORTH)
   {
-    if(new_h != ih->data->h)
+    if (new_h != ih->data->h)
     {
-      if (new_h > ih->naturalheight)
-        iSboxSaveDimension(ih, ih->data->w, new_h);
-      else 
-        iSboxSaveDimension(ih, ih->naturalheight, new_h);
+      iSboxSaveDimension(ih, ih->data->w, new_h);
+      IupRefresh(ih);  /* may affect all the elements in the dialog */
     }
   }
-
-  IupRefresh(ih);  /* may affect all the elements in the dialog */
 }
 
 
@@ -185,6 +179,15 @@ static int iSboxFocus_CB(Ihandle* bar, int focus)
 |* Attributes                                                                *|
 \*****************************************************************************/
 
+
+static char* iSboxGetClientSizeAttrib(Ihandle* ih)
+{
+  int width = ih->currentwidth - iSboxGetXborder(ih);
+  int height = ih->currentheight - iSboxGetYborder(ih);
+  if (width < 0) width = 0;
+  if (height < 0) height = 0;
+  return iupStrReturnIntInt(width, height, 'x');
+}
 
 static int iSboxSetColorAttrib(Ihandle* ih, const char* value)
 {
@@ -365,7 +368,7 @@ Iclass* iupSboxNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name   = "sbox";
-  ic->format = "h";   /* one ihandle */
+  ic->format = "h";   /* one Ihandle* */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype  = IUP_CHILDMANY+2; /* canvas+child */
   ic->is_interactive = 0;
@@ -383,8 +386,8 @@ Iclass* iupSboxNewClass(void)
   iupBaseRegisterCommonAttrib(ic);
 
   /* Base Container */
-  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetRasterSizeAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_READONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_READONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTSIZE", iSboxGetClientSizeAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_READONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_READONLY | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   /* IupSbox only */

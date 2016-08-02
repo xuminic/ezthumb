@@ -1,7 +1,0 @@
-$(OBJDIR)/iuplua_pplot.o: iuplua_pplot.c /cygdrive/d/tecgraf/lua/include/lua.h \
- /cygdrive/d/tecgraf/lua/include/lauxlib.h \
- /cygdrive/d/tecgraf/lua/include/lua.h ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../include/iuplua.h \
- ../include/iup_pplot.h /cygdrive/d/tecgraf/cd/include/cd.h \
- /cygdrive/d/tecgraf/cd/include/cd_old.h \
- /cygdrive/d/tecgraf/cd/include/cdlua.h il.h loh/pplot.loh

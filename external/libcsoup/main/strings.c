@@ -22,9 +22,9 @@
 #include <string.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
-int strings_main(void *rtime, int argc, char **argv)
+int strings_strbody(void)
 {
 	struct	dicts	{
 		char	*dest;
@@ -37,9 +37,6 @@ int strings_main(void *rtime, int argc, char **argv)
 	};
 	char	*p;
 	int	i, rc;
-
-	/* stop the compiler complaining */
-	(void) rtime; (void) argc; (void) argv;
 
 	CDB_SHOW(("csc_strcmp_param() testing:\n"));
 	for (i = 0; i < (int)(sizeof(testcase)/sizeof(struct dicts)); i++) {
@@ -58,8 +55,101 @@ int strings_main(void *rtime, int argc, char **argv)
 			CDB_SHOW(("Picking from {%s} ... %s (%d)\n", testcase[i].sour, p, rc));
 		}
 	}				
+
 	return 0;
 }
+
+static int strings_strbival(void)
+{
+	char	*testcase[] = {
+		"1024x768x24",
+		"  1024  768  24  ",
+		"0x100x0x200+0xff",
+		"0123",
+		NULL
+	};
+	int	i, v1, v2;
+
+	CDB_SHOW(("\ncsc_strbival_int() testing: xX+*\n"));
+	for (i = 0; testcase[i]; i++) {
+		v1 = csc_strbival_int(testcase[i], "xX+*", &v2);
+		CDB_SHOW(("[%s]:  %d %d\n", testcase[i], v1, v2));
+	}
+	CDB_SHOW(("csc_strbival_int() testing:\n"));
+	for (i = 0; testcase[i]; i++) {
+		v1 = csc_strbival_int(testcase[i], NULL, &v2);
+		CDB_SHOW(("[%s]:  %d %d\n", testcase[i], v1, v2));
+	}
+
+	return 0;
+}
+
+static int strings_strinsert(void)
+{
+#define	STRINSERTSMPL	"Alpha AXP of DEC"
+	char	buf[24];
+	int	rc;
+
+	CDB_SHOW(("\nFrom [Alpha AXP of DEC] to [Alpha RISC of DEC]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), &buf[6], 3, "RISC");
+	CDB_SHOW(("%s\n", buf));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to [RISCAlpha AXP of DEC]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), NULL, 0, "RISC");
+	CDB_SHOW(("%s\n", buf));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha AXP of DECCISC]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), buf+sizeof(buf), 0, "CISC");
+	CDB_SHOW(("%s\n", buf));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha RISCCISAXP of DEC]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), &buf[6], 0, "RISCCIS");
+	CDB_SHOW(("%s\n", buf));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to buffer overflow: "));
+	strcpy(buf, STRINSERTSMPL);
+	rc = csc_strinsert(buf, sizeof(buf), &buf[6], 0, "RISCCISC");
+	CDB_SHOW(("%s [%d]\n", buf, rc));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha AXP _AXP of DEC]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), buf+10, -4, "_");
+	CDB_SHOW(("%s\n", buf));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to out of boundry: "));
+	strcpy(buf, STRINSERTSMPL);
+	rc = csc_strinsert(buf, sizeof(buf), &buf[3], -4, "_");
+	CDB_SHOW(("%s [%d]\n", buf, rc));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha is gone]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), buf+6, 100, "is gone");
+	CDB_SHOW(("%s\n", buf));
+
+	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha of DEC]: "));
+	strcpy(buf, STRINSERTSMPL);
+	csc_strinsert(buf, sizeof(buf), buf+6, 4, NULL);
+	CDB_SHOW(("%s\n", buf));
+
+	return 0;
+}
+
+
+int strings_main(void *rtime, int argc, char **argv)
+{
+	/* stop the compiler complaining */
+	(void) rtime; (void) argc; (void) argv;
+
+	strings_strbody();
+	strings_strbival();
+	strings_strinsert();
+	return 0;
+}
+
 
 struct	clicmd	strings_cmd = {
 	"strings", strings_main, NULL, "Testing the string process functions"

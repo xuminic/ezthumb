@@ -24,7 +24,7 @@
 #include <time.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 #define	TESTPATH	"longpath/shortpath/config/myconfig"
 #define TESTINPUT	"myconfig.test"

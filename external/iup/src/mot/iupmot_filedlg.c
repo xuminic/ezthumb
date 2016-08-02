@@ -153,50 +153,102 @@ static void motFileDlgCBclose(Widget w, XtPointer client_data, XtPointer call_da
 static int motFileDlgGetMultipleFiles(Ihandle* ih, const char* dir, Widget wList)
 {
   int *pos, sel_count, dir_len;
-  int i, len, cur_len;
-  char *filename, *all_names;
-  Iarray* names_array;
+  char *filename;
   XmString* items;
 
   if (!XmListGetSelectedPos(wList, &pos, &sel_count))
     return 0;
 
-  names_array = iupArrayCreate(1024, 1);  /* just set an initial size, but count is 0 */
+  dir_len = (int)strlen(dir);
+
   XtVaGetValues(wList, XmNitems, &items, NULL);
 
-  cur_len = strlen(dir);
-
-  all_names = iupArrayAdd(names_array, cur_len+1);
-  memcpy(all_names, dir, cur_len);
-  all_names[cur_len] = '|';
-  dir_len = cur_len;
-  cur_len++; /* skip separator */
-
-  for (i = 0; i<sel_count; i++)
+  if (sel_count == 1)
   {
-    filename = iupmotGetXmString(items[pos[i]-1]);  /* XmListGetSelectedPos starts at 1 */
+    filename = iupmotGetXmString(items[pos[0] - 1]);  /* XmListGetSelectedPos starts at 1 */
     if (filename)
     {
-      len = strlen(filename)-dir_len;
+      iupAttribSetStrId(ih, "MULTIVALUE", 0, dir);
+      iupAttribSetStrId(ih, "MULTIVALUE", 1, filename + dir_len);
 
-      cur_len = iupArrayCount(names_array);
-      all_names = iupArrayAdd(names_array, len+1);
-      memcpy(all_names+cur_len, filename+dir_len, len);
-      all_names[cur_len+len] = '|';
+      iupAttribSetStr(ih, "VALUE", filename);  /* here value is not separated by '|' */
+
+      iupAttribSetInt(ih, "MULTIVALUECOUNT", 2);
+
       XtFree(filename);
     }
   }
+  else
+  {
+    Iarray* names_array = iupArrayCreate(1024, 1);  /* just set an initial size, but count is 0 */
+    char *all_names;
+    int i, cur_len, count = 0;
+
+    int len = dir_len;
+    if (dir[dir_len - 1] == '/') len--;  /* remove last '/' */
+
+    all_names = iupArrayAdd(names_array, len + 1);
+    memcpy(all_names, dir, len);  /* does NOT includes last separator */
+    all_names[len] = '|';
+
+    iupAttribSetStrId(ih, "MULTIVALUE", count, dir);  /* here count=0 always */  /* same as directory, includes last separator */
+    count++;
+
+    for (i = 0; i < sel_count; i++)
+    {
+      filename = iupmotGetXmString(items[pos[i] - 1]);  /* XmListGetSelectedPos starts at 1 */
+      if (filename)
+      {
+        len = (int)strlen(filename) - dir_len;
+
+        cur_len = iupArrayCount(names_array);
+
+        all_names = iupArrayAdd(names_array, len + 1);
+        memcpy(all_names + cur_len, filename + dir_len, len);
+        all_names[cur_len + len] = '|';
+
+        iupAttribSetStrId(ih, "MULTIVALUE", count, filename + dir_len);
+        count++;
+
+        XtFree(filename);
+      }
+    }
+
+    iupAttribSetInt(ih, "MULTIVALUECOUNT", count);
+
+    cur_len = iupArrayCount(names_array);
+    all_names = iupArrayInc(names_array);
+    all_names[cur_len + 1] = 0;
+
+    /* replace VALUE with the correct sequence */
+    iupAttribSetStr(ih, "VALUE", all_names);
+
+    iupArrayDestroy(names_array);
+  }
 
   XtFree((char*)pos);
-
-  cur_len = iupArrayCount(names_array);
-  all_names = iupArrayInc(names_array);
-  all_names[cur_len+1] = 0;
-
-  iupAttribSetStr(ih, "VALUE", all_names);
-
-  iupArrayDestroy(names_array);
   return 1;
+}
+
+static char* motFileCheckExt(Ihandle* ih, const char* filename)
+{
+  char* ext = iupAttribGet(ih, "EXTDEFAULT");
+  if (ext)
+  {
+    int len = (int)strlen(filename);
+    int ext_len = (int)strlen(ext);
+    if (filename[len - ext_len - 1] != '.')
+    {
+      char* new_filename = XtMalloc(len + ext_len + 1 + 1);
+      memcpy(new_filename, filename, len);
+      new_filename[len] = '.';
+      memcpy(new_filename + len + 1, ext, ext_len);
+      new_filename[len + ext_len + 1] = 0;
+      return new_filename;
+    }
+  }
+
+  return (char*)filename;
 }
 
 static void motFileDlgCallback(Widget filebox, Ihandle* ih, XmFileSelectionBoxCallbackStruct* call_data)
@@ -206,7 +258,8 @@ static void motFileDlgCallback(Widget filebox, Ihandle* ih, XmFileSelectionBoxCa
     int dialogtype = iupAttribGetInt(ih, "_IUPDLG_DIALOGTYPE");
     char* filename;
     XmStringGetLtoR(call_data->value, XmSTRING_DEFAULT_CHARSET, &filename);
-    iupAttribSetStr(ih, "VALUE", filename);
+    filename = motFileCheckExt(ih, filename);
+    iupAttribSetStr(ih, "VALUE", filename);  /* this will be replaced for multiple files */
     XtFree(filename);
 
     if (!motFileDlgCheckValue(ih, filebox))
@@ -221,10 +274,8 @@ static void motFileDlgCallback(Widget filebox, Ihandle* ih, XmFileSelectionBoxCa
     {
       Widget wList = XmFileSelectionBoxGetChild(filebox, XmDIALOG_LIST);
 
-      /* VALUE obtained above contains exactly the DIRECTORY */
+      /* here value obtained above contains exactly the directory */
       char* dir = iupAttribGet(ih, "VALUE");
-      int len = strlen(dir);
-      if (dir[len-1]=='/') dir[len-1] = 0;  /* remove last '/' */
       iupAttribSetStr(ih, "DIRECTORY", dir);
 
       if (!motFileDlgGetMultipleFiles(ih, iupAttribGet(ih, "DIRECTORY"), wList))
@@ -259,7 +310,7 @@ static void motFileDlgCallback(Widget filebox, Ihandle* ih, XmFileSelectionBoxCa
         }
       }
 
-      /* store the DIRECTORY */
+      /* store the directory */
       {
         char* dir = iupStrFileGetPath(filename);
         iupAttribSetStr(ih, "DIRECTORY", dir);
@@ -562,7 +613,7 @@ static int motFileDlgPopup(Ihandle* ih, int x, int y)
     if (p) 
     {
       /* Use only the first filter */
-      int size = p-value;
+      int size = (int)(p-value);
       filter = (char*)malloc(size+1);
       memcpy(filter, value, size);
       filter[size] = 0;
@@ -718,5 +769,6 @@ void iupdrvFileDlgInitClass(Iclass* ic)
 {
   ic->DlgPopup = motFileDlgPopup;
 
+  iupClassRegisterAttribute(ic, "EXTDEFAULT", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MULTIPLEFILES", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

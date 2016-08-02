@@ -76,11 +76,11 @@ int iupluaScanf(lua_State *L)
     case 'x':
     case 'X':
       if (s[-3] == 'l')
-        sprintf(text[i], outf, luaL_checklong(L, indParam++));
+        sprintf(text[i], outf, (long)luaL_checkinteger(L, indParam++));
       else if (s[-3] == 'h')
-        sprintf(text[i], outf, (short) luaL_checkint(L, indParam++));
+        sprintf(text[i], outf, (short)luaL_checkinteger(L, indParam++));
       else
-        sprintf(text[i], outf, luaL_checkint(L, indParam++));
+        sprintf(text[i], outf, (int)luaL_checkinteger(L, indParam++));
       break;
     case 'e':
     case 'f':
@@ -88,7 +88,7 @@ int iupluaScanf(lua_State *L)
     case 'E':
     case 'G':
       if (s[-3] == 'l')
-        sprintf(text[i], outf, luaL_checknumber(L, indParam++));
+        sprintf(text[i], outf, (double)luaL_checknumber(L, indParam++));
       else
         sprintf(text[i], outf, (float)luaL_checknumber(L, indParam++));
       break;

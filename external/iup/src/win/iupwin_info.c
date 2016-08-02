@@ -22,7 +22,7 @@
 
 /* No need to test for UTF8MODE here */
 
-/* other method, wait for Windows 8.1 */
+/* other method, when replaced should do it in CD also (cdwinp.cpp) */
 static BOOL winCheckWindowsVersion(DWORD major, DWORD minor) 
 {
   OSVERSIONINFOEX osvi;

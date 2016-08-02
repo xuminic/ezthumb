@@ -56,6 +56,12 @@ static int iLinkLeaveWindow_CB(Ihandle* ih)
   return IUP_DEFAULT;
 }
 
+static int iLinkMapMethod(Ihandle* ih)
+{
+  IupSetAttribute(ih, "FONTSTYLE", "Underline");
+  return IUP_NOERROR;
+}
+
 static int iLinkCreateMethod(Ihandle* ih, void **params)
 {
   if (params)
@@ -67,8 +73,6 @@ static int iLinkCreateMethod(Ihandle* ih, void **params)
   IupSetCallback(ih, "BUTTON_CB", (Icallback)iLinkButton_CB);
   IupSetCallback(ih, "ENTERWINDOW_CB", iLinkEnterWindow_CB);
   IupSetCallback(ih, "LEAVEWINDOW_CB", iLinkLeaveWindow_CB);
-
-  IupSetAttribute(ih, "FONTSTYLE", "Underline");
 
   return IUP_NOERROR; 
 }
@@ -86,6 +90,7 @@ Iclass* iupLinkNewClass(void)
   /* Class functions */
   ic->New = iupLinkNewClass;
   ic->Create = iLinkCreateMethod;
+  ic->Map = iLinkMapMethod;
 
   /* Callbacks */
   iupClassRegisterCallback(ic, "ACTION", "s");

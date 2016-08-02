@@ -34,6 +34,7 @@
 #define _IUPDLG_PRIVATE
 #include "iup_dialog.h"
 #include "iup_image.h"
+#include "iup_assert.h"
 
 #include "iupgtk_drv.h"
 
@@ -296,7 +297,10 @@ static gboolean gtkDialogConfigureEvent(GtkWidget *widget, GdkEventConfigure *ev
 #ifndef HILDON
   /* In hildon the menu is not a menubar */
   if (ih->data->menu && ih->data->menu->handle)
-    gtk_widget_set_size_request(ih->data->menu->handle, evt->width, -1);
+  {
+    if (evt->width > 0)
+      gtk_widget_set_size_request(ih->data->menu->handle, evt->width, -1);
+  }
 #endif
 
   if (ih->data->ignore_resize) 
@@ -407,8 +411,8 @@ static gboolean gtkDialogChildDestroyEvent(GtkWidget *widget, Ihandle *ih)
   if (iupObjectCheck(ih))
     IupDestroy(ih);
 
-  /* this callback is usefull to destroy children dialogs when the parent is destroyed. */
-  /* The application is responsable for destroying the children before this happen. */
+  /* this callback is useful to destroy children dialogs when the parent is destroyed. */
+  /* The application is responsible for destroying the children before this happen. */
 
   return FALSE;
 }
@@ -423,12 +427,22 @@ static gboolean gtkDialogChildDestroyEvent(GtkWidget *widget, Ihandle *ih)
    the menu that it is inside the dialog. */
 static void gtkDialogSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 {
-  int menu_h = gtkDialogGetMenuSize(ih);
-  (void)x;
-  (void)y;
+  if (ih->firstchild)
+  {
+    char* offset = iupAttribGet(ih, "CHILDOFFSET");
 
-  /* Child coordinates are relative to client left-top corner. */
-  iupBaseSetPosition(ih->firstchild, 0, menu_h);
+    /* Native container, position is reset */
+    x = 0;
+    y = 0;
+
+    if (offset) iupStrToIntInt(offset, &x, &y, 'x');
+
+    y += gtkDialogGetMenuSize(ih);
+
+    /* Child coordinates are relative to client left-top corner. */
+    if (ih->firstchild)
+      iupBaseSetPosition(ih->firstchild, x, y);
+  }
 }
 
 static void* gtkDialogGetInnerNativeContainerHandleMethod(Ihandle* ih, Ihandle* child)
@@ -493,7 +507,7 @@ static int gtkDialogMapMethod(Ihandle* ih)
     gtk_window_set_type_hint(GTK_WINDOW(ih->handle), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   /* the container that will receive the child element. */
-  inner_parent = iupgtkNativeContainerNew();
+  inner_parent = iupgtkNativeContainerNew(0);
   gtk_container_add((GtkContainer*)ih->handle, inner_parent);
   gtk_widget_show(inner_parent);
 
@@ -569,7 +583,7 @@ static int gtkDialogMapMethod(Ihandle* ih)
 static void gtkDialogUnMapMethod(Ihandle* ih)
 {
   GtkWidget* inner_parent;
-#if GTK_CHECK_VERSION(2, 10, 0)
+#if GTK_CHECK_VERSION(2, 10, 0) && !GTK_CHECK_VERSION(3, 14, 0)
   GtkStatusIcon* status_icon;
 #endif
 
@@ -579,7 +593,7 @@ static void gtkDialogUnMapMethod(Ihandle* ih)
     IupDestroy(ih->data->menu);  
   }
 
-#if GTK_CHECK_VERSION(2, 10, 0)
+#if GTK_CHECK_VERSION(2, 10, 0) && !GTK_CHECK_VERSION(3, 14, 0)
   status_icon = (GtkStatusIcon*)iupAttribGet(ih, "_IUPDLG_STATUSICON");
   if (status_icon)
   {
@@ -797,9 +811,58 @@ static int gtkDialogSetOpacityAttrib(Ihandle *ih, const char *value)
   if (!iupStrToInt(value, &opacity))
     return 0;
 
+#if GTK_CHECK_VERSION(3, 8, 0)
+  gtk_widget_set_opacity(ih->handle, (double)opacity/255.0);
+#else
   gtk_window_set_opacity((GtkWindow*)ih->handle, (double)opacity/255.0);
+#endif
   return 1;
 }
+
+static int gtkDialogSetOpacityImageAttrib(Ihandle *ih, const char *value)
+{
+  GdkPixbuf* pixbuf = iupImageGetImage(value, ih, 0);
+  if (pixbuf)
+  {
+#if GTK_CHECK_VERSION(3, 0, 0)
+    GdkWindow* window = iupgtkGetWindow(ih->handle);
+    if (window)
+    {
+      cairo_region_t *shape;
+
+#if GTK_CHECK_VERSION(3, 10, 0)
+      cairo_surface_t* surface = gdk_cairo_surface_create_from_pixbuf(pixbuf, 0, window);
+#else
+      int width = gdk_pixbuf_get_width(pixbuf);
+      int height = gdk_pixbuf_get_height(pixbuf);
+      cairo_surface_t* surface = gdk_window_create_similar_surface(window, CAIRO_CONTENT_COLOR_ALPHA, width, height);
+      cairo_t* cr = cairo_create(surface);
+      gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+      cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+      cairo_paint(cr);
+      cairo_destroy(cr);
+#endif
+
+      shape = gdk_cairo_region_create_from_surface(surface);
+      cairo_surface_destroy(surface);
+
+      gtk_widget_shape_combine_region(ih->handle, shape);
+      cairo_region_destroy(shape);
+    }
+#else
+    GdkBitmap* mask = NULL;
+    gdk_pixbuf_render_pixmap_and_mask(pixbuf, NULL, &mask, 255);
+    if (mask) 
+    {
+      gtk_widget_shape_combine_mask(ih->handle, mask, 0, 0);
+      g_object_unref(mask);
+    }
+#endif
+    return 1;
+  }
+  return 0;
+}
+
 #endif
 
 static int gtkDialogSetIconAttrib(Ihandle* ih, const char *value)
@@ -845,19 +908,19 @@ static int gtkDialogSetBackgroundAttrib(Ihandle* ih, const char* value)
     {
       /* TODO: this is NOT working!!!! */
       cairo_pattern_t* pattern;
-      cairo_surface_t* surface;
-      cairo_t* cr;
-
       int width = gdk_pixbuf_get_width(pixbuf);
       int height = gdk_pixbuf_get_height(pixbuf);
 
-      surface = gdk_window_create_similar_surface(window, CAIRO_CONTENT_COLOR_ALPHA, width, height);
-      cr = cairo_create(surface);
-      gdk_cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
-      cairo_paint (cr);
-      cairo_destroy (cr);
+      cairo_surface_t* surface = gdk_window_create_similar_surface(window, CAIRO_CONTENT_COLOR_ALPHA, width, height);
+      cairo_t* cr = cairo_create(surface);
+      gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+      cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+      cairo_paint(cr);
+      cairo_destroy(cr);
 
       pattern = cairo_pattern_create_for_surface(surface);
+      cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+
       gdk_window_set_background_pattern(window, pattern);
       cairo_pattern_destroy (pattern);
 
@@ -880,7 +943,7 @@ static int gtkDialogSetBackgroundAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-#if GTK_CHECK_VERSION(2, 10, 0)
+#if GTK_CHECK_VERSION(2, 10, 0) && !GTK_CHECK_VERSION(3, 14, 0)
 static int gtkDialogTaskDoubleClick(int button)
 {
   static int last_button = -1;
@@ -1039,8 +1102,9 @@ void iupdrvDialogInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "DIALOGHINT", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 #if GTK_CHECK_VERSION(2, 12, 0)
   iupClassRegisterAttribute(ic, "OPACITY", NULL, gtkDialogSetOpacityAttrib, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "OPACITYIMAGE", NULL, gtkDialogSetOpacityImageAttrib, NULL, NULL, IUPAF_NO_INHERIT);
 #endif
-#if GTK_CHECK_VERSION(2, 10, 0)
+#if GTK_CHECK_VERSION(2, 10, 0) && !GTK_CHECK_VERSION(3, 14, 0)
   iupClassRegisterAttribute(ic, "TRAY", NULL, gtkDialogSetTrayAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "TRAYIMAGE", NULL, gtkDialogSetTrayImageAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "TRAYTIP", NULL, gtkDialogSetTrayTipAttrib, NULL, NULL, IUPAF_NO_INHERIT);

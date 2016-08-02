@@ -1,5 +1,0 @@
-$(OBJDIR)/iup_glcanvas_x.o: iup_glcanvas_x.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h ../include/iupcbs.h ../include/iupgl.h \
- ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
- ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h \
- ../src/iup_stdcontrols.h ../src/iup_assert.h ../src/iup_register.h

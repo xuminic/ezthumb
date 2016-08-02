@@ -82,9 +82,9 @@ function ctrl.createElement(class, param)
 end
 
 -- here you can add some custom methods to the class
-function ctrl.popup(handle, x, y)
-  iup.Popup(handle,x,y)
+function ctrl.myfunc(ih, x, y)
+  iup.MyFunc(ih, x, y)
 end
 
 iup.RegisterWidget(ctrl) -- will make iup.mycontrol available
-iup.SetClass(ctrl, "iup widget") -- register the class in the registry
+iup.SetClass(ctrl, "iupWidget") -- register the class in the registry

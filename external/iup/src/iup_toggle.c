@@ -23,7 +23,7 @@
 
 static char* iToggleGetRadioAttrib(Ihandle* ih)
 {
-  return iupStrReturnBoolean (ih->data->radio); 
+  return iupStrReturnBoolean(ih->data->is_radio);
 }
 
 static int iToggleSetFlatAttrib(Ihandle* ih, const char* value)
@@ -87,9 +87,10 @@ static void iToggleComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *ch
     char* title = IupGetAttribute(ih, "TITLE");
     char* str = iupStrProcessMnemonic(title, NULL, 0);   /* remove & */
     iupdrvFontGetMultiLineStringSize(ih, str, &natural_w, &natural_h);
-    if (str && str!=title) free(str);
 
-    iupdrvToggleAddCheckBox(&natural_w, &natural_h);
+    iupdrvToggleAddCheckBox(&natural_w, &natural_h, str);
+
+    if (str && str != title) free(str);
   }
 
   *w = natural_w;

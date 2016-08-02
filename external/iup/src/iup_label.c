@@ -30,9 +30,15 @@ static int iLabelSetSeparatorAttrib(Ihandle* ih, const char* value)
   if (value)
   {
     if (iupStrEqualNoCase(value, "HORIZONTAL"))
-      ih->expand = IUP_EXPAND_WIDTH;
+    {
+      if (!(ih->expand & IUP_EXPAND_WIDTH))
+        ih->expand = IUP_EXPAND_WFREE;
+    }
     else if (iupStrEqualNoCase(value, "VERTICAL"))
-      ih->expand = IUP_EXPAND_HEIGHT;
+    {
+      if (!(ih->expand & IUP_EXPAND_HEIGHT))
+        ih->expand = IUP_EXPAND_HFREE;
+    }
     else
       return 0;
   }

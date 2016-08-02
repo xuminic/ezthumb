@@ -178,7 +178,14 @@ static int winClipboardSetTextAttrib(Ihandle *ih, const char *value)
 
   /* CF_TEXT/CF_UNICODETEXT: Each line ends with a carriage return/linefeed (CR-LF) combination. */
   dos_str = iupStrToDos(value);
+#ifdef UNICODE
   wstr = iupwinStrToSystem(dos_str);
+#else
+  if (dos_str != value) 
+    wstr = iupStrReturnStr(dos_str);
+  else
+    wstr = dos_str;
+#endif
   if (dos_str != value) free(dos_str);
 
   size = (lstrlen(wstr)+1) * sizeof(TCHAR);
@@ -254,7 +261,7 @@ static int winClipboardSetImageAttrib(Ihandle *ih, const char *value)
   }
 
   hBitmap = (HBITMAP)iupImageGetImage(value, ih, 0);
-  iupImageClearCache(ih, hBitmap);
+  iupImageClearFromCache(ih, hBitmap);  /* to avoid being destroyed later */
 
   SetClipboardData(CF_BITMAP, (HANDLE)hBitmap);
   CloseClipboard();

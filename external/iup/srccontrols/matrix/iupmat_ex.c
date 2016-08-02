@@ -30,12 +30,12 @@
 
 
 /* Exported to IupMatrixEx */
-char* iupMatrixExGetCellValue(Ihandle* ih, int lin, int col, int convert)
+char* iupMatrixExGetCellValue(Ihandle* ih, int lin, int col, int display)
 {
-  if (convert)
-    return iupMatrixGetValue(ih, lin, col);  /* Display value */
+  if (display)
+    return iupMatrixGetValueDisplay(ih, lin, col);  /* Display value */
   else
-    return iupMatrixGetValueString(ih, lin, col);
+    return iupMatrixGetValue(ih, lin, col);  /* Internal value (Maximum Precision) */
 }
 
 /* Exported to IupMatrixEx */
@@ -91,28 +91,28 @@ static int iMatrixSetNumericFormatPrecisionAttrib(Ihandle* ih, int col, const ch
 {
   int precision;
   if (iupStrToInt(value, &precision))
-    IupSetStrfId(ih, "NUMERICFORMAT", col, "%%.%dlf",precision);
+  {
+    if (col == IUP_INVALID_ID)
+      IupSetStrf(ih, "NUMERICFORMATDEF", "%%.%df", precision);
+    else
+      IupSetStrfId(ih, "NUMERICFORMAT", col, "%%.%df", precision);
+  }
+  else
+  {
+    if (col == IUP_INVALID_ID)
+      IupSetAttribute(ih, "NUMERICFORMATDEF", NULL);
+    else
+      IupSetAttributeId(ih, "NUMERICFORMAT", col, NULL);
+  }
   return 0;
 }
 
-static int iMatrixGetPrecisionFromFormat (const char* format)
+static char* iMatrixGetNumericDecimalSymbolAttrib(Ihandle* ih)
 {
-  int precision;
-  while (*format)
-  {
-    if (*format=='.')
-     break;
-    format++;
-  }
-
-  if (*format!='.')
-    return -1;
-
-  format++;
-  if (iupStrToInt(format, &precision))
-    return precision;
-
-  return -1;
+  char* value = iupAttribGet(ih, "NUMERICDECIMALSYMBOL");
+  if (!value)
+    value = IupGetGlobal("DEFAULTDECIMALSYMBOL");
+  return value;
 }
 
 static char* iMatrixGetNumericFormatPrecisionAttrib(Ihandle* ih, int col)
@@ -120,12 +120,12 @@ static char* iMatrixGetNumericFormatPrecisionAttrib(Ihandle* ih, int col)
   int precision;
   char* value = iupAttribGetId(ih, "NUMERICFORMAT", col);
   if (!value)
-    value = iupAttribGetStr(ih, "NUMERICFORMATDEF");
+    value = iupMatrixGetNumericFormatDef(ih);
 
   if (!value)
     return NULL;
 
-  precision = iMatrixGetPrecisionFromFormat(value);
+  precision = iupStrGetFormatPrecision(value);
   if (precision == -1)
     return NULL;
 
@@ -220,18 +220,24 @@ static int iMatrixSetSortColumnAttrib(Ihandle* ih, int col, const char* value)
   int* sort_line_index;
   IFniii sort_cb;
 
+  /* Notice that sort_line_index[0] is always 0 */
+
   if (!ih->data->sort_line_index)
     ih->data->sort_line_index = (int*)calloc(ih->data->lines.num_alloc, sizeof(int));
+
   sort_line_index = ih->data->sort_line_index;
+
+  if (!ih->data->sort_has_index)
+  {
+    for (lin = 0; lin < lines_num; lin++)
+      sort_line_index[lin] = lin;
+  }
 
   if (iupStrEqualNoCase(value, "RESET"))
   {
-    for (lin=1; lin<lines_num; lin++)
-      sort_line_index[lin] = 0;
-
     ih->data->sort_has_index = 0;
-    iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_index, NULL);
-    ih->data->last_sort_index = 0;
+    iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_col, NULL);
+    ih->data->last_sort_col = 0;
 
     iupMatrixDraw(ih, 1);
     iupAttribSet(ih, "SORTCOLUMNINTERVAL", NULL);
@@ -254,10 +260,10 @@ static int iMatrixSetSortColumnAttrib(Ihandle* ih, int col, const char* value)
       sort_line_index[l2] = tmp;
     }
 
-    if (iupStrEqualNoCase(iupAttribGetId(ih, "SORTSIGN", ih->data->last_sort_index), "UP"))
-      iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_index, "DOWN");
+    if (iupStrEqualNoCase(iupAttribGetId(ih, "SORTSIGN", ih->data->last_sort_col), "UP"))
+      iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_col, "DOWN");
     else
-      iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_index, "UP");
+      iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_col, "UP");
 
     iupMatrixDraw(ih, 1);
     return 0;
@@ -270,6 +276,9 @@ static int iMatrixSetSortColumnAttrib(Ihandle* ih, int col, const char* value)
     iupStrToIntInt(value, &lin1, &lin2, '-');
 
   iupAttribSetStrf(ih, "SORTCOLUMNINTERVAL", "%d,%d", lin1, lin2);
+
+  if (lin1 < 1) lin1 = 1;
+  if (lin2 < lin1) lin2 = lin1;
 
   ascending = iupStrEqualNoCase(iupAttribGetStr(ih, "SORTCOLUMNORDER"), "ASCENDING");
   
@@ -289,8 +298,8 @@ static int iMatrixSetSortColumnAttrib(Ihandle* ih, int col, const char* value)
 
       for (lin=lin1; lin<=lin2; lin++)
       {
-        sort_line_number[lin-lin1].lin = sort_line_index[lin]!=0? sort_line_index[lin]: lin;
-        sort_line_number[lin-lin1].number = iupMatrixGetValueNumber(ih, lin, col);
+        sort_line_number[lin-lin1].lin = sort_line_index[lin];
+        sort_line_number[lin-lin1].number = iupMatrixGetValueNumeric(ih, lin, col);
       }
 
       qsort(sort_line_number,lin2-lin1+1,sizeof(ImatSortNumber), iMatrixCompareNumberFunc);
@@ -311,8 +320,8 @@ static int iMatrixSetSortColumnAttrib(Ihandle* ih, int col, const char* value)
 
       for (lin=lin1; lin<=lin2; lin++)
       {
-        sort_line_text[lin-lin1].lin = sort_line_index[lin]!=0? sort_line_index[lin]: lin;
-        sort_line_text[lin-lin1].text = iupMatrixGetValueText(ih, lin, col);
+        sort_line_text[lin-lin1].lin = sort_line_index[lin];
+        sort_line_text[lin-lin1].text = iupMatrixGetValueDisplay(ih, lin, col);
 
         if (ih->data->callback_mode)
           sort_line_text[lin-lin1].text = iupStrDup(sort_line_text[lin-lin1].text);
@@ -337,15 +346,29 @@ static int iMatrixSetSortColumnAttrib(Ihandle* ih, int col, const char* value)
     }
   }
 
+  iupAttribSetId(ih, "SORTSIGN", ih->data->last_sort_col, NULL);
   if (ascending)
     iupAttribSetId(ih, "SORTSIGN", col, "DOWN");
   else
     iupAttribSetId(ih, "SORTSIGN", col, "UP");
 
   ih->data->sort_has_index = 1;
-  ih->data->last_sort_index = col;
+  ih->data->last_sort_col = col;
   iupMatrixDraw(ih, 1);
   return 0;
+}
+
+static char* iMatrixGetLastSortColumnAttrib(Ihandle* ih)
+{
+  return iupStrReturnInt(ih->data->last_sort_col);
+}
+
+static char* iMatrixGetSortLineIndexAttrib(Ihandle* ih, int lin)
+{
+  if (lin > 0 && lin < ih->data->lines.num && ih->data->sort_has_index)
+    return iupStrReturnInt(ih->data->sort_line_index[lin]);
+  else
+    return NULL;
 }
 
 static int iMatrixSetUndoRedoAttrib(Ihandle* ih, const char* value)
@@ -373,16 +396,19 @@ void iupMatrixRegisterEx(Iclass* ic)
   iupClassRegisterAttributeId(ic, "NUMERICFORMATTITLE", NULL, iMatrixSetNumericFormatTitleAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "NUMERICUNITINDEX", NULL, iMatrixSetNumericUnitIndexAttrib, IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "NUMERICUNITSHOWNINDEX", NULL, iMatrixSetNumericUnitShownIndexAttrib, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "NUMERICFORMATDEF", NULL, NULL, IUPAF_SAMEASSYSTEM, "%.2lf", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "NUMERICFORMATDEF", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "NUMERICDECIMALSYMBOL", iMatrixGetNumericDecimalSymbolAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterCallback(ic, "NUMERICGETVALUE_CB", "ii=d");
   iupClassRegisterCallback(ic, "NUMERICSETVALUE_CB", "iid");
 
   /* IupMatrixEx Attributes - Sort Columns */
+  iupClassRegisterAttribute(ic, "LASTSORTCOLUMN", iMatrixGetLastSortColumnAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttributeId(ic, "SORTCOLUMN", NULL, iMatrixSetSortColumnAttrib, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "SORTCOLUMNORDER", NULL, NULL, IUPAF_SAMEASSYSTEM, "ASCENDING", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SORTCOLUMNORDER", NULL, NULL, IUPAF_SAMEASSYSTEM, "ASCENDING", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SORTCOLUMNCASESENSITIVE", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SORTCOLUMNINTERVAL", NULL, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttributeId(ic, "SORTLINEINDEX", iMatrixGetSortLineIndexAttrib, NULL, IUPAF_READONLY | IUPAF_NO_INHERIT);
 
   iupClassRegisterCallback(ic, "SORTCOLUMNCOMPARE_CB", "iii");
 

@@ -100,28 +100,29 @@ static int motValSetShowTicksAttrib(Ihandle* ih, const char* value)
 
 static int motValSetPageStepAttrib(Ihandle* ih, const char* value)
 {
-  int pagesize;
-  ih->data->pagestep = atof(value);
-  pagesize = (int)(ih->data->pagestep*SHRT_MAX);
-  XtVaSetValues(ih->handle, XmNscaleMultiple, pagesize, NULL);
+  if (iupStrToDoubleDef(value, &(ih->data->pagestep), 0.1))
+  {
+    int pagesize = (int)(ih->data->pagestep*SHRT_MAX);
+    XtVaSetValues(ih->handle, XmNscaleMultiple, pagesize, NULL);
+  }
   return 0; /* do not store value in hash table */
 }
 
 static int motValSetStepAttrib(Ihandle* ih, const char* value)
 {
-  ih->data->step = atof(value);
+  iupStrToDoubleDef(value, &(ih->data->step), 0.01);
   return 0; /* do not store value in hash table */
 }
 
 static int motValSetValueAttrib(Ihandle* ih, const char* value)
 {
-  int ival;
-
-  ih->data->val = atof(value);
-  iupValCropValue(ih);
-
-  ival = (int)(((ih->data->val-ih->data->vmin)/(ih->data->vmax - ih->data->vmin))*SHRT_MAX);
-  XtVaSetValues(ih->handle, XmNvalue, ival, NULL);
+  if (iupStrToDouble(value, &(ih->data->val)))
+  {
+    int ival;
+    iupValCropValue(ih);
+    ival = (int)(((ih->data->val - ih->data->vmin) / (ih->data->vmax - ih->data->vmin))*SHRT_MAX);
+    XtVaSetValues(ih->handle, XmNvalue, ival, NULL);
+  }
 
   return 0; /* do not store value in hash table */
 }
@@ -477,9 +478,9 @@ void iupdrvValInitClass(Iclass* ic)
 
   /* IupVal only */
   iupClassRegisterAttribute(ic, "VALUE", iupValGetValueAttrib, motValSetValueAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);  
-  iupClassRegisterAttribute(ic, "PAGESTEP", iupValGetPageStepAttrib, motValSetPageStepAttrib, IUPAF_SAMEASSYSTEM, "0.1", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "PAGESTEP", iupValGetPageStepAttrib, motValSetPageStepAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHOWTICKS", iupValGetShowTicksAttrib, motValSetShowTicksAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_DEFAULT);
-  iupClassRegisterAttribute(ic, "STEP", iupValGetStepAttrib, motValSetStepAttrib, IUPAF_SAMEASSYSTEM, "0.01", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "STEP", iupValGetStepAttrib, motValSetStepAttrib, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* NOT supported */
   iupClassRegisterAttribute(ic, "TICKSPOS", NULL, NULL, NULL, NULL, IUPAF_NOT_SUPPORTED|IUPAF_NOT_MAPPED);

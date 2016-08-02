@@ -247,6 +247,21 @@
     <ClCompile Include="..\src\iup_backgroundbox.c">
       <Filter>src_controls</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\iup_linefile.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\iup_config.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\iup_flatbutton.c">
+      <Filter>src_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\iup_animatedlabel.c">
+      <Filter>src_controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\iup_draw.c">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\iup_array.h">
@@ -268,9 +283,6 @@
       <Filter>inc</Filter>
     </ClInclude>
     <ClInclude Include="..\src\iup_dlglist.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\iup_draw.h">
       <Filter>inc</Filter>
     </ClInclude>
     <ClInclude Include="..\src\iup_drv.h">
@@ -339,9 +351,6 @@
     <ClInclude Include="..\include\iupkey.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\iupspin.h">
-      <Filter>include</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\iup_box.h">
       <Filter>inc_controls</Filter>
     </ClInclude>
@@ -398,6 +407,24 @@
     </ClInclude>
     <ClInclude Include="..\src\iup_normalizer.h">
       <Filter>inc_controls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\iup_linefile.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iup_config.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iup_class_cbs.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iup_plus.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iupdraw.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\iup_drvdraw.h">
+      <Filter>inc</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

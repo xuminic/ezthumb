@@ -10,6 +10,7 @@
 #include <stdio.h>  
 #include <limits.h>
 #include <stdarg.h>
+#include <locale.h>
 
 #include "iup_str.h"
 
@@ -116,6 +117,7 @@ int iupStrBoolean(const char* str)
 
 void iupStrUpper(char* dstr, const char* sstr)
 {
+  if (!sstr || sstr[0] == 0) return;
   for (; *sstr; sstr++, dstr++)
     *dstr = (char)iup_toupper(*sstr);
   *dstr = 0;
@@ -123,6 +125,7 @@ void iupStrUpper(char* dstr, const char* sstr)
 
 void iupStrLower(char* dstr, const char* sstr)
 {
+  if (!sstr || sstr[0] == 0) return;
   for (; *sstr; sstr++, dstr++)
     *dstr = (char)iup_tolower(*sstr);
   *dstr = 0;
@@ -130,7 +133,8 @@ void iupStrLower(char* dstr, const char* sstr)
 
 int iupStrHasSpace(const char* str)
 {
-  while(*str)
+  if (!str) return 0;
+  while (*str)
   {
     if (*str == ' ')
       return 1;
@@ -143,7 +147,7 @@ char *iupStrDup(const char *str)
 {
   if (str)
   {
-    int size = strlen(str)+1;
+    int size = (int)strlen(str)+1;
     char *newstr = malloc(size);
     if (newstr) memcpy(newstr, str, size);
     return newstr;
@@ -154,6 +158,8 @@ char *iupStrDup(const char *str)
 const char* iupStrNextLine(const char* str, int *len)
 {
   *len = 0;
+
+  if (!str) return NULL;
 
   while(*str!=0 && *str!='\n' && *str!='\r') 
   {
@@ -171,10 +177,22 @@ const char* iupStrNextLine(const char* str, int *len)
 
 const char* iupStrNextValue(const char* str, int str_len, int *len, char sep)
 {
+  int ignore_sep = 0;
+
   *len = 0;
 
-  while(*str!=0 && *str!=sep && *len<str_len) 
+  if (!str) return NULL;
+
+  while (*str != 0 && (*str != sep || ignore_sep) && *len<str_len)
   {
+    if (*str == '\"')
+    {
+      if (ignore_sep)
+        ignore_sep = 0;
+      else
+        ignore_sep = 1;
+    }
+
     (*len)++;
     str++;
   }
@@ -226,19 +244,23 @@ int iupStrCountChar(const char *str, char c)
 
 void iupStrCopyN(char* dst_str, int dst_max_size, const char* src_str)
 {
-  int size = strlen(src_str)+1;
-  if (size > dst_max_size) size = dst_max_size;
-  memcpy(dst_str, src_str, size-1);
-  dst_str[size-1] = 0;
+  if (src_str)
+  {
+    int size = (int)strlen(src_str) + 1;
+    if (size > dst_max_size) size = dst_max_size;
+    memcpy(dst_str, src_str, size - 1);
+    dst_str[size - 1] = 0;
+  }
 }
 
-char* iupStrDupUntil(char **str, char c)
+char* iupStrDupUntil(const char **str, char c)
 {
-  char *p_str,*new_str;
-  if (!str || *str==NULL)
+  const char *p_str;
+  char *new_str;
+  if (!str || str[0]==0)
     return NULL;
 
-  p_str=strchr(*str,c);
+  p_str = strchr(*str,c);
   if (!p_str) 
     return NULL;
   else
@@ -262,7 +284,7 @@ char* iupStrDupUntil(char **str, char c)
 static char *iStrDupUntilNoCase(char **str, char sep)
 {
   char *p_str,*new_str;
-  if (!str || *str==NULL)
+  if (!str || str[0]==0)
     return NULL;
 
   p_str=strchr(*str,sep); /* usually the lower case is enough */
@@ -415,19 +437,19 @@ char *iupStrGetMemory(int size)
 
 char* iupStrReturnStrf(const char* format, ...)
 {
-  char* value = iupStrGetMemory(1024);
+  char* str = iupStrGetMemory(1024);
   va_list arglist;
   va_start(arglist, format);
-  vsnprintf(value, 1024, format, arglist);
+  vsnprintf(str, 1024, format, arglist);
   va_end(arglist);
-  return value;
+  return str;
 }
 
 char* iupStrReturnStr(const char* str)
 {
   if (str)
   {
-    int size = strlen(str)+1;
+    int size = (int)strlen(str)+1;
     char* ret_str = iupStrGetMemory(size);
     memcpy(ret_str, str, size);
     return ret_str;
@@ -464,7 +486,14 @@ char* iupStrReturnInt(int i)
 char* iupStrReturnFloat(float f)
 {
   char* str = iupStrGetSmallMem();  /* 80 */
-  sprintf(str, "%.9f", f);  /* maximum float precision */
+  sprintf(str, IUP_FLOAT2STR, f);
+  return str;
+}
+
+char* iupStrReturnDouble(double d)
+{
+  char* str = iupStrGetSmallMem();  /* 80 */
+  sprintf(str, IUP_DOUBLE2STR, d);
   return str;
 }
 
@@ -475,14 +504,21 @@ char* iupStrReturnRGB(unsigned char r, unsigned char g, unsigned char b)
   return str;
 }
 
+char* iupStrReturnRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+{
+  char* str = iupStrGetSmallMem();  /* 4*20 */
+  sprintf(str, "%d %d %d %d", (int)r, (int)g, (int)b, (int)a);
+  return str;
+}
+
 char* iupStrReturnStrStr(const char *str1, const char *str2, char sep)
 {
   if (str1 || str2)
   {
     char* ret_str;
     int size1=0, size2=0;
-    if (str1) size1 = strlen(str1);
-    if (str2) size2 = strlen(str2);
+    if (str1) size1 = (int)strlen(str1);
+    if (str2) size2 = (int)strlen(str2);
     ret_str = iupStrGetMemory(size1+size2+2);
     if (str1 && size1) memcpy(ret_str, str1, size1);
     ret_str[size1] = sep;
@@ -499,6 +535,26 @@ char* iupStrReturnIntInt(int i1, int i2, char sep)
   char* str = iupStrGetSmallMem();  /* 2*20 */
   sprintf(str, "%d%c%d", i1, sep, i2);
   return str;
+}
+
+int iupStrGetFormatPrecision(const char* format)
+{
+  int precision;
+  while (*format)
+  {
+    if (*format == '.')
+      break;
+    format++;
+  }
+
+  if (*format != '.')
+    return -1;
+
+  format++;
+  if (iupStrToInt(format, &precision))
+    return precision;
+
+  return -1;
 }
 
 int iupStrToRGB(const char *str, unsigned char *r, unsigned char *g, unsigned char *b)
@@ -520,6 +576,30 @@ int iupStrToRGB(const char *str, unsigned char *r, unsigned char *g, unsigned ch
   *b = (unsigned char)bi;
   return 1;
 }
+
+int iupStrToRGBA(const char *str, unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *a)
+{
+  unsigned int ri = 0, gi = 0, bi = 0, ai = 255;
+  if (!str) return 0;
+  if (str[0] == '#')
+  {
+    str++;
+    if (sscanf(str, "%2X%2X%2X%2X", &ri, &gi, &bi, &ai) < 3) return 0;
+  }
+  else
+  {
+    if (sscanf(str, "%u %u %u %u", &ri, &gi, &bi, &ai) < 3) return 0;
+  }
+  if (ri > 255 || gi > 255 || bi > 255 || ai > 255) return 0;
+  *r = (unsigned char)ri;
+  *g = (unsigned char)gi;
+  *b = (unsigned char)bi;
+  *a = (unsigned char)ai;
+  return 1;
+}
+
+/* TODO: are strtod/atof and strtol/atoi faster/better than sscanf? 
+         must handle the 0 return value. */
 
 int iupStrToInt(const char *str, int *i)
 {
@@ -565,10 +645,31 @@ int iupStrToIntInt(const char *str, int *i1, int *i2, char sep)
   }
 }
 
+int iupStrToFloatDef(const char *str, float *f, float def)
+{
+  if (!str) { *f = def;  return 1; }
+  if (sscanf(str, "%f", f) != 1) return 0;
+  return 1;
+}
+
 int iupStrToFloat(const char *str, float *f)
 {
   if (!str) return 0;
   if (sscanf(str, "%f", f) != 1) return 0;
+  return 1;
+}
+
+int iupStrToDouble(const char *str, double *d)
+{
+  if (!str) return 0;
+  if (sscanf(str, "%lf", d) != 1) return 0;
+  return 1;
+}
+
+int iupStrToDoubleDef(const char *str, double *d, double def)
+{
+  if (!str) { *d = def;  return 1; }
+  if (sscanf(str, "%lf", d) != 1) return 0;
   return 1;
 }
 
@@ -609,13 +710,52 @@ int iupStrToFloatFloat(const char *str, float *f1, float *f2, char sep)
   }
 }
 
-int iupStrToStrStr(const char *str, char *str1, char *str2, char sep)
+int iupStrToDoubleDouble(const char *str, double *f1, double *f2, char sep)
 {
   if (!str) return 0;
 
   if (iup_tolower(*str) == sep) /* no first value */
   {
     str++; /* skip separator */
+    if (sscanf(str, "%lf", f2) != 1) return 0;
+    return 1;
+  }
+  else
+  {
+    char* p_str = iStrDupUntilNoCase((char**)&str, sep);
+
+    if (!p_str)   /* no separator means no second value */
+    {
+      if (sscanf(str, "%lf", f1) != 1) return 0;
+      return 1;
+    }
+    else if (*str == 0)    /* separator exists, but second value empty, also means no second value */
+    {
+      int ret = sscanf(p_str, "%lf", f1);
+      free(p_str);
+      if (ret != 1) return 0;
+      return 1;
+    }
+    else
+    {
+      int ret = 0;
+      if (sscanf(p_str, "%lf", f1) == 1) ret++;
+      if (sscanf(str, "%lf", f2) == 1) ret++;
+      free(p_str);
+      return ret;
+    }
+  }
+}
+
+int iupStrToStrStr(const char *str, char *str1, char *str2, char sep)
+{
+  if (!str) 
+    return 0;
+
+  if (iup_tolower(*str) == sep) /* no first value */
+  {
+    str++; /* skip separator */
+    str1[0] = 0;
     strcpy(str2, str);
     return 1;
   }
@@ -626,12 +766,14 @@ int iupStrToStrStr(const char *str, char *str1, char *str2, char sep)
     if (!p_str)   /* no separator means no second value */
     {        
       strcpy(str1, str);
+      str2[0] = 0;
       return 1;
     }
     else if (*str==0)    /* separator exists, but second value empty, also means no second value */
     {        
       strcpy(str1, p_str);
       free(p_str);
+      str2[0] = 0;
       return 1;
     }
     else
@@ -646,122 +788,146 @@ int iupStrToStrStr(const char *str, char *str1, char *str2, char sep)
 
 char* iupStrFileGetPath(const char *file_name)
 {
-  /* Starts at the last character */
-  int len = strlen(file_name) - 1;
-  while (len != 0)
-  {
-    if (file_name[len] == '\\' || file_name[len] == '/')
-    {
-      len++;
-      break;
-    }
-
-    len--;
-  }                                                          
-  if (len == 0)
+  if (!file_name)
     return NULL;
-
+  else
   {
-    char* path = malloc(len+1);
-    memcpy(path, file_name, len);
-    path[len] = 0;
+    /* Starts at the last character */
+    int len = (int)strlen(file_name) - 1;
+    while (len != 0)
+    {
+      if (file_name[len] == '\\' || file_name[len] == '/')
+      {
+        len++;
+        break;
+      }
 
-    return path;
+      len--;
+    }
+    if (len == 0)
+      return NULL;
+
+    {
+      char* path = malloc(len + 1);
+      memcpy(path, file_name, len);
+      path[len] = 0;
+
+      return path;
+    }
   }
 }
 
 char* iupStrFileGetTitle(const char *file_name)
 {
-  /* Starts at the last character */
-  int len = strlen(file_name);
-  int offset = len - 1;
-  while (offset != 0)
+  if (!file_name)
+    return NULL;
+  else
   {
-    if (file_name[offset] == '\\' || file_name[offset] == '/')
+    /* Starts at the last character */
+    int len = (int)strlen(file_name);
+    int offset = len - 1;
+    while (offset != 0)
     {
-      offset++;
-      break;
+      if (file_name[offset] == '\\' || file_name[offset] == '/')
+      {
+        offset++;
+        break;
+      }
+
+      offset--;
     }
 
-    offset--;
-  }
-
-  {
-    int title_size = len - offset + 1;
-    char* file_title = malloc(title_size);
-    memcpy(file_title, file_name + offset, title_size);
-    return file_title;
+    {
+      int title_size = len - offset + 1;
+      char* file_title = malloc(title_size);
+      memcpy(file_title, file_name + offset, title_size);
+      return file_title;
+    }
   }
 }
 
 char* iupStrFileGetExt(const char *file_name)
 {
-  /* Starts at the last character */
-  int len = strlen(file_name);
-  int offset = len - 1;
-  while (offset != 0)
+  if (!file_name)
+    return NULL;
+  else
   {
-    /* if found a path separator stop. */
-    if (file_name[offset] == '\\' || file_name[offset] == '/')
-      return NULL;
-
-    if (file_name[offset] == '.')
+    /* Starts at the last character */
+    int len = (int)strlen(file_name);
+    int offset = len - 1;
+    while (offset != 0)
     {
-      offset++;
-      break;
+      /* if found a path separator stop. */
+      if (file_name[offset] == '\\' || file_name[offset] == '/')
+        return NULL;
+
+      if (file_name[offset] == '.')
+      {
+        offset++;
+        break;
+      }
+
+      offset--;
     }
 
-    offset--;
-  }
+    if (offset == 0)
+      return NULL;
 
-  if (offset == 0) 
-    return NULL;
-
-  {
-    int ext_size = len - offset + 1;
-    char* file_ext = (char*)malloc(ext_size);
-    memcpy(file_ext, file_name + offset, ext_size);
-    return file_ext;
+    {
+      int ext_size = len - offset + 1;
+      char* file_ext = (char*)malloc(ext_size);
+      memcpy(file_ext, file_name + offset, ext_size);
+      return file_ext;
+    }
   }
 }
 
 char* iupStrFileMakeFileName(const char* path, const char* title)
 {
-  int size_path = strlen(path);
-  int size_title = strlen(title);
-  char *filename = malloc(size_path + size_title + 2);
-  memcpy(filename, path, size_path);
-
-  if (path[size_path-1] != '/')
+  if (!path || !title)
+    return NULL;
+  else
   {
-    filename[size_path] = '/';
-    size_path++;
+    int size_path = (int)strlen(path);
+    int size_title = (int)strlen(title);
+    char *file_name = malloc(size_path + size_title + 2);
+    memcpy(file_name, path, size_path);
+
+    if (path[size_path - 1] != '/')
+    {
+      file_name[size_path] = '/';
+      size_path++;
+    }
+
+    memcpy(file_name + size_path, title, size_title);
+    file_name[size_path + size_title] = 0;
+
+    return file_name;
   }
-
-  memcpy(filename+size_path, title, size_title);
-  filename[size_path+size_title] = 0;
-
-  return filename;
 }
 
-void iupStrFileNameSplit(const char* filename, char *path, char *title)
+void iupStrFileNameSplit(const char* file_name, char *path, char *title)
 {
-  int i, n = strlen(filename);
+  int i, n;
+
+  if (!file_name)
+    return;
 
   /* Look for last folder separator and split title from path */
-  for (i=n-1;i>=0; i--)
+  n = (int)strlen(file_name);
+  for (i = n - 1; i >= 0; i--)
   {
-    if (filename[i] == '\\' || filename[i] == '/') 
+    if (file_name[i] == '\\' || file_name[i] == '/') 
     {
       if (path)
       {
-        strncpy(path, filename, i+1);
+        strncpy(path, file_name, i+1);
         path[i+1] = 0;
       }
 
       if (title)
       {
-        strcpy(title, filename+i+1);
+        strcpy(title, file_name+i+1);
         title[n-i] = 0;
       }
 
@@ -773,6 +939,10 @@ void iupStrFileNameSplit(const char* filename, char *path, char *title)
 int iupStrReplace(char* str, char src, char dst)
 {
   int i = 0;
+
+  if (!str)
+    return 0;
+
   while (*str)
   {
     if (*str == src)
@@ -877,6 +1047,10 @@ char* iupStrConvertToC(const char* str)
   char* new_str, *pnstr;
   const char* pstr = str;
   int len, count=0;
+
+  if (!str)
+    return NULL;
+
   while(*pstr)
   {
     if (IUP_ISRESERVED(*pstr))
@@ -886,7 +1060,7 @@ char* iupStrConvertToC(const char* str)
   if (!count)
     return (char*)str;
 
-  len = pstr-str;
+  len = (int)(pstr-str);
   new_str = malloc(len+count+1);
   pstr = str;
   pnstr = new_str;
@@ -1018,50 +1192,50 @@ static void iStrInitLatin1_map(void)
   Latin1_map = map;
   Latin1_map_nocase = map_nocase;
 
-#define M(_x) (map[(unsigned char)_x])
+#define mm(_x) (map[(unsigned char)_x])
 
   /* these characters are sorted in the same order as Excel would sort them */
 
-  M(  0)=  0;  M(  1)=  1; M(  2)=  2; M(  3)=  3; M(  4)=  4; M(  5)=  5; M(  6)=  6; M(  7)=  7;  M(  8)=  8; M(  9)=  9; M( 10)= 10; M( 11)= 11; M( 12)= 12; M( 13)= 13; M( 14)= 14; M( 15)= 15; 
-  M( 16)= 16;  M( 17)= 17; M( 18)= 18; M( 19)= 19; M( 20)= 20; M( 21)= 21; M( 22)= 22; M( 23)= 23;  M( 24)= 24; M( 25)= 25; M( 26)= 26; M( 27)= 27; M( 28)= 28; M( 29)= 29; M( 30)= 30; M( 31)= 31; 
-  M('\'')= 32; M('-')= 33; M('–')= 34; M('—')= 35; M(' ')= 36; M('!')= 37; M('"')= 38; M('#')= 39;  M('$')= 40; M('%')= 41; M('&')= 42; M('(')= 43; M(')')= 44; M('*')= 45; M(',')= 46; M('.')= 47; 
-  M('/')= 48;  M(':')= 49; M(';')= 50; M('?')= 51; M('@')= 52; M('(')= 53; M(')')= 54; M('^')= 55;  M('ˆ')= 56; M('_')= 57; M('`')= 58; M('{')= 59; M('|')= 60; M('}')= 61; M('~')= 62; M('¡')= 63; 
-  M('¦')= 64;  M('¨')= 65; M('¯')= 66; M('´')= 67; M('¸')= 68; M('¿')= 69; M('˜')= 70; M('‘')= 71;  M('’')= 72; M('‚')= 73; M('“')= 74; M('”')= 75; M('„')= 76; M('‹')= 77; M('›')= 78; M('¢')= 79; 
-  M('£')= 80;  M('¤')= 81; M('¥')= 82; M('€')= 83; M('+')= 84; M('<')= 85; M('=')= 86; M('>')= 87;  M('±')= 88; M('«')= 89; M('»')= 90; M('×')= 91; M('÷')= 92; M('§')= 93; M('©')= 94; M('¬')= 95; 
-  M('®')= 96;  M('°')= 97; M('µ')= 98; M('¶')= 99; M('…')=100; M('†')=101; M('‡')=102; M('•')=103;  M('•')=104; M('‰')=105; M('0')=106; M('¼')=107; M('½')=108; M('¾')=109; M('1')=110; M('¹')=111; 
-  M('2')=112;  M('²')=113; M('3')=114; M('³')=115; M('4')=116; M('5')=117; M('6')=118; M('7')=119;  M('8')=120; M('9')=121; M('a')=122; M('A')=123; M('ª')=124; M('á')=125; M('Á')=126; M('à')=127; 
-  M('À')=128;  M('â')=129; M('Â')=130; M('ä')=131; M('Ä')=132; M('ã')=133; M('Ã')=134; M('å')=135;  M('Å')=136; M('æ')=137; M('Æ')=138; M('b')=139; M('B')=140; M('c')=141; M('C')=142; M('ç')=143; 
-  M('Ç')=144;  M('d')=145; M('D')=146; M('ð')=147; M('Ð')=148; M('e')=149; M('E')=150; M('é')=151;  M('É')=152; M('è')=153; M('È')=154; M('ê')=155; M('Ê')=156; M('ë')=157; M('Ë')=158; M('f')=159; 
-  M('F')=160;  M('ƒ')=161; M('g')=162; M('G')=163; M('h')=164; M('H')=165; M('i')=166; M('I')=167;  M('í')=168; M('Í')=169; M('ì')=170; M('Ì')=171; M('î')=172; M('Î')=173; M('ï')=174; M('Ï')=175; 
-  M('j')=176;  M('J')=177; M('k')=178; M('K')=179; M('l')=180; M('L')=181; M('m')=182; M('M')=183;  M('n')=184; M('N')=185; M('ñ')=186; M('Ñ')=187; M('o')=188; M('O')=189; M('º')=190; M('ó')=191; 
-  M('Ó')=192;  M('ò')=193; M('Ò')=194; M('ô')=195; M('Ô')=196; M('ö')=197; M('Ö')=198; M('õ')=199;  M('Õ')=200; M('ø')=201; M('Ø')=202; M('œ')=203; M('Œ')=204; M('p')=205; M('P')=206; M('q')=207; 
-  M('Q')=208;  M('r')=209; M('R')=210; M('s')=211; M('S')=212; M('š')=213; M('Š')=214; M('ß')=215;  M('t')=216; M('T')=217; M('þ')=218; M('Þ')=219; M('™')=220; M('u')=221; M('U')=222; M('ú')=223; 
-  M('Ú')=224;  M('ù')=225; M('Ù')=226; M('û')=227; M('Û')=228; M('ü')=229; M('Ü')=230; M('v')=231;  M('V')=232; M('w')=233; M('W')=234; M('x')=235; M('X')=236; M('y')=237; M('Y')=238; M('ý')=239; 
-  M('Ý')=240;  M('ÿ')=241; M('Ÿ')=242; M('z')=243; M('Z')=244; M('ž')=245; M('Ž')=246; M('\\')=247; M(127)=248; M(129)=249; M(141)=250; M(143)=251; M(144)=252; M(157)=253; M(160)=254; M(173)=255; 
+  mm(  0)=  0;  mm(  1)=  1; mm(  2)=  2; mm(  3)=  3; mm(  4)=  4; mm(  5)=  5; mm(  6)=  6; mm(  7)=  7;  mm(  8)=  8; mm(  9)=  9; mm( 10)= 10; mm( 11)= 11; mm( 12)= 12; mm( 13)= 13; mm( 14)= 14; mm( 15)= 15; 
+  mm( 16)= 16;  mm( 17)= 17; mm( 18)= 18; mm( 19)= 19; mm( 20)= 20; mm( 21)= 21; mm( 22)= 22; mm( 23)= 23;  mm( 24)= 24; mm( 25)= 25; mm( 26)= 26; mm( 27)= 27; mm( 28)= 28; mm( 29)= 29; mm( 30)= 30; mm( 31)= 31; 
+  mm('\'')= 32; mm('-')= 33; mm('–')= 34; mm('—')= 35; mm(' ')= 36; mm('!')= 37; mm('"')= 38; mm('#')= 39;  mm('$')= 40; mm('%')= 41; mm('&')= 42; mm('(')= 43; mm(')')= 44; mm('*')= 45; mm(',')= 46; mm('.')= 47; 
+  mm('/')= 48;  mm(':')= 49; mm(';')= 50; mm('?')= 51; mm('@')= 52; mm('(')= 53; mm(')')= 54; mm('^')= 55;  mm('ˆ')= 56; mm('_')= 57; mm('`')= 58; mm('{')= 59; mm('|')= 60; mm('}')= 61; mm('~')= 62; mm('¡')= 63; 
+  mm('¦')= 64;  mm('¨')= 65; mm('¯')= 66; mm('´')= 67; mm('¸')= 68; mm('¿')= 69; mm('˜')= 70; mm('‘')= 71;  mm('’')= 72; mm('‚')= 73; mm('“')= 74; mm('”')= 75; mm('„')= 76; mm('‹')= 77; mm('›')= 78; mm('¢')= 79; 
+  mm('£')= 80;  mm('¤')= 81; mm('¥')= 82; mm('€')= 83; mm('+')= 84; mm('<')= 85; mm('=')= 86; mm('>')= 87;  mm('±')= 88; mm('«')= 89; mm('»')= 90; mm('×')= 91; mm('÷')= 92; mm('§')= 93; mm('©')= 94; mm('¬')= 95; 
+  mm('®')= 96;  mm('°')= 97; mm('µ')= 98; mm('¶')= 99; mm('…')=100; mm('†')=101; mm('‡')=102; mm('•')=103;  mm('•')=104; mm('‰')=105; mm('0')=106; mm('¼')=107; mm('½')=108; mm('¾')=109; mm('1')=110; mm('¹')=111; 
+  mm('2')=112;  mm('²')=113; mm('3')=114; mm('³')=115; mm('4')=116; mm('5')=117; mm('6')=118; mm('7')=119;  mm('8')=120; mm('9')=121; mm('a')=122; mm('A')=123; mm('ª')=124; mm('á')=125; mm('Á')=126; mm('à')=127; 
+  mm('À')=128;  mm('â')=129; mm('Â')=130; mm('ä')=131; mm('Ä')=132; mm('ã')=133; mm('Ã')=134; mm('å')=135;  mm('Å')=136; mm('æ')=137; mm('Æ')=138; mm('b')=139; mm('B')=140; mm('c')=141; mm('C')=142; mm('ç')=143; 
+  mm('Ç')=144;  mm('d')=145; mm('D')=146; mm('ð')=147; mm('Ð')=148; mm('e')=149; mm('E')=150; mm('é')=151;  mm('É')=152; mm('è')=153; mm('È')=154; mm('ê')=155; mm('Ê')=156; mm('ë')=157; mm('Ë')=158; mm('f')=159; 
+  mm('F')=160;  mm('ƒ')=161; mm('g')=162; mm('G')=163; mm('h')=164; mm('H')=165; mm('i')=166; mm('I')=167;  mm('í')=168; mm('Í')=169; mm('ì')=170; mm('Ì')=171; mm('î')=172; mm('Î')=173; mm('ï')=174; mm('Ï')=175; 
+  mm('j')=176;  mm('J')=177; mm('k')=178; mm('K')=179; mm('l')=180; mm('L')=181; mm('m')=182; mm('M')=183;  mm('n')=184; mm('N')=185; mm('ñ')=186; mm('Ñ')=187; mm('o')=188; mm('O')=189; mm('º')=190; mm('ó')=191; 
+  mm('Ó')=192;  mm('ò')=193; mm('Ò')=194; mm('ô')=195; mm('Ô')=196; mm('ö')=197; mm('Ö')=198; mm('õ')=199;  mm('Õ')=200; mm('ø')=201; mm('Ø')=202; mm('œ')=203; mm('Œ')=204; mm('p')=205; mm('P')=206; mm('q')=207; 
+  mm('Q')=208;  mm('r')=209; mm('R')=210; mm('s')=211; mm('S')=212; mm('š')=213; mm('Š')=214; mm('ß')=215;  mm('t')=216; mm('T')=217; mm('þ')=218; mm('Þ')=219; mm('™')=220; mm('u')=221; mm('U')=222; mm('ú')=223; 
+  mm('Ú')=224;  mm('ù')=225; mm('Ù')=226; mm('û')=227; mm('Û')=228; mm('ü')=229; mm('Ü')=230; mm('v')=231;  mm('V')=232; mm('w')=233; mm('W')=234; mm('x')=235; mm('X')=236; mm('y')=237; mm('Y')=238; mm('ý')=239; 
+  mm('Ý')=240;  mm('ÿ')=241; mm('Ÿ')=242; mm('z')=243; mm('Z')=244; mm('ž')=245; mm('Ž')=246; mm('\\')=247; mm(127)=248; mm(129)=249; mm(141)=250; mm(143)=251; mm(144)=252; mm(157)=253; mm(160)=254; mm(173)=255; 
 
-#undef M
+#undef mm
 
-#define M(_x) (map_nocase[(unsigned char)_x])
+#define mm(_x) (map_nocase[(unsigned char)_x])
 
   /* here case differences use the same code */
-  M(  0)=  0;  M(  1)=  1; M(  2)=  2; M(  3)=  3; M(  4)=  4; M(  5)=  5; M(  6)=  6; M(  7)=  7;  M(  8)=  8; M(  9)=  9; M( 10)= 10; M( 11)= 11; M( 12)= 12; M( 13)= 13; M( 14)= 14; M( 15)= 15; 
-  M( 16)= 16;  M( 17)= 17; M( 18)= 18; M( 19)= 19; M( 20)= 20; M( 21)= 21; M( 22)= 22; M( 23)= 23;  M( 24)= 24; M( 25)= 25; M( 26)= 26; M( 27)= 27; M( 28)= 28; M( 29)= 29; M( 30)= 30; M( 31)= 31; 
-  M('\'')= 32; M('-')= 33; M('–')= 34; M('—')= 35; M(' ')= 36; M('!')= 37; M('"')= 38; M('#')= 39;  M('$')= 40; M('%')= 41; M('&')= 42; M('(')= 43; M(')')= 44; M('*')= 45; M(',')= 46; M('.')= 47; 
-  M('/')= 48;  M(':')= 49; M(';')= 50; M('?')= 51; M('@')= 52; M('(')= 53; M(')')= 54; M('^')= 55;  M('ˆ')= 56; M('_')= 57; M('`')= 58; M('{')= 59; M('|')= 60; M('}')= 61; M('~')= 62; M('¡')= 63; 
-  M('¦')= 64;  M('¨')= 65; M('¯')= 66; M('´')= 67; M('¸')= 68; M('¿')= 69; M('˜')= 70; M('‘')= 71;  M('’')= 72; M('‚')= 73; M('“')= 74; M('”')= 75; M('„')= 76; M('‹')= 77; M('›')= 78; M('¢')= 79; 
-  M('£')= 80;  M('¤')= 81; M('¥')= 82; M('€')= 83; M('+')= 84; M('<')= 85; M('=')= 86; M('>')= 87;  M('±')= 88; M('«')= 89; M('»')= 90; M('×')= 91; M('÷')= 92; M('§')= 93; M('©')= 94; M('¬')= 95; 
-  M('®')= 96;  M('°')= 97; M('µ')= 98; M('¶')= 99; M('…')=100; M('†')=101; M('‡')=102; M('•')=103;  M('•')=104; M('‰')=105; M('0')=106; M('¼')=107; M('½')=108; M('¾')=109; M('1')=110; M('¹')=111; 
-  M('2')=112;  M('²')=113; M('3')=114; M('³')=115; M('4')=116; M('5')=117; M('6')=118; M('7')=119;  M('8')=120; M('9')=121; M('a')=122; M('A')=122; M('ª')=124; M('á')=125; M('Á')=125; M('à')=127; 
-  M('À')=127;  M('â')=129; M('Â')=129; M('ä')=131; M('Ä')=131; M('ã')=133; M('Ã')=133; M('å')=135;  M('Å')=135; M('æ')=137; M('Æ')=137; M('b')=139; M('B')=139; M('c')=141; M('C')=141; M('ç')=143; 
-  M('Ç')=143;  M('d')=145; M('D')=145; M('ð')=147; M('Ð')=147; M('e')=149; M('E')=149; M('é')=151;  M('É')=151; M('è')=153; M('È')=153; M('ê')=155; M('Ê')=155; M('ë')=157; M('Ë')=157; M('f')=159; 
-  M('F')=159;  M('ƒ')=161; M('g')=162; M('G')=162; M('h')=164; M('H')=164; M('i')=166; M('I')=166;  M('í')=168; M('Í')=168; M('ì')=170; M('Ì')=170; M('î')=172; M('Î')=172; M('ï')=174; M('Ï')=174; 
-  M('j')=176;  M('J')=176; M('k')=178; M('K')=178; M('l')=180; M('L')=180; M('M')=182; M('M')=182;  M('n')=184; M('N')=184; M('ñ')=186; M('Ñ')=186; M('o')=188; M('O')=188; M('º')=190; M('ó')=191; 
-  M('Ó')=191;  M('ò')=193; M('Ò')=194; M('ô')=195; M('Ô')=196; M('ö')=197; M('Ö')=198; M('õ')=199;  M('Õ')=200; M('ø')=201; M('Ø')=202; M('œ')=203; M('Œ')=204; M('p')=205; M('P')=206; M('q')=207; 
-  M('Q')=208;  M('r')=209; M('R')=209; M('s')=211; M('S')=211; M('š')=213; M('Š')=213; M('ß')=215;  M('t')=216; M('T')=216; M('þ')=218; M('Þ')=218; M('™')=220; M('u')=221; M('U')=221; M('ú')=223; 
-  M('Ú')=223;  M('ù')=225; M('Ù')=225; M('û')=227; M('Û')=227; M('ü')=229; M('Ü')=229; M('v')=231;  M('V')=231; M('w')=233; M('W')=233; M('x')=235; M('X')=235; M('y')=237; M('Y')=237; M('ý')=239; 
-  M('Ý')=239;  M('ÿ')=241; M('Ÿ')=241; M('z')=243; M('Z')=243; M('ž')=245; M('Ž')=245; M('\\')=247; M(127)=248; M(129)=249; M(141)=250; M(143)=251; M(144)=252; M(157)=253; M(160)=254; M(173)=255; 
+  mm(  0)=  0;  mm(  1)=  1; mm(  2)=  2; mm(  3)=  3; mm(  4)=  4; mm(  5)=  5; mm(  6)=  6; mm(  7)=  7;  mm(  8)=  8; mm(  9)=  9; mm( 10)= 10; mm( 11)= 11; mm( 12)= 12; mm( 13)= 13; mm( 14)= 14; mm( 15)= 15; 
+  mm( 16)= 16;  mm( 17)= 17; mm( 18)= 18; mm( 19)= 19; mm( 20)= 20; mm( 21)= 21; mm( 22)= 22; mm( 23)= 23;  mm( 24)= 24; mm( 25)= 25; mm( 26)= 26; mm( 27)= 27; mm( 28)= 28; mm( 29)= 29; mm( 30)= 30; mm( 31)= 31; 
+  mm('\'')= 32; mm('-')= 33; mm('–')= 34; mm('—')= 35; mm(' ')= 36; mm('!')= 37; mm('"')= 38; mm('#')= 39;  mm('$')= 40; mm('%')= 41; mm('&')= 42; mm('(')= 43; mm(')')= 44; mm('*')= 45; mm(',')= 46; mm('.')= 47; 
+  mm('/')= 48;  mm(':')= 49; mm(';')= 50; mm('?')= 51; mm('@')= 52; mm('(')= 53; mm(')')= 54; mm('^')= 55;  mm('ˆ')= 56; mm('_')= 57; mm('`')= 58; mm('{')= 59; mm('|')= 60; mm('}')= 61; mm('~')= 62; mm('¡')= 63; 
+  mm('¦')= 64;  mm('¨')= 65; mm('¯')= 66; mm('´')= 67; mm('¸')= 68; mm('¿')= 69; mm('˜')= 70; mm('‘')= 71;  mm('’')= 72; mm('‚')= 73; mm('“')= 74; mm('”')= 75; mm('„')= 76; mm('‹')= 77; mm('›')= 78; mm('¢')= 79; 
+  mm('£')= 80;  mm('¤')= 81; mm('¥')= 82; mm('€')= 83; mm('+')= 84; mm('<')= 85; mm('=')= 86; mm('>')= 87;  mm('±')= 88; mm('«')= 89; mm('»')= 90; mm('×')= 91; mm('÷')= 92; mm('§')= 93; mm('©')= 94; mm('¬')= 95; 
+  mm('®')= 96;  mm('°')= 97; mm('µ')= 98; mm('¶')= 99; mm('…')=100; mm('†')=101; mm('‡')=102; mm('•')=103;  mm('•')=104; mm('‰')=105; mm('0')=106; mm('¼')=107; mm('½')=108; mm('¾')=109; mm('1')=110; mm('¹')=111; 
+  mm('2')=112;  mm('²')=113; mm('3')=114; mm('³')=115; mm('4')=116; mm('5')=117; mm('6')=118; mm('7')=119;  mm('8')=120; mm('9')=121; mm('a')=122; mm('A')=122; mm('ª')=124; mm('á')=125; mm('Á')=125; mm('à')=127; 
+  mm('À')=127;  mm('â')=129; mm('Â')=129; mm('ä')=131; mm('Ä')=131; mm('ã')=133; mm('Ã')=133; mm('å')=135;  mm('Å')=135; mm('æ')=137; mm('Æ')=137; mm('b')=139; mm('B')=139; mm('c')=141; mm('C')=141; mm('ç')=143; 
+  mm('Ç')=143;  mm('d')=145; mm('D')=145; mm('ð')=147; mm('Ð')=147; mm('e')=149; mm('E')=149; mm('é')=151;  mm('É')=151; mm('è')=153; mm('È')=153; mm('ê')=155; mm('Ê')=155; mm('ë')=157; mm('Ë')=157; mm('f')=159; 
+  mm('F')=159;  mm('ƒ')=161; mm('g')=162; mm('G')=162; mm('h')=164; mm('H')=164; mm('i')=166; mm('I')=166;  mm('í')=168; mm('Í')=168; mm('ì')=170; mm('Ì')=170; mm('î')=172; mm('Î')=172; mm('ï')=174; mm('Ï')=174; 
+  mm('j')=176;  mm('J')=176; mm('k')=178; mm('K')=178; mm('l')=180; mm('L')=180; mm('m')=182; mm('M')=182;  mm('n')=184; mm('N')=184; mm('ñ')=186; mm('Ñ')=186; mm('o')=188; mm('O')=188; mm('º')=190; mm('ó')=191; 
+  mm('Ó')=191;  mm('ò')=193; mm('Ò')=193; mm('ô')=195; mm('Ô')=195; mm('ö')=197; mm('Ö')=197; mm('õ')=199;  mm('Õ')=199; mm('ø')=201; mm('Ø')=201; mm('œ')=203; mm('Œ')=203; mm('p')=205; mm('P')=205; mm('q')=207; 
+  mm('Q')=207;  mm('r')=209; mm('R')=209; mm('s')=211; mm('S')=211; mm('š')=213; mm('Š')=213; mm('ß')=215;  mm('t')=216; mm('T')=216; mm('þ')=218; mm('Þ')=218; mm('™')=220; mm('u')=221; mm('U')=221; mm('ú')=223; 
+  mm('Ú')=223;  mm('ù')=225; mm('Ù')=225; mm('û')=227; mm('Û')=227; mm('ü')=229; mm('Ü')=229; mm('v')=231;  mm('V')=231; mm('w')=233; mm('W')=233; mm('x')=235; mm('X')=235; mm('y')=237; mm('Y')=237; mm('ý')=239; 
+  mm('Ý')=239;  mm('ÿ')=241; mm('Ÿ')=241; mm('z')=243; mm('Z')=243; mm('ž')=245; mm('Ž')=245; mm('\\')=247; mm(127)=248; mm(129)=249; mm(141)=250; mm(143)=251; mm(144)=252; mm(157)=253; mm(160)=254; mm(173)=255; 
 
-#undef M
+#undef mm
 }
 
 static char iStrUTF8toLatin1(const char* *l)
@@ -1135,6 +1309,15 @@ It was modified to the C language and simplified to IUP needs.
 int iupStrCompare(const char *l, const char *r, int casesensitive, int utf8)
 {
   enum mode_t { STRING, NUMBER } mode=STRING;
+
+  if (l == r)
+    return 0;
+
+  if (!l && r)
+    return -1;
+
+  if (l && !r)
+    return 1;
 
   if (!Latin1_map)
     iStrInitLatin1_map();
@@ -1226,6 +1409,9 @@ int iupStrCompare(const char *l, const char *r, int casesensitive, int utf8)
 
 int iupStrCompareEqual(const char *l, const char *r, int casesensitive, int utf8, int partial)
 {
+  if (!l || !r)
+    return 0;
+
   if (!Latin1_map)
     iStrInitLatin1_map();
 
@@ -1281,10 +1467,14 @@ static int iStrIncUTF8(const char* str)
 
 int iupStrCompareFind(const char *l, const char *r, int casesensitive, int utf8)
 {
-  int i, inc;
-  int l_len = strlen(l);
-  int r_len = strlen(r);
-  int count = l_len - r_len;
+  int i, inc, l_len, r_len, count;
+
+  if (!l || !r)
+    return 0;
+
+  l_len = (int)strlen(l);
+  r_len = (int)strlen(r);
+  count = l_len - r_len;
   if (count < 0)
     return 0;
 
@@ -1308,10 +1498,10 @@ int iupStrCompareFind(const char *l, const char *r, int casesensitive, int utf8)
   return 0;
 }
 
-static void iStrFixPosUTF8(const char* value, int *start, int *end)
+static void iStrFixPosUTF8(const char* str, int *start, int *end)
 {
   int p = 0, i = 0, find = 0, inc;
-  while (*(value + i))
+  while (*(str + i))
   {
     if (find == 0 && p == *start)
     {
@@ -1324,7 +1514,7 @@ static void iStrFixPosUTF8(const char* value, int *start, int *end)
       return;
     }
 
-    inc = iStrIncUTF8(value + i);
+    inc = iStrIncUTF8(str + i);
     i += inc;
     p++;
   }
@@ -1339,11 +1529,11 @@ static void iStrFixPosUTF8(const char* value, int *start, int *end)
     *end = i;
 }
 
-void iupStrRemove(char* value, int start, int end, int dir, int utf8)
+void iupStrRemove(char* str, int start, int end, int dir, int utf8)
 {
   int len;
 
-  if (end < start)
+  if (end < start || !str || str[0] == 0)
     return;
 
   if (start == end)
@@ -1360,37 +1550,127 @@ void iupStrRemove(char* value, int start, int end, int dir, int utf8)
   }
 
   if (utf8)
-    iStrFixPosUTF8(value, &start, &end);
+    iStrFixPosUTF8(str, &start, &end);
 
   /* from "start" remove up to "end", but not including "end" */
-  len = strlen(value);
+  len = (int)strlen(str);
   if (start >= len) { start = len - 1; end = len; }
   if (end > len) end = len;
 
-  memmove(value + start, value + end, len - end + 1);
+  memmove(str + start, str + end, len - end + 1);
 }
 
-char* iupStrInsert(const char* value, const char* insert_value, int start, int end, int utf8)
+char* iupStrInsert(const char* str, const char* insert_str, int start, int end, int utf8)
 {
-  char* new_value = (char*)value;
-  int insert_len = strlen(insert_value);
-  int len = strlen(value);
+  char* new_str = (char*)str;
+  int insert_len, len;
+
+  if (!str || !insert_str)
+    return NULL;
+
+  insert_len = (int)strlen(insert_str);
+  len = (int)strlen(str);
 
   if (utf8)
-    iStrFixPosUTF8(value, &start, &end);
+    iStrFixPosUTF8(str, &start, &end);
 
   if (end == start || insert_len > end - start)
   {
-    new_value = malloc(len - (end - start) + insert_len + 1);
-    memcpy(new_value, value, start);
-    memcpy(new_value + start, insert_value, insert_len);
-    memcpy(new_value + start + insert_len, value + end, len - end + 1);
+    new_str = malloc(len - (end - start) + insert_len + 1);
+    memcpy(new_str, str, start);
+    memcpy(new_str + start, insert_str, insert_len);
+    memcpy(new_str + start + insert_len, str + end, len - end + 1);
   }
   else
   {
-    memcpy(new_value + start, insert_value, insert_len);
-    memcpy(new_value + start + insert_len, value + end, len - end + 1);
+    memcpy(new_str + start, insert_str, insert_len);
+    memcpy(new_str + start + insert_len, str + end, len - end + 1);
   }
 
-  return new_value;
+  return new_str;
 }
+
+int iupStrIsAscii(const char* str)
+{
+  if (!str)
+    return 0;
+
+  while (*str)
+  {
+    int c = *str;
+    if (c < 0)
+      return 0;
+    str++;
+  }
+  return 1;
+}
+
+static char* iStrSetLocale(const char* decimal_symbol)
+{
+  if (decimal_symbol)
+  {
+    struct lconv* locale_info = localeconv();
+    if (locale_info->decimal_point[0] != decimal_symbol[0])
+    {
+      char* old_locale = setlocale(LC_NUMERIC, NULL);
+
+      if (decimal_symbol[0] == '.')
+      {
+        old_locale = iupStrDup(old_locale);  /* must be before another setlocale */
+        setlocale(LC_NUMERIC, "en-US");
+        return old_locale;
+      }
+      else if (decimal_symbol[0] == ',')
+      {
+        old_locale = iupStrDup(old_locale);  /* must be before another setlocale */
+        setlocale(LC_NUMERIC, "pt-BR");
+        return old_locale;
+      }
+    }
+  }
+
+  return NULL;
+}
+
+static void iStrResetLocale(char* old_locale)
+{
+  if (old_locale)
+  {
+    setlocale(LC_NUMERIC, old_locale);
+    free(old_locale);
+  }
+}
+
+int iupStrToDoubleLocale(const char *str, double *d, const char* decimal_symbol)
+{
+  int ret, locale_set = 0;
+  char* old_locale;
+
+  if (!str) 
+    return 0;
+
+  old_locale = iStrSetLocale(decimal_symbol);
+  if (old_locale) locale_set = 1;
+
+  ret = sscanf(str, "%lf", d);
+
+  iStrResetLocale(old_locale);
+
+  if (ret != 1) 
+    return 0;
+
+  if (locale_set)
+    return 2;
+  else
+    return 1;
+}
+
+void iupStrPrintfDoubleLocale(char *str, const char *format, double d, const char* decimal_symbol)
+{
+  char* old_locale = iStrSetLocale(decimal_symbol);
+
+  sprintf(str, format, d);
+
+  iStrResetLocale(old_locale);
+}
+

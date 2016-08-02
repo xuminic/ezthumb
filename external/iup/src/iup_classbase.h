@@ -77,8 +77,8 @@ void iupBaseSetCurrentSize(Ihandle* ih, int w, int h, int shrink);
 void iupBaseSetPosition(Ihandle* ih, int x, int y);
 
 /* Updates the SIZE attribute if defined. 
-   Called only from iupdrvSetStandardFontAttrib. */
-void iupBaseUpdateSizeFromFont(Ihandle* ih);
+   Called only from iupdrvSetFontAttrib. */
+void iupBaseUpdateAttribFromFont(Ihandle* ih);
 
 
 /** \defgroup iclassbasemethod Base Class Methods
@@ -115,10 +115,13 @@ int iupBaseSetNameAttrib(Ihandle* ih, const char* value);
 int iupBaseSetRasterSizeAttrib(Ihandle* ih, const char* value);
 int iupBaseSetSizeAttrib(Ihandle* ih, const char* value);
 char* iupBaseGetSizeAttrib(Ihandle* ih);
+char* iupBaseGetCurrentSizeAttrib(Ihandle* ih);
 char* iupBaseGetRasterSizeAttrib(Ihandle* ih);
 char* iupBaseGetClientOffsetAttrib(Ihandle* ih);
 int iupBaseSetMaxSizeAttrib(Ihandle* ih, const char* value);
 int iupBaseSetMinSizeAttrib(Ihandle* ih, const char* value);
+char* iupBaseGetExpandAttrib(Ihandle* ih);
+int iupBaseSetExpandAttrib(Ihandle* ih, const char* value);
 
 /* visual */
 char* iupBaseGetVisibleAttrib(Ihandle* ih);
@@ -136,10 +139,13 @@ char* iupBaseNativeParentGetBgColorAttrib(Ihandle* ih);
 /* other */
 char* iupBaseContainerGetExpandAttrib(Ihandle* ih);
 int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value);
-int iupBaseNoSaveCheck(Ihandle* ih, const char* name);
 
 /* drag&drop */
 void iupdrvRegisterDragDropAttrib(Iclass* ic);
+
+/* util */
+int iupBaseNoSaveCheck(Ihandle* ih, const char* name);
+
 
 /** @} */
 
@@ -154,6 +160,7 @@ void iupdrvRegisterDragDropAttrib(Iclass* ic);
 
 #define iupMAX(_a,_b) ((_a)>(_b)?(_a):(_b))
 #define iupROUND(_x) ((int)((_x)>0? (_x)+0.5: (_x)-0.5))
+int     iupRound(double x);
 
 #define iupCOLOR8TO16(_x) ((unsigned short)(_x*257))  
 #define iupCOLOR16TO8(_x) ((unsigned char)(_x/257))   /* 65535/257 = 255 */

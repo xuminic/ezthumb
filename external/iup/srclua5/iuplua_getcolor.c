@@ -13,13 +13,12 @@
 
 #include "iuplua.h"
 #include "il.h"
-#include "il_controls.h"
 
  
 static int GetColor(lua_State *L)
 {
-  int x = luaL_checkint(L,1);
-  int y = luaL_checkint(L,2);
+  int x = (int)luaL_checkinteger(L,1);
+  int y = (int)luaL_checkinteger(L, 2);
   unsigned char r = (unsigned char) luaL_optnumber(L,3,0);
   unsigned char g = (unsigned char) luaL_optnumber(L,4,0);
   unsigned char b = (unsigned char) luaL_optnumber(L,5,0);

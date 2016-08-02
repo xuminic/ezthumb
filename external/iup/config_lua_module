@@ -1,15 +1,14 @@
 #!/bin/bash
 
-#Current Lua Version
-LUA_VER=5.1
-LUA_PFX=51
-
 # Include TEC_UNAME definitions
-source tec_uname
+source ./tec_uname
 
 echo ' '
 echo '  This script will configure the Tecgraf libraries in the system'
 echo '  to be used from Lua. It was tested in Ubuntu and in Fedora.'
+echo ' '
+echo '  The current Lua version is defined by the variables:'
+echo '    USE_LUA51 (default) or USE_LUA52 or USE_LUA52'
 echo ' '
 echo '  The Run Time libraries must be already installed on the system (see the install script).'
 echo '  It assumes that Lua binaries are installed using system packages.'
@@ -21,11 +20,12 @@ echo ' '
 
 Make_Lua_Link()
 {
-  ln -fsv $TEC_SYSTEM_LIB/lib$1$LUA_PFX.so $1.so
+  ln -fsv $TEC_SYSTEM_LIB/lib$1$LUA_SFX.so $1.so
 }
 
 # From tec_uname script
 ComputeTecUname
+ComputeLuaVersion
 ComputeSystemPaths
 #PrintInfo
 

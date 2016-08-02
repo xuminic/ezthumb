@@ -134,13 +134,13 @@ static void iClassObjectChildAdded(Iclass* ic, Ihandle* ih, Ihandle* child)
     ic->ChildAdded(ih, child);
 }
 
-static void iClassObjectChildRemoved(Iclass* ic, Ihandle* ih, Ihandle* child)
+static void iClassObjectChildRemoved(Iclass* ic, Ihandle* ih, Ihandle* child, int pos)
 {
   if (ic->parent)
-    iClassObjectChildRemoved(ic->parent, ih, child);
+    iClassObjectChildRemoved(ic->parent, ih, child, pos);
 
   if (ic->ChildRemoved)
-    ic->ChildRemoved(ih, child);
+    ic->ChildRemoved(ih, child, pos);
 }
 
 static void iClassLayoutUpdate(Iclass* ic, Ihandle *ih)
@@ -214,9 +214,9 @@ void iupClassObjectChildAdded(Ihandle* ih, Ihandle* child)
   iClassObjectChildAdded(ih->iclass, ih, child);
 }
 
-void iupClassObjectChildRemoved(Ihandle* ih, Ihandle* child)
+void iupClassObjectChildRemoved(Ihandle* ih, Ihandle* child, int pos)
 {
-  iClassObjectChildRemoved(ih->iclass, ih, child);
+  iClassObjectChildRemoved(ih->iclass, ih, child, pos);
 }
 
 void iupClassObjectLayoutUpdate(Ihandle *ih)
@@ -292,6 +292,7 @@ void iupClassRelease(Iclass* ic)
 
 int iupClassMatch(Iclass* ic, const char* classname)
 {
+  /* check for all classes in the hierarchy */
   while (ic)
   {
     if (iupStrEqualNoCase(ic->name, classname))
@@ -312,7 +313,7 @@ char* IupGetClassName(Ihandle *ih)
   if (!iupObjectCheck(ih))
     return NULL;
 
-  return ih->iclass->name;
+  return (char*)ih->iclass->name;
 }
 
 char* IupGetClassType(Ihandle *ih)

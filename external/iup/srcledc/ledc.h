@@ -2,7 +2,6 @@
  * \brief LEDC definitions.
  *
  * See Copyright Notice in iup.h
- * $Id: ledc.h,v 1.4 2012/03/30 16:26:20 scuri Exp $
  */
  
 #ifndef __LEDC_H 

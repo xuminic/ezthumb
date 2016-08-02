@@ -35,6 +35,7 @@ Iclass* iupSpinboxNewClass(void);
 Iclass* iupListNewClass(void);
 Iclass* iupTreeNewClass(void);
 Iclass* iupLinkNewClass(void);
+Iclass* iupFlatButtonNewClass(void);
 
 Iclass* iupMenuNewClass(void);
 Iclass* iupItemNewClass(void);
@@ -54,6 +55,11 @@ Iclass* iupGridBoxNewClass(void);
 Iclass* iupExpanderNewClass(void);
 Iclass* iupDetachBoxNewClass(void);
 Iclass* iupBackgroundBoxNewClass(void);
+Iclass* iupAnimatedLabelNewClass(void);
+Iclass* iupCalendarNewClass(void);
+Iclass* iupDatePickNewClass(void);
+Iclass* iupParamBoxNewClass(void);
+Iclass* iupParamNewClass(void);
 
 Iclass* iupTimerNewClass(void);
 Iclass* iupImageNewClass(void);
@@ -70,6 +76,8 @@ void iupdrvFontDlgInitClass(Iclass* ic);
 void iupdrvFileDlgInitClass(Iclass* ic);
 
 /************************************************/
+
+Iclass* iupBackgroundBoxNewBaseClass(const char* name, const char* base_name);
 
 /* Common definition of the canvas class */
 typedef struct _iupCanvas {

@@ -26,7 +26,7 @@
 */
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 #define CSC_CDLL_MAGIC          (('D'<<24) | ('L'<<16))
 #define CSC_CDLL_BACKGUARD      0xdeadbeef

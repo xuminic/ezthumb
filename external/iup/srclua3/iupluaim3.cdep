@@ -1,6 +1,0 @@
-$(OBJDIR)/iuplua_im.o: iuplua_im.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h ../include/iupim.h \
- /cygdrive/d/tecgraf/lua/include/lua.h \
- /cygdrive/d/tecgraf/lua/include/lauxlib.h \
- /cygdrive/d/tecgraf/lua/include/lua.h ../include/iuplua.h \
- ../include/iupluaim.h il.h

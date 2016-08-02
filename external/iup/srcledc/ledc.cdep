@@ -1,3 +1,0 @@
-$(OBJDIR)/lex.yy.o: lex.yy.c ledc.h y.tab.h
-$(OBJDIR)/y.tab.o: y.tab.c ledc.h
-$(OBJDIR)/ledc.o: ledc.c ledc.h

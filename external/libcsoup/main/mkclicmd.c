@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 int main(int argc, char **argv)
 {

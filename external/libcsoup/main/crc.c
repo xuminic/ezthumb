@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 #include "libcsoup.h"
-#include "csoup_internal.h"
+#include "libcsoup_debug.h"
 
 static	char	testbuf[2048];
 

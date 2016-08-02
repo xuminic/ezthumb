@@ -25,7 +25,7 @@
 
 
 
-char* iupTabsGetPaddingAttrib(Ihandle* ih)
+char* iupTabsGetTabPaddingAttrib(Ihandle* ih)
 {
   return iupStrReturnIntInt(ih->data->horiz_padding, ih->data->vert_padding, 'x');
 }
@@ -216,20 +216,35 @@ static void iTabsGetDecorOffset(Ihandle* ih, int *dx, int *dy)
   *dy += ih->data->vert_padding;
 }
 
-void iupTabsCheckCurrentTab(Ihandle* ih, int pos)
+void iupTabsCheckCurrentTab(Ihandle* ih, int pos, int removed)
 {
   int cur_pos = iupdrvTabsGetCurrentTab(ih);
   if (cur_pos == pos)
   {
+    int p;
+
+    /* if given tab is the current tab, 
+       then the current tab must be changed to a visible tab */
     Ihandle* child;
 
-    for (pos = 0, child = ih->firstchild; child; child = child->brother, pos++)
+    /* this function is called after the child has being removed from the hierarchy,
+       but before the system tab being removed. */
+
+    p = 0;
+    if (removed && p == pos)
+      p++;
+
+    for (child = ih->firstchild; child; child = child->brother)
     {
-      if (pos != cur_pos && iupdrvTabsIsTabVisible(child))
+      if (p != pos && iupdrvTabsIsTabVisible(child, p))
       {
-        iupdrvTabsSetCurrentTab(ih, pos);
+        iupdrvTabsSetCurrentTab(ih, p);
         return;
       }
+
+      p++;
+      if (removed && p == pos)
+        p++;  /* increment twice to compensate for child already removed */
     }
   }
 }
@@ -239,7 +254,7 @@ static void iTabsSetTab(Ihandle* ih, Ihandle* child, int pos)
   if (ih->handle)
   {
     int cur_pos = iupdrvTabsGetCurrentTab(ih);
-    if (cur_pos != pos && iupdrvTabsIsTabVisible(child))
+    if (cur_pos != pos && iupdrvTabsIsTabVisible(child, pos))
       iupdrvTabsSetCurrentTab(ih, pos);
   }
   else
@@ -248,7 +263,7 @@ static void iTabsSetTab(Ihandle* ih, Ihandle* child, int pos)
 
 
 /* ------------------------------------------------------------------------- */
-/* TABS - Sets and Gets - Accessors                                          */
+/* TABS - Sets and Gets - Attribs                                           */
 /* ------------------------------------------------------------------------- */
 
 static int iTabsSetValueHandleAttrib(Ihandle* ih, const char* value)
@@ -386,7 +401,7 @@ char* iupTabsGetTabVisibleAttrib(Ihandle* ih, int pos)
 {
   Ihandle* child = IupGetChild(ih, pos);
   if (child)
-    return iupStrReturnBoolean(iupdrvTabsIsTabVisible(child));
+    return iupStrReturnBoolean(iupdrvTabsIsTabVisible(child, pos));
   else
     return NULL;
 }
@@ -464,17 +479,19 @@ static void iTabsSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
 
 static void iTabsSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 {
-  /* IupTabs is the native parent of its children,
-     so the position is restarted at (0,0).
-     In all systems, each tab is a native window covering the client area.
+  /* In all systems, each tab is a native window covering the client area.
      Child coordinates are relative to client left-top corner of the tab page. */
   Ihandle* child;
-  (void)x;
-  (void)y;
+  char* offset = iupAttribGet(ih, "CHILDOFFSET");
+
+  /* Native container, position is reset */
+  x = 0;
+  y = 0;
+
+  if (offset) iupStrToIntInt(offset, &x, &y, 'x');
+
   for (child = ih->firstchild; child; child = child->brother)
-  {
-    iupBaseSetPosition(child, 0, 0);
-  }
+    iupBaseSetPosition(child, x, y);
 }
 
 static void* iTabsGetInnerNativeContainerHandleMethod(Ihandle* ih, Ihandle* child)
@@ -544,7 +561,7 @@ Iclass* iupTabsNewClass(void)
   /* IupTabs only */
   iupClassRegisterAttribute(ic, "VALUE", iTabsGetValueAttrib, iTabsSetValueAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "VALUEPOS", iTabsGetValuePosAttrib, iTabsSetValuePosAttrib, IUPAF_SAMEASSYSTEM, "0", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "VALUE_HANDLE", iTabsGetValueHandleAttrib, iTabsSetValueHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT|IUPAF_NO_STRING);
+  iupClassRegisterAttribute(ic, "VALUE_HANDLE", iTabsGetValueHandleAttrib, iTabsSetValueHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
   iupClassRegisterAttribute(ic, "COUNT", iTabsGetCountAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHOWCLOSE", iTabsGetShowCloseAttrib, iTabsSetShowCloseAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
@@ -552,6 +569,9 @@ Iclass* iupTabsNewClass(void)
   iupClassRegisterAttribute(ic, "CLIENTSIZE", iTabsGetClientSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CLIENTOFFSET", iTabsGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+
+  /* Native Container */
+  iupClassRegisterAttribute(ic, "CHILDOFFSET", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupdrvTabsInitClass(ic);
 

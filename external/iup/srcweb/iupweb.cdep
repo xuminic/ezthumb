@@ -1,6 +1,0 @@
-$(OBJDIR)/iup_webbrowser.o: iup_webbrowser.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h ../include/iupweb.h ../src/iup_object.h \
- ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
- ../src/iup_attrib.h ../src/iup_str.h ../src/iup_drv.h \
- ../src/iup_drvfont.h ../src/iup_register.h ../src/iup_stdcontrols.h \
- ../src/iup_layout.h iup_webbrowser.h

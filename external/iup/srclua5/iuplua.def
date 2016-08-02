@@ -4,6 +4,7 @@ EXPORTS
   iuplua_plugstate
   iuplua_getstate
   iuplua_checkihandle
+  iuplua_isihandle
   iuplua_call
   iuplua_call_ret_s
   iuplua_call_ret_d
@@ -13,6 +14,7 @@ EXPORTS
   iuplua_pushihandle_raw
   iuplua_dofile
   iuplua_dostring
+  iuplua_dobuffer
   iupkey_open
   iuplua_opencall_internal
   luaopen_iuplua
@@ -21,9 +23,13 @@ EXPORTS
   iuplua_checkstring_array
   iuplua_checkint_array
   iuplua_checkfloat_array
+  iuplua_checkdouble_array
   iuplua_checkuchar_array
   iuplua_checkihandle_array
   iuplua_checkihandleornil
   iuplua_call_start
   iuplua_register_cb
+  iuplua_register_lib
+  iuplua_register_funcs
+  iuplua_show_error_message
   

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <math.h>
 
-#undef SCI_NAMESPACE
+
 #include <Scintilla.h>
 
 #include "iup.h"
@@ -37,22 +37,22 @@ SCI_GETEXTRADESCENT
 static int iScintillaSetViewWSAttrib(Ihandle *ih, const char *value)
 {
   if (iupStrEqualNoCase(value, "INVISIBLE"))
-    iupScintillaSendMessage(ih, SCI_SETVIEWWS, SCWS_INVISIBLE, 0);
+    IupScintillaSendMessage(ih, SCI_SETVIEWWS, SCWS_INVISIBLE, 0);
   if (iupStrEqualNoCase(value, "VISIBLEALWAYS"))
-    iupScintillaSendMessage(ih, SCI_SETVIEWWS, SCWS_VISIBLEALWAYS, 0);
+    IupScintillaSendMessage(ih, SCI_SETVIEWWS, SCWS_VISIBLEALWAYS, 0);
   else if (iupStrEqualNoCase(value, "VISIBLEAFTERINDENT"))
-    iupScintillaSendMessage(ih, SCI_SETVIEWWS, SCWS_VISIBLEAFTERINDENT, 0);
+    IupScintillaSendMessage(ih, SCI_SETVIEWWS, SCWS_VISIBLEAFTERINDENT, 0);
 
   return 0;
 }
 
 static char* iScintillaGetViewWSAttrib(Ihandle* ih)
 {
-  if (iupScintillaSendMessage(ih, SCI_GETVIEWWS, 0, 0) == SCWS_INVISIBLE)
+  if (IupScintillaSendMessage(ih, SCI_GETVIEWWS, 0, 0) == SCWS_INVISIBLE)
     return "INVISIBLE";
-  else if (iupScintillaSendMessage(ih, SCI_GETVIEWWS, 0, 0) == SCWS_VISIBLEALWAYS)
+  else if (IupScintillaSendMessage(ih, SCI_GETVIEWWS, 0, 0) == SCWS_VISIBLEALWAYS)
     return "VISIBLEALWAYS";
-  else if (iupScintillaSendMessage(ih, SCI_GETVIEWWS, 0, 0) == SCWS_VISIBLEAFTERINDENT)
+  else if (IupScintillaSendMessage(ih, SCI_GETVIEWWS, 0, 0) == SCWS_VISIBLEAFTERINDENT)
     return "VISIBLEAFTERINDENT";
 
   return "UNDEFINED";
@@ -62,7 +62,7 @@ static int iScintillaSetWSFgColorAttrib(Ihandle *ih, const char *value)
 {
   if (!value)
   {
-    iupScintillaSendMessage(ih, SCI_SETWHITESPACEFORE, 0, 0);
+    IupScintillaSendMessage(ih, SCI_SETWHITESPACEFORE, 0, 0);
     return 0;
   }
   else
@@ -71,7 +71,7 @@ static int iScintillaSetWSFgColorAttrib(Ihandle *ih, const char *value)
     if (!iupStrToRGB(value, &r, &g, &b))
       return 0;
 
-    iupScintillaSendMessage(ih, SCI_SETWHITESPACEFORE, 1, iupScintillaEncodeColor(r, g, b));
+    IupScintillaSendMessage(ih, SCI_SETWHITESPACEFORE, 1, iupScintillaEncodeColor(r, g, b));
     return 1;
   }
 }
@@ -80,7 +80,7 @@ static int iScintillaSetWSBgColorAttrib(Ihandle *ih, const char *value)
 {
   if (!value)
   {
-    iupScintillaSendMessage(ih, SCI_SETWHITESPACEBACK, 0, 0);
+    IupScintillaSendMessage(ih, SCI_SETWHITESPACEBACK, 0, 0);
     return 0;
   }
   else
@@ -89,7 +89,7 @@ static int iScintillaSetWSBgColorAttrib(Ihandle *ih, const char *value)
     if (!iupStrToRGB(value, &r, &g, &b))
       return 0;
 
-    iupScintillaSendMessage(ih, SCI_SETWHITESPACEBACK, 1, iupScintillaEncodeColor(r, g, b));
+    IupScintillaSendMessage(ih, SCI_SETWHITESPACEBACK, 1, iupScintillaEncodeColor(r, g, b));
 
     return 1;
   }
@@ -101,14 +101,14 @@ static int iScintillaSetWSSizeAttrib(Ihandle *ih, const char *value)
   if (!iupStrToInt(value, &size))
     return 0;
 
-  iupScintillaSendMessage(ih, SCI_SETWHITESPACESIZE, size, 0);
+  IupScintillaSendMessage(ih, SCI_SETWHITESPACESIZE, size, 0);
 
   return 0;
 }
 
 static char* iScintillaGetWSSizeAttrib(Ihandle* ih)
 {
-  int size = iupScintillaSendMessage(ih, SCI_GETWHITESPACESIZE, 0, 0);
+  int size = IupScintillaSendMessage(ih, SCI_GETWHITESPACESIZE, 0, 0);
   return iupStrReturnInt(size);
 }
 
@@ -118,14 +118,14 @@ static int iScintillaSetWSExtraAscentAttrib(Ihandle *ih, const char *value)
   if (!iupStrToInt(value, &asc))
     return 0;
 
-  iupScintillaSendMessage(ih, SCI_SETEXTRAASCENT, asc, 0);
+  IupScintillaSendMessage(ih, SCI_SETEXTRAASCENT, asc, 0);
 
   return 0;
 }
 
 static char* iScintillaGetWSExtraAscentAttrib(Ihandle* ih)
 {
-  int asc = iupScintillaSendMessage(ih, SCI_GETEXTRAASCENT, 0, 0);
+  int asc = IupScintillaSendMessage(ih, SCI_GETEXTRAASCENT, 0, 0);
   return iupStrReturnInt(asc);
 }
 
@@ -135,14 +135,14 @@ static int iScintillaSetWSExtraDescentAttrib(Ihandle *ih, const char *value)
   if (!iupStrToInt(value, &desc))
     return 0;
 
-  iupScintillaSendMessage(ih, SCI_SETEXTRADESCENT, desc, 0);
+  IupScintillaSendMessage(ih, SCI_SETEXTRADESCENT, desc, 0);
 
   return 0;
 }
 
 static char* iScintillaGetWSExtraDescentAttrib(Ihandle* ih)
 {
-  int desc = iupScintillaSendMessage(ih, SCI_GETEXTRADESCENT, 0, 0);
+  int desc = IupScintillaSendMessage(ih, SCI_GETEXTRADESCENT, 0, 0);
   return iupStrReturnInt(desc);
 }
 

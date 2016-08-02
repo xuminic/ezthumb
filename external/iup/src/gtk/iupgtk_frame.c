@@ -29,6 +29,7 @@
 
 void iupdrvFrameGetDecorOffset(int *x, int *y)
 {
+  /* LAYOUT_DECORATION_ESTIMATE */
   *x = 2;
   *y = 2;
 }
@@ -44,6 +45,20 @@ static int gtkFrameSetTitleAttrib(Ihandle* ih, const char* value)
   {
     GtkFrame* frame = (GtkFrame*)ih->handle;
     gtk_frame_set_label(frame, iupgtkStrConvertToSystem(value));
+    return 1;
+  }
+  return 0;
+}
+
+static int gtkFrameSetSunkenAttrib(Ihandle* ih, const char* value)
+{
+  if (!iupAttribGetStr(ih, "_IUPFRAME_HAS_TITLE"))
+  {
+    if (iupStrBoolean(value))
+      gtk_frame_set_shadow_type((GtkFrame*)ih->handle, GTK_SHADOW_IN);
+    else
+      gtk_frame_set_shadow_type((GtkFrame*)ih->handle, GTK_SHADOW_ETCHED_IN);
+
     return 1;
   }
   return 0;
@@ -89,9 +104,9 @@ static int gtkFrameSetFgColorAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-static int gtkFrameSetStandardFontAttrib(Ihandle* ih, const char* value)
+static int gtkFrameSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetStandardFontAttrib(ih, value);
+  iupdrvSetFontAttrib(ih, value);
 
   if (ih->handle)
   {
@@ -110,7 +125,7 @@ static void* gtkFrameGetInnerNativeContainerHandleMethod(Ihandle* ih, Ihandle* c
 
 static int gtkFrameMapMethod(Ihandle* ih)
 {
-  char *value, *title;
+  char *title;
   GtkWidget *inner_parent;
 
   if (!ih->parent)
@@ -126,21 +141,13 @@ static int gtkFrameMapMethod(Ihandle* ih)
     iupAttribSet(ih, "_IUPFRAME_HAS_TITLE", "1");
   else
   {
-    value = iupAttribGetStr(ih, "SUNKEN");
-    if (iupStrBoolean(value))
-      gtk_frame_set_shadow_type((GtkFrame*)ih->handle, GTK_SHADOW_IN);
-    else
-      gtk_frame_set_shadow_type((GtkFrame*)ih->handle, GTK_SHADOW_ETCHED_IN);
-
     if (iupAttribGet(ih, "BGCOLOR"))
       iupAttribSet(ih, "_IUPFRAME_HAS_BGCOLOR", "1");
   }
 
   /* the container that will receive the child element. */
-  inner_parent = iupgtkNativeContainerNew();
-
-  /* must set this so IupFrame will be always a full native containter */
-  iupgtkNativeContainerSetHasWindow(inner_parent, TRUE);
+  /* use a window to be a full native containter */
+  inner_parent = iupgtkNativeContainerNew(1);
 
   gtk_container_add((GtkContainer*)ih->handle, inner_parent);
   gtk_widget_show(inner_parent);
@@ -149,6 +156,11 @@ static int gtkFrameMapMethod(Ihandle* ih)
   iupgtkAddToParent(ih);
 
   gtk_widget_realize(ih->handle);
+
+#if GTK_CHECK_VERSION(3, 0, 0)
+  if (!iupAttribGet(ih, "_IUPFRAME_HAS_BGCOLOR"))
+    gtkFrameSetBgColorAttrib(ih, NULL);
+#endif
 
   return IUP_NOERROR;
 }
@@ -162,10 +174,11 @@ void iupdrvFrameInitClass(Iclass* ic)
   /* Driver Dependent Attribute functions */
 
   /* Overwrite Common */
-  iupClassRegisterAttribute(ic, "STANDARDFONT", NULL, gtkFrameSetStandardFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NO_SAVE|IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "FONT", NULL, gtkFrameSetFontAttrib, IUPAF_SAMEASSYSTEM, "DEFAULTFONT", IUPAF_NOT_MAPPED);  /* inherited */
 
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", iupFrameGetBgColorAttrib, gtkFrameSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_DEFAULT);
+  iupClassRegisterAttribute(ic, "SUNKEN", NULL, gtkFrameSetSunkenAttrib, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* Special */
   iupClassRegisterAttribute(ic, "FGCOLOR", NULL, gtkFrameSetFgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGFGCOLOR", IUPAF_DEFAULT);

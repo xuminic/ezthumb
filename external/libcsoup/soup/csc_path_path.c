@@ -60,11 +60,11 @@ char *csc_path_path(char *path, char *buffer, int blen)
 		}
 	}
 	if (i >= 0) {
-		i++;
+		i += 2;
 		if (buffer) {
 			csc_strlcpy(buffer, path, i > blen ? blen : i);
 		}
-		return path + i;
+		return path + i - 1;
 	}
 	if (buffer && (blen > 3)) {
 		strcpy(buffer, ".");
