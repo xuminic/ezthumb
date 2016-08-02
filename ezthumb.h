@@ -26,9 +26,13 @@
 #include "libavutil/mathematics.h"
 #include "gd.h"
 #include "libcsoup.h"
-#include "ezthumb_debug.h"
 
 #define EZTHUMB_VERSION		"3.4.0"
+
+/* define the modules of libcsoup for easy debugging */
+#define EZTHUMB_MOD_CORE	SLOG_MODUL_ENUM(3)
+#define EZTHUMB_MOD_CLI		SLOG_MODUL_ENUM(4)
+#define EZTHUMB_MOD_GUI		SLOG_MODUL_ENUM(5)
 
 #define EZ_ERR_NONE		0
 #define EZ_ERR_EOP		-1	/* End Of Process */

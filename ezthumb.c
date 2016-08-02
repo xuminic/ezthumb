@@ -24,12 +24,15 @@
 #include <inttypes.h>
 #include <sys/time.h>
 
-//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
 
 #include "ezconfig.h"
 #include "ezthumb.h"
 #include "id_lookup.h"
+
+/* re-use the debug convention in libcsoup */
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
+#include "libcsoup_debug.h"
 
 #include "gdfontt.h"
 #include "gdfonts.h"
@@ -776,7 +779,7 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 
 
 #define VSkLOG(s,a,b)	\
-	EDB_PROG(("video_snapshot_skim: %s %lld/%lld\n", (s),(a),(b)))
+	CDB_PROG(("video_snapshot_skim: %s %lld/%lld\n", (s),(a),(b)))
 
 /* for these conditions: backward seeking available, key frame only,
  * snap interval is larger than maximum key frame interval and no rewind
@@ -871,7 +874,7 @@ vs_skim_update:
 
 
 #define VSSLOG(s,a,b)	\
-	EDB_PROG(("video_snapshot_scan: %s %lld/%lld\n", (s),(a),(b)))
+	CDB_PROG(("video_snapshot_scan: %s %lld/%lld\n", (s),(a),(b)))
 
 /* for these conditions: Though backward seeking is NOT available but it is 
  * required to extract key frame only. snap interval is larger than maximum 
@@ -951,7 +954,7 @@ vs_scan_update:
 
 
 #define VSTLOG(s,a,b,c)	\
-	EDB_PROG(("video_snapshot_twopass: %s %lld/%lld/%lld\n", \
+	CDB_PROG(("video_snapshot_twopass: %s %lld/%lld/%lld\n", \
 				(s),(a),(b),(c)))
 
 /* for these conditions: Though backward seeking is NOT available and it is 
@@ -1647,7 +1650,7 @@ static int video_keyframe_credit(EZVID *vidx, int64_t dts)
 {
 	/* reset the key frame crediting */ 
 	/* note that ezthumb never reset the keygap */
-	EDB_MODL(("video_keyframe_credit: %lld\n", dts));
+	CDB_MODL(("video_keyframe_credit: %lld\n", dts));
 	if (dts < 0) {
 		/* save (top up) the recent session before reset */
 		vidx->keyalldts += vidx->keylast - vidx->keyfirst;
@@ -1816,7 +1819,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		default:
 			/* 20130719 Remove the unknown streams in display */
 			strcat(buffer, "Unknown");
-			EDB_SHOW(("%s\n", buffer));
+			CDB_SHOW(("%s\n", buffer));
 			continue;
 		}
 		image_gdcanvas_print(image, line++, 0, buffer);
@@ -1863,15 +1866,15 @@ static EZTIME video_duration(EZVID *vidx)
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
 		if (vidx->seekable == ENX_SEEK_UNKNOWN) {
-			EDB_PROG(("video_duration: [Q] scan done\n"));
+			CDB_PROG(("video_duration: [Q] scan done\n"));
 		} else if (!SEEKABLE(vidx->seekable)) {
-			EDB_PROG(("video_duration: [Q] fullscan\n"));
+			CDB_PROG(("video_duration: [Q] fullscan\n"));
 			vidx->duration = video_duration_fullscan(vidx);
 		} else if ((ref_dur = video_duration_quickscan(vidx)) > 0) {
-			EDB_PROG(("video_duration: [Q] quickscan\n"));
+			CDB_PROG(("video_duration: [Q] quickscan\n"));
 			vidx->duration = ref_dur;
 		} else {	/* foolproof mode */
-			EDB_PROG(("video_duration: [Q] fullscan back\n"));
+			CDB_PROG(("video_duration: [Q] fullscan back\n"));
 			video_seeking(vidx, 0);
 			vidx->duration = video_duration_fullscan(vidx);
 		}
@@ -1893,7 +1896,7 @@ static EZTIME video_duration(EZVID *vidx)
 		vidx->seekable = video_seek_challenge(vidx);
 		video_timing(vidx, EZ_PTS_DSEEK);
 		if (vidx->seekable == ENX_SEEK_UNKNOWN) {
-			EDB_PROG(("video_duration: [A] scan done\n"));
+			CDB_PROG(("video_duration: [A] scan done\n"));
 			break;
 		}
 		/* estimate the duration of the video file */
@@ -1901,7 +1904,7 @@ static EZTIME video_duration(EZVID *vidx)
 		/* get the error of the duration by head and by calculation */
 		ref_err = (int)((vidx->duration - ref_dur) * 1000 
 					/ vidx->duration);
-		EDB_PROG(("video_duration: compared (%lld/%lld/%d)\n", 
+		CDB_PROG(("video_duration: compared (%lld/%lld/%d)\n", 
 				vidx->duration, ref_dur, ref_err));
 		/* calculate the possible keyframes in the video file */
 		key_num = (int)(video_ms_to_dts(vidx, ref_dur) / vidx->keydts);
@@ -1915,7 +1918,7 @@ static EZTIME video_duration(EZVID *vidx)
 		if (shots > key_num / 2) {
 			/* if the estimated shots are more than half of 
 			 * estimate keyframe, ezthumb enforce the full scan */
-			EDB_PROG(("video_duration: few keyframes %d/%d\n",
+			CDB_PROG(("video_duration: few keyframes %d/%d\n",
 					shots, key_num));
 			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
@@ -1926,17 +1929,17 @@ static EZTIME video_duration(EZVID *vidx)
 			 * will turn to scan mode */
 			break;
 		} else if (!SEEKABLE(vidx->seekable)) {
-			EDB_PROG(("video_duration: error %d fullscan\n",
+			CDB_PROG(("video_duration: error %d fullscan\n",
 					ref_err));
 			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
 		} else if ((ref_dur = video_duration_quickscan(vidx)) > 0) {
-			EDB_PROG(("video_duration: error %d quickscan\n",
+			CDB_PROG(("video_duration: error %d quickscan\n",
 					ref_err));
 			vidx->duration = ref_dur;
 			video_timing(vidx, EZ_PTS_DSCAN);
 		} else {
-			EDB_PROG(("video_duration: error %d full\n", ref_err));
+			CDB_PROG(("video_duration: error %d full\n", ref_err));
 			video_seeking(vidx, 0);
 			vidx->duration = video_duration_fullscan(vidx);
 			video_timing(vidx, EZ_PTS_DSCAN);
@@ -1947,7 +1950,7 @@ static EZTIME video_duration(EZVID *vidx)
 
 	eznotify(vidx->sysopt, EN_DURATION, 0,
 			smm_time_diff(&vidx->tmark), vidx);
-	EDB_PROG(("video_duration: %lld S:%d BR:%d (%d ms)\n", 
+	CDB_PROG(("video_duration: %lld S:%d BR:%d (%d ms)\n", 
 			vidx->duration, vidx->seekable, vidx->bitrates, 
 			smm_time_diff(&vidx->tmark)));
 	return vidx->duration;
@@ -1982,7 +1985,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 		 * load the second packet so av_read_frame() could return -1
 		 * to indicate its end of stream */
 		now = video_load_packet(vidx, &packet);
-		EDB_PROG(("video_duration_quickscan: seek %lld get %lld\n", 
+		CDB_PROG(("video_duration_quickscan: seek %lld get %lld\n", 
 				base + rdts, now));
 		if (now > 0) {
 			av_free_packet(&packet);
@@ -2004,10 +2007,10 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, vidx);
 	}
 	if ((recent -= vidx->dts_offset) <= 0) {
-		EDB_PROG(("video_duration_quickscan: failed\n"));
+		CDB_PROG(("video_duration_quickscan: failed\n"));
 		return -1;
 	}
-	EDB_PROG(("video_duration_quickscan: succeed (%lld)\n", recent));
+	CDB_PROG(("video_duration_quickscan: succeed (%lld)\n", recent));
 	return (EZTIME) video_dts_to_ms(vidx, recent);
 }
 
@@ -2018,7 +2021,7 @@ static EZTIME video_duration_fullscan(EZVID *vidx)
 	SETDURMOD(vidx->ses_flags, EZOP_DUR_FSCAN);
 	dts = video_statistics(vidx) - vidx->dts_offset;
 	dts = (EZTIME) video_dts_to_ms(vidx, dts > 0 ? dts : 0);
-	EDB_PROG(("video_duration_fullscan: %lld %lld\n", dts, vidx->keygap));
+	CDB_PROG(("video_duration_fullscan: %lld %lld\n", dts, vidx->keygap));
 	return dts;
 }
 
@@ -2055,11 +2058,11 @@ static int video_seek_challenge(EZVID *vidx)
 		cur_dts = packet.dts - vidx->dts_offset;
 		/* return the duration and mark it SEEK_UNKNOWN */
 		vidx->duration = (EZTIME) video_dts_to_ms(vidx, cur_dts);
-		EDB_PROG(("video_seek_challenge: short video %lld\n", 
+		CDB_PROG(("video_seek_challenge: short video %lld\n", 
 				vidx->duration));
 		return ENX_SEEK_UNKNOWN;
 	}
-	EDB_PROG(("video_seek_challenge: reference i-frame "
+	CDB_PROG(("video_seek_challenge: reference i-frame "
 			"DTS=%lld POS=%lld\n", dts_first, pos_first));
 
 	/* The current postion should be around the first second in the video
@@ -2083,11 +2086,11 @@ static int video_seek_challenge(EZVID *vidx)
 			cur_dts = packet.dts - vidx->dts_offset;
 			vidx->duration = (EZTIME) 
 				video_dts_to_ms(vidx, cur_dts);
-			EDB_PROG(("video_seek_challenge: short video %lld\n", 
+			CDB_PROG(("video_seek_challenge: short video %lld\n", 
 					vidx->duration));
 			return ENX_SEEK_UNKNOWN;
 		}
-		EDB_PROG(("video_seek_challenge: reference extended "
+		CDB_PROG(("video_seek_challenge: reference extended "
 				"DTS=%lld POS=%lld\n", dts_first, pos_first));
 	}
 
@@ -2096,7 +2099,7 @@ static int video_seek_challenge(EZVID *vidx)
 	 * key frame rate means how many dts in avarage per key frame */
 	key_dts = (vidx->keylast - vidx->keyfirst) / vidx->keycount;
 	key_num = av_rescale(vidx->filesize, vidx->keycount, pos_first);
-	EDB_PROG(("video_seek_challenge: keyframe %lld dts * %lld\n",
+	CDB_PROG(("video_seek_challenge: keyframe %lld dts * %lld\n",
 			key_dts, key_num));
 
 	if (key_num - vidx->keycount > 50) {
@@ -2109,12 +2112,12 @@ static int video_seek_challenge(EZVID *vidx)
 		/* There's not enough key frames left in the video file 
 		 * worthing a seekable test, probably a too small clip. */
 		vidx->duration = video_duration_fullscan(vidx);
-		EDB_PROG(("video_seek_challenge: short video %lld\n", 
+		CDB_PROG(("video_seek_challenge: short video %lld\n", 
 				vidx->duration));
 		return ENX_SEEK_UNKNOWN;
 	}
 
-	EDB_PROG(("video_seek_challenge: seek forward from %lld by %lld\n",
+	CDB_PROG(("video_seek_challenge: seek forward from %lld by %lld\n",
 			dts_begin, dts_target));
 
 	/* seeking forward test */
@@ -2148,7 +2151,7 @@ static int video_seek_challenge(EZVID *vidx)
 		av_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
-		EDB_PROG(("video_seek_challenge: forward seeking "
+		CDB_PROG(("video_seek_challenge: forward seeking "
 				"%lld/%lld %d\n", cur_dts, next_dts, error));
 		errmin = (error < errmin) ? error : errmin;
 	}
@@ -2170,12 +2173,12 @@ static int video_seek_challenge(EZVID *vidx)
 		dts_span = video_dts_to_ms(vidx, dts_span);
 		vidx->bitrates = (int)(pos_first * 8000 / dts_span);
 	}
-	EDB_PROG(("video_seek_challenge: reference bitrate is %d\n", 
+	CDB_PROG(("video_seek_challenge: reference bitrate is %d\n", 
 			vidx->bitrates));
 
 	if (errmin > EZ_DSCP_STEP_ERROR) {
 		/* unable to seek or error > 30% */
-		EDB_PROG(("video_seek_challenge: forward seeking failed %d\n",
+		CDB_PROG(("video_seek_challenge: forward seeking failed %d\n",
 					errmin));
 		/* reset the keyframe accrediting because of many seeking */
 		video_keyframe_credit(vidx, -1);
@@ -2204,7 +2207,7 @@ static int video_seek_challenge(EZVID *vidx)
 		av_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
-		EDB_PROG(("video_seek_challenge: backward seeking "
+		CDB_PROG(("video_seek_challenge: backward seeking "
 				"%lld/%lld %d\n", cur_dts, next_dts, error));
 		errmin = (error < errmin) ? error : errmin;
 	}
@@ -2212,11 +2215,11 @@ static int video_seek_challenge(EZVID *vidx)
 	video_keyframe_credit(vidx, -1);
 	
 	if (errmin > EZ_DSCP_STEP_ERROR) {
-		EDB_PROG(("video_seek_challenge: backward seeking failed %d\n",
+		CDB_PROG(("video_seek_challenge: backward seeking failed %d\n",
 					errmin));
 		return ENX_SEEK_FORWARD;
 	}
-	EDB_PROG(("video_seek_challenge: bi-direction seekable. (%d ms)\n",
+	CDB_PROG(("video_seek_challenge: bi-direction seekable. (%d ms)\n",
 			smm_time_diff(&vidx->tmark)));
 	return ENX_SEEK_FREE;
 }
@@ -2295,7 +2298,7 @@ static int64_t video_snap_point(EZVID *vidx, EZIMG *image, int index)
 		while (vpos < 0) {
 			vpos += image->time_step;
 		}
-		EDB_PROG(("video_snap_point: "
+		CDB_PROG(("video_snap_point: "
 					"ID=%d POS=%lld DUR=%lld OFF=%lld\n",
 				index, vpos, vidx->duration, vidx->dur_off));
 		if (vpos > vidx->duration) {
@@ -2966,7 +2969,7 @@ static int video_display_ar(AVStream *stream, AVRational *dar)
 	if (dar->num && dar->den) {
 		ar_height = stream->codec->width * dar->den / dar->num;
 	}
-	EDB_PROG(("video_display_ar: SAR=%d:%d DAR=%d:%d Height=%d\n", 
+	CDB_PROG(("video_display_ar: SAR=%d:%d DAR=%d:%d Height=%d\n", 
 			sar->num, sar->den, dar->num, dar->den, ar_height));
 	return ar_height;
 }
@@ -3715,7 +3718,7 @@ static int image_gdframe_puts(EZIMG *image, int fsize,
 {
 	int	brect[8];
 
-	EDB_FUNC(("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", 
+	CDB_FUNC(("image_gdframe_puts(%dx%dx%d): %s (0x%x)\n", 
 				x, y, fsize, s, c));
 	fsize = image_fontsize(fsize, image->dst_width);
 	if (image->sysopt->ins_font == NULL) {
@@ -3803,8 +3806,8 @@ static int image_gdcanvas_print(EZIMG *image, int row, int off, char *s)
 	int	x, y, ts_width;
 	
 	/* 20130719 copy the display to console and avoid NULL pointer */
-	EDB_SHOW((s));
-	EDB_SHOW(("\n"));
+	CDB_SHOW((s));
+	CDB_SHOW(("\n"));
 	if (image == NULL) {
 		return 0;
 	}
@@ -4064,12 +4067,12 @@ static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 	if (ezopt_thumb_name(image->sysopt, image->filename, filename, idx) 
 			== EZ_THUMB_SKIP) {
 		errno = EEXIST;
-		EDB_WARN(("%s: skipped.\n", image->filename));
+		CDB_WARN(("%s: skipped.\n", image->filename));
 		return NULL;	/* skip the existed files */
 	}
 
 	if ((fp = fopen(image->filename, "wb")) == NULL) {
-		EDB_ERROR(("%s: failed to create\n", image->filename));
+		CDB_ERROR(("%s: failed to create\n", image->filename));
 	}
 	return fp;
 }
@@ -4246,7 +4249,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	if (inbuf) {
 		smm_free(inbuf);
 	}
-	EDB_FUNC(("ezopt_thumb_name: %d\n", rc));
+	CDB_FUNC(("ezopt_thumb_name: %d\n", rc));
 	return rc;
 }
 
@@ -4288,27 +4291,27 @@ static int ezdefault(EZOPT *ezopt, int event,
 
 	switch (event) {
 	case EZ_ERR_LOWMEM:
-		EDB_ERROR(("%s: low memory [%ld]\n", (char*) block, param));
+		CDB_ERROR(("%s: low memory [%ld]\n", (char*) block, param));
 		return event;
 	case EZ_ERR_FORMAT:
-		EDB_ERROR(("%s: unknown format.\n", (char*) block));
+		CDB_ERROR(("%s: unknown format.\n", (char*) block));
 		return event;
 	case EZ_ERR_STREAM:
-		EDB_ERROR(("%s: no stream info found.\n", (char*) block));
+		CDB_ERROR(("%s: no stream info found.\n", (char*) block));
 		return event;
 	case EZ_ERR_VIDEOSTREAM:
-		EDB_ERROR(("%s: no video stream found.\n", (char*) block));
+		CDB_ERROR(("%s: no video stream found.\n", (char*) block));
 		return event;
 	case EZ_ERR_CODEC_FAIL:
-		EDB_ERROR(("Could not open codec! %ld\n", param));
+		CDB_ERROR(("Could not open codec! %ld\n", param));
 		return event;
 	case EZ_ERR_FILE:
-		EDB_ERROR(("%s: file not found.\n", (char*) block));
+		CDB_ERROR(("%s: file not found.\n", (char*) block));
 		return event;
 	}
 
 	if (ezopt == NULL) {
-		EDB_ERROR(("Unhandled event [0x%x]\n", event));
+		CDB_ERROR(("Unhandled event [0x%x]\n", event));
 		return event;
 	}
 
@@ -4329,7 +4332,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 #endif
 			av_log_set_level(i);
 		}
-		EDB_INFO(("%s: file open (%ld ms)\n", vidx->filename, opt));
+		CDB_INFO(("%s: file open (%ld ms)\n", vidx->filename, opt));
 		break;
 	case EN_MEDIA_OPEN:
 		vidx = block;
@@ -4353,40 +4356,40 @@ static int ezdefault(EZOPT *ezopt, int event,
 	case EN_PROC_BEGIN:
 		switch (param) {
 		case ENX_SS_SCAN:
-			EDB_SHOW(("Building (Scan)      "));
+			CDB_SHOW(("Building (Scan)      "));
 			break;
 		case ENX_SS_SAFE:
-			EDB_SHOW(("Building (Safe)      "));
+			CDB_SHOW(("Building (Safe)      "));
 			break;
 		case ENX_SS_TWOPASS:
-			EDB_SHOW(("Building (2Pass)     "));
+			CDB_SHOW(("Building (2Pass)     "));
 			break;
 		case ENX_SS_HEURIS:
-			EDB_SHOW(("Building (Heur)      "));
+			CDB_SHOW(("Building (Heur)      "));
 			break;
 		case ENX_SS_IFRAMES:
-			EDB_SHOW(("Building (iFrame)      "));
+			CDB_SHOW(("Building (iFrame)      "));
 			break;
 		case ENX_SS_SKIM:
 		default:
-			EDB_SHOW(("Building (Fast)      "));
+			CDB_SHOW(("Building (Fast)      "));
 			break;
 		}
 		break;
 	case EN_PROC_BINDING:
-		EDB_SHOW(("+"));
+		CDB_SHOW(("+"));
 		break;
 	case EN_PROC_CURRENT:
-		EDB_SHOW(("."));
+		CDB_SHOW(("."));
 		break;
 	case EN_PROC_END:
-		EDB_SHOW((" %ldx%ld done\n", param, opt));
+		CDB_SHOW((" %ldx%ld done\n", param, opt));
 		break;
 	case EN_PROC_SAVED:
 		myntf = block;
 		vidx  = myntf->varg1;
 		image = myntf->varg2;
-		EDB_SHOW(("OUTPUT: %s\n", image->filename));
+		CDB_SHOW(("OUTPUT: %s\n", image->filename));
 
 		n = sprintf(buf, "MAGIC: %s %s ", 
 				seekm[vidx->seekable%4],
@@ -4396,20 +4399,20 @@ static int ezdefault(EZOPT *ezopt, int event,
 					vidx->pts[i*2], vidx->pts[i*2+1]);
 		}
 		strcat(buf, "\n");
-		EDB_SHOW((buf));
+		CDB_SHOW((buf));
 		break;
 	case EN_OPEN_BEGIN:
 		vidx = block;
-		EDB_SHOW(("Triaging %s ... ", vidx->filename));
+		CDB_SHOW(("Triaging %s ... ", vidx->filename));
 		break;
 	case EN_OPEN_END:
 		if ((vidx = block) != NULL) {
-			EDB_SHOW(("%dx%d %lld (ms)\n", vidx->width, 
+			CDB_SHOW(("%dx%d %lld (ms)\n", vidx->width, 
 					vidx->height, vidx->duration));
 		} else if (param == EZ_ERR_VIDEOSTREAM) {
-			EDB_SHOW(("no media\n"));
+			CDB_SHOW(("no media\n"));
 		} else {
-			EDB_SHOW(("skip\n"));
+			CDB_SHOW(("skip\n"));
 		}
 		break;
 	case EN_STREAM_BROKEN:
@@ -4439,15 +4442,15 @@ static int ezdefault(EZOPT *ezopt, int event,
 	case EN_SCAN_IFRAME:
 		vidx = block;
 		if (EZOP_DEBUG(vidx->ses_flags) >= SLOG_LVL_DEBUG) {
-			EDB_SHOW(("I-Frame Scanned (%ld ms):\n", opt));
+			CDB_SHOW(("I-Frame Scanned (%ld ms):\n", opt));
 			for (i = 0; i < param; i++) {
-				EDB_SHOW(("%9lld", ((long long *)block)[i]));
+				CDB_SHOW(("%9lld", ((long long *)block)[i]));
 				if ((i % 8) == 7) {
-					EDB_SHOW(("\n"));
+					CDB_SHOW(("\n"));
 				}
 			}
 			if ((i % 8) != 0) {
-				EDB_SHOW(("\n"));
+				CDB_SHOW(("\n"));
 			}
 		}
 		break;
@@ -4492,7 +4495,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 	case EN_BUMP_BACK:
 		myntf = block;
 		vidx = myntf->varg1;
-		EDB_ERROR(("Bump back to %lld: %lld (%lld < %lld)\n",
+		CDB_ERROR(("Bump back to %lld: %lld (%lld < %lld)\n",
 				(long long) myntf->iarg2, 
 				(long long) myntf->iarg1,
 				(long long) vidx->keydelta, 
@@ -4509,26 +4512,26 @@ static int ezdefault(EZOPT *ezopt, int event,
 		vidx = block;
 		switch (param) {
 		case ENX_IFRAME_RESET:
-			EDB_DEBUG(("Key Frame accrediting system reset.\n"));
+			CDB_DEBUG(("Key Frame accrediting system reset.\n"));
 			break;
 		case ENX_IFRAME_SET:
-			EDB_FUNC(("Key Frame start from: %lld\n", 
+			CDB_FUNC(("Key Frame start from: %lld\n", 
 					(long long) vidx->keylast));
 			break;
 		case ENX_IFRAME_UPDATE:
-			EDB_FUNC(("Key Frame Gap Update: %lld\n", 
+			CDB_FUNC(("Key Frame Gap Update: %lld\n", 
 					(long long) vidx->keygap));
 			break;
 		}
 		break;
 	case EN_FRAME_EXCEPTION:
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_WARNING) {
-			EDB_WARN(("Discard Dodge I"));
+			CDB_WARN(("Discard Dodge I"));
 			//dump_frame(block, 1);
 		}
 		break;
 	case EN_SKIP_EXIST:
-		EDB_ERROR(("Thumbnail Existed: %s\n", (char*) block));
+		CDB_ERROR(("Thumbnail Existed: %s\n", (char*) block));
 		break;
 	}
 	return event;
@@ -4548,7 +4551,7 @@ static int dump_media_brief(EZVID *vidx)
 			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
 			sec = vidx->duration / 1000;
 			sprintf(tmp, "%dx%d", codecx->width, codecx->height);
-			EDB_SHOW(("%2d:%02d:%02d %10s [%d]: %s\n",
+			CDB_SHOW(("%2d:%02d:%02d %10s [%d]: %s\n",
 					sec / 3600,
 					(sec % 3600) / 60, 
 					(sec % 3600) % 60,
@@ -4563,62 +4566,62 @@ static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx)
 	int64_t	dts;
 	int	i, sec;
 
-	EDB_SHOW(("Media: %s\n", vidx->filename));
+	CDB_SHOW(("Media: %s\n", vidx->filename));
 	for (i = 0; i < n; i++) {
-		EDB_SHOW(("[%d] ", i));
+		CDB_SHOW(("[%d] ", i));
 		if (i >= (int)vidx->formatx->nb_streams) {
-			EDB_SHOW(("ERROR  %8lu\n", mestat[i].received));
+			CDB_SHOW(("ERROR  %8lu\n", mestat[i].received));
 			continue;
 		}
 		
 		switch(vidx->formatx->streams[i]->codec->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:
-			EDB_SHOW(("VIDEO  "));
+			CDB_SHOW(("VIDEO  "));
 			break;
 		case AVMEDIA_TYPE_AUDIO:
-			EDB_SHOW(("AUDIO  "));
+			CDB_SHOW(("AUDIO  "));
 			break;
 		case AVMEDIA_TYPE_SUBTITLE:
-			EDB_SHOW(("SUBTITL"));
+			CDB_SHOW(("SUBTITL"));
 			break;
 		default:
-			EDB_SHOW(("UNKNOWN"));
+			CDB_SHOW(("UNKNOWN"));
 			break;
 		}
 		dts = mestat[i].dts_base + mestat[i].dts_last;
 		dts -= vidx->dts_offset;
 		sec = (int) (video_dts_to_ms(vidx, dts) / 1000);
-		EDB_SHOW((":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
+		CDB_SHOW((":%-8lu KEY:%-6lu REW:%lu  TIME:%d\n",
 				mestat[i].received, mestat[i].key, 
 				mestat[i].rewound, sec));
 	}
-	EDB_SHOW(("Maximum Gap of key frames: %lld\n", 
+	CDB_SHOW(("Maximum Gap of key frames: %lld\n", 
 			(long long) vidx->keygap));
-	EDB_SHOW(("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0));
+	CDB_SHOW(("Time used: %.3f\n", smm_time_diff(&vidx->tmark) / 1000.0));
 	return 0;
 }
 
 static int dump_format_context(AVFormatContext *format)
 {
 #ifdef	HAVE_AVFORMATCONTEXT_FILE_SIZE
-	EDB_SHOW(("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+	CDB_SHOW(("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) format->file_size,
 			format->bit_rate));
 #elif	defined(HAVE_AVFORMATCONTEXT_PB)
-	EDB_SHOW(("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
+	CDB_SHOW(("  Format: %s(%s), Size: %lld, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			(long long) avio_size(format->pb),
 			format->bit_rate));
 #else
-	EDB_SHOW(("  Format: %s(%s), Size: unknown, Bitrate: %u\n",
+	CDB_SHOW(("  Format: %s(%s), Size: unknown, Bitrate: %u\n",
 			format->iformat->long_name,
 			format->iformat->name,
 			format->bit_rate));
 #endif
-	EDB_SHOW(("  Streams: %d, Start time: %lld, Duration: %lld\n",
+	CDB_SHOW(("  Streams: %d, Start time: %lld, Duration: %lld\n",
 			format->nb_streams,
 			(long long) format->start_time,
 			(long long) format->duration));
@@ -4630,13 +4633,13 @@ static int dump_stream_common(AVStream *stream, int sidx)
 	AVCodec	*xcodec;
 
 	xcodec = avcodec_find_decoder(stream->codec->codec_id);
-	EDB_SHOW(("Stream #%d:%d: %s; Codec ID: %s; '%s' %s\n", 
+	CDB_SHOW(("Stream #%d:%d: %s; Codec ID: %s; '%s' %s\n", 
 			sidx, stream->id,
 			id_lookup(id_codec_type, stream->codec->codec_type),
 			id_lookup(id_codec, stream->codec->codec_id),
 			xcodec ? xcodec->name : "Unknown",
 			xcodec ? xcodec->long_name : "Unknown"));
-	EDB_SHOW(("  Start Time  : %" PRId64 "; Duration: %" PRId64 
+	CDB_SHOW(("  Start Time  : %" PRId64 "; Duration: %" PRId64 
 			"; Frame Rate: %d/%d; Stream_AR: %d/%d; Lang: %s\n",
 			(stream->start_time < 0) ? -1 : stream->start_time, 
 			(stream->duration < 0) ? -1 : stream->duration,
@@ -4649,7 +4652,7 @@ static int dump_stream_common(AVStream *stream, int sidx)
 
 static int dump_video_context(AVCodecContext *codec)
 {
-	EDB_SHOW(("  Video Codec : %s; %dx%d+%d; Time Base: %d/%d; "
+	CDB_SHOW(("  Video Codec : %s; %dx%d+%d; Time Base: %d/%d; "
 				"BR=%d BF=%d; AR: %d/%d\n",
 			id_lookup(id_pix_fmt, codec->pix_fmt),
 			codec->width, codec->height, 
@@ -4664,7 +4667,7 @@ static int dump_video_context(AVCodecContext *codec)
 
 static int dump_audio_context(AVCodecContext *codec)
 {
-	EDB_SHOW(("  Audio Codec : %s; Time Base: %d/%d; "
+	CDB_SHOW(("  Audio Codec : %s; Time Base: %d/%d; "
 				"CH=%d SR=%d %s BR=%d\n",
 			id_lookup(id_codec, codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
@@ -4676,7 +4679,7 @@ static int dump_audio_context(AVCodecContext *codec)
 
 static int dump_subtitle_context(AVCodecContext *codec)
 {
-	EDB_SHOW(("  Subtitles   : %s; Time Base: %d/%d; BR=%d\n",
+	CDB_SHOW(("  Subtitles   : %s; Time Base: %d/%d; BR=%d\n",
 			id_lookup(id_codec, codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->bit_rate));
@@ -4692,7 +4695,7 @@ static int dump_other_context(AVCodecContext *codec)
 static int dump_packet(AVPacket *p)
 {
 	/* PTS:Presentation timestamp.  DTS:Decompression timestamp */
-	EDB_SHOW(("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
+	CDB_SHOW(("Packet Pos:%" PRId64 ", PTS:%" PRId64 ", DTS:%" PRId64 
 			", Dur:%d, Siz:%d, Flag:%d, SI:%d\n",
 			p->pos, p->pts,	p->dts, p->duration, p->size,
 			p->flags, p->stream_index));
@@ -4706,7 +4709,7 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 	/*if (got_pic == 0) {
 		return 0;
 	}*/
-	EDB_SHOW(("%s KEY:%d CPN:%d EKey:%d %s DTS:%lld PKey:%d Pos:%lld Size:%d\n", 
+	CDB_SHOW(("%s KEY:%d CPN:%d EKey:%d %s DTS:%lld PKey:%d Pos:%lld Size:%d\n", 
 			got_pic == 0 ? "Decoding" : "Decoded ", 
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
@@ -4724,7 +4727,7 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 
 	dts = ezfrm->rf_dts - vidx->dts_offset;
 	meta_timestamp((int)video_dts_to_ms(vidx, dts), 1, timestamp);
-	EDB_SHOW(("Frame %3d: PAC:%d EKey:%d DTS:%lld (%s) "
+	CDB_SHOW(("Frame %3d: PAC:%d EKey:%d DTS:%lld (%s) "
 				"Type:%s %s PTS:%lld\n",
 			sn, ezfrm->rf_pac, vidx->vidframe->keyflag,
 			(long long) ezfrm->rf_dts, timestamp, 
@@ -4754,7 +4757,7 @@ static int dump_metadata(void *dict)
 		return 0;
 	}
 	for (i = 0; i < entry->count; i++) {
-		EDB_SHOW(("  %-12s: %s\n", 
+		CDB_SHOW(("  %-12s: %s\n", 
 				entry->elems[i].key, entry->elems[i].value));
 	}
 	return i;
@@ -4827,7 +4830,7 @@ static int dump_duration(EZVID *vidx, int use_ms)
 		strcpy(buf, "Mistake");
 		break;
 	}
-	EDB_SHOW(("Duration found by %s: %lld (%d ms); "
+	CDB_SHOW(("Duration found by %s: %lld (%d ms); "
 				"Seeking capability: %s\n",
 			buf, vidx->duration, use_ms, tmp));
 	return 0;
@@ -4835,46 +4838,46 @@ static int dump_duration(EZVID *vidx, int use_ms)
 
 static int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
 {
-	EDB_SHOW(("\n>>>>>>>>>>>>>>>>>>\n"));
-	EDB_SHOW(("Single shot size:  %dx%dx%d-%d\n", 
+	CDB_SHOW(("\n>>>>>>>>>>>>>>>>>>\n"));
+	CDB_SHOW(("Single shot size:  %dx%dx%d-%d\n", 
 			image->dst_width, image->dst_height, 
 			image->dst_pixfmt, ezopt->edge_width));
-	EDB_SHOW(("Grid size:         %dx%d+%d\n", 
+	CDB_SHOW(("Grid size:         %dx%d+%d\n", 
 			image->grid_col, image->grid_row, 
 			ezopt->shadow_width));
-	EDB_SHOW(("Canvas size:       %dx%d-%d\n", 
+	CDB_SHOW(("Canvas size:       %dx%d-%d\n", 
 			image->canvas_width, image->canvas_height, 
 			image->canvas_minfo));
-	EDB_SHOW(("Time setting:      %lld-%lld %lld (ms)\n", 
+	CDB_SHOW(("Time setting:      %lld-%lld %lld (ms)\n", 
 			(long long) image->time_from, 
 			(long long) image->time_during, 
 			(long long) image->time_step));
-	EDB_SHOW(("Margin of canvas:  %dx%d\n", 
+	CDB_SHOW(("Margin of canvas:  %dx%d\n", 
 			image->rim_width, image->rim_height));
-	EDB_SHOW(("Gap of shots:      %dx%d\n", 
+	CDB_SHOW(("Gap of shots:      %dx%d\n", 
 			image->gap_width, image->gap_height));
-	EDB_SHOW(("Color of Canvas:   BG#%08X SH#%08X MI#%08X\n",
+	CDB_SHOW(("Color of Canvas:   BG#%08X SH#%08X MI#%08X\n",
 			(unsigned) image->color_canvas,
 			(unsigned) image->color_shadow,
 			(unsigned) image->color_minfo));
-	EDB_SHOW(("Color of Shots:    ED#%08X IN#%08X SH#%08X\n",
+	CDB_SHOW(("Color of Shots:    ED#%08X IN#%08X SH#%08X\n",
 			(unsigned) image->color_edge,
 			(unsigned) image->color_inset,
 			(unsigned) image->color_inshadow));
-	EDB_SHOW(("Font size:         MI=%d IN=%d (SH: %d %d)\n", 
+	CDB_SHOW(("Font size:         MI=%d IN=%d (SH: %d %d)\n", 
 			ezopt->mi_size, ezopt->ins_size,
 			ezopt->mi_shadow, ezopt->ins_shadow));
-	EDB_SHOW(("Font position:     MI=%d IN=%d\n",
+	CDB_SHOW(("Font position:     MI=%d IN=%d\n",
 			ezopt->mi_position, ezopt->ins_position));
 	if (ezopt->mi_font) {
-		EDB_SHOW(("Font MediaInfo:    %s\n", ezopt->mi_font));
+		CDB_SHOW(("Font MediaInfo:    %s\n", ezopt->mi_font));
 	}
 	if (ezopt->ins_font) {
-		EDB_SHOW(("Font Inset Shots:  %s\n", ezopt->ins_font));
+		CDB_SHOW(("Font Inset Shots:  %s\n", ezopt->ins_font));
 	}
-	EDB_SHOW(("Output file name:  %s.%s (%d)\n", 
+	CDB_SHOW(("Output file name:  %s.%s (%d)\n", 
 			ezopt->suffix, ezopt->img_format, ezopt->img_quality));
-	EDB_SHOW(("Flags:             %s %s %s %s %s %s %s %s %s "
+	CDB_SHOW(("Flags:             %s %s %s %s %s %s %s %s %s "
 				"0x%x D%d P%d\n", 
 			ezopt->flags & EZOP_INFO ? "MI" : "",
 			ezopt->flags & EZOP_TIMEST ? "TS" : "",
@@ -4887,17 +4890,17 @@ static int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
 			ezopt->flags & EZOP_DECODE_OTF ? "OT" : "",
 			GETDURMOD(ezopt->flags),
 			EZOP_DEBUG(ezopt->flags), EZOP_PROC(ezopt->flags)));
-	EDB_SHOW(("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
+	CDB_SHOW(("Font numerate:     %dx%d %dx%d %dx%d %dx%d %dx%d\n",
 			gdFontGetTiny()->w, gdFontGetTiny()->h,
 			gdFontGetSmall()->w, gdFontGetSmall()->h,
 			gdFontGetMediumBold()->w, gdFontGetMediumBold()->h,
 			gdFontGetLarge()->w, gdFontGetLarge()->h,
 			gdFontGetGiant()->w, gdFontGetGiant()->h));
-	EDB_SHOW(("Background Image:  %s (0x%x)\n", 
+	CDB_SHOW(("Background Image:  %s (0x%x)\n", 
 			ezopt->background, ezopt->bg_position));
 
 	ezopt_profile_dump(ezopt,"Profile of Grid:   ", "Profile of Shots:  ");
-	EDB_SHOW(("<<<<<<<<<<<<<<<<<<\n"));
+	CDB_SHOW(("<<<<<<<<<<<<<<<<<<\n"));
 	return 0;
 }
 

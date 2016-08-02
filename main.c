@@ -23,12 +23,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
 #include "ezthumb.h"
 #ifndef	CFG_GUI_OFF
   #include "ezgui.h"
 #endif
 #include "id_lookup.h"
+
+/* re-use the debug convention in libcsoup */
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
+#include "libcsoup_debug.h"
+
 
 #define CMD_ERROR	-2
 #define CMD_UNSET	-1
@@ -227,14 +231,25 @@ static void linefeed_count(int n, int mod, char *con, char *coff);
 static void print_profile_shots(EZOPT *opt, int min);
 static void print_profile_width(EZOPT *opt, int vidw);
 static int load_default_config(EZOPT *opt);
+static int ezdebug_trans_module(int cw, char *buf, int blen);
 
-
+F_PRF_MODL	preset_trans_modl;
 
 int main(int argc, char **argv)
 {
+	SMMDBG	*dbgc;
 	int	i, todo;
 
 	smm_init();			/* initialize the libsmm */
+#if	defined(DEBUG) && defined(CFG_WIN32_API) && defined(CFG_GUI_ON)
+	//dbgc = slog_csoup_open(NULL, "win32.log");
+	dbgc = slog_csoup_open(NULL, NULL);
+#else
+	dbgc = slog_csoup_open(NULL, NULL);
+#endif
+	preset_trans_modl = dbgc->f_trans_modu;
+	dbgc->f_trans_modu = ezdebug_trans_module;
+
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
@@ -247,7 +262,7 @@ int main(int argc, char **argv)
 #endif
 
 	todo = command_line_parser(argc, argv, &sysopt);
-	EDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
+	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
 	
 	/* review the command option structure to make sure there is no
 	 * controdicted options */
@@ -717,7 +732,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				goto break_parse;	/* break the analysis */
 			}
 			EZOP_DEBUG_MAKE(opt->flags, c);
-			ezthumb_slog_setcw(c);
+			CDB_SET_LEVEL(c);
 			break;
 		case CMD_W_IDTH:
 			if (!isdigit(*optarg)) {
@@ -764,7 +779,7 @@ break_parse:
 
 static int signal_handler(int sig)
 {
-	EDB_WARN(("Signal %d\n", sig));
+	CDB_WARN(("Signal %d\n", sig));
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
 	smm_destroy();
@@ -845,7 +860,7 @@ static int msg_info(void *option, char *path, int type, void *info)
 
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		EDB_SHOW(("Entering %s:\n", path));
+		CDB_SHOW(("Entering %s:\n", path));
 		break;
 	case SMM_MSG_PATH_EXEC:
 		if (csc_extname_filter_match(ezopt->accept, path)) {
@@ -853,10 +868,10 @@ static int msg_info(void *option, char *path, int type, void *info)
 		}
 		break;
 	case SMM_MSG_PATH_BREAK:
-		EDB_WARN(("Failed to process %s\n", path));
+		CDB_WARN(("Failed to process %s\n", path));
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		EDB_SHOW(("Leaving %s\n", path));
+		CDB_SHOW(("Leaving %s\n", path));
 		break;
 	}
 	return SMM_NTF_PATH_NONE;
@@ -870,19 +885,19 @@ static int msg_shot(void *option, char *path, int type, void *info)
 
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		EDB_SHOW(("Entering %s:\n", path));
+		CDB_SHOW(("Entering %s:\n", path));
 		break;
 	case SMM_MSG_PATH_EXEC:
 		if (csc_extname_filter_match(ezopt->accept, path)) {
-			EDB_FUNC(("EZTHUMB %s\n", path));
+			CDB_FUNC(("EZTHUMB %s\n", path));
 			ezthumb(path, option);
 		}
 		break;
 	case SMM_MSG_PATH_BREAK:
-		EDB_WARN(("Failed to process %s\n", path));
+		CDB_WARN(("Failed to process %s\n", path));
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		EDB_SHOW(("Leaving %s\n", path));
+		CDB_SHOW(("Leaving %s\n", path));
 		break;
 	}
 	return SMM_NTF_PATH_NONE;
@@ -907,7 +922,7 @@ static int env_init(EZOPT *ezopt)
 	{
 		int	i;
 		for (i = 0; i <= len; i++) {
-			EDB_DEBUG(("%d: %s\n", i, arg[i]));
+			CDB_DEBUG(("%d: %s\n", i, arg[i]));
 		}
 	}
 #endif
@@ -1112,28 +1127,28 @@ static int event_cb(void *vobj, int event,
 		return EN_EVENT_PASSTHROUGH;
 	
 	case EN_PROC_BINDING:
-		EDB_SHOW(("\b\b\b\b\b+     "));
+		CDB_SHOW(("\b\b\b\b\b+     "));
 		break;
 
 	case EN_PROC_CURRENT:
 		if (param == 0) {	/* for key frame saving only */
-			EDB_SHOW(("."));
+			CDB_SHOW(("."));
 			break;
 		}
 
 		expect = opt * 100 / param / 2;
 		if (dotted >= expect) {
-			EDB_SHOW(("\b\b\b\b%3ld%%", opt * 100 / param));
+			CDB_SHOW(("\b\b\b\b%3ld%%", opt * 100 / param));
 		} else while (dotted < expect) {
-			EDB_SHOW(("\b\b\b\b\b. %3ld%%", opt * 100 / param));
+			CDB_SHOW(("\b\b\b\b\b. %3ld%%", opt * 100 / param));
 			dotted++;
 		}
 		break;
 	case EN_PROC_END:
 		if (param == 0) {       /* for key frame saving only */
-			EDB_SHOW(("\b\b\b\b100%% done\n"));
+			CDB_SHOW(("\b\b\b\b100%% done\n"));
 		} else {
-			EDB_SHOW(("\b\b\b\b%ldx%ld done\n", param, opt));
+			CDB_SHOW(("\b\b\b\b%ldx%ld done\n", param, opt));
 		}
 		break;
 
@@ -1158,10 +1173,10 @@ static int event_verbose(void *vobj, int event,
 		ezopt->notify = NULL;
 		eznotify(ezopt, event, param, opt, block);
 		ezopt->notify = ftmp;
-		EDB_SHOW(("\n"));
+		CDB_SHOW(("\n"));
 		break;
 	case EN_PROC_BINDING:
-		EDB_SHOW(("Binding next.\n"));
+		CDB_SHOW(("Binding next.\n"));
 		break;
 	case EN_PROC_CURRENT:
 		break;
@@ -1293,7 +1308,7 @@ static int load_default_config(EZOPT *opt)
 		ezopt_load_config(opt, config);
 		if (EZOP_DEBUG(opt->flags) >= SLOG_LVL_INFO) {
 			path = csc_cfg_status(config, &items);
-			EDB_INFO(("Read %d configures: %s\n", items, path));
+			CDB_INFO(("Read %d configures: %s\n", items, path));
 		}
 		csc_cfg_close(config);
 	}
@@ -1304,11 +1319,25 @@ static int load_default_config(EZOPT *opt)
 		ezopt_load_config(opt, config);
 		if (EZOP_DEBUG(opt->flags) >= SLOG_LVL_INFO) {
 			path = csc_cfg_status(config, &items);
-			EDB_INFO(("Read %d configures: %s\n", items, path));
+			CDB_INFO(("Read %d configures: %s\n", items, path));
 		}
 		csc_cfg_close(config);
 	}
 	return 0;
+}
+
+static int ezdebug_trans_module(int cw, char *buf, int blen)
+{
+	if (cw & EZTHUMB_MOD_CORE) {
+		csc_strlcat(buf, "[EZTHUMB]", blen);
+	} else if (cw & EZTHUMB_MOD_CLI) {
+		csc_strlcat(buf, "[CLI]", blen);
+	} else if (cw & EZTHUMB_MOD_GUI) {
+		csc_strlcat(buf, "[EZGUI]", blen);
+	} else if (preset_trans_modl) {
+		return preset_trans_modl(cw, buf, blen);
+	}
+	return strlen(buf);
 }
 
 

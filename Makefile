@@ -89,8 +89,7 @@ OBJGUI	= $(OBJDIR)/main_con.o
 endif
 OBJCON	= $(OBJDIR)/main_con.o
 
-OBJS	= $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o  $(OBJDIR)/id_lookup.o \
-	  $(OBJDIR)/ezthumb_debug.o
+OBJS	= $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o  $(OBJDIR)/id_lookup.o
 
 
 RELDATE	= $(shell date  +%Y%m%d)
@@ -118,8 +117,6 @@ RELLIST	= ChangeLog	\
 	  ezqiz		\
 	  ezthumb.1	\
 	  ezthumb.c	\
-	  ezthumb_debug.c	\
-	  ezthumb_debug.h	\
 	  ezthumb.h	\
 	  ezthumb.ico	\
 	  ezthumb_icon.rc	\

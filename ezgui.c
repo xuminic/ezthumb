@@ -24,10 +24,6 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_DEBUG)
-
 #include "iup.h"
 
 #include "ezconfig.h"
@@ -36,6 +32,13 @@
 #include "ezgui.h"
 #include "ezicon.h"
 #include "id_lookup.h"
+
+/* re-use the debug convention in libcsoup */
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_DEBUG)
+#include "libcsoup_debug.h"
+
 
 #define EZOBJ_MAIN	"EZGUIOBJ"
 #define EZOBJ_SVIEW	"SVIEWOBJ"
@@ -424,7 +427,7 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 	gui->win_width = xui_get_size(ih, "RASTERSIZE", &gui->win_height);
 
-	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d P:%s\n", width, height,
+	CDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d P:%s\n", width, height,
 			gui->win_width, gui->win_height, 
 			IupGetAttribute(gui->dlg_main, "SCREENPOSITION")));
 
@@ -448,25 +451,25 @@ static int ezgui_event_window_show(Ihandle *ih, int state)
 #ifdef	DEBUG
 	switch (state) {
 	case IUP_HIDE:
-		EDB_MODL(("EVT_SHOW(%d): IUP_HIDE\n", state));
+		CDB_MODL(("EVT_SHOW(%d): IUP_HIDE\n", state));
 		break;
 	case IUP_SHOW:
-		EDB_MODL(("EVT_SHOW(%d): IUP_SHOW\n", state));
+		CDB_MODL(("EVT_SHOW(%d): IUP_SHOW\n", state));
 		break;
 	case IUP_RESTORE:
-		EDB_MODL(("EVT_SHOW(%d): IUP_RESTORE\n", state));
+		CDB_MODL(("EVT_SHOW(%d): IUP_RESTORE\n", state));
 		break;
 	case IUP_MINIMIZE:
-		EDB_MODL(("EVT_SHOW(%d): IUP_MINIMIZE\n", state));
+		CDB_MODL(("EVT_SHOW(%d): IUP_MINIMIZE\n", state));
 		break;
 	case IUP_MAXIMIZE:
-		EDB_MODL(("EVT_SHOW(%d): IUP_MAXIMIZE\n", state));
+		CDB_MODL(("EVT_SHOW(%d): IUP_MAXIMIZE\n", state));
 		break;
 	case IUP_CLOSE:
-		EDB_MODL(("EVT_SHOW(%d): IUP_CLOSE\n", state));
+		CDB_MODL(("EVT_SHOW(%d): IUP_CLOSE\n", state));
 		break;
 	default:
-		EDB_MODL(("EVT_SHOW(%d): unknown\n", state));
+		CDB_MODL(("EVT_SHOW(%d): unknown\n", state));
 		break;
 	}
 #endif
@@ -508,7 +511,7 @@ static int ezgui_event_window_close(Ihandle *ih)
 
 	s = IupGetAttribute(ih, "SCREENPOSITION");
 
-	EDB_MODL(("EVT_CLOSE: SCREENPOSITION = %s\n", s));
+	CDB_MODL(("EVT_CLOSE: SCREENPOSITION = %s\n", s));
 	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_WIN_POS, s);
 	return 0;
 }
@@ -1464,8 +1467,8 @@ static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
 	}
 	
 	val = IupGetAttribute(gui->dlg_odir, "VALUE");
-	EDB_DEBUG(("Open File VALUE: %s\n", val));
-	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
+	CDB_DEBUG(("Open File VALUE: %s\n", val));
+	CDB_DEBUG(("Last  DIRECTORY: %s\n", 
 			IupGetAttribute(gui->dlg_odir, "DIRECTORY")));
 
 	IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
@@ -1607,8 +1610,8 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 	}
 
 	val = IupGetAttribute(gui->dlg_font, "VALUE");
-	EDB_DEBUG(("Font Face: %s\n", val));
-	EDB_DEBUG(("Font Color: %s\n",
+	CDB_DEBUG(("Font Face: %s\n", val));
+	CDB_DEBUG(("Font Color: %s\n",
 				IupGetAttribute(gui->dlg_font, "COLOR")));
 
 	IupSetAttribute(gui->font_face, "VISIBLE", "YES");
@@ -1847,7 +1850,7 @@ static int ezgui_setup_format_update(EZGUI *gui)
 	}
 	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY, val);
 	
-	EDB_DEBUG(("EVT_SETUP: Fmt=%d JPG=%d GIFA=%d Tra=%s\n",
+	CDB_DEBUG(("EVT_SETUP: Fmt=%d JPG=%d GIFA=%d Tra=%s\n",
 			gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr, val));
 	return 0;
 }
@@ -2298,7 +2301,7 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 		return IUP_DEFAULT;
 	}
 
-	EDB_DEBUG(("EVT_Action %d: %s %s\n", item, attr, text));
+	CDB_DEBUG(("EVT_Action %d: %s %s\n", item, attr, text));
 
 	gui->sysopt->pre_seek = (int) strtol(attr, NULL, 0);
 	attr = strchr(attr, ':');
@@ -2330,7 +2333,7 @@ static int ezgui_sview_event_dropfiles(Ihandle *ih,
 		return IUP_DEFAULT;
 	}
 
-	EDB_DEBUG(("EVT_Dropfiles: fname=%s number=%d %dx%d\n",
+	CDB_DEBUG(("EVT_Dropfiles: fname=%s number=%d %dx%d\n",
 				filename, num, x, y));
 	ezgui_sview_file_append(sview, (char*) filename);
 	/* highlight the RUN button when the list is not empty */
@@ -2348,8 +2351,8 @@ static int ezgui_sview_event_multi_select(Ihandle *ih, char *value)
 		return IUP_DEFAULT;
 	}
 
-	EDB_DEBUG(("EVT_Multi_select: %s\n", value));
-	EDB_DEBUG(("List value=%s\n", 
+	CDB_DEBUG(("EVT_Multi_select: %s\n", value));
+	CDB_DEBUG(("List value=%s\n", 
 				IupGetAttribute(sview->filename, "VALUE")));
 	
 	/* the parameter 'value' is useless. grab list myself */
@@ -2382,7 +2385,7 @@ static int ezgui_sview_event_moused(Ihandle *ih,
 		return IUP_DEFAULT;
 	}
 
-	EDB_MODL(("EVT_Mouse: %d %d %dx%d %s\n", 
+	CDB_MODL(("EVT_Mouse: %d %d %dx%d %s\n", 
 				button, pressed, x, y, status));
 	if (pressed) {	/* only act when button is released */
 		return IUP_DEFAULT;
@@ -2406,7 +2409,7 @@ static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
 
 	line  = IupConvertXYToPos(ih, x, y);
 
-	EDB_MODL(("EVT_Motion: %d %d %d\n", x, y, line));
+	CDB_MODL(("EVT_Motion: %d %d %d\n", x, y, line));
 
 	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
@@ -2450,9 +2453,9 @@ static int ezgui_sview_add(SView *sview)
 	 * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
 	 * 			lan_ke_er.flv|Powered_by_Discuz.flv|
 	 * Last  DIRECTORY: /home/xum1/dwhelper0 */
-	EDB_DEBUG(("Open File VALUE: %s\n", 
+	CDB_DEBUG(("Open File VALUE: %s\n", 
 			IupGetAttribute(gui->dlg_open, "VALUE")));
-	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
+	CDB_DEBUG(("Last  DIRECTORY: %s\n", 
 			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
 	/* duplicate the path and filename list */
 	flist = csc_strcpy_alloc(IupGetAttribute(gui->dlg_open, "VALUE"), 16);
@@ -2516,7 +2519,7 @@ static int ezgui_sview_remove(SView *sview)
 
 	while (1) {
 		value = IupGetAttribute(sview->filename, "VALUE");
-		EDB_PROG(("EVT_Remove: %s\n", value));
+		CDB_PROG(("EVT_Remove: %s\n", value));
 		for (i = 0; value[i]; i++) {
 			if (value[i] == '+') {
 				ezgui_sview_file_remove(sview, i+1);
@@ -2604,7 +2607,7 @@ static int ezgui_sview_file_append(SView *sview, char *fname)
 
 static int ezgui_sview_file_remove(SView *sview, int idx)
 {
-	EDB_INFO(("Removing: %s\n", 
+	CDB_INFO(("Removing: %s\n", 
 			IupGetAttributeId(sview->filename, "",  idx)));
 
 	IupSetInt(sview->filename, "REMOVEITEM", idx);
@@ -2816,7 +2819,7 @@ static int xui_config_status(void *config, char *prompt)
 	int	item;
 
 	path = csc_cfg_status(config, &item);
-	EDB_SHOW(("%s: %d items in %s\n", prompt, item, path));
+	CDB_SHOW(("%s: %d items in %s\n", prompt, item, path));
 	return 0;
 }
 
