@@ -1,5 +1,6 @@
 20160802:
 	* external: upsourced to recent versions and clean up the libgd.
+	* ezgui.c: removed the gtk part totally because IUP works pretty well.
 
 20151119: Version 3.4.0 release
 	* libcsoup: updated to 0.8.10

@@ -21,14 +21,7 @@
 #ifndef	_EZGUI_H_
 #define _EZGUI_H_
 
-#ifdef	CFG_GUI_GTK
-#include <glib.h>
-#include <glib/gstdio.h>
-#include <gtk/gtk.h>
-#else
 #include "iup.h"
-#endif
-
 #include "libcsoup.h"
 #include "ezthumb.h"
 
@@ -68,84 +61,6 @@
 
 #define CFG_PIC_FONT_SYSTEM	"Use the System Font"
 #define CFG_PIC_FONT_BROWSE	"Choose Font"
-
-
-#if CFG_GUI_GTK
-
-#define	CFG_SUBPATH	"ezthumb"
-#define CFG_FILENAME	"ezthumb.conf"
-#define CFG_GRP_MAIN	"main"
-
-typedef	struct		{
-	char		*fname;		/* the path of the configure file */
-	GKeyFile	*ckey;		/* key entry of the configure file */
-	int		mcount;		/* modify counter >0 mean to save */
-} EZCFG;
-	
-typedef	struct		{
-	GtkTreeModel	*app_model;
-	
-	GtkTextBuffer	*discarded;
-	int		dis_count;	/* counter of discarded files */
-	int		add_count;	/* counter of added files */
-} EZADD;
-
-typedef	struct		{
-	GtkWidget	*gw_main;
-	GtkWidget	*gw_page;
-	GtkWidget	*gw_page_main;
-	GtkWidget	*gw_listview;
-	GdkWindowState	gw_win_state;	/* window state from events */
-	int		w_width;
-	int		w_height;
-
-	GtkWidget	*button_del;	/* the delete button on main page */
-	GtkWidget	*button_run;	/* the start button on main page */
-	GtkWidget	*button_box;
-	GtkWidget	*prof_group;
-
-	GtkWidget	*entry_col;
-	GtkWidget	*entry_row;
-	GtkWidget	*entry_step;
-	GtkWidget	*entry_zoom_ratio;
-	GtkWidget	*entry_zoom_wid;
-	GtkWidget	*entry_zoom_hei;
-	GtkWidget	*entry_width;
-
-	/* Setup Page: the two main buttons in the bottom */
-	GtkWidget	*butt_setup_apply;
-	GtkWidget	*butt_setup_cancel;
-
-	/* Setup Page: the choise of profiles */
-	GtkWidget	*prof_grid;
-	GtkWidget	*prof_zoom;
-	
-	/* Setup Page: the duration finding mode */
-	GtkWidget	*dfm_head;	/* no scan */
-	GtkWidget	*dfm_fast;	/* fast tail scan */
-	GtkWidget	*dfm_slow;	/* slow full scan */
-
-	/* Setup Page: the output file format */
-	GtkWidget	*off_jpg;
-	GtkWidget	*off_jpg_qf;	/* quality fact */
-	GtkWidget	*off_gif;
-	GtkWidget	*off_gifa;
-	GtkWidget	*off_gifa_fr;	/* frame rate */
-	GtkWidget	*off_png;
-	GtkWidget	*off_transp;	/* transparent */
-	int		tmp_jpg_qf;
-	int		tmp_gifa_fr;
-
-	/* feed to progress */
-	int		list_count;	/* counter of files in the listview */
-	int		list_index;	/* current node index */
-	GtkTreeModel	*list_model;
-	GtkTreeIter	*list_iter;
-
-	EZCFG		*config;
-	EZOPT		*sysopt;	/* system parameters */
-} EZGUI;
-#else
 
 typedef	struct		{
 	EZOPT		*sysopt;	/* system parameters */
@@ -218,7 +133,6 @@ typedef	struct		{
 	int		tmp_gifa_fr;
 	int		exist_idx;
 } EZGUI;
-#endif
 
 #define	EZGUI_SVIEW_ACTIVE_MAX		8
 #define EZGUI_SVIEW_ACTIVE_CONTENT	0

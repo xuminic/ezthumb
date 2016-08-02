@@ -1,5 +1,5 @@
 
-/*  ezgui.c - the graphic user interface
+/*  eziup.c - the graphic user interface based on IUP
 
     Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
 
@@ -22,187 +22,257 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <ctype.h>
 
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_DEBUG)
 
-#define CFG_GUI_GTK	1
+#include "iup.h"
+
+#include "ezconfig.h"
+#include "libcsoup.h"
+#include "ezthumb.h"
 #include "ezgui.h"
 #include "ezicon.h"
+#include "id_lookup.h"
 
-static	char	*prof_list_grid[] = {
-	CFG_PIC_AUTO, CFG_PIC_GRID_DIM, CFG_PIC_GRID_STEP, 
-	CFG_PIC_DIS_NUM, CFG_PIC_DIS_STEP, CFG_PIC_DIS_KEY, NULL
+#define EZOBJ_MAIN	"EZGUIOBJ"
+#define EZOBJ_SVIEW	"SVIEWOBJ"
+
+#define EZGUI_MAINKEY	"GUI"		/* for the configure file */
+
+#define EGPS_SETUP_DESCR	"120"
+#define EGPS_SETUP_DROPDOWN	"200x14"
+#define EGPS_SETUP_SHORT_TEXT	"40x10"
+#define EGPS_GRID_FST_TEXT	"24x10"
+#define EGPS_GRID_SND_TEXT	"18x10"
+#define EGPS_GRID_LABEL		"28"
+#define EGPS_SETUP_BUTTON	"42"
+
+
+static	struct	idtbl	uir_grid[] = {
+	{ 0,	CFG_PIC_AUTO }, 
+	{ 0,	CFG_PIC_GRID_DIM }, 
+	{ 0,	CFG_PIC_GRID_STEP },
+	{ 0,	CFG_PIC_DIS_NUM }, 
+	{ 0,	CFG_PIC_DIS_STEP }, 
+	{ 0,	CFG_PIC_DIS_KEY }, 
+	{ 0,	NULL }
 };
 
-static	char	*prof_list_zoom[] = {
-	CFG_PIC_AUTO, CFG_PIC_ZOOM_RATIO, CFG_PIC_ZOOM_DEFINE,
-	CFG_PIC_ZOOM_SCREEN, NULL
+static	struct	idtbl	uir_zoom[] = {
+	{ 0,	CFG_PIC_AUTO }, 
+	{ 0,	CFG_PIC_ZOOM_RATIO }, 
+	{ 0,	CFG_PIC_ZOOM_DEFINE },
+	{ 0,	CFG_PIC_ZOOM_SCREEN }, 
+	{ 0,	NULL }
 };
 
-static int ezgui_option_save(EZGUI *gui);
-static int ezgui_ezthumb(EZGUI *gui);
-static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter);
+static	struct	idtbl	uir_format[] = {
+	{ 0,	CFG_PIC_FMT_JPEG },
+	{ 0,	CFG_PIC_FMT_PNG }, 
+	{ 0,	CFG_PIC_FMT_GIFA },
+	{ 0,	CFG_PIC_FMT_GIF }, 
+	{ 0, 	NULL }
+};
+
+static	struct	idtbl	uir_outdir[] = {
+	{ 0,	CFG_PIC_ODIR_CURR },
+	{ 0,	CFG_PIC_ODIR_PATH },
+	{ 0,	NULL }
+};
+
+static	struct	idtbl	uir_choose_font[] = {
+	{ 0,	CFG_PIC_FONT_SYSTEM },
+	{ 0,	CFG_PIC_FONT_BROWSE },
+	{ 0,	NULL }
+};
+
+static int ezgui_timer_monitor(Ihandle *ih);
+static int ezgui_create_window(EZGUI *gui);
+static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
+static int ezgui_event_window_show(Ihandle *ih, int state);
+static int ezgui_event_window_close(Ihandle *ih);
+
+static Ihandle *ezgui_page_main(EZGUI *gui);
+static int ezgui_page_main_reset(EZGUI *gui);
+static Ihandle *ezgui_page_main_button(EZGUI *gui);
+static int ezgui_event_main_add(Ihandle *ih);
+static int ezgui_event_main_remove(Ihandle *ih);
+static int ezgui_event_main_run(Ihandle *ih);
+static int ezgui_show_progress(EZGUI *gui, int cur, int range);
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b);
 
-static int ezgui_create_window(EZGUI *gui);
-static void ezgui_signal_win_state(EZGUI *gui, GdkEvent *event, GtkWidget *);
-static void ezgui_signal_resize(EZGUI *gui, GdkRectangle *rect, GtkWidget *);
+static Ihandle *ezgui_page_setup(EZGUI *gui);
+static int ezgui_page_setup_reset(EZGUI *gui);
 
-static GtkWidget *ezgui_page_main_create(EZGUI *gui);
-static GtkWidget *ezgui_page_main_profile(EZGUI *gui);
-static int ezgui_page_main_read(EZGUI *gui);
-static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui);
-static EZADD *ezgui_page_main_listview_open(GtkWidget *view);
-static int ezgui_page_main_listview_close(GtkWidget *view, EZADD *ezadd);
-static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s);
-static void ezgui_page_main_dialog_invalid_files(EZADD *ezadd);
-static void ezgui_signal_file_choose(EZGUI *gui);
-static void ezgui_signal_file_remove(EZGUI *gui);
-static void ezgui_signal_select_change(EZGUI *gui, GtkTreeSelection *tsel);
-static void ezgui_signal_select_dragdrop(GtkWidget *view, 
-		GdkDragContext *context, int x, int y, 
-		GtkSelectionData *seldata, guint info, guint time, EZGUI *);
+static Ihandle *ezgui_setup_grid_create(EZGUI *gui);
+static Ihandle *ezgui_setup_grid_groupbox(Ihandle *gridbox);
+static int ezgui_setup_grid_reset(Ihandle *gridbox);
+//static int ezgui_setup_grid_read_index(Ihandle *gridbox);
+//static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx);
+static int ezgui_setup_grid_update(Ihandle *gridbox, char *status);
+static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s);
 
-static GtkWidget *ezgui_page_setup_create(EZGUI *gui);
-static int ezgui_page_setup_output_format(EZGUI *gui, GtkWidget *table, int);
-static int ezgui_signal_setup_sensible(EZGUI *gui);
-static int ezgui_signal_setup_insensible(EZGUI *gui);
-static int ezgui_signal_setup_reset(EZGUI *gui);
-static int ezgui_signal_setup_update(EZGUI *gui);
-static int ezgui_signal_setup_format(EZGUI *gui, void *parent);
+static Ihandle *ezgui_setup_zoom_create(EZGUI *gui);
+static Ihandle *ezgui_setup_zoom_groupbox(Ihandle *zoombox);
+static int ezgui_setup_zoom_reset(Ihandle *zoombox);
+//static int ezgui_setup_zoom_read_index(Ihandle *zoombox);
+//static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index);
+static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status);
+static int ezgui_setup_zoom_check(Ihandle *zoombox);
+static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s);
 
-static EZCFG *ezgui_cfg_alloc(void);
-static int ezgui_cfg_free(EZCFG *cfg);
-static char *ezgui_cfg_read_alloc(EZCFG *cfg, char *key);
-static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s);
-static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def);
-static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val);
-static int ezgui_cfg_flush(EZCFG *cfg);
+static Ihandle *ezgui_setup_media_create(EZGUI *gui);
+static int ezgui_setup_media_reset(EZGUI *gui);
+static int ezgui_setup_media_update(EZGUI *gui, char *status);
+static int ezgui_setup_media_check(EZGUI *gui);
+static int ezgui_setup_media_event(Ihandle *ih, char *text, int i, int s);
 
-static GtkWidget *ezgui_pack_forward(GtkWidget *box, ...);
-static GtkWidget *ezgui_pack_backward(GtkWidget *box, ...);
-static GtkWidget *ezgui_pack_fill(GtkWidget *box, ...);
-static GtkWidget *ezgui_entry_box(int val, int dw);
-static int ezgui_entry_get_int(GtkWidget *entry);
-static int ezgui_entry_set_int(GtkWidget *entry, int val);
-static GtkWidget *ezgui_page_label(gchar *s);
-static GtkWidget *ezgui_setup_label(gchar *s);
-static GtkWidget *ezgui_setup_idname(gchar *s);
-static GtkWidget *ezgui_setup_entry(EZGUI *gui, int dw, int ww);
-static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler);
-static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler);
-static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s, 
-		GCallback c_handler);
-static int ezgui_format_reset(EZGUI *gui, int rwcfg);
-static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y);
-static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n);
-static void ezgui_window_update(void);
+static Ihandle *ezgui_setup_outputdir_create(EZGUI *gui);
+static int ezgui_setup_outputdir_reset(EZGUI *gui);
+static int ezgui_setup_outputdir_update(EZGUI *gui);
+static int ezgui_setup_outputdir_check(EZGUI *gui);
+static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s);
+
+static Ihandle *ezgui_setup_font_create(EZGUI *gui);
+static int ezgui_setup_font_reset(EZGUI *gui);
+static int ezgui_setup_font_update(EZGUI *gui);
+static int ezgui_setup_font_check(EZGUI *gui);
+static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s);
+
+static Ihandle *ezgui_setup_suffix_create(EZGUI *gui);
+static int ezgui_setup_suffix_reset(EZGUI *gui);
+static int ezgui_setup_suffix_update(EZGUI *gui);
+static int ezgui_setup_suffix_check(EZGUI *gui);
+static int ezgui_setup_suffix_event(Ihandle *ih);
+
+static Ihandle *ezgui_setup_dupname_create(EZGUI *gui);
+static int ezgui_setup_dupname_reset(EZGUI *gui);
+static int ezgui_setup_dupname_update(EZGUI *gui);
+static int ezgui_setup_dupname_check(EZGUI *gui);
+static int ezgui_setup_dupname_event(Ihandle *ih, char *text, int i, int s);
+
+static Ihandle *ezgui_setup_format_create(EZGUI *gui);
+static int ezgui_setup_format_reset(EZGUI *gui);
+static int ezgui_setup_format_update(EZGUI *gui);
+static int ezgui_setup_format_check(EZGUI *gui);
+static int ezgui_setup_format_event_picture(Ihandle *ih, char *text, int item, int);
+static int ezgui_setup_format_event_transparent(Ihandle* ih, int state);
+static int ezgui_setup_format_event_param(Ihandle* ih);
+
+static Ihandle *ezgui_setup_button_create(EZGUI *gui);
+static int ezgui_setup_button_check_status(EZGUI *gui);
+static int ezgui_setup_button_event_ok(Ihandle *ih);
+static int ezgui_setup_button_event_cancel(Ihandle *ih);
+
+static Ihandle *ezgui_page_about(EZGUI *gui);
+
+static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck);
+static int ezgui_sview_progress(Ihandle *ih, int percent);
+static int ezgui_sview_resize(Ihandle *ih, int width, int height);
+static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl);
+//static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl);
+static int ezgui_sview_event_run(Ihandle *ih, int item, char *text);
+static int ezgui_sview_event_dropfiles(Ihandle *, const char *,int, int, int);
+static int ezgui_sview_event_multi_select(Ihandle *ih, char *value);
+static int ezgui_sview_event_moused(Ihandle *ih, 
+		int button, int pressed, int x, int y, char *status);
+static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status);
+static int ezgui_sview_add(SView *sview);
+static int ezgui_sview_remove(SView *sview);
+static int ezgui_sview_run(SView *sview);
+static int ezgui_sview_file_append(SView *sview, char *fname);
+static int ezgui_sview_file_remove(SView *sview, int idx);
+static int ezgui_sview_active_update(SView *sview, int type, int num);
+
+static Ihandle *xui_label(char *label, char *size, char *font);
+static Ihandle *xui_text(Ihandle **xlst, char *label);
+static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
+static int xui_list_get_idx(Ihandle *ih);
+static int xui_text_get_number(Ihandle *ih);
+static int xui_get_size(Ihandle *ih, char *attr, int *height);
+static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
+static Ihandle *xui_text_grid(char *label, 
+		Ihandle **xcol, Ihandle **xrow, char *ext);
+static Ihandle *xui_button(char *prompt, Icallback ntf);
+static int xui_config_status(void *config, char *prompt);
+static char *xui_make_filters(char *slist);
+static char *xui_make_font(char *face, int *size);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
 	EZGUI	*gui;
-	char	*p;
-	int	tmp;
 
-	gtk_init(argcs, argvs);
+	IupOpen(argcs, argvs);
+
+	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
+	if (!IupGetGlobal("SINGLEINSTANCE")) {
+		IupClose();
+		return NULL;
+	}
 
 	if ((gui = smm_alloc(sizeof(EZGUI))) == NULL) {
 		return NULL;
 	}
-	if ((gui->config = ezgui_cfg_alloc()) == NULL) {
-		smm_free(gui);
-		return NULL;
-	}
+
+	/* initialize GUI structure with parameters from command line */
 	gui->sysopt = ezopt;
-	
-	/* setup the simple profile */
-	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_PROF_SIMPLE))) {
-		ezopt_profile_setup(ezopt, p);
-		smm_free(p);
-	} else if ((p = ezopt_profile_export_alloc(ezopt)) != NULL) {
-		ezgui_cfg_write(gui->config, CFG_KEY_PROF_SIMPLE, p);
-		smm_free(p);
+	sprintf(gui->inst_id, "EZTHUMB_%p", gui);
+
+	/* load configure from file, or create the file */
+	gui->config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
+			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
+	if (gui->config) {
+		csc_cfg_status(gui->config, NULL);
+		ezopt_load_config(ezopt, gui->config);
+		xui_config_status(gui->config, "Read");
 	}
-
-	/* setup the grid profile */
-	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID)) == NULL) {
-		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
-	} else {
-		smm_free(p);
-	}
-	/* setup the zoom profile */
-	if ((p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM)) == NULL) {
-		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
-	} else {
-		smm_free(p);
-	}
-	
-	gui->w_width  = ezgui_cfg_read_int(gui->config, 
-			CFG_KEY_WIN_WIDTH, 800);
-	gui->w_height = ezgui_cfg_read_int(gui->config, 
-			CFG_KEY_WIN_HEIGHT, 480);
-	gui->gw_win_state = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_WINDOWSTATE, 0);
-
-	ezopt->grid_col = ezgui_cfg_read_int(gui->config, 
-			CFG_KEY_GRID_COLUMN, ezopt->grid_col);
-	ezopt->grid_row = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_GRID_ROW, ezopt->grid_row);
-	ezopt->tm_step = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_TIME_STEP, ezopt->tm_step / 1000) * 1000;
-	ezopt->tn_facto = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_ZOOM_RATIO, ezopt->tn_facto);
-	ezopt->tn_width = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_ZOOM_WIDTH, ezopt->tn_width);
-	ezopt->tn_height = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_ZOOM_HEIGHT, ezopt->tn_height);
-	ezopt->canvas_width = ezgui_cfg_read_int(gui->config,
-			CFG_KEY_CANVAS_WIDTH, ezopt->canvas_width);
-
-	tmp = GETDURMOD(ezopt->flags);
-	tmp = ezgui_cfg_read_int(gui->config, CFG_KEY_DURATION, tmp);
-	SETDURMOD(ezopt->flags, tmp);
-
-	ezgui_format_reset(gui, EZUI_FMR_RDWR);
 	return gui;
 }
 
 int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 {
-	EZADD	*ezadd;
+	SView	*sview;
+	Ihandle *timer;
 	int	i;
 
 	ezgui_create_window(gui);
 
-	/* append command line file names */
-	ezadd = ezgui_page_main_listview_open(gui->gw_listview);
-	for (i = 0; i < fnum; i++) {
-		ezgui_page_main_listview_append(gui, ezadd, flist[i]);
-	}
-	ezgui_page_main_listview_close(gui->gw_listview, ezadd);
-
-	/* find out if the list is empty */
-	if (gui->list_count) {
-		gtk_widget_set_sensitive(gui->button_run, TRUE);
-	} else {
-		gtk_widget_set_sensitive(gui->button_run, FALSE);
+	/* filling the work area with file names from command line */
+	sview = (SView *) IupGetAttribute(gui->list_view, EZOBJ_SVIEW);
+	if (fnum && sview) {
+		for (i = 0; i < fnum; i++) {
+			ezgui_sview_file_append(sview, flist[i]);
+			ezgui_show_progress(gui, i, fnum);
+		}
+		ezgui_show_progress(gui, i, fnum);
 	}
 
-	/* update the configure file because some options may be changed
-	 * by command line options */
-	ezgui_option_save(gui);
-	
-	gtk_widget_show_all(gui->gw_main);
-	gtk_main();
+	timer = IupTimer();
+	IupSetCallback(timer, "ACTION_CB", (Icallback)ezgui_timer_monitor);
+	IupSetAttribute(timer, EZOBJ_MAIN, (char*) gui);
+	IupSetAttribute(timer, "TIME", "100");
+	IupSetAttribute(timer, "RUN", "YES");
+
+	IupMainLoop();
+	IupSetAttribute(timer, "RUN", "NO");
 	return 0;
 }
 
 int ezgui_close(EZGUI *gui)
 {
 	if (gui) {
-		ezgui_option_save(gui);
-		ezgui_cfg_free(gui->config);
+		IupClose();
+		if (gui->filefilter) {
+			smm_free(gui->filefilter);
+		}
+		if (gui->config) {
+			xui_config_status(gui->config, "Finalize");
+			csc_cfg_close(gui->config);
+		}
 		smm_free(gui);
 	}
 	return 0;
@@ -210,1502 +280,2603 @@ int ezgui_close(EZGUI *gui)
 
 void ezgui_version(void)
 {
-	char	*path;
-
-	EDB_SHOW(("GTK: %d.%d.%d\n", GTK_MAJOR_VERSION, 
-			GTK_MINOR_VERSION, GTK_MICRO_VERSION));
-	path = g_build_filename(g_get_user_config_dir(),
-			CFG_SUBPATH, CFG_FILENAME, NULL);
-	EDB_SHOW(("Profile: %s\n", path));
-	g_free(path);
 }
 
-
-
-static int ezgui_option_save(EZGUI *gui)
+static int ezgui_timer_monitor(Ihandle *ih)
 {
-	EZOPT	*opt = gui->sysopt;
-	char	tmp[32];
+	EZGUI	*gui;
+	int	i;
 
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_WIN_WIDTH, gui->w_width);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_WIN_HEIGHT, gui->w_height);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_WINDOWSTATE, gui->gw_win_state);
+	if ((gui = (EZGUI*) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
 
-	ezgui_cfg_write_int(gui->config, 
-			CFG_KEY_GRID_COLUMN, opt->grid_col);
-	ezgui_cfg_write_int(gui->config, 
-			CFG_KEY_GRID_ROW, opt->grid_row);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_TIME_STEP, opt->tm_step / 1000);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_ZOOM_RATIO, opt->tn_facto);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_ZOOM_WIDTH, opt->tn_width);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_ZOOM_HEIGHT, opt->tn_height);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_CANVAS_WIDTH, opt->canvas_width);
-	ezgui_cfg_write_int(gui->config,
-			CFG_KEY_DURATION, GETDURMOD(opt->flags));
-
-	sprintf(tmp, "%s@%d", opt->img_format, opt->img_quality);
-	ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, tmp);
-
-	ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
-			opt->flags & EZOP_TRANSPARENT ? "yes" : "no");
-
-	/* save to the configure file */
-	ezgui_cfg_flush(gui->config);
-	return 0;
+	if (gui->dir_ppp_flag) {
+		i = lookup_index_string(uir_outdir, 0, CFG_PIC_ODIR_CURR);
+		IupSetInt(gui->dir_list, "VALUE", i + 1);
+		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+		gui->dir_ppp_flag = 0;
+	}
+	if (gui->font_ppp_flag) {
+		i = lookup_index_string(uir_choose_font, 0, CFG_PIC_FONT_SYSTEM);
+		IupSetInt(gui->font_list, "VALUE", i + 1);
+		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		gui->font_ppp_flag = 0;
+	}
+	return IUP_DEFAULT;
 }
 
-static int ezgui_ezthumb(EZGUI *gui)
+static int ezgui_create_window(EZGUI *gui)
 {
-	GtkTreeSelection	*tsel;
-	GtkTreeModel		*model;
-	GtkTreeIter		iter;
-	GList			*slist, *node;
+	Ihandle		*tabs;
+	char		*s;
+	char		win_size[32];
+
+	/* find the extension name filter of files */
+	/* the CFG_KEY_SUFFIX_FILTER has been opened in ezthumb.c before
+	 * so make it readonly here. */
+	s = csc_cfg_read(gui->config, NULL, CFG_KEY_SUFFIX_FILTER);
+	if (s) {
+		gui->filefilter = xui_make_filters(s);
+	} else {
+		gui->filefilter = xui_make_filters(EZ_DEF_FILTER);
+	}
+
+	/* create the Open-File dialog in the initialize stage.
+	 * so in the event, it can be popup and hide without a real destory */
+	gui->dlg_open = IupFileDlg();
+	IupSetAttribute(gui->dlg_open, "PARENTDIALOG", gui->inst_id);
+	IupSetAttribute(gui->dlg_open, "TITLE", "Open");
+	IupSetAttribute(gui->dlg_open, "MULTIPLEFILES", "YES");
+	IupSetAttribute(gui->dlg_open, "EXTFILTER", gui->filefilter);
+
+	/* the Open-File dialog for picking an output directory */
+	gui->dlg_odir = IupFileDlg();
+	IupSetAttribute(gui->dlg_odir, "PARENTDIALOG", gui->inst_id);
+	IupSetAttribute(gui->dlg_odir, "TITLE", "Save to");
+	IupSetAttribute(gui->dlg_odir, "DIALOGTYPE", "DIR");
+
+	gui->dlg_font = IupFontDlg();
+	IupSetAttribute(gui->dlg_font, "PARENTDIALOG", gui->inst_id);
+	IupSetAttribute(gui->dlg_font, "TITLE", "Setup Font");
+
+	tabs = IupTabs(ezgui_page_main(gui), 
+			ezgui_page_setup(gui), 
+			//IupVbox(IupFill(), NULL), 
+			ezgui_page_about(gui), 
+			NULL);
+	IupSetAttribute(tabs, "TABTITLE0", "Generate");
+	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
+	//IupSetAttribute(tabs, "TABTITLE2", "Advanced");
+	IupSetAttribute(tabs, "TABTITLE2", " About  ");
+	IupSetAttribute(tabs, "PADDING", "6x2");
+
+	tabs = IupHbox(tabs, NULL);
+	IupSetAttribute(tabs, "NMARGIN", "8x8");
+
+	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
+	gui->dlg_main = IupDialog(tabs);
+	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
+	
+	/* retrieve the previous window size */
+	gui->win_width = gui->win_height = 0;
+	csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_WIN_WIDTH, &gui->win_width);
+	csc_cfg_read_int(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_WIN_HEIGHT, &gui->win_height);
+	if ((gui->win_width == 0) || (gui->win_height == 0)) {
+		gui->win_width = 800;	/* minimen "740x130" */
+		gui->win_height = 540;
+	}
+	sprintf(win_size, "%dx%d", gui->win_width, gui->win_height);
+	IupSetAttribute(gui->dlg_main, "RASTERSIZE", win_size);
+
+	/* recover the minimized placement of the window */
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_WINDOWSTATE);
+	if (s) {
+		IupSetAttribute(gui->dlg_main, "PLACEMENT", s);
+	}
+	
+	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
+	IupSetHandle(gui->inst_id, gui->dlg_main);
+
+	/* bind the GUI structure into the current dialog so it can be accessed
+	 * in its sub-controls */
+	IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->dlg_main, "RESIZE_CB",
+			(Icallback) ezgui_event_window_resize);
+	IupSetCallback(gui->dlg_main, "SHOW_CB",
+			(Icallback) ezgui_event_window_show);
+	IupSetCallback(gui->dlg_main, "CLOSE_CB",
+			(Icallback) ezgui_event_window_close);
+
+	/* show the dialog window at the last location */
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_WIN_POS);
+	if (s == NULL) {
+		IupShow(gui->dlg_main);
+	} else {
+		int	y = 0, x = (int) strtol(s, NULL, 0);
+
+		if ((s = strchr(s, ',')) != NULL) {
+			y = (int) strtol(s+1, NULL, 0);
+		}
+		IupShowXY(gui->dlg_main, x, y);
+	}
 
 	/* bind the notification function to GUI mode */
 	gui->sysopt->notify = ezgui_notificate;
-	/* read options from the GUI widgets */
-	ezgui_page_main_read(gui);
-	/* save these options into the configure file */
-	ezgui_option_save(gui);
 
-	tsel  = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
-
-	if (gtk_tree_selection_count_selected_rows(tsel) == 0) {
-		/* no selection; process the whole list */
-		if (gtk_tree_model_get_iter_first(model, &iter)) {
-			do {
-				ezgui_commit(gui, model, &iter);
-			} while (gtk_tree_model_iter_next(model, &iter));
-		}
-		return 0;
-	}
-
-	slist = gtk_tree_selection_get_selected_rows(tsel, &model);
-	for (node = slist; node; node = g_list_next(node)) {
-		if (gtk_tree_model_get_iter(model, &iter, node->data)) {
-			ezgui_commit(gui, model, &iter);
-		}
-		gtk_tree_path_free(node->data);
-	}
-	g_list_free(slist);
+	ezgui_page_setup_reset(gui);
+	ezgui_setup_button_event_ok(gui->butt_setup_apply);
+	ezgui_page_main_reset(gui);
 	return 0;
 }
 
-static int ezgui_commit(EZGUI *gui, GtkTreeModel *model, GtkTreeIter *iter)
+static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 {
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	/* 20160115 setting "RASTERSIZE" again gain the ability of shrink */
+	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
+	gui->win_width = xui_get_size(ih, "RASTERSIZE", &gui->win_height);
+
+	EDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d P:%s\n", width, height,
+			gui->win_width, gui->win_height, 
+			IupGetAttribute(gui->dlg_main, "SCREENPOSITION")));
+
+	if (gui->win_state != IUP_MAXIMIZE) {
+		csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_WIN_WIDTH, gui->win_width);
+		csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_WIN_HEIGHT, gui->win_height);
+	}
+
+	/* 20151223 retrieve the client size of scrollbox instead */
+	width = xui_get_size(gui->list_sbox, "CLIENTSIZE", &height);
+	ezgui_sview_resize(gui->list_view, width, height);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_window_show(Ihandle *ih, int state)
+{
+	EZGUI	*gui;
+
+#ifdef	DEBUG
+	switch (state) {
+	case IUP_HIDE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_HIDE\n", state));
+		break;
+	case IUP_SHOW:
+		EDB_MODL(("EVT_SHOW(%d): IUP_SHOW\n", state));
+		break;
+	case IUP_RESTORE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_RESTORE\n", state));
+		break;
+	case IUP_MINIMIZE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_MINIMIZE\n", state));
+		break;
+	case IUP_MAXIMIZE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_MAXIMIZE\n", state));
+		break;
+	case IUP_CLOSE:
+		EDB_MODL(("EVT_SHOW(%d): IUP_CLOSE\n", state));
+		break;
+	default:
+		EDB_MODL(("EVT_SHOW(%d): unknown\n", state));
+		break;
+	}
+#endif
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	/* we don't save the MAXIMIZED status because when IUP set the 
+	 * PLACEMENT of MAXIMIZED, IUP won't generate the resize event */
+	gui->win_state = state;
+
+	switch (state) {
+	case IUP_MINIMIZE:
+		csc_cfg_write(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_WINDOWSTATE, "MINIMIZED");
+		break;
+	case IUP_HIDE:
+		break;
+	/* case IUP_MAXIMIZE:
+		csc_cfg_write(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_WINDOWSTATE, "MAXIMIZED");
+		break;*/
+	default:
+		csc_cfg_delete_key(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_WINDOWSTATE);
+		break;
+	}
+	return 0;
+}
+
+static int ezgui_event_window_close(Ihandle *ih)
+{
+	EZGUI	*gui;
 	char	*s;
+	
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
 
-	/*
-	GtkTreePath	*path;
-	int		*idx;
-	path = gtk_tree_model_get_path(model, iter);
-	idx = gtk_tree_path_get_indices(path);
-	gui->list_index = *idx;
-	gtk_tree_path_free(path);
-	slogz("process %d\n", gui->list_index);
-	*/
-	gui->list_model = model;
-	gui->list_iter  = iter;
-	gtk_tree_model_get(model, iter, EZUI_COL_NAME, &s, -1);
+	s = IupGetAttribute(ih, "SCREENPOSITION");
 
-	/* 20120903 Bugfix: set the codepage to utf-8 before calling
-	 * ezthumb core. In Win32 version, the ezthumb core uses the 
-	 * default codepage to process file name. However the GTK converted
-	 * the file name to UTF-8 so the Windows version could not find
-	 * the file. There's no such problem in linux. */
-	smm_codepage_set(65001);
-	ezthumb(s, gui->sysopt);
-	smm_codepage_reset();
-	g_free(s);
+	EDB_MODL(("EVT_CLOSE: SCREENPOSITION = %s\n", s));
+	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_WIN_POS, s);
+	return 0;
+}
+
+
+/****************************************************************************
+ * Page Main 
+ ****************************************************************************/
+static Ihandle *ezgui_page_main(EZGUI *gui)
+{
+	Ihandle	*vbox, *hbox;
+
+	/* the progress bar of the current processing file */
+	gui->prog_bar = IupProgressBar();
+	IupSetAttribute(gui->prog_bar, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(gui->prog_bar, "DASHED", "YES");
+	IupSetAttribute(gui->prog_bar, "SIZE", "x10");
+
+	/* the progress bar of the task list */
+	gui->prog_wait = IupProgressBar();
+	IupSetAttribute(gui->prog_wait, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(gui->prog_wait, "DASHED", "YES");
+	IupSetAttribute(gui->prog_wait, "SIZE", "x10");
+	IupSetAttribute(gui->prog_wait, "MARQUEE", "YES");
+
+	/* the status bar */
+	gui->stat_bar = IupLabel("");
+	IupSetAttribute(gui->stat_bar, "EXPAND", "HORIZONTAL");
+
+	/* status bar and progress bars share the same conner. normally it
+	 * display the status until in the running mode */
+	gui->ps_zbox = IupZbox(gui->stat_bar, gui->prog_bar, 
+			gui->prog_wait, NULL);
+	IupSetAttribute(gui->ps_zbox, "ALIGNMENT", "ACENTER");
+
+	/* progres bar and buttons are in the same bottom line */
+	hbox = IupHbox(gui->ps_zbox, ezgui_page_main_button(gui), NULL);
+	IupSetAttribute(hbox, "NGAP", "10");
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+
+	/* grouping with the work area, a group of lists inside a scroll box */
+	gui->list_view = ezgui_sview_create(gui, 1);
+	ezgui_sview_active_add(gui->list_view, 
+			EZGUI_SVIEW_ACTIVE_CONTENT, gui->button_run);
+	ezgui_sview_active_add(gui->list_view, 
+			EZGUI_SVIEW_ACTIVE_SELECT, gui->button_del);
+	ezgui_sview_active_add(gui->list_view, 
+			EZGUI_SVIEW_ACTIVE_PROGRESS, gui->prog_bar);
+	ezgui_sview_active_add(gui->list_view,
+			EZGUI_SVIEW_ACTIVE_BIND, gui->button_add);
+	
+	gui->list_sbox = IupScrollBox(gui->list_view);
+	IupSetAttribute(gui->list_sbox, "SCROLLBAR", "VERTICAL");
+
+	vbox = IupVbox(gui->list_sbox, hbox, NULL);
+	IupSetAttribute(vbox, "NGAP", "4");
+	IupSetAttribute(vbox, "NMARGIN", "4x4");
+	return vbox;
+}
+
+static int ezgui_page_main_reset(EZGUI *gui)
+{
+	SView	*sview;
+
+	IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
+	IupSetAttribute(gui->button_del, "ACTIVE", "NO");
+
+	sview = (SView *) IupGetAttribute(gui->button_run, EZOBJ_SVIEW);
+	if (sview) {
+		ezgui_sview_active_update(sview, 
+				EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
+	}
+	return 0;
+}
+
+static Ihandle *ezgui_page_main_button(EZGUI *gui)
+{
+	gui->button_add = xui_button("Add", NULL);
+	IupSetCallback(gui->button_add, "ACTION",
+			(Icallback) ezgui_event_main_add);
+	gui->button_del = xui_button("Remove", NULL);
+	IupSetCallback(gui->button_del, "ACTION",
+			(Icallback) ezgui_event_main_remove);
+	gui->button_run = xui_button("Run", NULL);
+	IupSetCallback(gui->button_run, "ACTION",
+			(Icallback) ezgui_event_main_run);
+	return IupHbox(gui->button_add, gui->button_del, gui->button_run,NULL);
+}
+
+static int ezgui_event_main_add(Ihandle *ih)
+{
+	SView	*sview;
+
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) != NULL) {
+		ezgui_sview_add(sview);
+	}
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_remove(Ihandle *ih)
+{
+	SView	*sview;
+
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) != NULL) {
+		ezgui_sview_remove(sview);
+	}
+	return IUP_DEFAULT;
+}
+
+static int ezgui_event_main_run(Ihandle *ih)
+{
+	SView	*sview;
+
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) != NULL) {
+		ezgui_sview_run(sview);
+	}
+	return IUP_DEFAULT;
+}
+
+static int ezgui_show_progress(EZGUI *gui, int cur, int range)
+{
+	if (cur == 0) {		/* begin to display progress */
+		IupSetInt(gui->prog_bar, "MIN", 0);
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 1);
+	} else if (cur == range) {	/* end of display */
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
+	} else if (cur < range) {
+		IupSetInt(gui->prog_bar, "MAX", range);
+		IupSetInt(gui->prog_bar, "VALUE", cur);
+	}
+	IupFlush();
+	return 0;
+}
+
+static int ezgui_show_duration(EZGUI *gui, int state)
+{
+	if (state == EN_OPEN_BEGIN) {
+		IupSetInt(gui->prog_wait, "VALUE", 0);
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 2);
+	} else if (state == EN_OPEN_END) {
+		IupSetInt(gui->ps_zbox, "VALUEPOS", 0);
+	} else {
+		IupSetInt(gui->prog_wait, "VALUE", 1);
+	}
+	IupFlush();
 	return 0;
 }
 
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
+//static int ezgui_sview_notificate(void *v, int eid, long param, long opt, void *b)
 {
 	EZGUI	*gui = ((EZOPT*) v)->gui;
-	int	val;
 
-	(void) b;		/* stop the gcc warning */
+	(void)b;
+
 	switch (eid) {
 	case EN_PROC_BEGIN:
-	case EN_PROC_END:
+		ezgui_show_progress(gui, 0, 0);	/* show/reset progress bar */
 		break;
-
 	case EN_PROC_CURRENT:
-		if (param == 0) {	/* i-frame ripping */
-			val = 100;
-		} else {
-			val = opt * 100 / param;
-		}
-
-		gtk_list_store_set(GTK_LIST_STORE(gui->list_model), 
-				gui->list_iter, EZUI_COL_PROGRESS, val, -1);
-		ezgui_window_update();
+		ezgui_sview_progress(gui->prog_bar, (int)(opt * 100 / param));
+		ezgui_show_progress(gui, opt, param);
 		break;
-
+	case EN_PROC_END:
+		ezgui_sview_progress(gui->prog_bar, 100);
+		ezgui_show_progress(gui, param, param);
+		break;
+	case EN_OPEN_BEGIN:
+	case EN_OPEN_GOING:
+	case EN_OPEN_END:
+		ezgui_show_duration(gui, eid);
+		break;
 	default:
 		return EN_EVENT_PASSTHROUGH;
 	}
 	return eid;
 }
 
-static int ezgui_create_window(EZGUI *gui)
+
+/****************************************************************************
+ * Page Setup 
+ ****************************************************************************/
+static Ihandle *ezgui_page_setup(EZGUI *gui)
 {
-	GtkWidget	*page_main, *page_setup;
-	GdkPixbuf	*icon;
+	Ihandle	*vbox, *sbox;
 
-	/* Create the pages of notebook */
-	page_main = ezgui_page_main_create(gui);
-	page_setup = ezgui_page_setup_create(gui);
+	/* create the setup working area */
+	sbox = IupVbox(xui_label("Profile Selection", NULL, "Bold"), NULL);
+	IupSetAttribute(sbox, "NGAP", "8");
+	IupSetAttribute(sbox, "NMARGIN", "16x16");
 
-	/* Create a new notebook, place the position of the tabs */
-	gui->gw_page = gtk_notebook_new();
-	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(gui->gw_page), GTK_POS_TOP);
-	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_main, 
-			ezgui_page_label("Generate"));
-	gtk_notebook_append_page(GTK_NOTEBOOK(gui->gw_page), page_setup, 
-			ezgui_page_label("Setup"));
+	/* adding profiles of grid and zoom */
+	gui->prof_grid = ezgui_setup_grid_create(gui);
+	gui->prof_zoom = ezgui_setup_zoom_create(gui);
+	vbox = IupVbox(ezgui_setup_grid_groupbox(gui->prof_grid),
+			ezgui_setup_zoom_groupbox(gui->prof_zoom), NULL);
+	IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+	IupAppend(sbox, vbox);
 
-	gtk_notebook_set_current_page(GTK_NOTEBOOK(gui->gw_page), 0);
+	/* adding media processing */
+	IupAppend(sbox, xui_label("Media Processing", NULL, "Bold"));
+	IupAppend(sbox, ezgui_setup_media_create(gui));
 
-	/* create the top level window */
-	gui->gw_main = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_default_size(GTK_WINDOW(gui->gw_main), 
-			gui->w_width, gui->w_height);
-	gtk_container_set_border_width(GTK_CONTAINER(gui->gw_main), 10);
-	if (gui->gw_win_state & GDK_WINDOW_STATE_ICONIFIED) {
-		gtk_window_iconify(GTK_WINDOW(gui->gw_main));
-	}
-	if (gui->gw_win_state & GDK_WINDOW_STATE_MAXIMIZED) {
-		gtk_window_maximize(GTK_WINDOW(gui->gw_main));
-	}
-	if (gui->gw_win_state & GDK_WINDOW_STATE_FULLSCREEN) {
-		gtk_window_fullscreen(GTK_WINDOW(gui->gw_main));
-	}
-	icon = gdk_pixbuf_new_from_inline(-1, ezicon_pixbuf, FALSE, NULL);
-	gtk_window_set_icon(GTK_WINDOW(gui->gw_main), icon);
+	/* adding font setup */
+	IupAppend(sbox, xui_label("Font", NULL, "Bold"));
+	IupAppend(sbox, ezgui_setup_font_create(gui));
 
-	g_signal_connect(gui->gw_main, "delete_event", gtk_main_quit, NULL);
-	g_signal_connect_swapped(gui->gw_main, "size-allocate",
-			G_CALLBACK(ezgui_signal_resize), gui);
-	g_signal_connect_swapped(gui->gw_main, "window-state-event",
-			G_CALLBACK(ezgui_signal_win_state), gui);
-	gtk_container_add(GTK_CONTAINER(gui->gw_main), gui->gw_page);
-	return 0;
-}
+	/* adding output directory */
+	IupAppend(sbox, xui_label("Output Directory", NULL, "Bold"));
+	IupAppend(sbox, ezgui_setup_outputdir_create(gui));
 
-static void ezgui_signal_win_state(EZGUI *gui, GdkEvent *event, 
-		GtkWidget *widget)
-{
-	EDB_PROG(("[WSTAT] %d\n", event->type));
-	(void) widget;		 /* stop the gcc warning */
-	if (event->type == GDK_WINDOW_STATE) {
-		gui->gw_win_state = event->window_state.new_window_state;
-	}
-}
+	/* adding thumbnail output */
+	IupAppend(sbox, xui_label("Output Thumbnails", NULL, "Bold"));
+	vbox = IupVbox(ezgui_setup_suffix_create(gui), 
+			ezgui_setup_dupname_create(gui),
+			ezgui_setup_format_create(gui), NULL);
+	IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+	IupAppend(sbox, vbox);
 
-static void ezgui_signal_resize(EZGUI *gui, GdkRectangle *rect, 
-		GtkWidget *parent)
-{
-	(void) parent;		 /* stop the gcc warning */
-	if (gui->gw_win_state & (GDK_WINDOW_STATE_ICONIFIED | 
-				GDK_WINDOW_STATE_MAXIMIZED | 
-				GDK_WINDOW_STATE_FULLSCREEN)) {
-		return;
-	}
+	/* create the scroll box around the setup working area */
+	sbox = IupScrollBox(sbox);
+	IupSetAttribute(sbox, "SCROLLBAR", "VERTICAL");
 
-	EDB_PROG(("[RESIZE] X=%d Y=%d Width=%d Height=%d\n",
-			rect->x, rect->y, rect->width, rect->height));
-	gui->w_width  = rect->width;
-	gui->w_height = rect->height;
-}
-
-static GtkWidget *ezgui_page_main_create(EZGUI *gui)
-{
-	GtkWidget	*scroll;
-	GtkWidget	*button_add;
-	GtkWidget	*vbox;
-
-	/* create the listview */
-	gui->gw_listview = ezgui_page_main_listview_create(gui);
-
-	/* create the scrollbars and stuffed with the listview */
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
-	gtk_container_add(GTK_CONTAINER(scroll), gui->gw_listview);
-
-	/* create the buttons */
-	button_add = ezgui_button(gui, "Add", 
-			G_CALLBACK(ezgui_signal_file_choose));
-	gui->button_del = ezgui_button(gui, "Remove",
-			G_CALLBACK(ezgui_signal_file_remove));
-	gui->button_run = ezgui_button(gui, "Start",
-			G_CALLBACK(ezgui_ezthumb));
-
-	gtk_widget_set_sensitive(gui->button_del, FALSE);
-	gtk_widget_set_sensitive(gui->button_run, FALSE);
-
-	/* create left side */
-	gui->prof_group = ezgui_page_main_profile(gui);
-
-	/* create the horizontal box and stuffed with the buttons */
-	gui->button_box = gtk_hbox_new(FALSE, 0);
-	ezgui_pack_backward(gui->button_box, gui->button_run, gui->button_del,
-			button_add, NULL);
-	ezgui_pack_forward(gui->button_box, gui->prof_group, NULL);
-
-	/* create the vertical box and stuffed with all above */
-	vbox = gtk_vbox_new(FALSE, 0);
-	ezgui_pack_fill(vbox, scroll, NULL);
-	ezgui_pack_forward(vbox, gui->button_box, NULL);
+	/* pack the scroll box with the button area */
+	vbox = IupVbox(sbox, ezgui_setup_button_create(gui), NULL);
+	IupSetAttribute(vbox, "NGAP", "4");
+	IupSetAttribute(vbox, "NMARGIN", "4x4");
 	return vbox;
 }
 
-/* Grid: (Grid Auto)(Grid 4x4)(Grid 4 Step 15)(DC No. 20)(DC Step 15)
- * 		(DC I-Frame)
- * Zoom: (Zoom Auto)(Zoom 50%)(Zoom 320x240)(Res 1024) */
-static GtkWidget *ezgui_page_main_profile(EZGUI *gui)
+static int ezgui_page_setup_reset(EZGUI *gui)
 {
-	GtkWidget	*hbox;
-	GtkAdjustment	*adjust;
-	int		val;
-	char		*pic;
+	ezgui_setup_grid_reset(gui->prof_grid);
+	ezgui_setup_zoom_reset(gui->prof_zoom);
+	ezgui_setup_media_reset(gui);
+	ezgui_setup_font_reset(gui);
+	ezgui_setup_outputdir_reset(gui);
+	ezgui_setup_suffix_reset(gui);
+	ezgui_setup_dupname_reset(gui);
+	ezgui_setup_format_reset(gui);
 
-	hbox = gtk_hbox_new(FALSE, 0);
-
-	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID);
-	if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
-		gui->entry_col = ezgui_entry_box(gui->sysopt->grid_col, 3);
-		gui->entry_row = ezgui_entry_box(gui->sysopt->grid_row, 3);
-		ezgui_pack_forward(hbox, 
-				gtk_label_new("Grid"), gui->entry_col, 
-				gtk_label_new("x"), gui->entry_row, NULL);
-	} else if (!strcmp(pic, CFG_PIC_GRID_STEP)) {
-		gui->entry_col = ezgui_entry_box(gui->sysopt->grid_col, 3);
-		val = gui->sysopt->tm_step / 1000 ?
-				gui->sysopt->tm_step / 1000 : 60;
-		gui->entry_step = ezgui_entry_box(val, 5);
-		ezgui_pack_forward(hbox, 
-				gtk_label_new("Grid"), gui->entry_col,
-				gtk_label_new("Step"), gui->entry_step, NULL);
-	} else if (!strcmp(pic, CFG_PIC_DIS_NUM)) {
-		gui->entry_row = ezgui_entry_box(gui->sysopt->grid_row, 3);
-		ezgui_pack_forward(hbox, 
-				gtk_label_new("DSS No "), gui->entry_row,
-				NULL);
-	} else if (!strcmp(pic, CFG_PIC_DIS_STEP)) {
-		val = gui->sysopt->tm_step / 1000 ?
-				gui->sysopt->tm_step / 1000 : 60;
-		gui->entry_step = ezgui_entry_box(val, 5);
-		ezgui_pack_forward(hbox, 
-				gtk_label_new("DSS Step "), gui->entry_step, 
-				NULL);
-	} else if (!strcmp(pic, CFG_PIC_DIS_KEY)) {
-		ezgui_pack_forward(hbox, gtk_label_new("DSS I-Frame"), NULL);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
-		ezgui_pack_forward(hbox, gtk_label_new("Grid Auto"), NULL);
-	}
-	g_free(pic);
-
-	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM);
-	if (!strcmp(pic, CFG_PIC_ZOOM_RATIO)) {
-		val = ezgui_cfg_read_int(gui->config, CFG_KEY_ZOOM_RATIO, 
-				gui->sysopt->tn_facto);
-		adjust = (GtkAdjustment *) gtk_adjustment_new(val, 5.0, 
-				200.0, 5.0, 25.0, 0.0);
-		gui->entry_zoom_ratio = gtk_spin_button_new(adjust, 0, 0);
-		gtk_widget_set_size_request(gui->entry_zoom_ratio, 50, -1);
-
-		ezgui_pack_forward(hbox, 
-				gtk_label_new("  Zoom"), 
-				gui->entry_zoom_ratio, 
-				gtk_label_new("%"), NULL);
-	} else if (!strcmp(pic, CFG_PIC_ZOOM_DEFINE)) {
-		val = gui->sysopt->tn_width ? gui->sysopt->tn_width : 320;
-		gui->entry_zoom_wid = ezgui_entry_box(val, 5);
-		val = gui->sysopt->tn_height ? gui->sysopt->tn_height : 240;
-		gui->entry_zoom_hei = ezgui_entry_box(val, 5);
-		ezgui_pack_forward(hbox, 
-				gtk_label_new("  Zoom"), gui->entry_zoom_wid,
-				gtk_label_new("x"), gui->entry_zoom_hei, NULL);
-	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
-		val = gui->sysopt->canvas_width ? 
-				gui->sysopt->canvas_width : 1280;
-		gui->entry_width = ezgui_entry_box(val, 5);
-		ezgui_pack_forward(hbox, gtk_label_new("  Res"), 
-				gui->entry_width, NULL);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
-		ezgui_pack_forward(hbox, gtk_label_new("  Zoom Auto"), NULL);
-	}
-	g_free(pic);
-	return hbox;
+	/* store the default configures */
+	//ezgui_setup_button_event_ok(gui->butt_setup_apply);
+	return 0;
 }
 
-static int ezgui_page_main_read(EZGUI *gui)
+static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 {
-	EZOPT	*opt = gui->sysopt;
-	char	*pic;
+	static	SetGrid	setgridbuffer;		//FIXME: not reenterable
+	Ihandle	*hbox, *gridbox;
+	SetGrid	*grid = &setgridbuffer;
+	EZOPT	*ezopt;
+	char	*s;
+	int	i;
 
-	/* update the grid parameters */
-	if ((pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID)) == NULL) {
-		/* do nothing as default setting */
-	} else if (!strcmp(pic, CFG_PIC_GRID_DIM)) {
-		opt->grid_col = ezgui_entry_get_int(gui->entry_col);
-		opt->grid_row = ezgui_entry_get_int(gui->entry_row);
+	/* create the zbox of grid parameters */
+	grid->zbox = IupZbox(IupFill(), NULL);
+
+	hbox = xui_text_grid("Grid Of", 
+			&grid->entry_col_grid, &grid->entry_row, NULL);
+	IupAppend(grid->zbox, hbox);
+	
+	hbox = xui_text_grid("Column", 
+			&grid->entry_col_step, &grid->entry_step, "(s)");
+	IupAppend(grid->zbox, hbox);
+
+	hbox = xui_text_grid("Total", &grid->entry_dss_amnt, NULL, NULL);
+	IupAppend(grid->zbox, hbox);
+
+	hbox = xui_text_grid("Every", &grid->entry_dss_step, NULL, "(s) ");
+	IupAppend(grid->zbox, hbox);
+
+	IupAppend(grid->zbox, IupFill());
+
+	/* create grid drop list */
+	grid->hbox = xui_list_setting(&gridbox, "Grid Setting");
+	IupAppend(grid->hbox, grid->zbox);
+
+	for (i = 0; uir_grid[i].s; i++) {
+		IupSetAttributeId(gridbox, "", i + 1, uir_grid[i].s);
+	}
+	IupSetAttribute(gridbox, EZOBJ_GRID_PROFILE, (char*) grid);
+	IupSetCallback(gridbox, "ACTION", (Icallback) ezgui_setup_grid_event);
+
+	/* find the index of drop down lists: the grid drop down */
+	ezopt = gui->sysopt;
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_GRID);
+	if (s) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, s);
+	} else if (ezopt->pro_grid == NULL) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_AUTO);
+	} else if (ezopt->grid_col && ezopt->grid_row) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_GRID_DIM);
+	} else if (ezopt->grid_col && ezopt->tm_step) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_GRID_STEP);
+	} else if (!ezopt->grid_col && ezopt->grid_row) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_DIS_NUM);
+	} else if (!ezopt->grid_col && !ezopt->grid_row && ezopt->tm_step) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_DIS_STEP);
+	} else if (!ezopt->grid_col && !ezopt->grid_row && !ezopt->tm_step) {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_DIS_KEY);
+	} else {
+		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_AUTO);
+	}
+
+	grid->ezgui = gui;
+	return gridbox;
+}
+
+static Ihandle *ezgui_setup_grid_groupbox(Ihandle *gridbox)
+{
+	SetGrid	*grid;
+
+	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
+	if (grid != NULL) {
+		return grid->hbox;
+	}
+	return NULL;
+}
+
+static int ezgui_setup_grid_reset(Ihandle *gridbox)
+{
+	SetGrid	*grid;
+	EZOPT	*sopt;
+
+	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
+	if (grid != NULL) {
+		sopt = ((EZGUI*)grid->ezgui)->sysopt;
+		IupSetInt(gridbox, "VALUE", grid->grid_idx + 1);
+		IupSetInt(grid->entry_col_grid, "VALUE", sopt->grid_col);
+		IupSetInt(grid->entry_col_step, "VALUE", sopt->grid_col);
+		IupSetInt(grid->entry_row, "VALUE", sopt->grid_row);
+		IupSetInt(grid->entry_step, "VALUE", sopt->tm_step / 1000);
+		IupSetInt(grid->entry_dss_amnt, "VALUE", sopt->grid_row);
+		IupSetInt(grid->entry_dss_step, "VALUE", sopt->tm_step / 1000);
+		IupSetInt(grid->zbox, "VALUEPOS", grid->grid_idx);
+	}
+	return IUP_DEFAULT;
+}
+
+/*
+static int ezgui_setup_grid_read_index(Ihandle *gridbox)
+{
+	SetGrid	*grid;
+
+	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
+	if (grid != NULL) {
+		return grid->grid_idx;
+	}
+	return -1;
+}
+
+static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx)
+{
+	SetGrid	*grid;
+
+	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
+	if (grid != NULL) {
+		grid->grid_idx = idx;
+		return idx;
+	}
+	return -1;
+}
+*/
+static int ezgui_setup_grid_update(Ihandle *gridbox, char *status)
+{
+	SetGrid	*grid;
+	EZGUI	*gui;
+	EZOPT	*opt;
+	char	tmp[128];
+
+	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
+	if (grid == NULL) {
+		return -1;
+	}
+
+	gui = grid->ezgui;
+	opt = gui->sysopt;
+	grid->grid_idx = xui_list_get_idx(gridbox);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_GRID, uir_grid[grid->grid_idx].s);
+
+	/* FIXME: not quite readible */
+	switch (grid->grid_idx) {
+	case 0:
+		strcpy(tmp, "Auto Grid ");
+		break;
+	case 1:
+		opt->grid_col = xui_text_get_number(grid->entry_col_grid);
+		opt->grid_row = xui_text_get_number(grid->entry_row);
+		sprintf(tmp, "Grid:%dx%d ", opt->grid_col, opt->grid_row);
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
-	} else if (!strcmp(pic, CFG_PIC_GRID_STEP)) {
-		opt->grid_col = ezgui_entry_get_int(gui->entry_col);
-		opt->tm_step  = ezgui_entry_get_int(gui->entry_step) * 1000;
+		break;
+	case 2:
+		opt->grid_col = xui_text_get_number(grid->entry_col_step);
+		opt->tm_step  = xui_text_get_number(grid->entry_step);
+		sprintf(tmp, "Column:%d Step:%d(s) ", 
+				opt->grid_col, opt->tm_step);
+		opt->tm_step *= 1000;
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
-	} else if (!strcmp(pic, CFG_PIC_DIS_NUM)) {
+		break;
+	case 3:
 		opt->grid_col = 0;
-		opt->grid_row = ezgui_entry_get_int(gui->entry_row);
+		opt->grid_row = xui_text_get_number(grid->entry_dss_amnt);
+		sprintf(tmp, "Total %d snaps ", opt->grid_row);
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
-	} else if (!strcmp(pic, CFG_PIC_DIS_STEP)) {
+		break;
+	case 4:
 		opt->grid_col = 0;
 		opt->grid_row = 0;
-		opt->tm_step  = ezgui_entry_get_int(gui->entry_step) * 1000;
+		opt->tm_step  = xui_text_get_number(grid->entry_dss_step);
+		sprintf(tmp, "Snap every %d(s) ", opt->tm_step);
+		opt->tm_step *= 1000;
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
-	} else if (!strcmp(pic, CFG_PIC_DIS_KEY)) {
+		break;
+	case 5:
 		opt->grid_col = 0;
 		opt->grid_row = 0;
 		opt->tm_step  = 0;
+		strcpy(tmp, "Separate I-Frames ");
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
-	}
-	if (pic) {
-		g_free(pic);
-	}
-
-	/* update the zoom parameters */
-	if ((pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM)) == NULL) {
-		/* do nothing as default setting */
-	} else if (!strcmp(pic, CFG_PIC_ZOOM_RATIO)) {
-		opt->tn_facto  = ezgui_entry_get_int(gui->entry_zoom_ratio);
-		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
-	} else if (!strcmp(pic, CFG_PIC_ZOOM_DEFINE)) {
-		opt->tn_width  = ezgui_entry_get_int(gui->entry_zoom_wid);
-		opt->tn_height = ezgui_entry_get_int(gui->entry_zoom_hei);
-		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
-	} else if (!strcmp(pic, CFG_PIC_ZOOM_SCREEN)) {
-		opt->canvas_width = ezgui_entry_get_int(gui->entry_width);
-		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
-	}
-	if (pic) {
-		g_free(pic);
-	}
-	return 0;
-}
-
-static GtkWidget *ezgui_page_main_listview_create(EZGUI *gui)
-{
-	static	GtkTargetEntry	targets[] = { { "STRING", 0, 0 } };
-	GtkWidget		*view;
-	GtkTreeViewColumn	*col;
-	GtkTreeSelection	*tsel;
-	GtkCellRenderer		*renderer;
-	GtkListStore		*liststore;
-
-	view = gtk_tree_view_new();
-
-	/* --- Column #1 --- */
-	renderer = gtk_cell_renderer_text_new();
-	//g_object_set(renderer, "width", 300, NULL);
-	col = gtk_tree_view_column_new_with_attributes("Name", 
-			renderer, "text", EZUI_COL_NAME, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);
-	//g_object_set(col, "width", 300, NULL);
-	gtk_tree_view_column_set_min_width(col, 300);
-	/* Nope, we autosize it later after file names been read */
-	//gtk_tree_view_column_set_min_width(col, -1);
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #2 --- */
-	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Size",
-			renderer, "text", EZUI_COL_SIZE, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);	
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #3 --- */
-	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Length",
-			renderer, "text", EZUI_COL_LENGTH, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #4 --- */
-	renderer = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("Resolution",
-			renderer, "text", EZUI_COL_SCREEN, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);          
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* --- Column #5 --- */
-	renderer = gtk_cell_renderer_progress_new();
-	//gtk_object_set(renderer, "text", "", "value", 100, NULL);
-	col = gtk_tree_view_column_new_with_attributes("Progress",
-			renderer, "value", EZUI_COL_PROGRESS, NULL);
-	gtk_tree_view_column_set_resizable(col, TRUE);
-	gtk_tree_view_column_set_min_width(col, 120);
-	gtk_tree_view_insert_column(GTK_TREE_VIEW(view), col, -1);
-
-	/* setup the model */
-	liststore = gtk_list_store_new(EZUI_COL_MAX, G_TYPE_STRING, 
-			G_TYPE_STRING, G_TYPE_STRING, 
-			G_TYPE_STRING, G_TYPE_INT);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(view), 
-			GTK_TREE_MODEL(liststore));
-
-	/* setup the tree selection */
-	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
-	gtk_tree_selection_set_mode(tsel, GTK_SELECTION_MULTIPLE);
-	g_signal_connect_swapped(tsel, "changed", 
-			G_CALLBACK(ezgui_signal_select_change), gui);
-
-	/* bind the signal */
-	//g_signal_connect(view, "button-release-event",
-	//		G_CALLBACK(ezgui_signal_select_undo), gui);
-	g_signal_connect_swapped(view, "row-activated",
-			G_CALLBACK(ezgui_ezthumb), gui);
-
-	/* Make tree view a destination for Drag'n'Drop */
-	/* Don't swap the signal because there are too many parameters */
-	gtk_drag_dest_set(view, GTK_DEST_DEFAULT_ALL, 
-			targets, 1, GDK_ACTION_COPY);
-	g_signal_connect(view, "drag_data_received",
-			G_CALLBACK(ezgui_signal_select_dragdrop), gui);
-
-	return view;
-}
-
-static EZADD *ezgui_page_main_listview_open(GtkWidget *view)
-{
-	EZADD	*ezadd;
-
-	if ((ezadd = smm_alloc(sizeof(EZADD))) == NULL) {
-		return NULL;
-	}
-
-	/* get the point to the model */
-	ezadd->app_model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
-	/* Make sure the model stays with us after the tree view unrefs it */
-	g_object_ref(ezadd->app_model); 
-	/* Detach model from view */
-	//gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL);
-	
-	/* create the text frame for discarded files */
-	ezadd->discarded = gtk_text_buffer_new(NULL);
-	return ezadd;
-}
-
-static int ezgui_page_main_listview_close(GtkWidget *view, EZADD *ezadd)
-{
-	int	rc;
-
-	(void) view;		 /* stop the gcc warning */
-	if (ezadd == NULL) {
-		return 0;
-	}
-
-	/* Re-attach model to view */
-	//gtk_tree_view_set_model(GTK_TREE_VIEW(view), ezadd->app_model);
-	/* unref it becuase it has been reference by the tree view */
-	g_object_unref(ezadd->app_model);
-
-	rc = ezadd->add_count;
-	if (ezadd->dis_count) {
-		ezgui_page_main_dialog_invalid_files(ezadd);
-	}
-	g_object_unref(ezadd->discarded);
-	smm_free(ezadd);
-	return rc;
-}
-
-static int ezgui_page_main_listview_append(EZGUI *gui, EZADD *ezadd, char *s)
-{
-	GtkTreeIter	row;
-	EZVID		vobj;
-	char		*fname, tmark[32], res[32], tsize[32];
-
-	if (!s || !*s || !ezadd) {
-		return 0;
-	}
-
-	/* check if there is the same file in the list */
-	if (gtk_tree_model_get_iter_first(ezadd->app_model, &row)) {
-		do {
-			gtk_tree_model_get(ezadd->app_model, &row, 
-					EZUI_COL_NAME, &fname, -1);
-			if (!strcmp(fname, s)) {
-				g_free(fname);
-				return 0;
-			}
-			g_free(fname);
-		} while (gtk_tree_model_iter_next(ezadd->app_model, &row));
-	}
-
-	if (EZOP_DEBUG(gui->sysopt->flags) >= SLOG_LVL_PROGRAM) {
-		unsigned char *p;
-
-		EDB_SHOW(("ezgui_page_main_listview_append: %s\n", s));
-		if ((p = strstr(s, "\\User\\")) != NULL) {
-			p += 6;
-			while (*p != '\\') {
-				EDB_SHOW(("%d ", *p++));
-			}
-		}
-		EDB_SHOW(("\n"));
-	}
-	/* 20120903 Bugfix: set the codepage to utf-8 before calling
-	 * ezthumb core. In Win32 version, the ezthumb core uses the 
-	 * default codepage to process file name. However the GTK converted
-	 * the file name to UTF-8 so the Windows version could not find
-	 * the file. There's no such problem in linux. */
-	smm_codepage_set(65001);
-	if (ezinfo(s, gui->sysopt, &vobj) != EZ_ERR_NONE) {
-		smm_codepage_reset();
-		ezadd->dis_count++;
-		gtk_text_buffer_insert_at_cursor(ezadd->discarded, s, -1);
-		gtk_text_buffer_insert_at_cursor(ezadd->discarded, "\n", -1);
-		return 0;
-
-	}
-	smm_codepage_reset();
-	meta_timestamp(vobj.duration, 0, tmark);
-	meta_filesize(vobj.filesize, tsize);
-	sprintf(res, "%dx%d", vobj.width, vobj.height);
-
-	gtk_list_store_append(GTK_LIST_STORE(ezadd->app_model), &row);
-	gtk_list_store_set(GTK_LIST_STORE(ezadd->app_model), &row, 
-			EZUI_COL_NAME, s, EZUI_COL_SIZE, tsize, 
-			EZUI_COL_LENGTH, tmark, EZUI_COL_SCREEN, res, -1);
-	gui->list_count++;
-	ezadd->add_count++;
-	return ezadd->add_count;
-}
-
-static void ezgui_page_main_dialog_invalid_files(EZADD *ezadd)
-{
-	GtkWidget	*dialog, *vbox, *text, *scroll;
-
-	dialog = gtk_message_dialog_new(NULL,	//GTK_WINDOW(), 
-			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, 
-			GTK_BUTTONS_CLOSE, "Failed to load following files");
-	gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-			"The following files could not be loaded because of "
-			"unsupported format or file corrupted");
-	gtk_window_set_title(GTK_WINDOW(dialog), "Loading files");
-	//gtk_widget_set_size_request(dialog, 500, 300);
-
-	text = gtk_text_view_new_with_buffer(ezadd->discarded);
-	gtk_text_view_set_editable(GTK_TEXT_VIEW(text), FALSE);
-
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_widget_set_size_request(scroll, 600, 240);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_container_add(GTK_CONTAINER(scroll), text);
-
-	vbox = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
-	ezgui_pack_fill(vbox, scroll, NULL);
-	gtk_widget_show_all(vbox);
-
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-}
-
-static void ezgui_signal_file_choose(EZGUI *gui)
-{
-	GtkWidget 	*dialog;
-	GtkFileFilter	*filter;
-	GtkFileChooser	*chooser;
-
-	GSList	*flist, *p;
-	EZADD	*ezadd;
-	char	*dir;
-	int	i;
-	/*char	*vidtab[] = { "*.avi", "*.flv", "*.mkv", "*.mov", "*.mp4", 
-		"*.mpg", "*.mpeg", "*.rm", "*.rmvb", 
-		"*.ts", "*.vob", "*.wmv" };*/
-	char	vidtab[64];
-
-	dialog = gtk_file_chooser_dialog_new ("Choose File", 
-			GTK_WINDOW(gui->gw_main),
-			GTK_FILE_CHOOSER_ACTION_OPEN,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-			GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
-			NULL);
-	chooser = GTK_FILE_CHOOSER(dialog);
-
-	gtk_file_chooser_set_select_multiple(chooser, TRUE);
-	dir = ezgui_cfg_read_alloc(gui->config, CFG_KEY_DIRECTORY);
-	if (dir != NULL) {
-		gtk_file_chooser_set_current_folder(chooser, dir);
-		g_free(dir);
-	}
-
-	filter = gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "All Videos");
-	gtk_file_filter_add_mime_type(filter, "video/*");
-	/*for (i = 0; i < sizeof(vidtab)/sizeof(char*); i++) {
-		gtk_file_filter_add_pattern(filter, vidtab[i]);
-	}*/
-	if (gui->sysopt->accept) {
-		CSEFF   *flt = gui->sysopt->accept;	//FIXME
-		for (i = 0; flt->filter[i]; i++) {
-			strcpy(vidtab, "*.");
-			strncat(vidtab, flt->filter[i], sizeof(vidtab)-2);
-			gtk_file_filter_add_pattern(filter, vidtab);
-		}
-	}
-
-	gtk_file_chooser_add_filter(chooser, filter);
-
-	/*filter = gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "*.avi");
-	gtk_file_filter_add_pattern(filter, "*.avi");
-	gtk_file_chooser_add_filter(chooser, filter);*/
-
-	filter = gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "All Files");
-	gtk_file_filter_add_pattern(filter, "*");
-	gtk_file_chooser_add_filter(chooser, filter);
-
-	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
-		ezadd = ezgui_page_main_listview_open(gui->gw_listview);
-
-		flist = gtk_file_chooser_get_filenames(chooser);
-		for (p = flist; p != NULL; p = p->next) {
-			ezgui_page_main_listview_append(gui, ezadd, p->data);
-			//puts(p->data);
-			g_free(p->data);
-			ezgui_window_update();
-		}
-		g_slist_free(flist);
-
-		ezgui_page_main_listview_close(gui->gw_listview, ezadd);
-
-		/* find out if the list is empty */
-		if (gui->list_count) {
-			gtk_widget_set_sensitive(gui->button_run, TRUE);
-		} else {
-			gtk_widget_set_sensitive(gui->button_run, FALSE);
-		}
-
-		/* save the current working directory */
-		if ((dir = gtk_file_chooser_get_current_folder(chooser))) {
-			ezgui_cfg_write(gui->config, CFG_KEY_DIRECTORY, dir);
-			g_free(dir);
-		}
-	}
-	gtk_widget_destroy(dialog);
-}
-
-static void ezgui_signal_file_remove(EZGUI *gui)
-{
-	GtkTreeSelection	*tsel;
-	GtkTreeModel	*model;
-	GtkTreeIter 	iter;
-	GList		*slist, *node;
-
-	tsel  = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
-	model = gtk_tree_view_get_model(GTK_TREE_VIEW(gui->gw_listview));
-
-	while ((slist = gtk_tree_selection_get_selected_rows(tsel, &model)) 
-			!= NULL) {
-		if (gtk_tree_model_get_iter(model, &iter, slist->data)) {
-			gtk_list_store_remove(GTK_LIST_STORE(model), &iter);
-			gui->list_count--;
-		}
-		for (node = slist; node; node = g_list_next(node)) {
-			gtk_tree_path_free(node->data);
-		}
-		g_list_free(slist);
-	}
-
-	/* find out if the list is empty */
-	if (gui->list_count) {
-		gtk_widget_set_sensitive(gui->button_run, TRUE);
-	} else {
-		gtk_widget_set_sensitive(gui->button_run, FALSE);
-	}
-}
-
-static void ezgui_signal_select_change(EZGUI *gui, GtkTreeSelection *tsel)
-{
-	if (gtk_tree_selection_count_selected_rows(tsel) > 0) {
-		gtk_widget_set_sensitive(gui->button_del, TRUE);
-	} else {
-		gtk_widget_set_sensitive(gui->button_del, FALSE);
-	}
-}
-
-#if 0
-static void ezgui_signal_select_undo(GtkWidget *view, 
-		GdkEvent *event, EZGUI *gui)
-{
-	GtkTreeSelection	*tsel;
-
-	tsel = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui->gw_listview));
-	if (((GdkEventButton*)event)->button == 3) {	/* right button */
-		gtk_widget_set_sensitive(gui->button_del, FALSE);
-		gtk_tree_selection_unselect_all(tsel);
-	}
-}
-#endif
-
-static void ezgui_signal_select_dragdrop(GtkWidget *view, 
-		GdkDragContext *context, int x, int y, 
-		GtkSelectionData *seldata, guint info, guint time, EZGUI *gui)
-{
-	EZADD	*ezadd;
-	char	*dndl, *head, *tail, *tmp;
-
-	(void) view;		/* stop the gcc warning */
-	(void) context;		/* stop the gcc warning */
-	(void) x;		/* stop the gcc warning */
-	(void) y;		/* stop the gcc warning */
-	(void) info;		/* stop the gcc warning */
-	(void) time;		/* stop the gcc warning */
-	if ((dndl = (char*)gtk_selection_data_get_text(seldata)) == NULL) {
-		return;
-	}
-
-	ezadd = ezgui_page_main_listview_open(gui->gw_listview);
-
-	for (head = dndl; head; head = tail + 1) {
-		if ((tail = strchr(head, '\n')) == NULL) {
-			tail = (char*) -1;
-		} else {
-			*tail = 0;
-		}
-		head += 7;	/* skip the leading 'file://' */
-		if ((tmp = strchr(head, '\r')) != NULL) {
-			*tmp = 0;
-		}
-		ezgui_page_main_listview_append(gui, ezadd, head);
-		ezgui_window_update();
-	}
-
-	ezgui_page_main_listview_close(gui->gw_listview, ezadd);
-
-	/* find out if the list is empty */
-	if (gui->list_count) {
-		gtk_widget_set_sensitive(gui->button_run, TRUE);
-	} else {
-		gtk_widget_set_sensitive(gui->button_run, FALSE);
-	}
-
-	g_free(dndl);
-}
-
-static GtkWidget *ezgui_page_setup_create(EZGUI *gui)
-{
-	GtkWidget	*hbox_button, *vbox_page, *scroll, *table;
-	
-	/* create the table for all settings */
-	table = gtk_table_new(5, 9, FALSE);
-	gtk_table_set_row_spacings(GTK_TABLE(table), 2);
-	gtk_table_set_col_spacings(GTK_TABLE(table), 2);
-	gtk_table_set_col_spacing(GTK_TABLE(table), 0, 20);
-
-	/* create the combo box for the profile setting */
-	gui->prof_grid = ezgui_combo(gui, prof_list_grid,
-			G_CALLBACK(ezgui_signal_setup_sensible));
-	gui->prof_zoom = ezgui_combo(gui, prof_list_zoom,
-			G_CALLBACK(ezgui_signal_setup_sensible));
-
-	table_fill(table, 
-		ezgui_setup_label("<b>Profile Selection:</b>"), 0, 0, 5);
-	table_insert(table, ezgui_setup_idname("Grid Setting:"), 1, 1);
-	table_insert(table, gui->prof_grid, 2, 1);
-	table_insert(table, ezgui_setup_idname("Zoom Setting:"), 3, 1);
-	table_insert(table, gui->prof_zoom, 4, 1);
-
-	/* create the radio button for the Duration finding mode */
-	gui->dfm_head = ezgui_rabutton(gui, NULL, "File Head  ",
-			G_CALLBACK(ezgui_signal_setup_sensible));
-	gui->dfm_fast = ezgui_rabutton(gui, gui->dfm_head, "Fast scan  ",
-			G_CALLBACK(ezgui_signal_setup_sensible));
-	gui->dfm_slow = ezgui_rabutton(gui, gui->dfm_fast, "Full scan  ",
-			G_CALLBACK(ezgui_signal_setup_sensible));
-
-	table_fill(table, ezgui_setup_label("<b>Duration Finding Mode:</b>"),
-			0, 2, 5);
-	table_insert(table, gui->dfm_head, 1, 3);
-	table_insert(table, gui->dfm_fast, 2, 3);
-	table_insert(table, gui->dfm_slow, 3, 3);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->dfm_head), TRUE);
-
-	/* create the radio button group for the output format */
-	table_fill(table, ezgui_setup_label("<b>Output File Format:</b>"),
-			0, 4, 5);
-	ezgui_page_setup_output_format(gui, table, 5);
-
-
-	/* create a scroll container for the setup page */
-	scroll = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), 
-			table);
-
-	/* create the "OK" and "Cancel" buttons in the bottom of the page */
-	gui->butt_setup_cancel = ezgui_button(gui, "Cancel",
-			G_CALLBACK(ezgui_signal_setup_reset));
-	gui->butt_setup_apply = ezgui_button(gui, "OK",
-			G_CALLBACK(ezgui_signal_setup_update));
-
-	hbox_button = gtk_hbox_new(FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_button), 
-			gui->butt_setup_apply, FALSE, FALSE, 0);
-	gtk_box_pack_end(GTK_BOX(hbox_button), 
-			gui->butt_setup_cancel, FALSE, FALSE, 0);
-
-	/* create the vbox container for the whole page */
-	vbox_page = gtk_vbox_new(FALSE, 0);
-	ezgui_pack_fill(vbox_page, scroll, NULL);
-	ezgui_pack_forward(vbox_page, hbox_button, NULL);
-
-	/* reset the setup page by the options in the config file */
-	ezgui_signal_setup_reset(gui);
-	return vbox_page;
-}
-
-static int ezgui_page_setup_output_format(EZGUI *gui, 
-		GtkWidget *table, int row)
-{
-	GtkWidget	*hbox_gifa;
-
-	/* PNG button + Tranparent tickbox */
-	gui->off_png = ezgui_rabutton(gui, NULL, "PNG",
-			G_CALLBACK(ezgui_signal_setup_format));
-	gui->off_transp = gtk_check_button_new_with_label("Transparent");
-	g_signal_connect_swapped(gui->off_transp, "toggled",
-			G_CALLBACK(ezgui_signal_setup_format), gui);
-
-	table_insert(table, gui->off_png, 1, row);
-	table_insert(table, gui->off_transp, 3, row);
-	row++;
-
-	/* GIF button */
-	gui->off_gif = ezgui_rabutton(gui, gui->off_png, "GIF",
-			G_CALLBACK(ezgui_signal_setup_format));
-	table_insert(table, gui->off_gif, 1, row);
-	row++;
-
-	/* GIF Animated button */
-	gui->off_gifa = ezgui_rabutton(gui, gui->off_gif, "Animated GIF",
-			G_CALLBACK(ezgui_signal_setup_format));
-
-	gui->off_gifa_fr = ezgui_setup_entry(gui, 4, 80);
-	//ezgui_entry_set_int(gui->off_gifa_fr, gui->tmp_gifa_fr);
-	g_signal_connect_swapped(gui->off_gifa_fr, "key-press-event",
-			G_CALLBACK(ezgui_signal_setup_sensible), gui);
-
-	hbox_gifa = gtk_hbox_new(FALSE, 0);
-	ezgui_pack_forward(hbox_gifa, gui->off_gifa_fr, 
-			gtk_label_new("(ms)"), NULL);
-
-	table_insert(table, gui->off_gifa,  1, row);
-	table_insert(table, gtk_label_new("Speed: "), 2, row);
-	table_insert(table, hbox_gifa, 3, row);
-	row++;
-
-	/* JPEG button */
-	gui->off_jpg = ezgui_rabutton(gui, gui->off_gifa, "JPEG",
-			G_CALLBACK(ezgui_signal_setup_format));
-
-	gui->off_jpg_qf = ezgui_setup_entry(gui, 3, 80);
-	//ezgui_entry_set_int(gui->off_jpg_qf, gui->tmp_jpg_qf);
-	g_signal_connect_swapped(gui->off_jpg_qf, "key-press-event",
-			G_CALLBACK(ezgui_signal_setup_sensible), gui);
-
-	table_insert(table, gui->off_jpg,  1, row);
-	table_insert(table, gtk_label_new("Quality: "), 2, row);
-	table_insert(table, gui->off_jpg_qf, 3, row);
-	row++;
-
-	ezgui_format_reset(gui, EZUI_FMR_RDRSET);
-	return row;
-}
-
-static int ezgui_signal_setup_sensible(EZGUI *gui)
-{
-	gtk_widget_set_sensitive(gui->butt_setup_apply, TRUE);
-	gtk_widget_set_sensitive(gui->butt_setup_cancel, TRUE);
-	return 0;
-}
-
-static int ezgui_signal_setup_insensible(EZGUI *gui)
-{
-	gtk_widget_set_sensitive(gui->butt_setup_apply, FALSE);
-	gtk_widget_set_sensitive(gui->butt_setup_cancel, FALSE);
-	return 0;
-}
-
-static int ezgui_signal_setup_reset(EZGUI *gui)
-{
-	char	*pic;
-	int	i;
-
-	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_GRID);
-	for (i = 0; prof_list_grid[i]; i++) {
-		if (!strcmp(pic, prof_list_grid[i])) {
-			break;
-		}
-	}
-	if (prof_list_grid[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_grid), i);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_GRID, CFG_PIC_AUTO);
-	}
-	g_free(pic);
-
-	pic = ezgui_cfg_read_alloc(gui->config, CFG_KEY_ZOOM);
-	for (i = 0; prof_list_zoom[i]; i++) {
-		if (!strcmp(pic, prof_list_zoom[i])) {
-			break;
-		}
-	}
-	if (prof_list_zoom[i]) {
-		gtk_combo_box_set_active(GTK_COMBO_BOX(gui->prof_zoom), i);
-	} else {
-		ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, CFG_PIC_AUTO);
-	}
-	g_free(pic);
-
-	switch (ezgui_cfg_read_int(gui->config, CFG_KEY_DURATION, 
-				GETDURMOD(gui->sysopt->flags))) {
-	case EZOP_DUR_QSCAN:
-		gtk_toggle_button_set_active
-			(GTK_TOGGLE_BUTTON(gui->dfm_fast), TRUE);
-		break;
-	case EZOP_DUR_FSCAN:
-		gtk_toggle_button_set_active
-			(GTK_TOGGLE_BUTTON(gui->dfm_slow), TRUE);
 		break;
 	default:
-		gtk_toggle_button_set_active
-			(GTK_TOGGLE_BUTTON(gui->dfm_head), TRUE);
+		strcpy(tmp, "Oops; ");
 		break;
 	}
-	
-	/* reset the output file format control group */
-	ezgui_format_reset(gui, EZUI_FMR_RDONLY);
-	
-	/* dummy toggling */
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_jpg), TRUE);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
-	
-	if (!strcmp(gui->sysopt->img_format, "jpg")) {
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(gui->off_jpg), TRUE);
-	} else if (!strcmp(gui->sysopt->img_format, "png")) {
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(gui->off_png), TRUE);
-	} else if (!strcmp(gui->sysopt->img_format, "gif")) {
-		if (gui->sysopt->img_quality == 0) {
-			gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(gui->off_gif), TRUE);
-		} else {
-			gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(gui->off_gifa), TRUE);
-		}
-	}
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui->off_transp), 
-			gui->sysopt->flags & EZOP_TRANSPARENT);
-	ezgui_entry_set_int(gui->off_jpg_qf, gui->tmp_jpg_qf);
-	ezgui_entry_set_int(gui->off_gifa_fr, gui->tmp_gifa_fr);
+	strcat(status, tmp);
+	IupSetInt(grid->zbox, "VALUEPOS", grid->grid_idx);
 
-	ezgui_signal_setup_insensible(gui);
+	/* save all related parameters into the configure file */
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_GRID_COLUMN, 
+			opt->grid_col);
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_GRID_ROW, 
+			opt->grid_row);
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_TIME_STEP, 
+			opt->tm_step);
 	return 0;
 }
 
-static int ezgui_signal_setup_update(EZGUI *gui)
+static int ezgui_setup_grid_check(Ihandle *gridbox)
 {
-	gchar	*pic;
-	int	rc = 0;
+	SetGrid	*grid;
+	EZOPT	*opt;
 
-	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_grid));
-	if (pic) {
-		rc += ezgui_cfg_write(gui->config, CFG_KEY_GRID, pic);
-		g_free(pic);
-	}
-	EDB_PROG(("ezgui_signal_setup_update: grid %d\n", rc));
-
-	pic = gtk_combo_box_get_active_text(GTK_COMBO_BOX(gui->prof_zoom));
-	if (pic) {
-		rc += ezgui_cfg_write(gui->config, CFG_KEY_ZOOM, pic);
-		g_free(pic);
-	}
-	EDB_PROG(("ezgui_signal_setup_update: zoom %d\n", rc));
-
-	if (rc) {
-		gtk_widget_destroy(gui->prof_group);
-		gui->prof_group = ezgui_page_main_profile(gui);
-		ezgui_pack_forward(gui->button_box, gui->prof_group, NULL);
-		gtk_widget_show_all(gui->button_box);
+	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
+	if (grid == NULL) {
+		return 0;
 	}
 
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->dfm_head))) {
-		SETDURMOD(gui->sysopt->flags, EZOP_DUR_HEAD);
-	} else if (gtk_toggle_button_get_active(
-				GTK_TOGGLE_BUTTON(gui->dfm_fast))) {
-		SETDURMOD(gui->sysopt->flags, EZOP_DUR_QSCAN);
+	if (grid->grid_idx != xui_list_get_idx(gridbox)) {
+		return 1;
+	}
+	
+	opt = grid->ezgui->sysopt;
+	switch (grid->grid_idx) {
+	case 1:
+		if (opt->grid_col != xui_text_get_number(grid->entry_col_grid)) {
+			return 1;
+		}
+		if (opt->grid_row != xui_text_get_number(grid->entry_row)) {
+			return 1;
+		}
+		break;
+	case 2:
+		if (opt->grid_col != xui_text_get_number(grid->entry_col_step)) {
+			return 1;
+		}
+		if (opt->tm_step  != xui_text_get_number(grid->entry_step) * 1000) {
+			return 1;
+		}
+		break;
+	case 3:
+		if (opt->grid_row != xui_text_get_number(grid->entry_dss_amnt)) {
+			return 1;
+		}
+		break;
+	case 4:
+		if (opt->tm_step != xui_text_get_number(grid->entry_dss_step) * 1000) {
+			return 1;
+		}
+		break;
+	}
+	return 0;
+}
+
+static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s)
+{
+	SetGrid	*grid;
+
+	(void) text;	/* stop the gcc complaining */
+	//printf("ezgui_setup_grid_event: %s %d %d\n", text, i, s);
+	
+	/* we don't care about the leaving event */
+	if (s == 0) {
+		return IUP_DEFAULT;
+	}
+
+	grid = (SetGrid *) IupGetAttribute(ih, EZOBJ_GRID_PROFILE);
+	if (grid != NULL) {
+		IupSetInt(grid->zbox, "VALUEPOS", i - 1);
+		ezgui_setup_button_check_status(grid->ezgui);
+	}
+	return IUP_DEFAULT;
+}
+
+static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
+{
+	static	SetZoom	setzoombuffer;
+	Ihandle	*hbox, *zoombox;
+	SetZoom	*zoom = &setzoombuffer;
+	EZOPT	*ezopt;
+	char	*s;
+	int	i;
+
+	/* create the zbox of zoom parameters */
+	zoom->zbox = IupZbox(IupFill(), NULL);
+
+	hbox = xui_text_grid("Ratio", &zoom->entry_zoom_ratio, NULL, "%");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SIZE", "24x11");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SPIN", "YES");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SPINMIN", "5");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SPINMAX", "200");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SPININC", "5");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SPINALIGN", "LEFT");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SPINVALUE", "50");
+	IupAppend(zoom->zbox, hbox);
+
+	hbox = xui_text_grid("Resolu", 
+			&zoom->entry_zoom_wid, &zoom->entry_zoom_hei, NULL);
+	IupAppend(zoom->zbox, hbox);
+	
+	hbox = xui_text_grid("Width", &zoom->entry_width, NULL, NULL);
+	IupAppend(zoom->zbox, hbox);
+	
+	/* create zoom drop list */
+	zoom->hbox = xui_list_setting(&zoombox, "Zoom Setting");
+	IupAppend(zoom->hbox, zoom->zbox);
+
+	for (i = 0; uir_zoom[i].s; i++) {
+		IupSetAttributeId(zoombox, "", i + 1, uir_zoom[i].s);
+	}
+	IupSetAttribute(zoombox, EZOBJ_ZOOM_PROFILE, (char*) zoom);
+	IupSetCallback(zoombox, "ACTION", (Icallback) ezgui_setup_zoom_event);
+
+	/* find the index of drop down lists: the zoom drop down */
+	ezopt = gui->sysopt;
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_ZOOM);
+	if (s) {
+		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, s);
+	} else if (ezopt->pro_size == NULL) {
+		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_AUTO);
+	} else if (ezopt->tn_facto) {
+		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_ZOOM_RATIO);
+	} else if (ezopt->tn_width && ezopt->tn_height) {
+		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_ZOOM_DEFINE);
+	} else if (ezopt->canvas_width) {
+		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_ZOOM_SCREEN);
 	} else {
-		SETDURMOD(gui->sysopt->flags, EZOP_DUR_FSCAN);
+		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_AUTO);
 	}
 
-	/* receive the output file format setting group */
-	gui->tmp_jpg_qf   = ezgui_entry_get_int(gui->off_jpg_qf);
-	gui->tmp_gifa_fr  = ezgui_entry_get_int(gui->off_gifa_fr);
+	zoom->ezgui = gui;
+	return zoombox;
+}
 
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_transp))) {
+static Ihandle *ezgui_setup_zoom_groupbox(Ihandle *zoombox)
+{
+	SetZoom	*zoom;
+
+	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
+	if (zoom != NULL) {
+		return zoom->hbox;
+	}
+	return NULL;
+}
+
+static int ezgui_setup_zoom_reset(Ihandle *zoombox)
+{
+	SetZoom	*zoom;
+	EZOPT	*sopt;
+
+	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
+	if (zoom != NULL) {
+		sopt = zoom->ezgui->sysopt;
+		IupSetInt(zoombox, "VALUE", zoom->zoom_idx + 1);
+		IupSetInt(zoom->entry_zoom_ratio, "VALUE", sopt->tn_facto);
+		IupSetInt(zoom->entry_zoom_wid, "VALUE", sopt->tn_width);
+		IupSetInt(zoom->entry_zoom_hei, "VALUE", sopt->tn_height);
+		IupSetInt(zoom->entry_width, "VALUE", sopt->canvas_width);
+		IupSetInt(zoom->zbox, "VALUEPOS", zoom->zoom_idx);
+	}
+	return IUP_DEFAULT;
+}
+
+/*
+static int ezgui_setup_zoom_read_index(Ihandle *zoombox)
+{
+	SetZoom	*zoom;
+
+	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
+	if (zoom != NULL) {
+		return zoom->zoom_idx;
+	}
+	return -1;
+}
+
+static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index)
+{
+	SetZoom	*zoom;
+
+	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
+	if (zoom != NULL) {
+		zoom->zoom_idx = index;
+		return index;
+	}
+	return -1;
+}
+*/
+
+static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
+{
+	SetZoom	*zoom;
+	EZGUI	*gui;
+	EZOPT	*opt;
+	char	tmp[128];
+
+	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
+	if (zoom == NULL) {
+		return -1;
+	}
+
+	gui = zoom->ezgui;
+	opt = gui->sysopt;
+	zoom->zoom_idx = xui_list_get_idx(zoombox);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_ZOOM, uir_zoom[zoom->zoom_idx].s);
+
+	switch (zoom->zoom_idx) {
+	case 0:
+		strcpy(tmp, "Auto Zoom ");
+		break;
+	case 1:
+		opt->tn_facto  = xui_text_get_number(zoom->entry_zoom_ratio);
+		sprintf(tmp, "Zoom to %d%% ", opt->tn_facto);
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
+		break;
+	case 2:
+		opt->tn_width  = xui_text_get_number(zoom->entry_zoom_wid);
+		opt->tn_height = xui_text_get_number(zoom->entry_zoom_hei);
+		sprintf(tmp, "Zoom to %dx%d ", 
+				opt->tn_width, opt->tn_height);
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
+		break;
+	case 3:
+		opt->canvas_width = xui_text_get_number(zoom->entry_width);
+		sprintf(tmp, "Canvas Width %d ", opt->canvas_width);
+		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
+		break;
+	default:
+		strcpy(tmp, "Oops; ");
+		break;
+	}
+	strcat(status, tmp);
+	IupSetInt(zoom->zbox, "VALUEPOS", zoom->zoom_idx);
+
+	/* save all related parameters into the configure file */
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_ZOOM_RATIO, 
+			opt->tn_facto);
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_ZOOM_WIDTH, 
+			opt->tn_width);
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_ZOOM_HEIGHT, 
+			opt->tn_height);
+	csc_cfg_write_int(gui->config, NULL, CFG_KEY_CANVAS_WIDTH, 
+			opt->canvas_width);
+	return 0;
+}
+
+static int ezgui_setup_zoom_check(Ihandle *zoombox)
+{
+	SetZoom	*zoom;
+	EZOPT	*opt;
+
+	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
+	if (zoom == NULL) {
+		return 0;
+	}
+
+	if (zoom->zoom_idx != xui_list_get_idx(zoombox)) {
+		return 1;
+	}
+
+	opt = zoom->ezgui->sysopt;
+	switch (zoom->zoom_idx) {
+	case 1:
+		if (opt->tn_facto != xui_text_get_number(zoom->entry_zoom_ratio)) {
+			return 1;
+		}
+		break;
+	case 2:
+		if (opt->tn_width != xui_text_get_number(zoom->entry_zoom_wid)) {
+			return 1;
+		}
+		if (opt->tn_height != xui_text_get_number(zoom->entry_zoom_hei)) {
+			return 1;
+		}
+		break;
+	case 3:
+		if (opt->canvas_width != xui_text_get_number(zoom->entry_width)) {
+			return 1;
+		}
+		break;
+	}
+	return 0;
+}
+	
+static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s)
+{
+	SetZoom	*zoom;
+
+	(void) text;	/* stop the gcc complaining */
+
+	zoom = (SetZoom *) IupGetAttribute(ih, EZOBJ_ZOOM_PROFILE);
+	if ((zoom != NULL) && (s != 0)) {
+		IupSetInt(zoom->zbox, "VALUEPOS", i - 1);
+		ezgui_setup_button_check_status(zoom->ezgui);
+	}
+	return IUP_DEFAULT;
+}
+
+
+static Ihandle *ezgui_setup_media_create(EZGUI *gui)
+{
+	Ihandle	*hbox1, *hbox2, *vbox;
+	int	i;
+
+	hbox1 = xui_list_setting(&gui->dfm_list, "Find Media Duration By");
+	for (i = 0; id_duration_long[i].s; i++) {
+		IupSetAttributeId(gui->dfm_list, "", i + 1, 
+				id_duration_long[i].s);
+	}
+	IupSetCallback(gui->dfm_list, "ACTION", (Icallback) ezgui_setup_media_event);
+
+	/* find the index of drop down lists: the duration drop down */
+	gui->dfm_idx = lookup_index_idnum(id_duration_long, 0, 
+			GETDURMOD(gui->sysopt->flags));
+
+	
+	hbox2 = xui_list_setting(&gui->mpm_list, "Media Process Method");
+	for (i = 0; id_mprocess[i].s; i++) {
+		IupSetAttributeId(gui->mpm_list, "", i + 1, id_mprocess[i].s);
+	}
+	IupSetCallback(gui->mpm_list, "ACTION", (Icallback) ezgui_setup_media_event);
+
+	/* find the media process method */
+	gui->mpm_idx = lookup_index_idnum(id_mprocess, 
+			0, EZOP_PROC(gui->sysopt->flags));
+
+
+	vbox = IupVbox(hbox1, hbox2, NULL);
+	IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+	return vbox;
+}
+
+static int ezgui_setup_media_reset(EZGUI *gui)
+{
+	IupSetInt(gui->dfm_list, "VALUE", gui->dfm_idx + 1);
+	IupSetInt(gui->mpm_list, "VALUE", gui->mpm_idx + 1);
+	return 0;
+}
+
+static int ezgui_setup_media_update(EZGUI *gui, char *status)
+{
+	char	tmp[128];
+
+	gui->dfm_idx  = xui_list_get_idx(gui->dfm_list);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_DURATION, id_duration_long[gui->dfm_idx].s);
+
+	switch (gui->dfm_idx) {
+	case 0:
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_AUTO);
+		strcpy(tmp, "Auto detect");
+		break;
+	case 1:
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_HEAD);
+		strcpy(tmp, "Detect by Head");
+		break;
+	case 2:
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_FSCAN);
+		strcpy(tmp, "Detect by Full Scan");
+		break;
+	case 3:
+		SETDURMOD(gui->sysopt->flags, EZOP_DUR_QSCAN);
+		strcpy(tmp, "Detect by Partial Scan");
+		break;
+	default:
+		strcpy(tmp, "Oops; ");
+		break;
+	}
+	strcat(status, tmp);
+
+	gui->mpm_idx  = xui_list_get_idx(gui->mpm_list);
+	EZOP_PROC_MAKE(gui->sysopt->flags, id_mprocess[gui->mpm_idx].id);
+	csc_cfg_write(gui->config, NULL, CFG_KEY_MEDIA_PROC,
+			id_mprocess[gui->mpm_idx].s);
+	csc_cfg_write(gui->config, NULL, CFG_KEY_DURATION, 
+			lookup_string_idnum(id_duration_long, -1, 
+				GETDURMOD(gui->sysopt->flags)));
+	return 0;
+}
+
+static int ezgui_setup_media_check(EZGUI *gui)
+{
+	if (gui->dfm_idx != xui_list_get_idx(gui->dfm_list)) {
+		return 1;
+	}
+	if (gui->mpm_idx != xui_list_get_idx(gui->mpm_list)) {
+		return 1;
+	}
+	return 0;
+}
+
+static int ezgui_setup_media_event(Ihandle *ih, char *text, int i, int s)
+{
+	EZGUI	*gui;
+
+	(void) text; (void) i;
+
+	if (s == 0) {
+		return IUP_DEFAULT;	/* ignore the leaving item */
+	}
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) != NULL) {
+		ezgui_setup_button_check_status(gui);
+	}
+	return IUP_DEFAULT;
+}
+
+
+static Ihandle *ezgui_setup_outputdir_create(EZGUI *gui)
+{
+	Ihandle	*hbox1, *hbox2, *vbox;
+	int	i;
+
+	hbox1 = xui_list_setting(&gui->dir_list, "Save Thumbnails ");
+	for (i = 0; uir_outdir[i].s; i++) {
+		IupSetAttributeId(gui->dir_list, "", i + 1, uir_outdir[i].s);
+	}
+	IupSetAttribute(gui->dir_list, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->dir_list, "ACTION",
+			(Icallback) ezgui_setup_outputdir_event);
+
+	hbox2 = xui_text(&gui->dir_path, "");
+	IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+
+	vbox = IupVbox(hbox1,  hbox2, NULL);
+	IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+	return vbox;
+}
+
+static int ezgui_setup_outputdir_reset(EZGUI *gui)
+{
+	char	*s;
+
+	/* find the thumbnail output method and path */
+	gui->dir_idx = 0;
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_OUTPUT_METHOD);
+	if (s) {
+		gui->dir_idx = lookup_index_string(uir_outdir, 0, s);
+	}
+	IupSetInt(gui->dir_list, "VALUE", gui->dir_idx + 1);
+
+	/* the default output directory entry */
+	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_CURR)) {
+		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+	} else {	/* CFG_PIC_ODIR_PATH */
+		IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
+		gui->sysopt->pathout = csc_cfg_read(gui->config, 
+					EZGUI_MAINKEY, CFG_KEY_OUTPUT_PATH);
+		if (gui->sysopt->pathout) {
+			IupSetAttribute(gui->dir_path, "VALUE", 
+						gui->sysopt->pathout);
+		} else {
+			IupSetAttribute(gui->dir_path, "VALUE", "");
+		}
+	}
+	return 0;
+}
+
+static int ezgui_setup_outputdir_update(EZGUI *gui)
+{
+	gui->dir_idx  = xui_list_get_idx(gui->dir_list);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_OUTPUT_METHOD, uir_outdir[gui->dir_idx].s);
+	
+	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
+		gui->sysopt->pathout = IupGetAttribute(gui->dir_path,"VALUE");
+		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_OUTPUT_PATH, gui->sysopt->pathout);
+	}
+	return 0;
+}
+
+static int ezgui_setup_outputdir_check(EZGUI *gui)
+{
+	char	*val;
+
+	if (gui->dir_idx != xui_list_get_idx(gui->dir_list)) {
+		return 1;
+	}
+	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
+		val = IupGetAttribute(gui->dir_path, "VALUE");
+		if (csc_strcmp_param(val, gui->sysopt->pathout)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int ezgui_setup_outputdir_event(Ihandle *ih, char *text, int i, int s)
+{
+	EZGUI	*gui;
+	char	*val;
+
+	(void) i;
+	if (s == 0) {
+		return IUP_DEFAULT;	/* ignore the leaving item */
+	}
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	
+	if (strcmp(text, CFG_PIC_ODIR_PATH)) {
+		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
+		ezgui_setup_button_check_status(gui);
+		return IUP_DEFAULT;
+	}
+
+	val = IupGetAttribute(gui->dir_path, "VALUE");
+	if (val) {
+		IupSetAttribute(gui->dlg_odir, "DIRECTORY", val);
+	}
+	IupPopup(gui->dlg_odir, IUP_CENTERPARENT, IUP_CENTERPARENT);
+	if (IupGetInt(gui->dlg_odir, "STATUS") < 0) {
+		/* 20151110 can not update list control inside the event 
+		 * callback, otherwise the list control will miss calculate 
+		 * the change and confuse the window manager */
+		gui->dir_ppp_flag = 1;
+		return IUP_DEFAULT;	/* cancelled */
+	}
+	
+	val = IupGetAttribute(gui->dlg_odir, "VALUE");
+	EDB_DEBUG(("Open File VALUE: %s\n", val));
+	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
+			IupGetAttribute(gui->dlg_odir, "DIRECTORY")));
+
+	IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
+	if (val) {
+		IupSetAttribute(gui->dir_path, "VALUE", val);
+	}
+	ezgui_setup_button_check_status(gui);	
+	return IUP_DEFAULT;
+}
+
+static Ihandle *ezgui_setup_font_create(EZGUI *gui)
+{
+	Ihandle	*hbox1, *hbox2, *vbox;
+	int	i;
+
+	hbox1 = xui_list_setting(&gui->font_list, "Choose Font");
+	for (i = 0; uir_choose_font[i].s; i++) {
+		IupSetAttributeId(gui->font_list, "", i + 1, 
+				uir_choose_font[i].s);
+	}
+	IupSetAttribute(gui->font_list, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->font_list, "ACTION",
+			(Icallback) ezgui_setup_font_event);
+
+	hbox2 = xui_text(&gui->font_face, "");
+	IupSetAttribute(gui->font_face, "READONLY", "YES");
+
+	vbox = IupVbox(hbox1,  hbox2, NULL);
+	IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+
+#ifdef  HAVE_GD_USE_FONTCONFIG
+	gdFTUseFontConfig(1);
+#endif
+	return vbox;
+}
+
+static int ezgui_setup_font_reset(EZGUI *gui) 
+{
+	char	*s;
+
+	/* find the font choosing method */
+	gui->font_idx = 0;
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_METHOD);
+	if (s) {
+		gui->font_idx = lookup_index_string(uir_choose_font, 0, s);
+	}
+	IupSetInt(gui->font_list, "VALUE", gui->font_idx + 1);
+
+	/* find the default font face */
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_SYSTEM)) {
+		/* just disable the entry control if system font used */
+		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+	} else {	/* CFG_PIC_FONT_BROWSE */
+		IupSetAttribute(gui->font_face, "VISIBLE", "YES");
+		s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_FACE);
+		if (s) {
+			IupSetAttribute(gui->font_face, "VALUE", s);
+		} else {
+			IupSetAttribute(gui->font_face, "VALUE", "");
+		}
+		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
+	}
+	return 0;
+}
+
+static int ezgui_setup_font_update(EZGUI *gui)
+{
+	gui->font_idx = xui_list_get_idx(gui->font_list);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_FONT_METHOD, uir_choose_font[gui->font_idx].s);
+
+	if (gui->sysopt->mi_font) {
+		smm_free(gui->sysopt->mi_font);
+	}
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_SYSTEM)) {
+		/* don't update configure if using system font */
+		gui->sysopt->mi_font = gui->sysopt->ins_font = NULL;
+	} else {	/* CFG_PIC_FONT_BROWSE */
+		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
+		csc_cfg_write(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_FONT_FACE, gui->font_gtk_name);
+
+		gui->sysopt->mi_font = gui->sysopt->ins_font = 
+			xui_make_font(gui->font_gtk_name, &gui->sysopt->mi_size);
+	}
+	return 0;
+}
+
+static int ezgui_setup_font_check(EZGUI *gui)
+{
+	char	*val;
+
+	if (gui->font_idx != xui_list_get_idx(gui->font_list)) {
+		return 1;
+	}
+	if (!strcmp(uir_choose_font[gui->font_idx].s, CFG_PIC_FONT_BROWSE)) {
+		val = IupGetAttribute(gui->font_face, "VALUE");
+		if (csc_strcmp_param(val, gui->font_gtk_name)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
+{
+	EZGUI	*gui;
+	char	*val;
+
+	(void) i;
+
+	if (s == 0) {
+		return IUP_DEFAULT;	/* ignore the leaving item */
+	}
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	if (strcmp(text, CFG_PIC_FONT_BROWSE)) {
+		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
+		ezgui_setup_button_check_status(gui);
+		return IUP_DEFAULT;
+	}
+	
+	val = IupGetAttribute(gui->font_face, "VALUE");
+	if (val) {
+		IupSetAttribute(gui->dlg_font, "VALUE", val);
+	}
+	IupSetAttribute(gui->dlg_font, "COLOR", "128 0 255");
+	IupPopup(gui->dlg_font, IUP_CENTERPARENT, IUP_CENTERPARENT);
+
+	if (IupGetAttribute(gui->dlg_font, "STATUS") == NULL) {
+		/* 20151110 can not update list control inside the event 
+		 * callback, otherwise the list control will miss calculate 
+		 * the change and confuse the window manager */
+		gui->font_ppp_flag = 1;
+		return IUP_DEFAULT;	/* cancelled */
+	}
+
+	val = IupGetAttribute(gui->dlg_font, "VALUE");
+	EDB_DEBUG(("Font Face: %s\n", val));
+	EDB_DEBUG(("Font Color: %s\n",
+				IupGetAttribute(gui->dlg_font, "COLOR")));
+
+	IupSetAttribute(gui->font_face, "VISIBLE", "YES");
+	if (val) {
+		IupSetAttribute(gui->font_face, "VALUE", val);
+	}
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+static Ihandle *ezgui_setup_suffix_create(EZGUI *gui)
+{
+	Ihandle *hbox;
+
+	hbox = xui_text(&gui->fmt_suffix, "Suffix of Thumbnails");
+	IupSetAttribute(gui->fmt_suffix, "VALUE", gui->sysopt->suffix);
+	IupSetAttribute(gui->fmt_suffix, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->fmt_suffix, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_suffix_event);
+	return hbox;
+}
+
+static int ezgui_setup_suffix_reset(EZGUI *gui)
+{
+	IupSetAttribute(gui->fmt_suffix, "VALUE", gui->sysopt->suffix);
+	return 0;
+}
+
+static int ezgui_setup_suffix_update(EZGUI *gui)
+{
+	char	*val;
+
+	val = IupGetAttribute(gui->fmt_suffix, "VALUE");
+	if (csc_strcmp_param(val, gui->sysopt->suffix)) {
+		csc_strlcpy(gui->sysopt->suffix, val, 64);
+	}
+	return 0;
+}
+
+static int ezgui_setup_suffix_check(EZGUI *gui)
+{
+	char	*val;
+
+	val = IupGetAttribute(gui->fmt_suffix, "VALUE");
+	if (csc_strcmp_param(val, gui->sysopt->suffix)) {
+		return 1;
+	}
+	return 0;
+}
+
+static int ezgui_setup_suffix_event(Ihandle *ih)
+{
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+static Ihandle *ezgui_setup_dupname_create(EZGUI *gui)
+{
+	Ihandle *hbox;
+	int	i;
+
+	/* find the process to existed thumbnails */
+	gui->exist_idx = lookup_index_idnum(id_existed, 0, 
+			EZOP_THUMB_GET(gui->sysopt->flags));
+
+	hbox = xui_list_setting(&gui->fmt_exist, "Existed Thumbnails");
+	for (i = 0; id_existed[i].s; i++) {
+		IupSetAttributeId(gui->fmt_exist, "", i+1, id_existed[i].s);
+	}
+	IupSetAttribute(gui->fmt_exist, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->fmt_exist, "ACTION",
+			(Icallback) ezgui_setup_dupname_event);
+	return hbox;
+}
+
+static int ezgui_setup_dupname_reset(EZGUI *gui)
+{
+	IupSetInt(gui->fmt_exist, "VALUE", gui->exist_idx + 1);
+	return 0;
+}
+
+static int ezgui_setup_dupname_update(EZGUI *gui)
+{
+	gui->exist_idx = xui_list_get_idx(gui->fmt_exist);
+	EZOP_THUMB_SET(gui->sysopt->flags, id_existed[gui->exist_idx].id);
+	csc_cfg_write(gui->config, NULL, CFG_KEY_FILE_EXISTED, 
+			id_existed[gui->exist_idx].s);
+	return 0;
+}
+
+static int ezgui_setup_dupname_check(EZGUI *gui)
+{
+	if (gui->exist_idx != xui_list_get_idx(gui->fmt_exist)) {
+		return 1;
+	}
+	return 0;
+}
+
+static int ezgui_setup_dupname_event(Ihandle *ih, char *text, int i, int s)
+{
+	EZGUI	*gui;
+
+	(void) i; (void) text;
+
+	if (s == 0) {
+		return IUP_DEFAULT;	/* ignore the leaving item */
+	}
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+static Ihandle *ezgui_setup_format_create(EZGUI *gui)
+{
+	Ihandle	*hbox3, *hbox4, *vbox;
+	int	i;
+
+	/* third line: file format of thumbnails */
+	hbox3 = xui_list_setting(&gui->fmt_list, "Save Picture As");
+	for (i = 0; uir_format[i].s; i++) {
+		IupSetAttributeId(gui->fmt_list, "", i+1, 
+				uir_format[i].s);
+	}
+	IupSetAttribute(gui->fmt_list, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->fmt_list, "ACTION",
+			(Icallback) ezgui_setup_format_event_picture);
+	
+	/* append the transparent control for png/gif */
+	gui->fmt_transp = IupToggle("Transparent", NULL);
+	IupSetAttribute(gui->fmt_transp, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->fmt_transp, "ACTION",
+			(Icallback) ezgui_setup_format_event_transparent);
+	IupAppend(hbox3, gui->fmt_transp);
+
+	/* optional line: attribute of the file format */
+	gui->fmt_zbox = IupZbox(IupFill(), 
+			xui_text_setting(&gui->fmt_gif_fr, "FRate:", "(ms)"),
+			xui_text_setting(&gui->fmt_jpg_qf, "Quality:", NULL),
+			NULL);
+	IupSetAttribute(gui->fmt_gif_fr, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->fmt_gif_fr, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_format_event_param);
+	IupSetAttribute(gui->fmt_jpg_qf, EZOBJ_MAIN, (char*) gui);
+	IupSetCallback(gui->fmt_jpg_qf, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_format_event_param);
+
+	hbox4 = IupHbox(xui_label("", EGPS_SETUP_DESCR, NULL), 
+			gui->fmt_zbox, NULL);
+	IupSetAttribute(hbox4, "NGAP", "4");
+
+	/* assemble the Picture Format area */
+	vbox = IupVbox(hbox3, hbox4, NULL);
+	//IupSetAttribute(vbox, "NMARGIN", "16x4");
+	IupSetAttribute(vbox, "NGAP", "4");
+
+	/* find the index of drop down lists: the file format drop down */
+	if (!strcmp(gui->sysopt->img_format, "png")) {
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_PNG);
+	} else if (strcmp(gui->sysopt->img_format, "gif")) {
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_JPEG);
+	} else if (gui->sysopt->img_quality) {
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_GIFA);
+	} else {
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_GIF);
+	}
+
+	/* seperate the image quality and frame rate */
+	gui->tmp_jpg_qf  = 85;
+	if (!csc_strcmp_list(gui->sysopt->img_format, "jpg", "jpeg", NULL)) {
+		gui->tmp_jpg_qf  = gui->sysopt->img_quality;
+	}
+	csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_JPG_QUALITY, &gui->tmp_jpg_qf);
+
+	gui->tmp_gifa_fr = 1000;
+	if (!strcmp(gui->sysopt->img_format, "gif") && 
+			gui->sysopt->img_quality) {
+		gui->tmp_gifa_fr = gui->sysopt->img_quality;
+	}
+	csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
+			CFG_KEY_GIF_FRATE, &gui->tmp_gifa_fr);
+	return vbox;
+}
+
+static int ezgui_setup_format_reset(EZGUI *gui)
+{
+	IupSetInt(gui->fmt_list, "VALUE", gui->fmt_idx + 1);
+	
+	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
+	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
+
+	if (gui->sysopt->flags & EZOP_TRANSPARENT) {
+		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
+	} else {
+		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
+	}
+
+	ezgui_setup_format_event_picture(gui->fmt_list,
+			uir_format[gui->fmt_idx].s, gui->fmt_idx + 1, 1);
+	return 0;
+}
+
+static int ezgui_setup_format_update(EZGUI *gui)
+{
+	char	*val;
+
+	gui->fmt_idx  = xui_list_get_idx(gui->fmt_list);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_FILE_FORMAT, uir_format[gui->fmt_idx].s);
+
+	gui->tmp_jpg_qf = (int) strtol(
+			IupGetAttribute(gui->fmt_jpg_qf, "VALUE"), NULL, 10);
+	csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_JPG_QUALITY, gui->tmp_jpg_qf);
+	gui->tmp_gifa_fr = (int) strtol(
+			IupGetAttribute(gui->fmt_gif_fr, "VALUE"), NULL, 10);
+	csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
+			CFG_KEY_GIF_FRATE, gui->tmp_gifa_fr);
+
+	val = IupGetAttribute(gui->fmt_transp, "VALUE");
+	if (!strcmp(val, "ON")) {
 		gui->sysopt->flags |= EZOP_TRANSPARENT;
 	} else {
 		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
 	}
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui->off_jpg))) {
-		if ((gui->tmp_jpg_qf < 5) || (gui->tmp_jpg_qf > 100)) {
-			gui->tmp_jpg_qf = 85;
-		}
-		strcpy(gui->sysopt->img_format, "jpg");
-		gui->sysopt->img_quality = gui->tmp_jpg_qf;
-		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
-		gtk_toggle_button_set_active(
-				GTK_TOGGLE_BUTTON(gui->off_transp), FALSE);
-	} else if (gtk_toggle_button_get_active(
-				GTK_TOGGLE_BUTTON(gui->off_gif))) {
-		strcpy(gui->sysopt->img_format, "gif");
-		gui->sysopt->img_quality = 0;
-	} else if (gtk_toggle_button_get_active(
-				GTK_TOGGLE_BUTTON(gui->off_gifa))) {
-		if (gui->tmp_gifa_fr && (gui->tmp_gifa_fr < 15)) {
-			gui->tmp_gifa_fr = 1000;
-		}
-		strcpy(gui->sysopt->img_format, "gif");
-		gui->sysopt->img_quality = gui->tmp_gifa_fr;
-	} else if (gtk_toggle_button_get_active(
-				GTK_TOGGLE_BUTTON(gui->off_png))) {
-		strcpy(gui->sysopt->img_format, "png");
-		gui->sysopt->img_quality = 0;
-	}
-
-	ezgui_option_save(gui);
-	ezgui_signal_setup_insensible(gui);
+	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY, val);
+	
+	EDB_DEBUG(("EVT_SETUP: Fmt=%d JPG=%d GIFA=%d Tra=%s\n",
+			gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr, val));
 	return 0;
 }
 
-static int ezgui_signal_setup_format(EZGUI *gui, void *parent)
+static int ezgui_setup_format_check(EZGUI *gui)
 {
-	if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(parent)) == TRUE) {
-		if (parent == gui->off_png) {
-			gtk_widget_set_sensitive(gui->off_transp, TRUE);
-		} else if (parent == gui->off_gif) {
-			gtk_widget_set_sensitive(gui->off_transp, TRUE);
-		} else if (parent == gui->off_gifa) {
-			gtk_widget_set_sensitive(gui->off_transp, TRUE);
-			gtk_widget_set_sensitive(gui->off_gifa_fr, TRUE);
-		} else if (parent == gui->off_jpg) {
-			gtk_widget_set_sensitive(gui->off_transp, FALSE);
-			gtk_widget_set_sensitive(gui->off_jpg_qf, TRUE);
+	char	*val;
+
+	if (gui->fmt_idx != xui_list_get_idx(gui->fmt_list)) {
+		return 1;
+	}
+
+	val = IupGetAttribute(gui->fmt_jpg_qf, "VALUE");
+	if (gui->tmp_jpg_qf != (int) strtol(val, NULL, 10)) {
+		return 1;
+	}
+	val = IupGetAttribute(gui->fmt_gif_fr, "VALUE");
+	if (gui->tmp_gifa_fr != (int) strtol(val, NULL, 10)) {
+		return 1;
+	}
+	val = IupGetAttribute(gui->fmt_transp, "VALUE");
+	if (!strcmp(val, "ON")) {
+		if ((gui->sysopt->flags & EZOP_TRANSPARENT) == 0) {
+			return 1;
 		}
 	} else {
-		if (parent == gui->off_gifa) {
-			gtk_widget_set_sensitive(gui->off_gifa_fr, FALSE);
-		} else if (parent == gui->off_jpg) {
-			gtk_widget_set_sensitive(gui->off_jpg_qf, FALSE);
+		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
+			return 1;
 		}
 	}
-
-	ezgui_signal_setup_sensible(gui);
 	return 0;
 }
 
-
-static EZCFG *ezgui_cfg_alloc(void)
+static int ezgui_setup_format_event_picture(Ihandle *ih, char *text, int i, int s)
 {
-	EZCFG	*cfg;
-	char	*path;
+	EZGUI	*gui;
 
-	if ((cfg = smm_alloc(sizeof(EZCFG))) == NULL) {
-		return NULL;
+	(void) i;
+
+	if (s == 0) {
+		return IUP_DEFAULT;	/* ignore the leaving item */
+	}
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
 	}
 
-	/* Make sure the path to the configure file existed */
-	if (!g_file_test(g_get_user_config_dir(), G_FILE_TEST_EXISTS)) {
-		g_mkdir(g_get_user_config_dir(), 0755);
+	/* hide the transparent toggle and quality editboxes */
+	IupSetAttribute(gui->fmt_transp, "VISIBLE", "NO");
+	IupSetInt(gui->fmt_zbox, "VALUEPOS", 0);
+
+	if (!strcmp(text, CFG_PIC_FMT_JPEG)) {
+		IupSetInt(gui->fmt_zbox, "VALUEPOS", 2);
+	} else {
+		IupSetAttribute(gui->fmt_transp, "VISIBLE", "YES");
+		if (!strcmp(text, CFG_PIC_FMT_GIFA)) {
+			IupSetInt(gui->fmt_zbox, "VALUEPOS", 1);
+		}
+	}
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_setup_format_event_transparent(Ihandle* ih, int state)
+{
+	EZGUI	*gui;
+
+	(void) state;
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_setup_format_event_param(Ihandle* ih)
+{
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+
+static Ihandle *ezgui_setup_button_create(EZGUI *gui)
+{
+	gui->butt_setup_apply = 
+		xui_button("OK", (Icallback) ezgui_setup_button_event_ok);
+	IupSetAttribute(gui->butt_setup_apply, EZOBJ_MAIN, (char*) gui);
+	IupSetAttribute(gui->butt_setup_apply, "ACTIVE", "NO");
+
+	gui->butt_setup_cancel = 
+		xui_button("Cancel", (Icallback) ezgui_setup_button_event_cancel);
+	IupSetAttribute(gui->butt_setup_cancel, EZOBJ_MAIN, (char*) gui);
+	IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "NO");
+
+	return IupHbox(xui_label("", "320", NULL),  
+			gui->butt_setup_cancel, gui->butt_setup_apply, NULL);
+}
+
+static int ezgui_setup_button_check_status(EZGUI *gui)
+{
+	int	counter = 0;
+
+	counter += ezgui_setup_grid_check(gui->prof_grid);
+	counter += ezgui_setup_zoom_check(gui->prof_zoom);
+	counter += ezgui_setup_media_check(gui);
+	counter += ezgui_setup_outputdir_check(gui);
+	counter += ezgui_setup_font_check(gui);
+	counter += ezgui_setup_suffix_check(gui);
+	counter += ezgui_setup_dupname_check(gui);
+	counter += ezgui_setup_format_check(gui);
+	if (counter == 0) {
+		IupSetAttribute(gui->butt_setup_apply, "ACTIVE", "NO");
+		IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "NO");
+	} else {
+		IupSetAttribute(gui->butt_setup_apply, "ACTIVE", "YES");
+		IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "YES");
+	}
+	return counter;
+}
+
+static int ezgui_setup_button_event_ok(Ihandle *ih)
+{
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
 	}
 
-	path = g_build_filename(g_get_user_config_dir(), CFG_SUBPATH, NULL);
-	if (!g_file_test(path, G_FILE_TEST_EXISTS)) {
-		g_mkdir(path, 0755);
-	}
-	g_free(path);
+	gui->status[0] = 0;
+	ezgui_setup_grid_update(gui->prof_grid, gui->status);
+	ezgui_setup_zoom_update(gui->prof_zoom, gui->status);
+	ezgui_setup_media_update(gui, gui->status);
+	ezgui_setup_font_update(gui);
+	ezgui_setup_outputdir_update(gui);
+	ezgui_setup_suffix_update(gui);
+	ezgui_setup_dupname_update(gui);
+	ezgui_setup_format_update(gui);
 
-	/* If the configure file exists, try to read it */
-	cfg->fname = g_build_filename(g_get_user_config_dir(), 
-			CFG_SUBPATH, CFG_FILENAME, NULL);
+	IupSetAttribute(gui->stat_bar, "TITLE", gui->status);
+	//puts(gui->status);
+
+	ezgui_setup_button_check_status(gui);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_setup_button_event_cancel(Ihandle *ih)
+{
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) != NULL) {
+		ezgui_page_setup_reset(gui);
+		ezgui_setup_button_check_status(gui);
+	}
+	return IUP_DEFAULT;
+}
+
+
+/****************************************************************************
+ * Page About
+ ****************************************************************************/
+static	const	char	*description = "\
+A video thumbnail generator based on FFMPEG library.\n\
+\n\
+Copyright (C) 2011-2015 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n";
+
+static	const	char	*credits = "\
+FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:\n\
+http://ffmpeg.zeranoe.com/builds\n\
+You can find source codes and copyrights of FFMPEG at\n\
+https://www.ffmpeg.org\n\
+\n\
+Following Libraries were grabbed from GnuWin:\n\
+http://sourceforge.net/projects/gnuwin32/files\n\
+\n\
+gd-2.0.33-1\n\
+jpeg-6b-4\n\
+libiconv-1.9.2-1\n\
+libpng-1.2.37\n\
+zlib-1.2.3\n\
+freetype-2.3.5-1\n\
+\n\
+The icon is a public domain under GNU Free Documentation License:\n\
+http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg\n\
+\n\
+The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
+graphical user interfaces.\n\
+http://webserver2.tecgraf.puc-rio.br/iup\n\
+\n\
+This program was inspired by movie thumbnailer (mtn):\n\
+http://sourceforge.net/projects/moviethumbnail\n";
+
+static Ihandle *ezgui_page_about(EZGUI *gui)
+{
+	Ihandle	*icon, *name, *descr, *thanks;
+	Ihandle	*vbox, *sbox;
+
+	(void) gui;
+
+	/* show the icon */
+	icon = IupLabel(NULL);
+	IupSetAttributeHandle(icon, "IMAGE", 
+			IupImageRGBA(64, 64, ezicon_about));
+
+	/* show name and the version */
+	name = IupLabel("Ezthumb " EZTHUMB_VERSION);
+	IupSetAttribute(name, "FONTSIZE", "20");
+	IupSetAttribute(name, "FONTSTYLE", "Bold");
 	
-	cfg->ckey = g_key_file_new();
-	if (g_file_test(cfg->fname, G_FILE_TEST_EXISTS)) {
-		g_key_file_load_from_file(cfg->ckey, cfg->fname, 0, NULL);
-	}
-	return cfg;
+	/* show the simple description */
+	descr = IupLabel(description);
+	IupSetAttribute(descr, "ALIGNMENT", "ACENTER:ACENTER");
+
+	/* show the credits */
+	thanks = IupLabel(credits);
+	IupSetAttribute(thanks, "ALIGNMENT", "ACENTER:ACENTER");
+	
+	/* group these elements inside a vertical box */
+	vbox = IupVbox(icon, name, descr, thanks, NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+	IupSetAttribute(vbox, "ALIGNMENT", "ACENTER");
+
+	/* fill the right side of the veritcal box with blank and pack
+	 * into a scrollbox */
+	sbox = IupScrollBox(IupHbox(vbox, IupHbox(IupFill(), NULL), NULL));
+	IupSetAttribute(sbox, "SCROLLBAR", "VERTICAL");
+	return sbox;
 }
 
-static int  ezgui_cfg_free(EZCFG *cfg)
+
+/****************************************************************************
+ * New control for workarea
+ ****************************************************************************/
+
+static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 {
-	if (cfg == NULL) {
-		return -1;
-	}
+	Ihandle	*vb_main, *vb_size, *vb_len, *vb_res, *vb_prog, *hbox;
+	SView	*sview;
 
-	ezgui_cfg_flush(cfg);
-
-	if (cfg->fname) {
-		g_free(cfg->fname);
-	}
-	/*if (cfg->ckey) {
-		g_free(cfg->ckey);
-	}*/
-	smm_free(cfg);
-	return 0;
-}
-
-static char *ezgui_cfg_read_alloc(EZCFG *cfg, char *key)
-{
-	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
+	if ((sview = smm_alloc(sizeof(SView))) == NULL) {
 		return NULL;
 	}
-	return g_key_file_get_value(cfg->ckey, CFG_GRP_MAIN, key, NULL);
+	sview->gui = gui;
+
+	sview->filename = IupList(NULL);
+	IupSetAttribute(sview->filename, "EXPAND", "YES");
+	IupSetAttribute(sview->filename, "MULTIPLE", "YES");
+	IupSetAttribute(sview->filename, "SCROLLBAR", "NO");
+	IupSetAttribute(sview->filename, "DROPFILESTARGET", "YES");
+	IupSetAttribute(sview->filename, "ALIGNMENT", "ARIGHT");
+	IupSetAttribute(sview->filename, EZOBJ_SVIEW, (char*) sview);
+	vb_main = IupVbox(xui_label("Files", NULL, NULL), 
+			sview->filename, NULL);
+
+	IupSetCallback(sview->filename, "DROPFILES_CB",
+			(Icallback) ezgui_sview_event_dropfiles);
+	IupSetCallback(sview->filename, "MULTISELECT_CB",
+			(Icallback) ezgui_sview_event_multi_select);
+	IupSetCallback(sview->filename, "BUTTON_CB",
+			(Icallback) ezgui_sview_event_moused);
+	IupSetCallback(sview->filename, "MOTION_CB",
+			(Icallback) ezgui_sview_event_motion);
+	if (dblck) {
+		IupSetCallback(sview->filename, "DBLCLICK_CB", 
+				(Icallback) ezgui_sview_event_run);
+	}
+
+	sview->filesize = IupList(NULL);
+	IupSetAttribute(sview->filesize, "SIZE", "50");
+	IupSetAttribute(sview->filesize, "EXPAND", "VERTICAL");
+	IupSetAttribute(sview->filesize, "SCROLLBAR", "NO");
+	IupSetAttribute(sview->filesize, "ACTIVE", "NO");
+	vb_size = IupVbox(xui_label("Size", "50", NULL), 
+			sview->filesize, NULL);
+
+	sview->medialen = IupList(NULL);
+	IupSetAttribute(sview->medialen, "SIZE", "48");
+	IupSetAttribute(sview->medialen, "EXPAND", "VERTICAL");
+	IupSetAttribute(sview->medialen, "SCROLLBAR", "NO");
+	IupSetAttribute(sview->medialen, "ACTIVE", "NO");
+	vb_len = IupVbox(xui_label("Length", "48", NULL), 
+			sview->medialen, NULL);
+
+	sview->resolution = IupList(NULL);
+	IupSetAttribute(sview->resolution, "SIZE", "50");
+	IupSetAttribute(sview->resolution, "EXPAND", "VERTICAL");
+	IupSetAttribute(sview->resolution, "SCROLLBAR", "NO");
+	IupSetAttribute(sview->resolution, "ACTIVE", "NO");
+	vb_res = IupVbox(xui_label("Resolution", "50", NULL), 
+			sview->resolution, NULL);
+	
+	sview->progress = IupList(NULL);
+	IupSetAttribute(sview->progress, "SIZE", "40");
+	IupSetAttribute(sview->progress, "SCROLLBAR", "NO");
+	IupSetAttribute(sview->progress, "EXPAND", "VERTICAL");
+	IupSetAttribute(sview->progress, "ACTIVE", "NO");
+	vb_prog = IupVbox(xui_label("Progress", "40", NULL), 
+			sview->progress, NULL);
+
+	sview->attrib = IupList(NULL);
+	IupSetAttribute(sview->attrib, "SIZE", "50");
+	IupSetAttribute(sview->attrib, "EXPAND", "VERTICAL");
+	IupSetAttribute(sview->attrib, "SCROLLBAR", "NO");
+	IupSetAttribute(sview->attrib, "ACTIVE", "NO");
+	IupVbox(xui_label("Attribution", "50", NULL), 
+			sview->attrib, NULL);
+
+	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
+	IupSetAttribute(hbox, EZOBJ_SVIEW, (char*) sview);
+	return hbox;
 }
 
-static int ezgui_cfg_write(EZCFG *cfg, char *key, char *s)
+static int ezgui_sview_progress(Ihandle *ih, int percent)
 {
-	char	*p;
+	SView	*sview;
+	char	*tmp;
 
-	if (s == NULL) {
-		return 0;
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return EZ_ERR_PARAM;
 	}
-	if (g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
-		p = g_key_file_get_value(cfg->ckey, CFG_GRP_MAIN, key, NULL);
-		if (!strcmp(s, p)) {
-			g_free(p);
-			return 0;
-		}
-		g_free(p);
-	}
-	g_key_file_set_value(cfg->ckey, CFG_GRP_MAIN, key, s);
-	cfg->mcount++;
-	return cfg->mcount;
-}
-
-#if 0
-static int ezgui_cfg_rdonly_int(EZCFG *cfg, char *key, int *readout)
-{
-	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
-		return EZ_ERR_KEYCFG;	/* key not found */
-	}
-	if (readout) {
-		*readout = g_key_file_get_integer(cfg->ckey, 
-				CFG_GRP_MAIN, key, NULL);
+	tmp = IupGetAttributeId(sview->progress, "", sview->svidx);
+	if (tmp) {
+		sprintf(tmp, "%d%%",  percent);
+		IupSetAttributeId(sview->progress, "", sview->svidx, tmp);
 	}
 	return EZ_ERR_NONE;
 }
+
+static int ezgui_sview_active_add(Ihandle *ih, int type, Ihandle *ctrl)
+{
+	SView	*sview;
+	Ihandle	**clist;	/* control list */
+	int	i;
+
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return EZ_ERR_PARAM;
+	}
+
+	switch (type) {
+	case EZGUI_SVIEW_ACTIVE_CONTENT:
+		clist = sview->act_content;
+		break;
+	case EZGUI_SVIEW_ACTIVE_SELECT:
+		clist = sview->act_select;
+		break;
+	case EZGUI_SVIEW_ACTIVE_PROGRESS:
+		clist = sview->act_progress;
+		break;
+	case EZGUI_SVIEW_ACTIVE_BIND:
+		IupSetAttribute(ctrl, EZOBJ_SVIEW, (char*) sview);
+		return EZ_ERR_NONE; 
+	default:
+		return EZ_ERR_PARAM;	/* wrong type */
+	}
+
+	for (i = 0; i < EZGUI_SVIEW_ACTIVE_MAX; i++) {
+		if (clist[i]) {
+			continue;
+		}
+		clist[i] = ctrl;
+		IupSetAttribute(clist[i], EZOBJ_SVIEW, (char*) sview);
+		return EZ_ERR_NONE;	/* successful */
+	}
+	return EZ_ERR_LOWMEM;	/* full */ 
+}
+
+static int ezgui_sview_resize(Ihandle *ih, int width, int height)
+{
+	SView	*sview;
+	char	tmp[32];
+
+	(void) height;
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return EZ_ERR_PARAM;
+	}
+
+	if (sview->car_size == 0) {
+		sview->car_size  = xui_get_size(sview->filesize, "RASTERSIZE", NULL);
+		sview->car_size += xui_get_size(sview->medialen, "RASTERSIZE", NULL);
+		sview->car_size += xui_get_size(sview->resolution, "RASTERSIZE", NULL);
+		sview->car_size += xui_get_size(sview->progress, "RASTERSIZE", NULL);
+		sview->car_size += 4;
+		//printf("ezgui_sview_resize: %d %d\n", width, sview->car_size);
+	}
+	sprintf(tmp, "%d", width - sview->car_size);
+	IupSetAttribute(sview->filename, "RASTERSIZE", tmp);
+	return 0;
+}
+
+#if 0
+static int ezgui_sview_active_remove(Ihandle *ih, int type, Ihandle *ctrl)
+{
+	SView	*sview;
+	Ihandle	**clist;	/* control list */
+	int	i;
+
+	if ((sview = (SView*)IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return EZ_ERR_PARAM;
+	}
+
+	switch (type) {
+	case EZGUI_SVIEW_ACTIVE_CONTENT:
+		clist = sview->act_content;
+		break;
+	case EZGUI_SVIEW_ACTIVE_SELECT:
+		clist = sview->act_select;
+		break;
+	case EZGUI_SVIEW_ACTIVE_PROGRESS:
+		clist = sview->act_progress;
+		break;
+	default:
+		return EZ_ERR_PARAM;	/* wrong type */
+	}
+
+	for (i = 0; i < EZGUI_SVIEW_ACTIVE_MAX && clist[i]; i++) {
+		if (ctrl && (ctrl != clist[i])) {
+			continue;
+		}
+		IupSetAttribute(clist[i], EZOBJ_SVIEW, NULL);
+		clist[i] = NULL;
+	}
+	return EZ_ERR_NONE;	/* successful */
+}
 #endif
 
-static int ezgui_cfg_read_int(EZCFG *cfg, char *key, int def)
+static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 {
-	if (!g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
-		g_key_file_set_integer(cfg->ckey, CFG_GRP_MAIN, key, def);
-		cfg->mcount++;
-		return def;
+	EZGUI	*gui;
+	SView	*sview;
+	char	*attr, *fname;
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return IUP_DEFAULT;
 	}
-	return g_key_file_get_integer(cfg->ckey, CFG_GRP_MAIN, key, NULL);
+
+	sview->svidx = item;	/* store the current index */
+	gui = sview->gui;
+
+	if ((attr = IupGetAttributeId(sview->attrib, "", item)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	EDB_DEBUG(("EVT_Action %d: %s %s\n", item, attr, text));
+
+	gui->sysopt->pre_seek = (int) strtol(attr, NULL, 0);
+	attr = strchr(attr, ':');
+	gui->sysopt->pre_br = (int) strtol(++attr, NULL, 0);
+	attr = strchr(attr, ':');
+	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
+
+	/* 20160115 content in 'text' is not stable */
+	smm_codepage_set(65001);
+	fname = csc_strcpy_alloc(text, 0);
+	ezthumb(fname, gui->sysopt);
+	smm_free(fname);
+	smm_codepage_reset();
+
+	gui->sysopt->pre_seek = 0;
+	gui->sysopt->pre_br   = 0;
+	gui->sysopt->pre_dura = 0;
+	return IUP_DEFAULT;
 }
 
-static int ezgui_cfg_write_int(EZCFG *cfg, char *key, int val)
+static int ezgui_sview_event_dropfiles(Ihandle *ih, 
+		const char* filename, int num, int x, int y)
 {
-	if (g_key_file_has_key(cfg->ckey, CFG_GRP_MAIN, key, NULL)) {
-		if (g_key_file_get_integer(cfg->ckey, CFG_GRP_MAIN, key, NULL)
-				== val) {
-			return 0;
+	SView	*sview;
+
+	(void)num; (void)x; (void)y;
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	EDB_DEBUG(("EVT_Dropfiles: fname=%s number=%d %dx%d\n",
+				filename, num, x, y));
+	ezgui_sview_file_append(sview, (char*) filename);
+	/* highlight the RUN button when the list is not empty */
+	ezgui_sview_active_update(sview, 
+			EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_sview_event_multi_select(Ihandle *ih, char *value)
+{
+	SView	*sview;
+	int	i, n;
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	EDB_DEBUG(("EVT_Multi_select: %s\n", value));
+	EDB_DEBUG(("List value=%s\n", 
+				IupGetAttribute(sview->filename, "VALUE")));
+	
+	/* the parameter 'value' is useless. grab list myself */
+	/*value = IupGetAttribute(sview->list_fname, "VALUE");
+	for (i = 0; value[i]; i++) {
+		if (value[i] == '+') {
+			IupSetAttribute(gui->button_del, "ACTIVE", "YES");
+			return IUP_DEFAULT;
 		}
 	}
-	g_key_file_set_integer(cfg->ckey, CFG_GRP_MAIN, key, val);
-	cfg->mcount++;
-	return cfg->mcount;
+	IupSetAttribute(gui->button_del, "ACTIVE", "NO");*/
+	value = IupGetAttribute(sview->filename, "VALUE");
+	for (i = n = 0; value[i]; i++) {
+		if (value[i] == '+') {
+			n++;
+		}
+	}
+	ezgui_sview_active_update(sview, EZGUI_SVIEW_ACTIVE_SELECT, n);
+	return IUP_DEFAULT;
 }
 
-static int ezgui_cfg_flush(EZCFG *cfg)
+static int ezgui_sview_event_moused(Ihandle *ih, 
+		int button, int pressed, int x, int y, char *status)
 {
-	gchar	*cfgdata;
-	gsize	len = 0;
-	FILE	*fp;
+	SView	*sview;
+
+	(void)x; (void)y; (void)status;	/* stop compiler complains */
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	EDB_MODL(("EVT_Mouse: %d %d %dx%d %s\n", 
+				button, pressed, x, y, status));
+	if (pressed) {	/* only act when button is released */
+		return IUP_DEFAULT;
+	}
+	/* deselect every thing if the right button was released */
+	if (button == IUP_BUTTON3) {
+		IupSetAttribute(sview->filename, "VALUE", "");
+		ezgui_sview_active_update(sview, 
+				EZGUI_SVIEW_ACTIVE_SELECT, 0);
+	}
+	return IUP_DEFAULT;
+}
+
+static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
+{
+	SView	*sview;
+	char	*fname;
+	int	line;
+
+	(void)status;	/* stop compiler complains */
+
+	line  = IupConvertXYToPos(ih, x, y);
+
+	EDB_MODL(("EVT_Motion: %d %d %d\n", x, y, line));
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return IUP_DEFAULT;
+	}
 	
-	if (cfg->mcount == 0) {
-		return 0;
+	if (line != sview->moused) {
+		sview->moused = line;
+		if (line < 1) {
+			IupSetAttribute(ih, "TIP", NULL);
+		} else {
+			fname = IupGetAttributeId(ih, "",  line);
+			if (fname) {
+				IupSetAttribute(ih, "TIP", fname);
+			}
+		}
 	}
+	return IUP_DEFAULT;
+}
 
-	EDB_INFO(("ezgui_cfg_flush: %d\n", cfg->mcount));
+static int ezgui_sview_add(SView *sview)
+{
+	EZGUI	*gui = (EZGUI *) sview->gui;
+	char	*flist, *fname, *path, *sdir;
+	int	i, amnt;
 	
-	cfgdata = g_key_file_to_data(cfg->ckey, &len, NULL);
+	/* Store the recent visited diretory so it can be used next time.
+	 * The file open dialog can not go to the last directory in gtk */
+	path = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_DIRECTORY);
+	if (path) {
+		IupSetAttribute(gui->dlg_open, "DIRECTORY", path);
+	}
+	IupPopup(gui->dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
 
-	if ((fp = g_fopen(cfg->fname, "w")) != NULL) {
-		fwrite(cfgdata, 1, len, fp);
-		fclose(fp);
+	if (IupGetInt(gui->dlg_open, "STATUS") < 0) {
+		return IUP_DEFAULT;	/* cancelled */
 	}
 
-	g_free(cfgdata);
-	cfg->mcount = 0;
-	return 0;
-}
-
-/*
-static int ezgui_cfg_set_monitor(EZGUI *gui)
-{
-	GFileMonitor	*mon_file;
-	GFile 		*cfg_file;
-
-	cfg_file = g_file_new_for_path(gui->cfg_fname);
-	mon_file = g_file_monitor_file(cfg_file, 0, NULL, NULL);
-	g_signal_connect(G_OBJECT(mon_file), "changed", 
-			G_CALLBACK(ezgui_cfg_external_change), gui);
-	return 0;
-}
-
-static int ezgui_cfg_external_change(EZGUI *gui)
-{
-}
-*/
-
-static GtkWidget *ezgui_pack_forward(GtkWidget *box, ...)
-{
-	va_list		ap;
-	GtkWidget	*wp;
-
-	va_start(ap, box);
-	while ((wp = va_arg(ap, GtkWidget*)) != NULL) {
-		gtk_box_pack_start(GTK_BOX(box), wp, FALSE, FALSE, 0);
+	/* IUP generate different file list between one file and more files:
+	 * Open File VALUE: /home/xum1/dwhelper/lan_ke_er.flv
+	 * Last  DIRECTORY: /home/xum1/dwhelper/
+	 * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
+	 * 			lan_ke_er.flv|Powered_by_Discuz.flv|
+	 * Last  DIRECTORY: /home/xum1/dwhelper0 */
+	EDB_DEBUG(("Open File VALUE: %s\n", 
+			IupGetAttribute(gui->dlg_open, "VALUE")));
+	EDB_DEBUG(("Last  DIRECTORY: %s\n", 
+			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
+	/* duplicate the path and filename list */
+	flist = csc_strcpy_alloc(IupGetAttribute(gui->dlg_open, "VALUE"), 16);
+	/* find out how many files is in */
+	for (i = amnt = 0; flist[i]; i++) {
+		amnt += (flist[i] == '|') ? 1 : 0;
 	}
-	va_end(ap);
-	return box;
-}
-
-static GtkWidget *ezgui_pack_backward(GtkWidget *box, ...)
-{
-	va_list		ap;
-	GtkWidget	*wp;
-
-	va_start(ap, box);
-	while ((wp = va_arg(ap, GtkWidget*)) != NULL) {
-		gtk_box_pack_end(GTK_BOX(box), wp, FALSE, FALSE, 0);
+	if (amnt == 0) {
+		amnt++;
+	} else {
+		amnt--;
 	}
-	va_end(ap);
-	return box;
-}
 
-static GtkWidget *ezgui_pack_fill(GtkWidget *box, ...)
-{
-	va_list		ap;
-	GtkWidget	*wp;
-
-	va_start(ap, box);
-	while ((wp = va_arg(ap, GtkWidget*)) != NULL) {
-		gtk_box_pack_start(GTK_BOX(box), wp, TRUE, TRUE, 0);
+	/* store the current directory. note that the tailing '/' or '0' 
+	 * need to be cut out first.
+	 * Is the tailing '0' a bug of IUP? */
+	path = csc_strcpy_alloc(
+			IupGetAttribute(gui->dlg_open, "DIRECTORY"), 4);
+	i = strlen(path) - 1;
+	if ((path[i] == '/') || (path[i] == '\\') || (path[i] == '0')) {
+		path[i] = 0;
 	}
-	va_end(ap);
-	return box;
+	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_DIRECTORY, path);
+	smm_free(path);
+
+	/* process the single file list */
+	if (amnt == 1) {
+		ezgui_sview_file_append(sview, flist);
+		/* highlight the RUN button when the list is not empty */
+		ezgui_sview_active_update(sview, 
+				EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
+		smm_free(flist);
+		return IUP_DEFAULT;
+	}
+
+	/* cut out the path first */
+	flist = csc_cuttoken(flist, &sdir, "|");
+	/* extract the file names */
+	while ((flist = csc_cuttoken(flist, &fname, "|")) != NULL) {
+		if (fname[0] == 0) {
+			break;	/* end of list */
+		}
+		path = csc_strcpy_alloc(sdir, strlen(fname)+8);
+		strcat(path, "/");
+		strcat(path, fname);
+		//printf("%s\n", path);
+		ezgui_sview_file_append(sview, path);
+		/* highlight the RUN button when the list is not empty */
+		ezgui_sview_active_update(sview, 
+				EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
+		smm_free(path);
+	}
+	smm_free(flist);
+	return IUP_DEFAULT;
 }
 
-static GtkWidget *ezgui_entry_box(int val, int dw)
+static int ezgui_sview_remove(SView *sview)
 {
-	GtkWidget	*entry;
+	char	*value;
+	int	i;
 
-	entry = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry), dw);
-	gtk_widget_set_size_request(entry, dw * 10, -1);
-
-	ezgui_entry_set_int(entry, val);
-	return entry;
+	while (1) {
+		value = IupGetAttribute(sview->filename, "VALUE");
+		EDB_PROG(("EVT_Remove: %s\n", value));
+		for (i = 0; value[i]; i++) {
+			if (value[i] == '+') {
+				ezgui_sview_file_remove(sview, i+1);
+				break;
+			}
+		}
+		if (!value[i]) {
+			break;
+		}
+	}
+	ezgui_sview_active_update(sview, 
+			EZGUI_SVIEW_ACTIVE_SELECT, 0);
+	ezgui_sview_active_update(sview, 
+			EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
+	return IUP_DEFAULT;
 }
 
-static int ezgui_entry_get_int(GtkWidget *entry)
+static int ezgui_sview_run(SView *sview)
 {
-	const gchar	*val;
+	char	*value, *fname;
+	int	i, n;
 
-	val = gtk_entry_get_text(GTK_ENTRY(entry));
-	return (int) strtol(val, NULL, 0);
+	value = IupGetAttribute(sview->filename, "VALUE");
+	for (i = n = 0; value[i]; i++) {
+		if (value[i] == '+') {
+			fname = IupGetAttributeId(sview->filename, "",  i+1);
+			ezgui_sview_event_run(sview->filename, i+1, fname);
+			n++;
+		}
+	}
+	if (n == 0) {
+		for (i = 0; i < sview->svnum; i++) {
+			fname = IupGetAttributeId(sview->filename, "",  i+1);
+			ezgui_sview_event_run(sview->filename, i+1, fname);
+		}
+	}
+	return IUP_DEFAULT;
 }
 
-static int ezgui_entry_set_int(GtkWidget *entry, int val)
-{
-	char	buf[16];
 
-	sprintf(buf, "%d", val);
-	gtk_entry_set_text(GTK_ENTRY(entry), buf);
-	return 0;
+static int ezgui_sview_file_append(SView *sview, char *fname)
+{
+	EZVID	vobj;
+	char	buf[64];
+	int	lnext;
+
+	/* preset the filename to make it look better */
+	lnext = sview->svnum + 1;
+	IupSetStrAttributeId(sview->filename, "",  lnext, fname);
+
+	/* 20120903 Bugfix: set the codepage to utf-8 before calling
+	 * ezthumb core. In Win32 version, the ezthumb core uses the 
+	 * default codepage to process file name. However the GTK 
+	 * converted the file name to UTF-8 so the Windows version 
+	 * could not find the file. 
+	 * There's no such problem in linux.*/
+	smm_codepage_set(65001);
+	if (ezinfo(fname, sview->gui->sysopt, &vobj) != EZ_ERR_NONE) {
+		smm_codepage_reset();
+		/* FIXME: disaster control */
+		IupSetInt(sview->filename, "REMOVEITEM", lnext);
+		return EZ_ERR_FORMAT;
+	}
+	smm_codepage_reset();
+
+	meta_filesize(vobj.filesize, buf);
+	IupSetStrAttributeId(sview->filesize,   "", lnext, buf);
+	meta_timestamp(vobj.duration, 0, buf);
+	IupSetStrAttributeId(sview->medialen,   "", lnext, buf);
+	sprintf(buf, "%dx%d", vobj.width, vobj.height);
+	IupSetStrAttributeId(sview->resolution, "", lnext, buf);
+	sprintf(buf, "%d:%d:%lld", vobj.seekable, vobj.bitrates, 
+			(long long) vobj.duration);
+	IupSetStrAttributeId(sview->attrib, "", lnext, buf);
+	/* hope the internal allocated memory is reusable */
+	IupSetStrAttributeId(sview->progress,   "", lnext, "0%     ");
+
+	/* increase the list index first because the IUP list control
+	 * starts from 1 */
+	sview->svnum++;
+
+	IupFlush();
+	return sview->svnum;
 }
 
-static GtkWidget *ezgui_page_label(gchar *s)
+static int ezgui_sview_file_remove(SView *sview, int idx)
 {
-	GtkWidget	*label;
+	EDB_INFO(("Removing: %s\n", 
+			IupGetAttributeId(sview->filename, "",  idx)));
 
-	label = gtk_label_new(s);
-	gtk_widget_set_size_request(label, 80, -1);
-	return label;
+	IupSetInt(sview->filename, "REMOVEITEM", idx);
+	IupSetInt(sview->filesize, "REMOVEITEM", idx);
+	IupSetInt(sview->medialen, "REMOVEITEM", idx);
+	IupSetInt(sview->resolution, "REMOVEITEM", idx);
+	IupSetInt(sview->progress, "REMOVEITEM", idx);
+	IupSetInt(sview->attrib, "REMOVEITEM", idx);
+	sview->svnum--;
+	return sview->svnum;
 }
 
-static GtkWidget *ezgui_setup_label(gchar *s)
+static int ezgui_sview_active_update(SView *sview, int type, int num)
 {
-	GtkWidget	*label;
+	Ihandle	**clist;	/* control list */
+	int	i;
 
-	label = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(label), s);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-	gtk_misc_set_padding(GTK_MISC(label), 10, 10);
-	return label;
+	switch (type) {
+	case EZGUI_SVIEW_ACTIVE_CONTENT:
+		clist = sview->act_content;
+		break;
+	case EZGUI_SVIEW_ACTIVE_SELECT:
+		clist = sview->act_select;
+		break;
+	case EZGUI_SVIEW_ACTIVE_PROGRESS:
+		clist = sview->act_progress;
+		break;
+	default:
+		return EZ_ERR_PARAM;
+	}
+
+	for (i = 0; i < EZGUI_SVIEW_ACTIVE_MAX; i++) {
+		if (clist[i] == NULL) {
+			continue;
+		}
+		if (num) {
+			IupSetAttribute(clist[i], "ACTIVE", "YES");
+		} else {
+			IupSetAttribute(clist[i], "ACTIVE", "NO");
+		}
+	}
+	return EZ_ERR_NONE;
 }
 
-static GtkWidget *ezgui_setup_idname(gchar *s)
-{
-	GtkWidget	*idname;
 
-	idname = gtk_label_new(NULL);
-	gtk_label_set_markup(GTK_LABEL(idname), s);
-	gtk_widget_set_size_request(idname, 120, 30);
-	return idname;
+/****************************************************************************
+ * Support Functions 
+ ****************************************************************************/
+static Ihandle *xui_label(char *label, char *size, char *font)
+{
+	Ihandle	*ih;
+
+	ih = IupLabel(label);
+	if (size) {
+		IupSetAttribute(ih, "SIZE", size);
+	}
+	if (font) {
+		IupSetAttribute(ih, "FONTSTYLE", font);
+	}
+	return ih;
 }
 
-static GtkWidget *ezgui_setup_entry(EZGUI *gui, int dw, int ww)
+static Ihandle *xui_text(Ihandle **xlst, char *label)
 {
-	GtkWidget	*entry;
+	Ihandle	*text, *hbox;
 
-	(void) gui;		/* stop the gcc warning */
-	entry = gtk_entry_new();
-	gtk_entry_set_max_length(GTK_ENTRY(entry), dw);
-	gtk_widget_set_size_request(entry, ww, -1);
-	gtk_widget_set_sensitive(entry, FALSE);
-	return entry;
+	text = IupText(NULL);
+	IupSetAttribute(text, "SIZE", EGPS_SETUP_DROPDOWN);
+
+	hbox = IupHbox(xui_label(label, EGPS_SETUP_DESCR, NULL), text, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+
+	if (xlst) {
+		*xlst = text;
+	}
+	return hbox;
 }
 
-static GtkWidget *ezgui_button(EZGUI *gui, gchar *s, GCallback c_handler)
+/* define the standart dropdown list for the setup page */
+static Ihandle *xui_list_setting(Ihandle **xlst, char *label)
 {
-	GtkWidget	*button;
+	Ihandle	*list, *hbox;
 
-	button = gtk_button_new_with_label(s);
-	gtk_widget_set_size_request(button, 80, 30);
-	if (c_handler) {
-		g_signal_connect_swapped(button, "clicked", c_handler, gui);
+	list = IupList(NULL);
+	IupSetAttribute(list, "SIZE", EGPS_SETUP_DROPDOWN);
+	IupSetAttribute(list, "DROPDOWN", "YES");
+
+	hbox = IupHbox(xui_label(label, EGPS_SETUP_DESCR, NULL), list, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+
+	if (xlst) {
+		*xlst = list;
+	}
+	return hbox;
+}
+
+static int xui_list_get_idx(Ihandle *ih)
+{
+	int	val;
+
+	val = (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 10);
+	return val - 1;
+}
+
+static int xui_text_get_number(Ihandle *ih)
+{
+	return (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 0);
+}
+
+static int xui_get_size(Ihandle *ih, char *attr, int *height)
+{
+	char	*ssize;
+	int	width;
+
+	if ((ssize = IupGetAttribute(ih, attr)) == NULL) {
+		return -1;
+	}
+	//printf("xui_get_size: %s = %s\n", attr, ssize);
+
+	width = (int) strtol(ssize, NULL, 10);
+
+	if ((ssize = strchr(ssize, 'x')) != NULL) {
+		if (height) {
+			*height = (int) strtol(++ssize, NULL, 10);
+		}
+	}
+	return width;
+}
+
+static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
+{
+	Ihandle	*hbox, *text;
+
+	text = IupText(NULL);
+	IupSetAttribute(text, "SIZE", EGPS_SETUP_SHORT_TEXT);
+
+	hbox = IupHbox(IupLabel(label), text,
+			ext ? IupLabel(ext) : NULL, NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+
+	if (xtxt) {
+		*xtxt = text;
+	}
+	return hbox;
+}
+
+static Ihandle *xui_text_grid(char *label, 
+		Ihandle **xcol, Ihandle **xrow, char *ext)
+{
+	Ihandle	*hbox, *text1, *text2;
+
+	if ((xcol == NULL) && (xrow == NULL)) {
+		return NULL;
+	}
+
+	if ((xcol == NULL) || (xrow == NULL)) {
+		text1 = IupText(NULL);
+		IupSetAttribute(text1, "SIZE", EGPS_GRID_FST_TEXT);
+		if (xcol) {
+			*xcol = text1;
+		} else {
+			*xrow = text1;
+		}
+		hbox = IupHbox(xui_label(label, EGPS_GRID_LABEL, NULL), 
+				text1,
+				ext ? IupLabel(ext) : NULL, 
+				NULL);
+		IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+		IupSetAttribute(hbox, "NGAP", "4");
+		return hbox;
+	}
+
+	text1 = IupText(NULL);
+	*xcol = text1;
+	IupSetAttribute(text1, "SIZE", EGPS_GRID_SND_TEXT);
+	text2 = IupText(NULL);
+	*xrow = text2;
+	IupSetAttribute(text2, "SIZE", EGPS_GRID_SND_TEXT);
+	hbox = IupHbox(xui_label(label, EGPS_GRID_LABEL, NULL), 
+			text1, 
+			IupLabel("x"), 
+			text2, 
+			ext ? IupLabel(ext) : NULL, 
+			NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	IupSetAttribute(hbox, "NGAP", "4");
+	return hbox;
+}
+
+
+static Ihandle *xui_button(char *prompt, Icallback ntf)
+{
+	Ihandle	*button;
+
+	button = IupButton(prompt, NULL);
+	IupSetAttribute(button, "SIZE", EGPS_SETUP_BUTTON);
+	if (ntf) {
+		IupSetCallback(button, "ACTION", ntf);
 	}
 	return button;
 }
 
-static GtkWidget *ezgui_combo(EZGUI *gui, char **sopt, GCallback c_handler)
+static int xui_config_status(void *config, char *prompt)
 {
-	GtkWidget	*combo;
-	int		i;
+	char	*path;
+	int	item;
 
-	combo = gtk_combo_box_new_text();
-	for (i = 0; sopt[i]; i++) {
-		gtk_combo_box_append_text(GTK_COMBO_BOX(combo), sopt[i]);
-	}
-	gtk_widget_set_size_request(combo, 160, -1);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
-	if (c_handler) {
-		g_signal_connect_swapped(combo, "changed", c_handler, gui);
-	}
-	return combo;
-}
-
-static GtkWidget *ezgui_rabutton(EZGUI *gui, GtkWidget *prev, gchar *s, 
-		GCallback c_handler)
-{
-	GtkWidget	*rab;
-
-	if (prev == NULL) {
-		rab = gtk_radio_button_new_with_label(NULL, s);
-	} else {
-		rab = gtk_radio_button_new_with_label_from_widget
-			(GTK_RADIO_BUTTON(prev), s);
-	}
-	//gtk_widget_set_size_request(rab, 180, -1);
-	if (c_handler) {
-		g_signal_connect_swapped(rab, "toggled", c_handler, gui);
-	}
-	return rab;
-}
-
-static int ezgui_format_reset(EZGUI *gui, int rwcfg)
-{
-	EZOPT	*ezopt = gui->sysopt;
-	char	*p, tmp[32];
-
-	p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_FILE_FORMAT);
-	if (p != NULL) {
-		ezopt->img_quality = meta_image_format(p, 
-				ezopt->img_format, 8);
-		smm_free(p);
-	} else if (rwcfg == EZUI_FMR_RDWR) {
-		sprintf(tmp, "%s@%d", ezopt->img_format, ezopt->img_quality);
-		ezgui_cfg_write(gui->config, CFG_KEY_FILE_FORMAT, tmp);
-	}
-
-	if (rwcfg == EZUI_FMR_RDRSET) {
-		gui->tmp_gifa_fr = 1000;
-		gui->tmp_jpg_qf  = 85;
-		if (!strcmp(ezopt->img_format, "jpg")) {
-			gui->tmp_jpg_qf  = ezopt->img_quality;
-		} else if (!strcmp(ezopt->img_format, "gif")) {
-			gui->tmp_gifa_fr = ezopt->img_quality;
-		}
-	}
-
-	p = ezgui_cfg_read_alloc(gui->config, CFG_KEY_TRANSPARENCY);
-	if (p != NULL) {
-		if (!strcmp(p, "yes")) {
-			ezopt->flags |= EZOP_TRANSPARENT;
-		} else {
-			ezopt->flags &= ~EZOP_TRANSPARENT;
-		}
-		smm_free(p);
-	} else if (rwcfg) {
-		ezgui_cfg_write(gui->config, CFG_KEY_TRANSPARENCY,
-				ezopt->flags & EZOP_TRANSPARENT ? "yes":"no");
-	}
+	path = csc_cfg_status(config, &item);
+	EDB_SHOW(("%s: %d items in %s\n", prompt, item, path));
 	return 0;
 }
 
-static void table_insert(GtkWidget *table, GtkWidget *w, int x, int y)
+/* expand the short form extension list to the full length */
+static char *xui_make_filters(char *slist)
 {
-	gtk_table_attach(GTK_TABLE(table), w, x, x+1, y, y+1, 
-			GTK_FILL, 0, 0, 0);
-}
+	char	*flt, token[32];
+	int	n;
 
-static void table_fill(GtkWidget *table, GtkWidget *w, int x, int y, int n)
-{
-	gtk_table_attach(GTK_TABLE(table), w, x, x+n, y, y+1, 
-			GTK_FILL, 0, 0, 0);
-}
-
-static void ezgui_window_update(void)
-{
-	while (gtk_events_pending()) {
-		gtk_main_iteration();
+	/* Assuming the worst case of the short list is like "a;b;c;d",
+	 * it will then be expanded to "*.a;*.b;*.c;*.d". The biggest length 
+	 * is N + (N/2+1) * 2 */
+	if ((flt = smm_alloc(strlen(slist) * 2 + 64)) == NULL) {
+		return NULL;
 	}
+
+	strcpy(flt, "Video Files|");
+	n = strlen(flt);
+	while ((slist = csc_gettoken(slist, token, ",;:")) != NULL) {
+		n += sprintf(flt + n, "*.%s;", token);
+	}
+	flt[strlen(flt)-1] = 0;		/* cut out the tailing ';' */
+	strcat(flt, "|All Files|*.*|");
+	return flt;
+}
+
+
+/* translate the font face style to the GD accepted one:
+ *   Nimbus Sans Bold Italic 10  --> Nimbus Sans:Bold:Italic
+ *   Nimbus Sans Italic 10  --> Nimbus Sans:Italic
+ *   Nimbus Sans 10  --> Nimbus Sans:Regular  */
+static char *xui_make_font(char *face, int *size)
+{
+	char	*p, *s = csc_strcpy_alloc(face, 16);
+
+	/* isolate the number of font size */
+	if (((p = strrchr(s, ' ')) != NULL) && isdigit(p[1])) {
+		*p++ = 0;
+		if (size) {
+			*size = (int) strtol(p, NULL, 0);
+		}
+	}
+	
+	/* Sans Bold Italic 10 */
+	if ((p = strstr(s, "Bold")) != NULL) {
+		*--p = ':';
+	}
+	if ((p = strstr(s, "Italic")) != NULL) {
+		*--p = ':';
+	}
+	if (strchr(s, ':') == NULL) {
+		if ((p = strstr(s, "Regular")) != NULL) {
+			*--p = ':';
+		} else {
+			strcat(s, ":Regular");
+		}
+	}
+
+	//printf("xui_make_font: %s\n", s);
+	return s;
 }
 
 

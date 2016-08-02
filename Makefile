@@ -7,7 +7,7 @@ SYSTOOL	= unix
 endif
 endif
 
-ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF, CFG_GUI_GTK
+ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF 
 SYSGUI	= CFG_GUI_ON
 endif
 ifeq 	($(SYSGUI),CFG_GUI_ON)
@@ -82,14 +82,10 @@ LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
 	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup
 
 
-ifeq	($(SYSGUI),CFG_GUI_GTK)
+ifeq ($(SYSGUI),CFG_GUI_ON)
 OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/ezgui.o
 else
-ifeq ($(SYSGUI),CFG_GUI_ON)
-OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/eziup.o
-else
 OBJGUI	= $(OBJDIR)/main_con.o
-endif
 endif
 OBJCON	= $(OBJDIR)/main_con.o
 
@@ -119,7 +115,6 @@ RELLIST	= ChangeLog	\
 	  ezgui.c	\
 	  ezgui.h	\
 	  ezicon.h	\
-	  eziup.c	\
 	  ezqiz		\
 	  ezthumb.1	\
 	  ezthumb.c	\
