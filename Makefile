@@ -1,27 +1,15 @@
 
 ifndef	SYSTOOL		# Options: cygwin, unix, mingw, cygmingw
-ifeq	($(MSYSTEM),MINGW32)
-SYSTOOL = mingw
-else
-SYSTOOL	= unix
-endif
+  ifeq	($(MSYSTEM),MINGW32)
+    SYSTOOL = mingw
+  else
+    SYSTOOL = unix
+  endif
 endif
 
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF 
-SYSGUI	= CFG_GUI_ON
+  SYSGUI = CFG_GUI_ON
 endif
-ifeq 	($(SYSGUI),CFG_GUI_ON)
-GUILIB	= -liup
-endif
-
-# Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
-ifndef	WINCON		
-WINCON	= -mwindows
-endif
-
-CSOUP	= ./external/libcsoup
-IUP	= ./external/iup
-
 
 ifeq	($(SYSTOOL),mingw)
 CC	= gcc -mms-bitfields
@@ -29,16 +17,20 @@ AR	= ar
 CP	= cp
 RM	= rm -f
 
-IUPLIB	= $(IUP)/lib/mingw4
-EXTDIR	= ./libmingw
-EXTLIB	= $(CSOUP)/libcsoup.a
-ifneq 	($(SYSGUI),CFG_GUI_OFF)
-GUILIB	+= $(WINCON) -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
-	  -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
+SYSINC  = -I./libmingw/include -I./libmingw/include/iup \
+	  -I./libmingw/ffmpeg/include
+SYSLDD  = -L./libmingw/lib -I./libmingw/ffmpeg/lib
+SYSFLAG = -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
+	  -DNONDLL #For linking static libgd
+SYSLIB  = 
+
+# Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
+ifeq    ($(SYSGUI),CFG_GUI_OFF)
+  SYSLIB += -mconsole
+else
+  SYSLIB += -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+            -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
 endif
-SYSINC	= -I$(EXTDIR)/ffmpeg/include -I$(EXTDIR)/include
-LIBDIR	= -L$(EXTDIR)/ffmpeg/lib -L$(EXTDIR)/lib -L$(CSOUP)
-SYSFLAG	= -DUNICODE -D_UNICODE -DNONDLL #For linking static libgd 
 endif
 
 # This setting is used for POSIX environment with the following libraries
@@ -49,63 +41,69 @@ AR	= ar
 CP	= cp
 RM	= rm -f
 
-IUPLIB	= $(shell echo $(IUP)/lib/*)
-EXTLIB	= $(CSOUP)/libcsoup.a $(IUPLIB)/libiup.a
-ifneq 	($(SYSGUI),CFG_GUI_OFF)
-GUILIB	+= `pkg-config gtk+-2.0 --libs` -lX11
+SYSINC  = -I./external/libcsoup -I/usr/include/ffmpeg
+SYSLDD  = -L./external/libcsoup
+SYSLIB  =
+SYSFLAG =
+
+ifeq	($(SYSGUI),CFG_GUI_ON)
+  include MakeGTK.mk
+  SYSINC += -I./external/iup/include $(GTKINC)
+  SYSLIB += $(GTKLIB) -lX11
+  SYSLDD += -L`echo ./external/iup/lib/*`
 endif
-SYSINC	= -I/usr/include/ffmpeg `pkg-config gtk+-2.0 --cflags`
-LIBDIR	= -L$(IUPLIB) -L$(CSOUP)
-SYSFLAG	= 
 endif
 
 
 PREFIX	= /usr/local
 BINDIR	= /usr/local/bin
 MANDIR	= /usr/local/man/man1
-RELDIR	= ./release-bin
+P_ICON  = /usr/share/icons/hicolor
+M_ICON  = apps/ezthumb.png
+
 OBJDIR  = ./objs
 
 # CFG_SNAPSHOT_DUMP is used to save each frames to JPEG pictures
 # CFG_SNAPSHOT_RAW is used to save each frames to YUV files
 # CFG_SNAPSHOT_RGB is used to save each frames to RGB files
-DEBUG	= -g -DDEBUG
+DEBUG	= -g -DDEBUG -O0
 
 # _FILE_OFFSET_BITS=64 is used to support files over 2GB in 32-bit OS
-DEFINES = -D_FILE_OFFSET_BITS=64
+DEFINES = -D_FILE_OFFSET_BITS=64 -D$(SYSGUI)
+CFLAGS	= -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG) 
 
-INCDIR	= -I$(CSOUP) -I$(IUP)/include $(SYSINC)
-CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(INCDIR) $(SYSFLAG) 
+PROJECT	= ezthumb
 
+ifeq	($(SYSTOOL),unix)
+  TARGET = $(PROJECT)
+else
+  ifeq  ($(SYSGUI),CFG_GUI_OFF)
+    TARGET = $(PROJECT).exe
+  else
+    TARGET = $(PROJECT)_win.exe
+  endif
+endif
 
+RELDATE := $(shell date +%Y%m%)
+RELVERS := $(shell grep EZTHUMB_VERSION ezthumb.h | cut -d\" -f 2)
+RELDIR  = $(PROJECT)-$(RELVERS)
+RELWIN  = $(RELDIR)-win32-bin
+
+OBJS	= $(OBJDIR)/main.o $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o \
+	  $(OBJDIR)/id_lookup.o
 LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
 	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup
 
-
 ifeq ($(SYSGUI),CFG_GUI_ON)
-OBJGUI	= $(OBJDIR)/main_gui.o $(OBJDIR)/ezgui.o
-else
-OBJGUI	= $(OBJDIR)/main_con.o
+  OBJS += $(OBJDIR)/ezgui.o
+  ifeq ($(SYSTOOL),mingw)
+    OBJS += $(OBJDIR)/ezthumb_icon.o
+    LIBS += -liconv
+  endif
+  LIBS += -liup -liupimglib
 endif
-OBJCON	= $(OBJDIR)/main_con.o
+LIBS += $(SYSLIB)
 
-OBJS	= $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o  $(OBJDIR)/id_lookup.o
-
-
-RELDATE	= $(shell date  +%Y%m%d)
-RELDIR	= ezthumb-$(shell version.sh)
-
-ifeq	($(SYSTOOL),unix)
-TGTGUI	= ezthumb
-TGTCON	= ezthumb_con
-TARGET	= $(TGTGUI)
-else
-LIBS	+= -liconv
-OBJGUI	+= $(OBJDIR)/ezthumb_icon.o
-TGTGUI	= ezthumb_win.exe
-TGTCON	= ezthumb.exe
-TARGET	= $(TGTCON) $(TGTGUI)
-endif
 
 # This list of files for source release
 RELLIST	= ChangeLog	\
@@ -130,113 +128,80 @@ RELLIST	= ChangeLog	\
 	  Makefile	\
 	  mkconfig.sh	\
 	  Readme.txt	\
-	  SMirC-thumbsup.svg	\
-	  SMirC-thumbsup.png	\
-	  TODO		\
-	  version.sh
+	  TODO
 
 $(OBJDIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+.PHONY: objs all clean cleanobj extlib extclean release installer_win \
+	release-win showdll install uninstall
 
-.PHONY: objs
+all: $(TARGET)
+	@echo GTK=$(GTKVER) $(IUPCFG)
 
-all: objdir $(EXTLIB) $(TARGET)
-
-$(TGTGUI): ezconfig.h $(OBJGUI) $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJGUI) $(OBJS) $(LIBS) $(GUILIB)
-
-$(TGTCON): ezconfig.h $(OBJCON) $(OBJS)
-	$(CC) $(CFLAGS) $(LIBDIR) -o $@ $(OBJCON) $(OBJS) $(LIBS)
-
-$(OBJDIR)/main_con.o: main.c
-	$(CC) $(CFLAGS) -DCFG_GUI_OFF -c -o $@ $<
-
-$(OBJDIR)/main_gui.o: main.c
-	$(CC) $(CFLAGS) -D$(SYSGUI) -c -o $@ $<
+$(TARGET): objdir ezconfig.h $(OBJS)
+	$(IUPCFG) make -C external all
+	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $(OBJS) $(LIBS)
 
 ezthumb.pdf: ezthumb.1
 	man -l -Tps $< | ps2pdf - $@
 
-$(IUPLIB)/libiup.a:
-	make -C $(IUP) do_all
-
-$(CSOUP)/libcsoup.a: csoup
-
-csoup:
-	make -C $(CSOUP) all
+$(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
+	windres $< -o $@
 
 objdir:
 	@if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
 
 
-# Don't do it by make because the head file need to be modified manually
-#ezicon.h: 
-#	gdk-pixbuf-csource --name=ezicon_pixbuf --raw SMirC-thumbsup.svg > $@
-#	gdk-pixbuf-csource --name=ezicon2_pixbuf --raw SMirC-thumbsup.png >> $@
-
 ezconfig.h: conftest.c
 	./mkconfig.sh > ezconfig.h
 
-$(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
-	windres $< -o $@
-
-install: all
-	install -s $(TARGET) $(BINDIR)
-	install ezthumb.1 $(MANDIR)
-
 CONTEST = DUMMY
 conftest: conftest.c
-	$(CC) $(CFLAGS) $(LIBDIR) -D$(CONTEST) -o $@ $< $(LIBS)
+	$(CC) $(CFLAGS) $(SYSLDD) -D$(CONTEST) -o $@ $< $(LIBS)
 
 clean:
 	$(RM) -f $(OBJDIR)/*
-	$(RM) $(TGTGUI) $(TGTCON)
+	$(RM) $(TARGET)
 	$(RM) -f conftest conftest.exe conftest.log ezconfig.h
 
-cleanall: clean
-	make -C $(IUP) clean
-	make -C $(CSOUP) clean
+extlib:
+	$(IUPCFG) make -C external all
 
-quickclean:
-	make -C $(CSOUP) clean
-	$(RM) $(TGTGUI) $(TGTCON)
+extclean:
+	$(IUPCFG) make -C external clean
 
-link: quickclean all
 
 ifeq	($(SYSTOOL),unix)
-release: rel_source
+release: extclean
 else
-release: rel_source rel_win_bin
+release: extclean installer_win
 endif
-	
-ifeq	($(SYSTOOL),unix)
-debug: all
-	$(CP) $(TARGET) ~/bin
-else
-debug: install_win
-	$(RM) -r ~/bin/ezthumb
-	mv $(RELDIR)-win-bin ~/bin/ezthumb
-endif
-
-rel_source: cleanall
-	if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
+	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
 	-$(CP) $(RELLIST) $(RELDIR)
 	-$(CP) -a external libmingw $(RELDIR)
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)
 
-install_win: all
-	if [ -d $(RELDIR)-win-bin ]; then $(RM) -r $(RELDIR)-win-bin; fi
-	-mkdir $(RELDIR)-win-bin
-	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELDIR)-win-bin
-	-$(CP) $(EXTDIR)/ffmpeg/bin/*.dll $(EXTDIR)/lib/*.dll $(RELDIR)-win-bin
-
-rel_win_bin: all
-	-echo "OutFile \"ezthumb-$(shell version.sh)-setup.exe\"" > nsis_version.txt
+installer_win: release-win
+	-echo "OutFile \"$(RELDIR)-setup.exe\"" > nsis_version.txt
 	makensis ezthumb.nsi
 	-$(RM) nsis_version.txt 
+
+release-win:
+	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
+	-mkdir $(RELWIN)
+	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELWIN)
+	-$(CP) ./libmingw/ffmpeg/bin/*.dll ./libmingw//lib/*.dll $(RELWIN)
+	SYSGUI=CFG_GUI_OFF make clean
+	SYSGUI=CFG_GUI_OFF make
+	-$(CP) $(PROJECT).exe $(RELWIN)
+	SYSGUI=CFG_GUI_ON make clean
+	SYSGUI=CFG_GUI_ON make
+	-$(CP) $(PROJECT)_win.exe $(RELWIN)
+	-7z a -tzip $(RELWIN).zip $(RELWIN)
+	-$(RM) -r $(RELWIN)
 
 showdll:
 	@if [ -f ezthumb.exe ]; then \

@@ -1,3 +1,7 @@
+20160803:
+	* libcsoup: updated to 0.9.3 to support module name translation.
+	* Makefile: reviewed to support a better upsource management.
+
 20160802:
 	* external: upsourced to recent versions and clean up the libgd.
 	* ezgui.c: removed the gtk part totally because IUP works pretty well.
