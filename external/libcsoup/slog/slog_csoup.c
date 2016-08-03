@@ -24,7 +24,7 @@
 #include <time.h>
 #include "libcsoup_debug.h"
 
-static int slog_csoup_trans_date(char *buf, int blen);
+static int slog_csoup_trans_date(int cw, char *buf, int blen);
 static int slog_csoup_trans_module(int cw, char *buf, int blen);
 
 SMMDBG	csoup_debug_control = {
@@ -33,8 +33,7 @@ SMMDBG	csoup_debug_control = {
 	SLOG_OPT_ALL,			/* option */
 	NULL, NULL,			/* file name and FILEP */
 	(void*) -1,			/* standard i/o */
-	slog_csoup_trans_date,		/* generating the prefix of date */
-	slog_csoup_trans_module,	/* generating the prefix of module */
+	NULL, NULL,			/* generating the prefixes */
 	NULL, NULL,			/* socket extension */
 	NULL, NULL, NULL		/* mutex setting */
 };
@@ -47,6 +46,14 @@ SMMDBG *slog_csoup_open(FILE *stdio, char *fname)
 	}
 	if (fname) {
 		slog_bind_file(&csoup_debug_control, fname);
+	}
+	if (csoup_debug_control.trans_module == NULL) {
+		slog_translate_setup(&csoup_debug_control, 
+				SLOG_TRANSL_MODUL, slog_csoup_trans_module);
+	}
+	if (csoup_debug_control.trans_date == NULL) {
+		slog_translate_setup(&csoup_debug_control, 
+				SLOG_TRANSL_DATE, slog_csoup_trans_date);
 	}
 	return &csoup_debug_control;
 }
@@ -84,19 +91,21 @@ char *slog_csoup_format(char *fmt, ...)
 	return csc_strcpy_alloc(logbuf, 0);
 }
 
-static int slog_csoup_trans_date(char *buf, int blen)
+static int slog_csoup_trans_date(int cw, char *buf, int blen)
 {
 	struct	tm	*lctm;
 	time_t	sec;
 	char	tmp[64];
 		
+	(void) cw;
+
 	time(&sec);
 	lctm = localtime(&sec);
 	sprintf(tmp, "[%d%02d%02d%02d%02d%02d]", lctm->tm_year + 1900, 
 			lctm->tm_mon, lctm->tm_mday,
 			lctm->tm_hour, lctm->tm_min, lctm->tm_sec);
 	csc_strlcat(buf, tmp, blen);
-	return strlen(buf);
+	return SMM_ERR_NONE;
 }
 
 static int slog_csoup_trans_module(int cw, char *buf, int blen)
@@ -110,6 +119,6 @@ static int slog_csoup_trans_module(int cw, char *buf, int blen)
 	if (cw & CSOUP_MOD_CONFIG) {
 		csc_strlcat(buf, "[CONFIG]", blen);
 	}
-	return strlen(buf);
+	return SMM_ERR_NONE;	/* end of the chain */
 }
 

@@ -77,6 +77,91 @@ int slog_bind_stdio(SMMDBG *dbgc, FILE *ioptr)
 	return 0;
 }
 
+int slog_translate_setup(SMMDBG *dbgc, int which, F_PREFIX func)
+{
+	F_PREFIX  *payload;
+	CSCLNK	  *node;
+
+	if ((node = csc_cdl_alloc(sizeof(F_PREFIX))) == NULL) {
+		return SMM_ERR_LOWMEM;
+	}
+
+	payload = csc_cdl_payload(node);
+	*payload = func;
+
+	switch (which) {
+	case SLOG_TRANSL_MODUL:
+		dbgc->trans_module = 
+			csc_cdl_insert_head(dbgc->trans_module, node);
+		break;
+	case SLOG_TRANSL_DATE:
+		dbgc->trans_date = 
+			csc_cdl_insert_head(dbgc->trans_date, node);
+		break;
+	default:
+		return SMM_ERR_NULL;
+	}
+	return SMM_ERR_NONE;
+}
+
+int slog_translate_remove(SMMDBG *dbgc, int which, F_PREFIX func)
+{
+	CSCLNK	*node = NULL;
+
+	int comparer(void *src, void *dst)
+	{
+		return *((F_PREFIX*)src) == *((F_PREFIX*)dst);
+	}
+
+	switch (which) {
+	case SLOG_TRANSL_MODUL:
+		node = csc_cdl_search(dbgc->trans_module, 
+				NULL, comparer, &func);
+		if (node) {
+			dbgc->trans_module = 
+				csc_cdl_remove(dbgc->trans_module, node);
+		}
+		break;
+	case SLOG_TRANSL_DATE:
+		node = csc_cdl_search(dbgc->trans_date, 
+				NULL, comparer, &func);
+		if (node) {
+			dbgc->trans_date = 
+				csc_cdl_remove(dbgc->trans_date, node);
+		}
+		break;
+	}
+	if (node == NULL) {
+		return SMM_ERR_NULL;
+	}
+	return SMM_ERR_NONE;
+}
+
+int slog_translating(SMMDBG *dbgc, int which, int cw, char *buf, int blen)
+{
+	F_PREFIX	func;
+	CSCLNK  	*root, *node;
+
+	switch (which) {
+	case SLOG_TRANSL_MODUL:
+		root = dbgc->trans_module;
+		break;
+	case SLOG_TRANSL_DATE:
+		root = dbgc->trans_date;
+		break;
+	default:
+		return SMM_ERR_NULL;
+	}
+
+	for (node = root; node; node = csc_cdl_next(root, node)) {
+		func = *((F_PREFIX*) csc_cdl_payload(node));
+		if (func(cw, buf, blen) == SMM_ERR_NONE) {
+			return SMM_ERR_NONE;
+		}
+	}
+	return SMM_ERR_NULL;
+}
+
 int slog_output(SMMDBG *dbgc, int cw, char *buf)
 {
 	char	prefix[512];
@@ -96,11 +181,13 @@ int slog_output(SMMDBG *dbgc, int cw, char *buf)
 
 	prefix[0] = 0;
 	if ((cw & SLOG_FLUSH) == 0) {
-		if ((dbgc->option & SLOG_OPT_TMSTAMP) && dbgc->f_trans_date) {
-			dbgc->f_trans_date(prefix, sizeof(prefix));
+		if (dbgc->option & SLOG_OPT_TMSTAMP) {
+			slog_translating(dbgc, SLOG_TRANSL_DATE, 
+					0, prefix, sizeof(prefix));
 		}
-		if ((dbgc->option & SLOG_OPT_MODULE) && dbgc->f_trans_modu) {
-			dbgc->f_trans_modu(cw, prefix, sizeof(prefix));
+		if (dbgc->option & SLOG_OPT_MODULE) {
+			slog_translating(dbgc, SLOG_TRANSL_MODUL, 
+					cw, prefix, sizeof(prefix));
 		}
 		if (prefix[0] != 0) {
 			csc_strlcat(prefix, " ", sizeof(prefix));

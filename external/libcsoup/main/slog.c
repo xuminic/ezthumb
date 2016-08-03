@@ -27,6 +27,66 @@
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(CSOUP_MOD_SLOG, SLOG_LVL_INFO)
 #include "libcsoup_debug.h"
 
+#define SLOG_MOD_TEST_1		SLOG_MODUL_ENUM(3)
+#define SLOG_MOD_TEST_2		SLOG_MODUL_ENUM(4)
+#define SLOG_MOD_TEST_3		SLOG_MODUL_ENUM(5)
+#define SLOG_MOD_TEST_4		SLOG_MODUL_ENUM(6)
+#define SLOG_MOD_TEST_5		SLOG_MODUL_ENUM(7)
+#define SLOG_MOD_TEST_6		SLOG_MODUL_ENUM(8)
+
+int slog_translate_test(SMMDBG *tstdbg)
+{
+	int my_transl_001(int cw, char *buf, int blen)
+	{
+		if (cw & SLOG_MOD_TEST_1) {
+			csc_strlcat(buf, "[MOD1]", blen);
+		}
+		if (cw & SLOG_MOD_TEST_2) {
+			csc_strlcat(buf, "[MOD2]", blen);
+		}
+		if (cw & SLOG_MOD_TEST_3) {
+			csc_strlcat(buf, "[MOD3]", blen);
+		}
+		return SMM_ERR_NULL;
+	}
+	int my_transl_002(int cw, char *buf, int blen)
+	{
+		if (cw & SLOG_MOD_TEST_4) {
+			csc_strlcat(buf, "[MOD4]", blen);
+		}
+		if (cw & SLOG_MOD_TEST_5) {
+			csc_strlcat(buf, "[MOD5]", blen);
+		}
+		if (cw & SLOG_MOD_TEST_6) {
+			csc_strlcat(buf, "[MOD6]", blen);
+		}
+		return SMM_ERR_NULL;
+	}
+	int my_transl_003(int cw, char *buf, int blen)
+	{
+		(void) cw;
+		csc_strlcat(buf, "{date}", blen);
+		return SMM_ERR_NULL;
+	}
+
+
+	tstdbg->cword = SLOG_MODUL_ALL(SLOG_LVL_DEBUG);
+	CDB_SET_LEVEL(SLOG_LVL_WARNING);
+
+	slog_translate_setup(tstdbg, SLOG_TRANSL_MODUL, my_transl_001);
+	slog_translate_setup(tstdbg, SLOG_TRANSL_MODUL, my_transl_002);
+	slog_translate_setup(tstdbg, SLOG_TRANSL_DATE, my_transl_003);
+
+	slogs(tstdbg, SLOG_CWORD(SLOG_MOD_TEST_1, SLOG_LVL_ERROR), "SLOG_MOD_TEST_1\n");
+	slogs(tstdbg, SLOG_CWORD(SLOG_MOD_TEST_2, SLOG_LVL_ERROR), "SLOG_MOD_TEST_2\n");
+	slogs(tstdbg, SLOG_CWORD(SLOG_MOD_TEST_3, SLOG_LVL_ERROR), "SLOG_MOD_TEST_3\n");
+	slogs(tstdbg, SLOG_CWORD(SLOG_MOD_TEST_4, SLOG_LVL_ERROR), "SLOG_MOD_TEST_4\n");
+	slogs(tstdbg, SLOG_CWORD(SLOG_MOD_TEST_5, SLOG_LVL_ERROR), "SLOG_MOD_TEST_5\n");
+	slogs(tstdbg, SLOG_CWORD(SLOG_MOD_TEST_6, SLOG_LVL_ERROR), "SLOG_MOD_TEST_6\n");
+	slogs(tstdbg, SLOG_CWORD(-1, SLOG_LVL_ERROR), "SLOG_MOD_TEST_all\n");
+	return 0;
+}
+
 
 int slog_main(void *rtime, int argc, char **argv)
 {
@@ -125,6 +185,8 @@ int slog_main(void *rtime, int argc, char **argv)
 		}
 	}
 #endif
+
+	slog_translate_test(tstdbg);
 	slog_shutdown(tstdbg);
 	return 0;
 }

@@ -233,8 +233,6 @@ static void print_profile_width(EZOPT *opt, int vidw);
 static int load_default_config(EZOPT *opt);
 static int ezdebug_trans_module(int cw, char *buf, int blen);
 
-F_PRF_MODL	preset_trans_modl;
-
 int main(int argc, char **argv)
 {
 	SMMDBG	*dbgc;
@@ -247,8 +245,8 @@ int main(int argc, char **argv)
 #else
 	dbgc = slog_csoup_open(NULL, NULL);
 #endif
-	preset_trans_modl = dbgc->f_trans_modu;
-	dbgc->f_trans_modu = ezdebug_trans_module;
+	slog_translate_setup(dbgc, SLOG_TRANSL_MODUL,
+			ezdebug_trans_module);
 
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */
@@ -1330,14 +1328,14 @@ static int ezdebug_trans_module(int cw, char *buf, int blen)
 {
 	if (cw & EZTHUMB_MOD_CORE) {
 		csc_strlcat(buf, "[EZTHUMB]", blen);
-	} else if (cw & EZTHUMB_MOD_CLI) {
-		csc_strlcat(buf, "[CLI]", blen);
-	} else if (cw & EZTHUMB_MOD_GUI) {
-		csc_strlcat(buf, "[EZGUI]", blen);
-	} else if (preset_trans_modl) {
-		return preset_trans_modl(cw, buf, blen);
 	}
-	return strlen(buf);
+	if (cw & EZTHUMB_MOD_CLI) {
+		csc_strlcat(buf, "[CLI]", blen);
+	}
+	if (cw & EZTHUMB_MOD_GUI) {
+		csc_strlcat(buf, "[EZGUI]", blen);
+	}
+	return SMM_ERR_NULL;
 }
 
 

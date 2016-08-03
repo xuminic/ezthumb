@@ -1,3 +1,6 @@
+20160803: 0.9.3:
+	* slog_core.c: supported the chain of translator of modules and date.
+
 20160725: 0.9.2:
 	* slog_csoup.c: code review and improvement.
 

@@ -31,8 +31,13 @@
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	2		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	3		/* 0-4095 */
 
+
+/* Forward declaration the structure of circular doubly linked list to hide
+ * its details. It will be defined in csc_cdll.c */
+struct  _CSCLNK;
+typedef	struct	_CSCLNK	CSCLNK;
 
 /*****************************************************************************
  * Command line process functions
@@ -167,10 +172,12 @@ slog(int control_word, char *fmt, ...);
 #define SLOG_OPT_MODULE		2
 #define SLOG_OPT_ALL		3
 
+#define SLOG_TRANSL_MODUL	0
+#define SLOG_TRANSL_DATE	1
+
 
 typedef int	(*F_LCK)(void *);
-typedef	int	(*F_PRF_DATE)(char *buf, int);
-typedef int	(*F_PRF_MODL)(int cw, char *buf, int);
+typedef int	(*F_PREFIX)(int cw, char *buf, int);
 typedef	int	(*F_EXT)(void *, void *, char *);
 
 typedef	struct	{
@@ -185,8 +192,8 @@ typedef	struct	{
 	FILE	*stdio;
 
 	/* for generating a prefix according to the 'option' field */
-	F_PRF_DATE	f_trans_date;
-	F_PRF_MODL	f_trans_modu;
+	CSCLNK	*trans_module;
+	CSCLNK	*trans_date;
 
 	/* log into the socket extension */
 	F_EXT	f_inet;
@@ -208,6 +215,9 @@ SMMDBG *slog_initialize(void *mem, int cword);
 int slog_shutdown(SMMDBG *dbgc);
 int slog_bind_file(SMMDBG *dbgc, char *fname);
 int slog_bind_stdio(SMMDBG *dbgc, FILE *ioptr);
+int slog_translate_setup(SMMDBG *dbgc, int which, F_PREFIX func);
+int slog_translate_remove(SMMDBG *dbgc, int which, F_PREFIX func);
+int slog_translating(SMMDBG *dbgc, int which, int cw, char *buf, int blen);
 int slog_output(SMMDBG *dbgc, int cw, char *buf);
 int slogs(SMMDBG *dbgc, int cw, char *buf);
 int slogs_long(SMMDBG *dbgc, int setcw, int cw, char *buf);
@@ -225,11 +235,6 @@ void *slog_bind_tcp(SMMDBG *dbgc, int port);
  * See csc_cdll.c: circular doubly linked list
  * Definitions and functions for process circular doubly linked list.
  ****************************************************************************/
-/* Forward declaration the structure of circular doubly linked list to hide
- * its details. It will be defined in csc_cdll.c */
-struct  _CSCLNK;
-typedef	struct	_CSCLNK	CSCLNK;
-
 #ifdef __cplusplus
 extern "C"
 {
