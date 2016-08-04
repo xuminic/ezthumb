@@ -22,7 +22,7 @@ SYSINC  = -I./libmingw/include -I./libmingw/include/iup \
 SYSLDD  = -L./libmingw/lib -I./libmingw/ffmpeg/lib
 SYSFLAG = -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
 	  -DNONDLL #For linking static libgd
-SYSLIB  = 
+SYSLIB  = -liconv
 
 # Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
 ifeq    ($(SYSGUI),CFG_GUI_OFF)
@@ -63,6 +63,8 @@ M_ICON  = apps/ezthumb.png
 
 OBJDIR  = ./objs
 
+CONVERT	= convert -background transparent ./external/icons/SMirC-thumbsup.svg
+
 # CFG_SNAPSHOT_DUMP is used to save each frames to JPEG pictures
 # CFG_SNAPSHOT_RAW is used to save each frames to YUV files
 # CFG_SNAPSHOT_RGB is used to save each frames to RGB files
@@ -98,7 +100,6 @@ ifeq ($(SYSGUI),CFG_GUI_ON)
   OBJS += $(OBJDIR)/ezgui.o
   ifeq ($(SYSTOOL),mingw)
     OBJS += $(OBJDIR)/ezthumb_icon.o
-    LIBS += -liconv
   endif
   LIBS += -liup -liupimglib
 endif
@@ -193,7 +194,7 @@ release-win:
 	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
 	-mkdir $(RELWIN)
 	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELWIN)
-	-$(CP) ./libmingw/ffmpeg/bin/*.dll ./libmingw//lib/*.dll $(RELWIN)
+	-$(CP) ./libmingw/ffmpeg/bin/*.dll ./libmingw/lib/*.dll $(RELWIN)
 	SYSGUI=CFG_GUI_OFF make clean
 	SYSGUI=CFG_GUI_OFF make
 	-$(CP) $(PROJECT).exe $(RELWIN)
@@ -202,6 +203,30 @@ release-win:
 	-$(CP) $(PROJECT)_win.exe $(RELWIN)
 	-7z a -tzip $(RELWIN).zip $(RELWIN)
 	-$(RM) -r $(RELWIN)
+
+install:
+	install -s ezthumb $(BINDIR)
+	cp -f ezthumb.1 $(MANDIR)
+	cp -f ezthumb.desktop /usr/share/applications
+	$(CONVERT) -resize 256x256 $(P_ICON)/256x256/$(M_ICON)
+	$(CONVERT) -resize 128x128 $(P_ICON)/128x128/$(M_ICON)
+	$(CONVERT) -resize 32x32   $(P_ICON)/32x32/$(M_ICON)
+	$(CONVERT) -resize 24x24   $(P_ICON)/24x24/$(M_ICON)
+	$(CONVERT) -resize 22x22   $(P_ICON)/22x22/$(M_ICON)
+	$(CONVERT) -resize 16x16   $(P_ICON)/16x16/$(M_ICON)
+	rm $(P_ICON)/icon-theme.cache
+
+uninstall:
+	rm -f $(BINDIR)/ezthumb
+	rm -f $(MANDIR)/ezthumb.1
+	rm -f /usr/share/applications/ezthumb.desktop
+	rm -f $(P_ICON)/256x256/$(M_ICON)
+	rm -f $(P_ICON)/128x128/$(M_ICON)
+	rm -f $(P_ICON)/48x48/$(M_ICON)
+	rm -f $(P_ICON)/32x32/$(M_ICON)
+	rm -f $(P_ICON)/24x24/$(M_ICON)
+	rm -f $(P_ICON)/22x22/$(M_ICON)
+	rm -f $(P_ICON)/16x16/$(M_ICON)
 
 showdll:
 	@if [ -f ezthumb.exe ]; then \
