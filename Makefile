@@ -19,7 +19,7 @@ RM	= rm -f
 
 SYSINC  = -I./libmingw/include -I./libmingw/include/iup \
 	  -I./libmingw/ffmpeg/include
-SYSLDD  = -L./libmingw/lib -I./libmingw/ffmpeg/lib
+SYSLDD  = -L./libmingw/lib -L./libmingw/ffmpeg/lib
 SYSFLAG = -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
 	  -DNONDLL #For linking static libgd
 SYSLIB  = 
@@ -91,8 +91,9 @@ RELWIN  = $(RELDIR)-win32-bin
 
 OBJS	= $(OBJDIR)/main.o $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o \
 	  $(OBJDIR)/id_lookup.o
-LIBS	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
+DEFLIB	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
 	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup
+LIBS	= $(DEFLIB)
 
 ifeq ($(SYSGUI),CFG_GUI_ON)
   OBJS += $(OBJDIR)/ezgui.o
@@ -158,7 +159,7 @@ ezconfig.h: conftest.c
 
 CONTEST = DUMMY
 conftest: conftest.c
-	$(CC) $(CFLAGS) $(SYSLDD) -D$(CONTEST) -o $@ $< $(LIBS)
+	$(CC) $(CFLAGS) $(SYSLDD) -D$(CONTEST) -o $@ $< $(DEFLIB)
 
 clean:
 	$(RM) -f $(OBJDIR)/*

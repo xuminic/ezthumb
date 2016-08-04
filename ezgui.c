@@ -2591,7 +2591,7 @@ static int ezgui_sview_file_append(SView *sview, char *fname)
 	IupSetStrAttributeId(sview->medialen,   "", lnext, buf);
 	sprintf(buf, "%dx%d", vobj.width, vobj.height);
 	IupSetStrAttributeId(sview->resolution, "", lnext, buf);
-	sprintf(buf, "%d:%d:%lld", vobj.seekable, vobj.bitrates, 
+	SMM_SPRINT(buf, "%d:%d:%lld", vobj.seekable, vobj.bitrates, 
 			(long long) vobj.duration);
 	IupSetStrAttributeId(sview->attrib, "", lnext, buf);
 	/* hope the internal allocated memory is reusable */
