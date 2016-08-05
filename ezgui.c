@@ -255,7 +255,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 
 	/* filling the work area with file names from command line */
 	sview = (SView *) IupGetAttribute(gui->list_view, EZOBJ_SVIEW);
-	if (fnum && sview) {
+	if ((fnum > 0) && sview) {
 		for (i = 0; i < fnum; i++) {
 			ezgui_sview_file_append(sview, flist[i]);
 			ezgui_show_progress(gui, i, fnum);
@@ -680,7 +680,6 @@ static int ezgui_show_duration(EZGUI *gui, int state)
 }
 
 static int ezgui_notificate(void *v, int eid, long param, long opt, void *b)
-//static int ezgui_sview_notificate(void *v, int eid, long param, long opt, void *b)
 {
 	EZGUI	*gui = ((EZOPT*) v)->gui;
 

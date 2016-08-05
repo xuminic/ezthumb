@@ -194,7 +194,7 @@ installer_win: release-win
 release-win:
 	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
 	-mkdir $(RELWIN)
-	-$(CP) ezthumb*.exe ezthumb.1 ezthumb.pdf ezthumb.ico $(RELWIN)
+	-$(CP) ezthumb.1 ezthumb.pdf ezthumb.ico $(RELWIN)
 	-$(CP) ./libmingw/ffmpeg/bin/*.dll ./libmingw/lib/*.dll $(RELWIN)
 	SYSGUI=CFG_GUI_OFF make clean
 	SYSGUI=CFG_GUI_OFF make
@@ -203,7 +203,6 @@ release-win:
 	SYSGUI=CFG_GUI_ON make
 	-$(CP) $(PROJECT)_win.exe $(RELWIN)
 	-7z a -tzip $(RELWIN).zip $(RELWIN)
-	-$(RM) -r $(RELWIN)
 
 install:
 	install -s ezthumb $(BINDIR)

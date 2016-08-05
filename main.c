@@ -240,8 +240,8 @@ int main(int argc, char **argv)
 
 	smm_init();			/* initialize the libsmm */
 #if	defined(DEBUG) && defined(CFG_WIN32_API) && defined(CFG_GUI_ON)
-	//dbgc = slog_csoup_open(NULL, "win32.log");
-	dbgc = slog_csoup_open(NULL, NULL);
+	dbgc = slog_csoup_open(NULL, "win32.log");
+	//dbgc = slog_csoup_open(NULL, NULL);
 #else
 	dbgc = slog_csoup_open(NULL, NULL);
 #endif
