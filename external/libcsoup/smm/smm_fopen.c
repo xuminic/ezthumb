@@ -24,7 +24,49 @@
 
 #include "libcsoup.h"
 
-#ifdef	CFG_WIN32_API
+#ifdef  CFG_WIN32_API
+FILE *smm_fopen(char *path, char *mode)
+{
+	TCHAR   *wpath, *wmode;
+	FILE    *fp;
+			
+	if ((wpath = smm_mbstowcs_alloc(path)) == NULL) {		
+		smm_errno_update(SMM_ERR_NONE_READ);
+		return NULL;
+	}
+	if ((wmode = smm_mbstowcs_alloc(mode)) == NULL) {
+		smm_errno_update(SMM_ERR_NONE_READ);
+		smm_free(wpath);
+		return NULL;
+	}
+
+	if ((fp = _wfopen(wpath, wmode)) == NULL) {
+		smm_errno_update(SMM_ERR_FOPEN);
+	} else {
+		smm_errno_update(SMM_ERR_NONE);
+	}
+
+	smm_free(wmode);
+	smm_free(wpath);
+	return fp;
+}
+#endif
+
+#ifdef	CFG_UNIX_API
+FILE *smm_fopen(char *path, char *mode)
+{
+	FILE	*fp;
+
+	if ((fp = fopen(path, mode)) == NULL) {
+		smm_errno_update(SMM_ERR_FOPEN);
+	} else {
+		smm_errno_update(SMM_ERR_NONE);
+	}
+	return fp;
+}
+#endif
+
+#if 0
 void *smm_fopen(char *path, char *mode)
 {
 	TCHAR	*wpath;
@@ -125,25 +167,6 @@ int smm_fclose(void *fp)
 		return CloseHandle(fp);
 	}
 	return 0;
-}
-#endif
-
-#ifdef	CFG_UNIX_API
-void *smm_fopen(char *path, char *mode)
-{
-	FILE	*fp;
-
-	if ((fp = fopen(path, mode)) == NULL) {
-		smm_errno_update(SMM_ERR_FOPEN);
-	} else {
-		smm_errno_update(SMM_ERR_NONE);
-	}
-	return fp;
-}
-
-int smm_fclose(void *fp)
-{
-	return fclose(fp);
 }
 #endif
 

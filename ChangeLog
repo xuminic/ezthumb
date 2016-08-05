@@ -3,6 +3,11 @@
 	The optind could go ahead of argc which caused -1 'fum' in ezgui_run()
 	* ezgui.c: Fixed the logic that didn't run auto mode while initial.
 	* ezgui.c: Fixed accessing utf-8 filename in Windows.
+	It looks IUP option UTF8MODE_FILE turned every filename to UTF-8
+	string so ezthumb has to abandon the fopen(), which was ok to read
+	a file, but write to chaos filenames.
+	The fix is using smm_fopen() instead which convert UTF-8 to UTF-16
+	against the current code page.
 	* ezicon.h: use the 128x128 icon only
 	* ezgui.c: added hot keys to tab bar and decorated the ui
 

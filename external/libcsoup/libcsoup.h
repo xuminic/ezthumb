@@ -31,7 +31,7 @@
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	3		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	4		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -666,8 +666,7 @@ int smm_errno_update(int value);
 long long smm_filesize(char *fname);
 char *smm_fontpath(char *ftname, char **userdir);
 int smm_fstat(char *fname);
-void *smm_fopen(char *path, char *mode);
-int smm_fclose(void *fp);
+FILE *smm_fopen(char *path, char *mode);
 int smm_fncmp(char *dstname, char *srcname);
 int smm_init(void);
 int smm_mkdir(char *path);

@@ -247,6 +247,7 @@ int main(int argc, char **argv)
 #endif
 	slog_translate_setup(dbgc, SLOG_TRANSL_MODUL,
 			ezdebug_trans_module);
+	CDB_INFO(("CodePage: %d\n", smm_sys_cp));
 
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */

@@ -516,6 +516,24 @@ void ezopt_review(EZOPT *ezopt)
 	}*/
 }
 
+/*
+void dump_filename(char *prompt, char *fname)
+{
+	char    buf[128];
+	int	len;
+	
+	if (prompt) {
+		CDB_ERROR(("%s\n", prompt));
+	}
+	len = strlen(fname);
+	while (len > 0) {
+		csc_memdump_line(fname, 16, 0, buf, 128);
+		fname += 16;
+		len -= 16;
+		CDB_ERROR(("%s\n", buf));
+	}
+}
+*/
 
 int ezthumb(char *filename, EZOPT *ezopt)
 {
@@ -527,6 +545,7 @@ int ezthumb(char *filename, EZOPT *ezopt)
 		eznotify(NULL, EN_SKIP_EXIST, 0, 0, filename);
 		return EZ_ERR_EOP;
 	}
+	//dump_filename("OPEN", filename);
 	if ((vidx = video_allocate(ezopt, filename, &rc)) == NULL) {
 		return rc;
 	}
@@ -2646,7 +2665,7 @@ static int video_frame_save_jpeg(EZVID *vidx, EZFRM *ezfrm)
 
 
 	sprintf(timestamp, "framedump_%09lld.jpg", (long long) dtms);
-	if ((fout = fopen(timestamp, "wb")) != NULL) {
+	if ((fout = smm_fopen(timestamp, "wb")) != NULL) {
 		gdImageJpeg(vidx->capgdimg, fout, 85);
 		fclose(fout);
 	}
@@ -2673,7 +2692,7 @@ static int video_frame_save_raw(EZVID *vidx, EZFRM *ezfrm)
 	fbsize = avpicture_get_size(ezfrm->pixfmt, 
 			ezfrm->width, ezfrm->height);
 	sprintf(fname, "framedump_%09lld.raw", (long long) dtms);
-	if ((fout = fopen(fname, "wb")) != NULL) {
+	if ((fout = smm_fopen(fname, "wb")) != NULL) {
 		fwrite(ezfrm->frame->data[0], 1, fbsize, fout);
 		fclose(fout);
 	}
@@ -2711,7 +2730,7 @@ static int video_frame_save_rgb(EZVID *vidx, EZFRM *ezfrm)
 	fbsize = avpicture_get_size(vidx->capframe->pixfmt, 
 			vidx->capframe->width, vidx->capframe->height);
 	sprintf(fname, "framedump_%09lld.rgb", (long long) dtms);
-	if ((fout = fopen(fname, "wb")) != NULL) {
+	if ((fout = smm_fopen(fname, "wb")) != NULL) {
 		fwrite(vidx->capframe->frame->data[0], 1, fbsize, fout);
 		fclose(fout);
 	}
@@ -3909,7 +3928,7 @@ static int image_gdcanvas_background(EZIMG *image)
 	if (image->sysopt->background == NULL) {
 		return EZ_ERR_NONE;
 	}
-	if ((fin = fopen(image->sysopt->background, "rb")) == NULL) {
+	if ((fin = smm_fopen(image->sysopt->background, "rb")) == NULL) {
 		perror(image->sysopt->background);
 		return EZ_ERR_FILE;
 	}
@@ -4071,7 +4090,8 @@ static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 		return NULL;	/* skip the existed files */
 	}
 
-	if ((fp = fopen(image->filename, "wb")) == NULL) {
+	//dump_filename("WRITE", image->filename);
+	if ((fp = smm_fopen(image->filename, "wb")) == NULL) {
 		CDB_ERROR(("%s: failed to create\n", image->filename));
 	}
 	return fp;
