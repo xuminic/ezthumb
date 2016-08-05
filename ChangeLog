@@ -1,3 +1,10 @@
+20160805:
+	* ezgui.c: Fixed the status/progress bar displaying issue.
+	* ezgui.c: Fixed the logic that didn't run auto mode while initial.
+	* ezgui.c: Fixed accessing utf-8 filename in Windows.
+	* ezicon.h: use the 128x128 icon only
+	* ezgui.c: added hot keys to tab bar and decorated the ui
+
 20160803:
 	* libcsoup: updated to 0.9.3 to support module name translation.
 	* Makefile: reviewed to support a better upsource management.

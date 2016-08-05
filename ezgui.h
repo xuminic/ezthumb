@@ -230,7 +230,6 @@ enum	{
 EZGUI *ezgui_init(EZOPT *ezopt, int *argc, char ***argv);
 int ezgui_run(EZGUI *gui, char *flist[], int fnum);
 int ezgui_close(EZGUI *gui);
-void ezgui_version(void);
 
 #endif	/* _EZGUI_H_ */
 

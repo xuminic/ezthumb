@@ -1,5 +1,5 @@
 
-/*  eziup.c - the graphic user interface based on IUP
+/*  ezgui.c - the graphic user interface based on IUP
 
     Copyright (C) 2011  "Andy Xuming" <xuming@users.sourceforge.net>
 
@@ -46,12 +46,11 @@
 #define EZGUI_MAINKEY	"GUI"		/* for the configure file */
 
 #define EGPS_SETUP_DESCR	"120"
-#define EGPS_SETUP_DROPDOWN	"200x14"
-#define EGPS_SETUP_SHORT_TEXT	"40x10"
-#define EGPS_GRID_FST_TEXT	"24x10"
-#define EGPS_GRID_SND_TEXT	"18x10"
-#define EGPS_GRID_LABEL		"28"
-#define EGPS_SETUP_BUTTON	"42"
+#define EGPS_SETUP_DROPDOWN	"200"	//"200x14"
+#define EGPS_SETUP_SHORT_TEXT	"40"	//"40x10"
+#define EGPS_GRID_FST_TEXT	"24"	//"24x10"
+#define EGPS_GRID_SND_TEXT	"24"	//"18x10"
+#define EGPS_SETUP_BUTTON	"60"
 
 
 static	struct	idtbl	uir_grid[] = {
@@ -210,6 +209,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	EZGUI	*gui;
 
 	IupOpen(argcs, argvs);
+	IupImageLibOpen();
 
 	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
 	if (!IupGetGlobal("SINGLEINSTANCE")) {
@@ -244,6 +244,15 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 
 	ezgui_create_window(gui);
 
+	/* 20160727 enable utf-8 mode for Windows.
+	 * One case had been found that default setting can only accept utf-16
+	 * in Windows, though utf-8 filename can be normally displayed in 
+	 * File Explorer. Enabling the following attributions will let 
+	 * IupFileDlg() return utf-8 filenames */
+	/* Note that these two lines must be kept in this sequence */
+	IupSetAttribute(NULL, "UTF8MODE", "YES");
+	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
+
 	/* filling the work area with file names from command line */
 	sview = (SView *) IupGetAttribute(gui->list_view, EZOBJ_SVIEW);
 	if (fnum && sview) {
@@ -255,13 +264,20 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	}
 
 	timer = IupTimer();
-	IupSetCallback(timer, "ACTION_CB", (Icallback)ezgui_timer_monitor);
+	IupSetCallback(timer, "ACTION_CB", (Icallback) ezgui_timer_monitor);
 	IupSetAttribute(timer, EZOBJ_MAIN, (char*) gui);
 	IupSetAttribute(timer, "TIME", "100");
 	IupSetAttribute(timer, "RUN", "YES");
 
 	IupMainLoop();
 	IupSetAttribute(timer, "RUN", "NO");
+
+	/* 20160719 It is known some event will come behind the CLOSE event,
+	 * for example, click in a text control then click the close button,
+	 * the KILLFOCUS will come behind the IupMainLoop() */
+	/* I set NULL to 'EZOBJ_MAIN' as a flag to notify all events the main
+	 * loop is closed. Having all event unhooked may be a better way */
+	IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, NULL);
 	return 0;
 }
 
@@ -270,7 +286,7 @@ int ezgui_close(EZGUI *gui)
 	if (gui) {
 		IupClose();
 		if (gui->filefilter) {
-			smm_free(gui->filefilter);
+			gui->filefilter = smm_free(gui->filefilter);
 		}
 		if (gui->config) {
 			xui_config_status(gui->config, "Finalize");
@@ -279,10 +295,6 @@ int ezgui_close(EZGUI *gui)
 		smm_free(gui);
 	}
 	return 0;
-}
-
-void ezgui_version(void)
-{
 }
 
 static int ezgui_timer_monitor(Ihandle *ih)
@@ -311,7 +323,7 @@ static int ezgui_timer_monitor(Ihandle *ih)
 
 static int ezgui_create_window(EZGUI *gui)
 {
-	Ihandle		*tabs;
+	Ihandle		*tabs, *tabox;
 	char		*s;
 	char		win_size[32];
 
@@ -345,20 +357,19 @@ static int ezgui_create_window(EZGUI *gui)
 
 	tabs = IupTabs(ezgui_page_main(gui), 
 			ezgui_page_setup(gui), 
-			//IupVbox(IupFill(), NULL), 
 			ezgui_page_about(gui), 
 			NULL);
-	IupSetAttribute(tabs, "TABTITLE0", "Generate");
-	IupSetAttribute(tabs, "TABTITLE1", " Setup  ");
+	IupSetAttribute(tabs, "TABTITLE0", "&Generate");
+	IupSetAttribute(tabs, "TABTITLE1", " &Setup  ");
 	//IupSetAttribute(tabs, "TABTITLE2", "Advanced");
-	IupSetAttribute(tabs, "TABTITLE2", " About  ");
+	IupSetAttribute(tabs, "TABTITLE2", " &About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
-	tabs = IupHbox(tabs, NULL);
-	IupSetAttribute(tabs, "NMARGIN", "8x8");
+	tabox = IupHbox(tabs, NULL);
+	IupSetAttribute(tabox, "NMARGIN", "8x8");
 
-	IupSetHandle("DLG_ICON", IupImageRGBA(320, 320, ezicon_pixbuf));
-	gui->dlg_main = IupDialog(tabs);
+	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, ezicon_pixbuf));
+	gui->dlg_main = IupDialog(tabox);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
 	
 	/* retrieve the previous window size */
@@ -367,12 +378,12 @@ static int ezgui_create_window(EZGUI *gui)
 			CFG_KEY_WIN_WIDTH, &gui->win_width);
 	csc_cfg_read_int(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_WIN_HEIGHT, &gui->win_height);
-	if ((gui->win_width == 0) || (gui->win_height == 0)) {
-		gui->win_width = 800;	/* minimen "740x130" */
-		gui->win_height = 540;
+	if (gui->win_width && gui->win_height) {
+		sprintf(win_size, "%dx%d", gui->win_width, gui->win_height);
+		IupSetAttribute(gui->dlg_main, "RASTERSIZE", win_size);
+	} else {
+		IupSetAttribute(gui->dlg_main, "RASTERSIZE", "x600");
 	}
-	sprintf(win_size, "%dx%d", gui->win_width, gui->win_height);
-	IupSetAttribute(gui->dlg_main, "RASTERSIZE", win_size);
 
 	/* recover the minimized placement of the window */
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_WINDOWSTATE);
@@ -543,8 +554,13 @@ static Ihandle *ezgui_page_main(EZGUI *gui)
 
 	/* status bar and progress bars share the same conner. normally it
 	 * display the status until in the running mode */
-	gui->ps_zbox = IupZbox(gui->stat_bar, gui->prog_bar, 
-			gui->prog_wait, NULL);
+	/* in C, each element must have a name defined by IupSetHandle (why?)
+	 * but its children automatically receives a name when the child is 
+	 * appended or inserted into the tabs */
+	gui->ps_zbox = IupZbox(NULL);
+	IupAppend(gui->ps_zbox, gui->stat_bar);
+	IupAppend(gui->ps_zbox, gui->prog_bar);
+	IupAppend(gui->ps_zbox, gui->prog_wait);
 	IupSetAttribute(gui->ps_zbox, "ALIGNMENT", "ACENTER");
 
 	/* progres bar and buttons are in the same bottom line */
@@ -590,12 +606,15 @@ static int ezgui_page_main_reset(EZGUI *gui)
 static Ihandle *ezgui_page_main_button(EZGUI *gui)
 {
 	gui->button_add = xui_button("Add", NULL);
+	IupSetAttribute(gui->button_add, "IMAGE", "IUP_FileOpen");
 	IupSetCallback(gui->button_add, "ACTION",
 			(Icallback) ezgui_event_main_add);
 	gui->button_del = xui_button("Remove", NULL);
+	IupSetAttribute(gui->button_del, "IMAGE", "IUP_EditErase");
 	IupSetCallback(gui->button_del, "ACTION",
 			(Icallback) ezgui_event_main_remove);
 	gui->button_run = xui_button("Run", NULL);
+	IupSetAttribute(gui->button_run,"IMAGE", "IUP_ActionOk");
 	IupSetCallback(gui->button_run, "ACTION",
 			(Icallback) ezgui_event_main_run);
 	return IupHbox(gui->button_add, gui->button_del, gui->button_run,NULL);
@@ -772,7 +791,7 @@ static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 	/* create the zbox of grid parameters */
 	grid->zbox = IupZbox(IupFill(), NULL);
 
-	hbox = xui_text_grid("Grid Of", 
+	hbox = xui_text_grid("Grid", 
 			&grid->entry_col_grid, &grid->entry_row, NULL);
 	IupAppend(grid->zbox, hbox);
 	
@@ -783,7 +802,7 @@ static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 	hbox = xui_text_grid("Total", &grid->entry_dss_amnt, NULL, NULL);
 	IupAppend(grid->zbox, hbox);
 
-	hbox = xui_text_grid("Every", &grid->entry_dss_step, NULL, "(s) ");
+	hbox = xui_text_grid("Every", &grid->entry_dss_step, NULL, "(s)");
 	IupAppend(grid->zbox, hbox);
 
 	IupAppend(grid->zbox, IupFill());
@@ -803,7 +822,7 @@ static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_GRID);
 	if (s) {
 		grid->grid_idx = lookup_index_string(uir_grid, 0, s);
-	} else if (ezopt->pro_grid == NULL) {
+	} else if (ezopt->pro_grid != NULL) {
 		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_AUTO);
 	} else if (ezopt->grid_col && ezopt->grid_row) {
 		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_GRID_DIM);
@@ -1032,7 +1051,8 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	zoom->zbox = IupZbox(IupFill(), NULL);
 
 	hbox = xui_text_grid("Ratio", &zoom->entry_zoom_ratio, NULL, "%");
-	IupSetAttribute(zoom->entry_zoom_ratio, "SIZE", "24x11");
+	//IupSetAttribute(zoom->entry_zoom_ratio, "SIZE", "24x11");
+	IupSetAttribute(zoom->entry_zoom_ratio, "SIZE", "30");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPIN", "YES");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINMIN", "5");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINMAX", "200");
@@ -1041,7 +1061,7 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINVALUE", "50");
 	IupAppend(zoom->zbox, hbox);
 
-	hbox = xui_text_grid("Resolu", 
+	hbox = xui_text_grid("Pixel", 
 			&zoom->entry_zoom_wid, &zoom->entry_zoom_hei, NULL);
 	IupAppend(zoom->zbox, hbox);
 	
@@ -1063,7 +1083,7 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_ZOOM);
 	if (s) {
 		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, s);
-	} else if (ezopt->pro_size == NULL) {
+	} else if (ezopt->pro_size != NULL) {
 		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_AUTO);
 	} else if (ezopt->tn_facto) {
 		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_ZOOM_RATIO);
@@ -1943,11 +1963,13 @@ static Ihandle *ezgui_setup_button_create(EZGUI *gui)
 		xui_button("OK", (Icallback) ezgui_setup_button_event_ok);
 	IupSetAttribute(gui->butt_setup_apply, EZOBJ_MAIN, (char*) gui);
 	IupSetAttribute(gui->butt_setup_apply, "ACTIVE", "NO");
+	IupSetAttribute(gui->butt_setup_apply, "IMAGE", "IUP_ActionOk");
 
 	gui->butt_setup_cancel = 
 		xui_button("Cancel", (Icallback) ezgui_setup_button_event_cancel);
 	IupSetAttribute(gui->butt_setup_cancel, EZOBJ_MAIN, (char*) gui);
 	IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "NO");
+	IupSetAttribute(gui->butt_setup_cancel, "IMAGE", "IUP_ActionCancel");
 
 	return IupHbox(xui_label("", "320", NULL),  
 			gui->butt_setup_cancel, gui->butt_setup_apply, NULL);
@@ -2058,8 +2080,7 @@ static Ihandle *ezgui_page_about(EZGUI *gui)
 
 	/* show the icon */
 	icon = IupLabel(NULL);
-	IupSetAttributeHandle(icon, "IMAGE", 
-			IupImageRGBA(64, 64, ezicon_about));
+	IupSetAttribute(icon, "IMAGE", "DLG_ICON");
 
 	/* show name and the version */
 	name = IupLabel("Ezthumb " EZTHUMB_VERSION);
@@ -2760,12 +2781,17 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 static Ihandle *xui_text_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext)
 {
-	Ihandle	*hbox, *text1, *text2;
+	Ihandle	*hbox, *text1, *text2, *title;
 
 	if ((xcol == NULL) && (xrow == NULL)) {
 		return NULL;
 	}
 
+	title = IupZbox(NULL);
+	IupAppend(title, xui_label(label, NULL, NULL));
+	IupAppend(title, IupLabel("Column"));	/* dummy for fixing widths */
+
+	/* Just one text control */
 	if ((xcol == NULL) || (xrow == NULL)) {
 		text1 = IupText(NULL);
 		IupSetAttribute(text1, "SIZE", EGPS_GRID_FST_TEXT);
@@ -2774,12 +2800,9 @@ static Ihandle *xui_text_grid(char *label,
 		} else {
 			*xrow = text1;
 		}
-		hbox = IupHbox(xui_label(label, EGPS_GRID_LABEL, NULL), 
-				text1,
-				ext ? IupLabel(ext) : NULL, 
-				NULL);
+		hbox = IupHbox(title, text1, ext ? IupLabel(ext) : NULL,NULL);
 		IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
-		IupSetAttribute(hbox, "NGAP", "4");
+		//IupSetAttribute(hbox, "NGAP", "4");
 		return hbox;
 	}
 
@@ -2789,14 +2812,10 @@ static Ihandle *xui_text_grid(char *label,
 	text2 = IupText(NULL);
 	*xrow = text2;
 	IupSetAttribute(text2, "SIZE", EGPS_GRID_SND_TEXT);
-	hbox = IupHbox(xui_label(label, EGPS_GRID_LABEL, NULL), 
-			text1, 
-			IupLabel("x"), 
-			text2, 
-			ext ? IupLabel(ext) : NULL, 
-			NULL);
+	hbox = IupHbox(title, text1, IupLabel("x"), text2, 
+			ext ? IupLabel(ext) : NULL, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
-	IupSetAttribute(hbox, "NGAP", "4");
+	//IupSetAttribute(hbox, "NGAP", "4");
 	return hbox;
 }
 

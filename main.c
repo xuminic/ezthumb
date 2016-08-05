@@ -253,7 +253,7 @@ int main(int argc, char **argv)
 	env_init(&sysopt);		/* load configures from environment */
 
 #ifndef	CFG_GUI_OFF
-	if (command_line_parser(argc, argv, NULL) == 'G') {
+	if (command_line_parser(argc, argv, NULL) == CMD_G_UI) {
 		/* initialize the GUI module and read the configure file */
 		sysopt.gui =  ezgui_init(&sysopt, &argc, &argv);
 	}
@@ -284,9 +284,6 @@ int main(int argc, char **argv)
 	case CMD_VERSION:	/* version */
 		printf(version);
 		version_ffmpeg();
-#ifndef	CFG_GUI_OFF
-		ezgui_version();
-#endif
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_P_ROFILE:	/* print the internal profile table */
