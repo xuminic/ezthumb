@@ -2036,40 +2036,6 @@ static int ezgui_setup_button_event_cancel(Ihandle *ih)
 /****************************************************************************
  * Page About
  ****************************************************************************/
-static	const	char	*description = "\
-A video thumbnail generator based on FFMPEG library.\n\
-\n\
-Copyright (C) 2011-2015 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
-License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
-This is free software: you are free to change and redistribute it.\n\
-There is NO WARRANTY, to the extent permitted by law.\n";
-
-static	const	char	*credits = "\
-FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:\n\
-http://ffmpeg.zeranoe.com/builds\n\
-You can find source codes and copyrights of FFMPEG at\n\
-https://www.ffmpeg.org\n\
-\n\
-Following Libraries were grabbed from GnuWin:\n\
-http://sourceforge.net/projects/gnuwin32/files\n\
-\n\
-gd-2.0.33-1\n\
-jpeg-6b-4\n\
-libiconv-1.9.2-1\n\
-libpng-1.2.37\n\
-zlib-1.2.3\n\
-freetype-2.3.5-1\n\
-\n\
-The icon is a public domain under GNU Free Documentation License:\n\
-http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg\n\
-\n\
-The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
-graphical user interfaces.\n\
-http://webserver2.tecgraf.puc-rio.br/iup\n\
-\n\
-This program was inspired by movie thumbnailer (mtn):\n\
-http://sourceforge.net/projects/moviethumbnail\n";
-
 static Ihandle *ezgui_page_about(EZGUI *gui)
 {
 	Ihandle	*icon, *name, *descr, *thanks;

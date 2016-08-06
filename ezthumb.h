@@ -632,6 +632,9 @@ struct	ezntf	{
 typedef	int  (*F_BRK)(void*, void*);
 typedef	void (*F_HOOK)(F_BRK, void*, void*);
 
+extern	const	char	*description;
+extern	const	char	*credits;
+
 
 /* ezthumb.c */
 void ezopt_init(EZOPT *ezopt, char *profile);

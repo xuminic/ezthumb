@@ -1,3 +1,7 @@
+20160806:
+	* main.c: added the factory reset function.
+	* main.c: added displaying credits.
+
 20160805:
 	* ezgui.c: Fixed the status/progress bar displaying issue in Windows
 	The optind could go ahead of argc which caused -1 'fum' in ezgui_run()

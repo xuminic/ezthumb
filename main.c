@@ -39,6 +39,7 @@
 #define CMD_UNKNOWN	0
 #define CMD_HELP	1
 #define CMD_VERSION	2
+#define CMD_F_RESET	3
 #define CMD_ACCURATE	4
 #define CMD_BKGROUND	5
 #define CMD_OTF		6
@@ -174,6 +175,8 @@ static	struct	cliopt	clist[] = {
 		1, "the time in video where ends shooting (HH:MM:SS/NN%)" },
 	{ CMD_TRANSPRT, "transparent", 
 		0, "generate the transparent background" },
+	{ CMD_F_RESET, "factory-reset",
+		0, "recover to the default settings" },
 	{ CMD_VID_IDX, "vindex",
 		1, "*the index of the video stream" },
 	{ CMD_HELP, "help",
@@ -190,6 +193,40 @@ Copyright (C) 2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\n";
+
+const	char	*description = "\
+A video thumbnail generator based on FFMPEG library.\n\
+\n\
+Copyright (C) 2011-2015 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
+This is free software: you are free to change and redistribute it.\n\
+There is NO WARRANTY, to the extent permitted by law.\n";
+
+const	char	*credits = "\
+FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:\n\
+http://ffmpeg.zeranoe.com/builds\n\
+You can find source codes and copyrights of FFMPEG at\n\
+https://www.ffmpeg.org\n\
+\n\
+Following Libraries were grabbed from GnuWin:\n\
+http://sourceforge.net/projects/gnuwin32/files\n\
+\n\
+gd-2.0.33-1\n\
+jpeg-6b-4\n\
+libiconv-1.9.2-1\n\
+libpng-1.2.37\n\
+zlib-1.2.3\n\
+freetype-2.3.5-1\n\
+\n\
+The icon is a public domain under GNU Free Documentation License:\n\
+http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg\n\
+\n\
+The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
+graphical user interfaces.\n\
+http://webserver2.tecgraf.puc-rio.br/iup\n\
+\n\
+This program was inspired by movie thumbnailer (mtn):\n\
+http://sourceforge.net/projects/moviethumbnail\n";
 
 
 /* predefined profiles */
@@ -231,6 +268,7 @@ static void linefeed_count(int n, int mod, char *con, char *coff);
 static void print_profile_shots(EZOPT *opt, int min);
 static void print_profile_width(EZOPT *opt, int vidw);
 static int load_default_config(EZOPT *opt);
+static int delete_user_config(void);
 static int ezdebug_trans_module(int cw, char *buf, int blen);
 
 int main(int argc, char **argv)
@@ -285,6 +323,10 @@ int main(int argc, char **argv)
 	case CMD_VERSION:	/* version */
 		printf(version);
 		version_ffmpeg();
+		todo = EZ_ERR_EOP;
+		break;
+	case CMD_F_RESET:
+		delete_user_config();
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_P_ROFILE:	/* print the internal profile table */
@@ -394,6 +436,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		switch (c) {
 		case CMD_HELP:
 		case CMD_VERSION:
+		case CMD_F_RESET:
 			todo = c;
 			goto break_parse;	/* break the analysis */
 
@@ -819,7 +862,9 @@ static int debug_online(int argc, char **argv)
 		return 0;
 	}
 
-	if (!strcmp(*argv, "pro-test")) {	
+	if (!strcmp(*argv, "credits")) {
+		puts(credits);
+	} else if (!strcmp(*argv, "pro-test")) {	
 		/* test the profile (@length, +width) */
 		runtime_profile_test(&sysopt, argv[1]);
 	} else if (!strcmp(*argv, "pro-export")) {
@@ -1318,6 +1363,20 @@ static int load_default_config(EZOPT *opt)
 			CDB_INFO(("Read %d configures: %s\n", items, path));
 		}
 		csc_cfg_close(config);
+	}
+	return 0;
+}
+
+static int delete_user_config(void)
+{
+	KEYCB	*config;
+
+	config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
+			"ezthumb", "ezthumb.conf", CSC_CFG_READ);
+	if (config) {
+		csc_cfg_close(config);
+		smm_config_delete(SMM_CFGROOT_DESKTOP, 
+				"ezthumb", "ezthumb.conf");
 	}
 	return 0;
 }
