@@ -268,7 +268,6 @@ static void linefeed_count(int n, int mod, char *con, char *coff);
 static void print_profile_shots(EZOPT *opt, int min);
 static void print_profile_width(EZOPT *opt, int vidw);
 static int load_default_config(EZOPT *opt);
-static int delete_user_config(void);
 static int ezdebug_trans_module(int cw, char *buf, int blen);
 
 int main(int argc, char **argv)
@@ -278,8 +277,8 @@ int main(int argc, char **argv)
 
 	smm_init();			/* initialize the libsmm */
 #if	defined(DEBUG) && defined(CFG_WIN32_API) && defined(CFG_GUI_ON)
-	dbgc = slog_csoup_open(NULL, "win32.log");
-	//dbgc = slog_csoup_open(NULL, NULL);
+	//dbgc = slog_csoup_open(NULL, "win32.log");
+	dbgc = slog_csoup_open(NULL, NULL);
 #else
 	dbgc = slog_csoup_open(NULL, NULL);
 #endif
@@ -297,6 +296,7 @@ int main(int argc, char **argv)
 		sysopt.gui =  ezgui_init(&sysopt, &argc, &argv);
 	}
 #endif
+	CDB_ERROR(("%d: %s\n", argc, argv[1]));
 
 	todo = command_line_parser(argc, argv, &sysopt);
 	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
 
 	switch (todo) {
 	case CMD_ERROR:
-		printf("Invalid parameters.\n");
+		CDB_ERROR(("Invalid parameters.\n"));
 		todo = EZ_ERR_PARAM;
 		break;
 	case CMD_HELP:		/* help */
@@ -326,12 +326,13 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_F_RESET:
-		delete_user_config();
+		smm_config_delete(SMM_CFGROOT_DESKTOP, 
+				"ezthumb", "ezthumb.conf");
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_P_ROFILE:	/* print the internal profile table */
 		for (i = 0; i < PROFLIST; i++) {
-			printf("%2d: %s\n", i, sysprof[i]);
+			CDB_SHOW(("%2d: %s\n", i, sysprof[i]));
 		}
 		todo = EZ_ERR_EOP;
 		break;
@@ -430,9 +431,11 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		}
 	}
 
+	optind = 0;	/* reset the optind */
 	todo = CMD_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
+		CDB_ERROR(("PARSE: %d [%c]\n", c,c ));
 		switch (c) {
 		case CMD_HELP:
 		case CMD_VERSION:
@@ -452,8 +455,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		case CMD_GAP_SHOT:	
 			/* gap-shots: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			opt->grid_gap_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -465,8 +468,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		case CMD_GAP_MARG:	
 			/* gap-margin: Examples: 5, 5%, 5x8, 5%x8% */
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			opt->grid_rim_w = para_get_ratio(optarg);
 			if ((p = strchr(optarg, 'x')) == NULL) {
@@ -481,8 +484,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_INFO;
 			} else if ((c = para_get_position(optarg)) == -1) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			} else {
 				opt->flags |= EZOP_INFO;
 				opt->mi_position = c;
@@ -494,8 +497,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_TIMEST;
 			} else if ((c = para_get_position(optarg)) == -1) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			} else {
 				opt->flags |= EZOP_TIMEST;
 				opt->ins_position = c;
@@ -507,8 +510,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_FFRAME;
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_OPT_LFR:	/* opt-lfr */
@@ -517,14 +520,14 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_LFRAME;
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_POS_BG:	/* "pos-bg" */
 			if ((c = para_get_position(optarg)) == -1) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			} else {
 				opt->bg_position = c;
 			}
@@ -535,24 +538,24 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "off")) {
 				opt->flags &= ~EZOP_DECODE_OTF;
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_TIME_FROM:	/* time-from */
 			if (isdigit(*optarg)) {
 				opt->time_from = para_get_time_point(optarg);
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_TIME_END:	/* time-end */
 			if (isdigit(*optarg)) {
 				opt->time_to = para_get_time_point(optarg);
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_TRANSPRT:
@@ -561,8 +564,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_VID_IDX:	/* index */
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			} else {
 				opt->vs_user = strtol(optarg, NULL, 0);
 			}
@@ -576,14 +579,15 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (!strcmp(optarg, "copy")) {
 				EZOP_THUMB_SET(opt->flags, EZOP_THUMB_COPY);
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_DEPTH:
 			/* Recursive depth, for example: "FF:3"
 			 * Magic words in first two characters: FF, DF, DL.
-			 * First-meet-Firt-process, Directory-First, Directory-Last 
+			 * First-meet-Firt-process, Directory-First, 
+			 * Directory-Last 
 			 * 0 means unlimited */
 			if ((optarg[2] == ':') || (optarg[2] == 0)) {
 				c = opt->r_flags;
@@ -711,7 +715,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 				ezopt_profile_setup(opt, sysprof[c]);
 			} else {	/* wrong profile index */
 				todo = CMD_P_ROFILE;
-				goto break_parse;	/* break the analysis */
+				goto break_parse;  /* break the analysis */
 			}
 			break;
 		case CMD_R_ECURS:
@@ -719,8 +723,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_S_IZE:	/* Examples: 50, 50%, 320x240 */
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			opt->tn_width = opt->tn_height = 0;	/* 20120720 */
 			opt->canvas_width = 0;
@@ -737,8 +741,8 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_T_IMES:
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			opt->grid_row = 0;
 			prof_grid = 0;	/* disable the profile */
@@ -767,16 +771,16 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			} else if (isdigit(*optarg)) {
 				c = strtol(optarg, NULL, 0);
 			} else {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			EZOP_DEBUG_MAKE(opt->flags, c);
 			CDB_SET_LEVEL(c);
 			break;
 		case CMD_W_IDTH:
 			if (!isdigit(*optarg)) {
-				todo = CMD_ERROR;	/* command line error */
-				goto break_parse;	/* break the analysis */
+				todo = CMD_ERROR;  /* command line error */
+				goto break_parse;  /* break the analysis */
 			}
 			opt->canvas_width = strtol(optarg, NULL, 0);
 			prof_size = 0;	/* disable the profile */
@@ -1363,20 +1367,6 @@ static int load_default_config(EZOPT *opt)
 			CDB_INFO(("Read %d configures: %s\n", items, path));
 		}
 		csc_cfg_close(config);
-	}
-	return 0;
-}
-
-static int delete_user_config(void)
-{
-	KEYCB	*config;
-
-	config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
-			"ezthumb", "ezthumb.conf", CSC_CFG_READ);
-	if (config) {
-		csc_cfg_close(config);
-		smm_config_delete(SMM_CFGROOT_DESKTOP, 
-				"ezthumb", "ezthumb.conf");
 	}
 	return 0;
 }

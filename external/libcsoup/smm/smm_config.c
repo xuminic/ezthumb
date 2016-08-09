@@ -359,7 +359,8 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 		len += mem_copy(&buf, &blen, fname);
 		len += mem_copy(&buf, &blen, NULL);	/* insert \0 */
 
-		len += mem_copy(&buf, &blen, "CONSOLE/");
+		/* 20160808 Win32 API still require '\\' */
+		len += mem_copy(&buf, &blen, "CONSOLE\\");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 		}
@@ -377,7 +378,7 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 		len += mem_copy(&buf, &blen, fname);
 		len += mem_copy(&buf, &blen, NULL);	/* insert \0 */
 
-		len += mem_copy(&buf, &blen, "SOFTWARE/");
+		len += mem_copy(&buf, &blen, "SOFTWARE\\");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 		}
@@ -399,7 +400,7 @@ int smm_config_path(int sysdir, char *path, char *fname, char *buf, int blen)
 		len += mem_copy(&buf, &blen, fname);
 		len += mem_copy(&buf, &blen, NULL);	/* insert \0 */
 
-		len += mem_copy(&buf, &blen, "SOFTWARE/");
+		len += mem_copy(&buf, &blen, "SOFTWARE\\");
 		if (path) {
 			len += mem_copy(&buf, &blen, path);
 		}

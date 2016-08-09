@@ -31,7 +31,7 @@
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	4		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	6		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -142,6 +142,7 @@ slog(int control_word, char *fmt, ...);
 
 */
 #define	SLOG_BUFFER		32768	/* maximum log buffer */
+#define SLOG_TRANS_CHAIN	32	/* the depth of translator chain */
 
 #define SLOG_LVL_AUTO		0	/* decided by local macroes */
 #define SLOG_LVL_ERROR		1
@@ -192,8 +193,8 @@ typedef	struct	{
 	FILE	*stdio;
 
 	/* for generating a prefix according to the 'option' field */
-	CSCLNK	*trans_module;
-	CSCLNK	*trans_date;
+	F_PREFIX	trans_module[SLOG_TRANS_CHAIN];
+	F_PREFIX	trans_date[SLOG_TRANS_CHAIN];
 
 	/* log into the socket extension */
 	F_EXT	f_inet;

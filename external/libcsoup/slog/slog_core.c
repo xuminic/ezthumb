@@ -79,68 +79,8 @@ int slog_bind_stdio(SMMDBG *dbgc, FILE *ioptr)
 
 int slog_translate_setup(SMMDBG *dbgc, int which, F_PREFIX func)
 {
-	F_PREFIX  *payload;
-	CSCLNK	  *node;
-
-	if ((node = csc_cdl_alloc(sizeof(F_PREFIX))) == NULL) {
-		return SMM_ERR_LOWMEM;
-	}
-
-	payload = csc_cdl_payload(node);
-	*payload = func;
-
-	switch (which) {
-	case SLOG_TRANSL_MODUL:
-		dbgc->trans_module = 
-			csc_cdl_insert_head(dbgc->trans_module, node);
-		break;
-	case SLOG_TRANSL_DATE:
-		dbgc->trans_date = 
-			csc_cdl_insert_head(dbgc->trans_date, node);
-		break;
-	default:
-		return SMM_ERR_NULL;
-	}
-	return SMM_ERR_NONE;
-}
-
-int slog_translate_remove(SMMDBG *dbgc, int which, F_PREFIX func)
-{
-	CSCLNK	*node = NULL;
-
-	int comparer(void *src, void *dst)
-	{
-		return *((F_PREFIX*)src) == *((F_PREFIX*)dst);
-	}
-
-	switch (which) {
-	case SLOG_TRANSL_MODUL:
-		node = csc_cdl_search(dbgc->trans_module, 
-				NULL, comparer, &func);
-		if (node) {
-			dbgc->trans_module = 
-				csc_cdl_remove(dbgc->trans_module, node);
-		}
-		break;
-	case SLOG_TRANSL_DATE:
-		node = csc_cdl_search(dbgc->trans_date, 
-				NULL, comparer, &func);
-		if (node) {
-			dbgc->trans_date = 
-				csc_cdl_remove(dbgc->trans_date, node);
-		}
-		break;
-	}
-	if (node == NULL) {
-		return SMM_ERR_NULL;
-	}
-	return SMM_ERR_NONE;
-}
-
-int slog_translating(SMMDBG *dbgc, int which, int cw, char *buf, int blen)
-{
-	F_PREFIX	func;
-	CSCLNK  	*root, *node;
+	F_PREFIX  *root;
+	int	i;
 
 	switch (which) {
 	case SLOG_TRANSL_MODUL:
@@ -153,9 +93,58 @@ int slog_translating(SMMDBG *dbgc, int which, int cw, char *buf, int blen)
 		return SMM_ERR_NULL;
 	}
 
-	for (node = root; node; node = csc_cdl_next(root, node)) {
-		func = *((F_PREFIX*) csc_cdl_payload(node));
-		if (func(cw, buf, blen) == SMM_ERR_NONE) {
+	i = SLOG_TRANS_CHAIN - 1;
+	if (root[i] != NULL) {
+		return SMM_ERR_LOWMEM;	/* the queue is full */
+	}
+	for ( ; i > 0; i--) root[i] = root[i-1];	/* shift the queue */
+	root[0] = func;		/* always inserts to head */
+	return SMM_ERR_NONE;
+}
+
+int slog_translate_remove(SMMDBG *dbgc, int which, F_PREFIX func)
+{
+	F_PREFIX  *root;
+	int	i;
+
+	switch (which) {
+	case SLOG_TRANSL_MODUL:
+		root = dbgc->trans_module;
+		break;
+	case SLOG_TRANSL_DATE:
+		root = dbgc->trans_date;
+		break;
+	default:
+		return SMM_ERR_NULL;
+	}
+	for (i = 0; (i < SLOG_TRANS_CHAIN) && (root[i] != func); i++);
+	if (i < SLOG_TRANS_CHAIN) {
+		return SMM_ERR_NULL;	/* not found */
+	}
+	for ( ; i < SLOG_TRANS_CHAIN - 1; i++) {
+		root[i] = root[i+1];	/* squeeze the queue */
+	}
+	root[i] = NULL;
+	return SMM_ERR_NONE;
+}
+
+int slog_translating(SMMDBG *dbgc, int which, int cw, char *buf, int blen)
+{
+	F_PREFIX  *root;
+	int	i;
+
+	switch (which) {
+	case SLOG_TRANSL_MODUL:
+		root = dbgc->trans_module;
+		break;
+	case SLOG_TRANSL_DATE:
+		root = dbgc->trans_date;
+		break;
+	default:
+		return SMM_ERR_NULL;
+	}
+	for (i = 0; root[i] && (i < SLOG_TRANS_CHAIN); i++) {
+		if (root[i](cw, buf, blen) == SMM_ERR_NONE) {
 			return SMM_ERR_NONE;
 		}
 	}

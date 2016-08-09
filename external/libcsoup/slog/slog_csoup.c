@@ -33,7 +33,8 @@ SMMDBG	csoup_debug_control = {
 	SLOG_OPT_ALL,			/* option */
 	NULL, NULL,			/* file name and FILEP */
 	(void*) -1,			/* standard i/o */
-	NULL, NULL,			/* generating the prefixes */
+	{ slog_csoup_trans_module },
+	{ slog_csoup_trans_date },
 	NULL, NULL,			/* socket extension */
 	NULL, NULL, NULL		/* mutex setting */
 };
@@ -46,14 +47,6 @@ SMMDBG *slog_csoup_open(FILE *stdio, char *fname)
 	}
 	if (fname) {
 		slog_bind_file(&csoup_debug_control, fname);
-	}
-	if (csoup_debug_control.trans_module == NULL) {
-		slog_translate_setup(&csoup_debug_control, 
-				SLOG_TRANSL_MODUL, slog_csoup_trans_module);
-	}
-	if (csoup_debug_control.trans_date == NULL) {
-		slog_translate_setup(&csoup_debug_control, 
-				SLOG_TRANSL_DATE, slog_csoup_trans_date);
 	}
 	return &csoup_debug_control;
 }

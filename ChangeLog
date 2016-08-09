@@ -1,3 +1,9 @@
+20160809:
+	* libcsoup: updated to 0.9.6
+	which fixed two issue: the dead loop in csc_cdll that caused core dump
+	in verbose level 7; the registry removal issue that caused by wrong
+	path seperator.
+
 20160806:
 	* main.c: added the factory reset function.
 	* main.c: added displaying credits.
