@@ -27,7 +27,7 @@
 #include "gd.h"
 #include "libcsoup.h"
 
-#define EZTHUMB_VERSION		"3.4.0"
+#define EZTHUMB_VERSION		"3.4.1"
 
 /* define the modules of libcsoup for easy debugging */
 #define EZTHUMB_MOD_CORE	SLOG_MODUL_ENUM(3)

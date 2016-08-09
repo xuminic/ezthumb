@@ -13,6 +13,20 @@ curve profiles.
 
 Release Notes
 =============
+Version 3.4.1:
+*) Added factory reset
+*) IUP updated to 3.10.1
+*) Fixed the progress bar overlap status bar issue
+*) Fixed the utf-8 filename issue in Windows
+*) Fixed the core dump when verbose level reach 7
+*) Fixed the failure of removing registry in Windows.
+
+Version 3.4.0:
+*) Added the about page
+*) Added the font choice dialog.
+*) Fixed the adjustment of the window size.
+*) Fixed many things in UI.
+
 Version 3.3.0:
 *) FFMPEG updated to 2015-03-03 git-5de2dab (H.265 ready)
 *) Accurate PTS display

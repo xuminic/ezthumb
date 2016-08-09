@@ -1,3 +1,11 @@
+20160809: release 3.4.1
+	*) Added factory reset
+	*) IUP updated to 3.10.1
+	*) Fixed the progress bar overlap status bar issue
+	*) Fixed the utf-8 filename issue in Windows
+	*) Fixed the core dump when verbose level reach 7
+	*) Fixed the failure of removing registry in Windows.
+	
 20160809:
 	* libcsoup: updated to 0.9.6
 	which fixed two issue: the dead loop in csc_cdll that caused core dump
