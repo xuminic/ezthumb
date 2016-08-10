@@ -56,8 +56,9 @@ endif
 
 
 PREFIX	= /usr/local
-BINDIR	= /usr/local/bin
-MANDIR	= /usr/local/man/man1
+BINDIR	= $(PREFIX)/bin
+MANDIR	= $(PREFIX)/share/man/man1
+APPDIR	= $(PREFIX)/share/applications
 P_ICON  = /usr/share/icons/hicolor
 M_ICON  = apps/ezthumb.png
 
@@ -207,19 +208,19 @@ release-win:
 install:
 	install -s ezthumb $(BINDIR)
 	cp -f ezthumb.1 $(MANDIR)
-	cp -f ezthumb.desktop /usr/share/applications
+	cp -f ezthumb.desktop $(APPDIR)
 	$(CONVERT) -resize 256x256 $(P_ICON)/256x256/$(M_ICON)
 	$(CONVERT) -resize 128x128 $(P_ICON)/128x128/$(M_ICON)
 	$(CONVERT) -resize 32x32   $(P_ICON)/32x32/$(M_ICON)
 	$(CONVERT) -resize 24x24   $(P_ICON)/24x24/$(M_ICON)
 	$(CONVERT) -resize 22x22   $(P_ICON)/22x22/$(M_ICON)
 	$(CONVERT) -resize 16x16   $(P_ICON)/16x16/$(M_ICON)
-	rm $(P_ICON)/icon-theme.cache
+	gtk-update-icon-cache -f $(P_ICON)
 
 uninstall:
 	rm -f $(BINDIR)/ezthumb
 	rm -f $(MANDIR)/ezthumb.1
-	rm -f /usr/share/applications/ezthumb.desktop
+	rm -f $(APPDIR)/ezthumb.desktop
 	rm -f $(P_ICON)/256x256/$(M_ICON)
 	rm -f $(P_ICON)/128x128/$(M_ICON)
 	rm -f $(P_ICON)/48x48/$(M_ICON)
