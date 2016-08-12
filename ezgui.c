@@ -2485,7 +2485,7 @@ static int ezgui_sview_add(SView *sview)
 			break;	/* end of list */
 		}
 		path = csc_strcpy_alloc(sdir, strlen(fname)+8);
-		strcat(path, "/");
+		strcat(path, SMM_DEF_DELIM);
 		strcat(path, fname);
 		//printf("%s\n", path);
 		ezgui_sview_file_append(sview, path);
