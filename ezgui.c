@@ -182,6 +182,9 @@ static int ezgui_sview_event_multi_select(Ihandle *ih, char *value);
 static int ezgui_sview_event_moused(Ihandle *ih, 
 		int button, int pressed, int x, int y, char *status);
 static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status);
+#if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+static int ezgui_sview_event_ctrl_a(Ihandle *ih, int c);
+#endif
 static int ezgui_sview_add(SView *sview);
 static int ezgui_sview_remove(SView *sview);
 static int ezgui_sview_run(SView *sview);
@@ -2110,6 +2113,12 @@ static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 		IupSetCallback(sview->filename, "DBLCLICK_CB", 
 				(Icallback) ezgui_sview_event_run);
 	}
+#if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+	/* 20160812: In Windows the list control doesn't support Ctrl-A to
+	 * select all items so I put a workaround here */
+	IupSetCallback(sview->filename, "K_cA",
+			(Icallback) ezgui_sview_event_ctrl_a);
+#endif
 
 	sview->filesize = IupList(NULL);
 	IupSetAttribute(sview->filesize, "SIZE", "50");
@@ -2414,6 +2423,29 @@ static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
 	}
 	return IUP_DEFAULT;
 }
+
+#if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+static int ezgui_sview_event_ctrl_a(Ihandle *ih, int c)
+{
+	SView	*sview;
+	char	*buf;
+
+	CDB_DEBUG(("ezgui_sview_event_ctrl_a: %x\n",c));
+
+	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	buf = csc_strcpy_alloc(IupGetAttribute(sview->filename, "VALUE"), 0);
+	c = strlen(buf);
+	memset(buf, '+', c);
+	IupSetAttribute(sview->filename, "VALUE", buf);
+	smm_free(buf);
+
+	ezgui_sview_active_update(sview, EZGUI_SVIEW_ACTIVE_SELECT, c);
+	return IUP_DEFAULT;
+}
+#endif
 
 static int ezgui_sview_add(SView *sview)
 {
