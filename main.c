@@ -296,8 +296,6 @@ int main(int argc, char **argv)
 		sysopt.gui =  ezgui_init(&sysopt, &argc, &argv);
 	}
 #endif
-	CDB_ERROR(("%d: %s\n", argc, argv[1]));
-
 	todo = command_line_parser(argc, argv, &sysopt);
 	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
 	
@@ -435,7 +433,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	todo = CMD_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
-		CDB_ERROR(("PARSE: %d [%c]\n", c,c ));
 		switch (c) {
 		case CMD_HELP:
 		case CMD_VERSION:
