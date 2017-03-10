@@ -54,6 +54,7 @@
 #define CMD_OPT_LFR	15
 #define CMD_OVERRIDE	16
 #define CMD_POS_BG	17
+#define CMD_PROGRESS	18
 #define CMD_TIME_FROM	20
 #define CMD_TIME_END	21
 #define CMD_TRANSPRT	22
@@ -115,6 +116,8 @@ static	struct	cliopt	clist[] = {
 #ifndef	CFG_GUI_OFF
 	{ CMD_G_UI, "gui",
 		0, "enable the graphic user interface" },
+	{ CMD_PROGRESS, "gui-progress",
+		0, "display the progress bar without the full GUI window" },
 #endif
 	{ CMD_I_NFO, "info",
 		0, "display the simple information of videos" },
@@ -364,7 +367,12 @@ int main(int argc, char **argv)
 		} else {
 			sysopt.notify = event_verbose;
 		}
+#ifndef CFG_GUI_OFF
+		ezbar_init(&sysopt);
+#endif
+		eznotify(&sysopt, EN_BATCH_BEGIN, 0, 0, NULL);
 		todo = ezthumb_bind(argv + optind, argc - optind, &sysopt);
+		eznotify(&sysopt, EN_BATCH_END, 0, 0, NULL);
 		break;
 	case CMD_G_UI:
 		todo = EZ_ERR_EOP;
@@ -384,6 +392,10 @@ int main(int argc, char **argv)
 		} else {
 			sysopt.notify = event_verbose;
 		}
+#ifndef CFG_GUI_OFF
+		ezbar_init(&sysopt);
+#endif
+		eznotify(&sysopt, EN_BATCH_BEGIN, 0, 0, NULL);
 		if ((sysopt.flags & EZOP_RECURSIVE) == 0) {
 			for (i = optind; i < argc; i++) {
 				todo = ezthumb(argv[i], &sysopt);
@@ -397,6 +409,7 @@ int main(int argc, char **argv)
 						msg_shot, &sysopt);
 			}
 		}
+		eznotify(&sysopt, EN_BATCH_END, 0, 0, NULL);
 		break;
 	}
 	main_close(&sysopt);
@@ -784,6 +797,9 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_SUFFI_X:
 			csc_strlcpy(opt->suffix, optarg, 64);
+			break;
+		case CMD_PROGRESS:
+			opt->flags |= EZOP_PROGRESS_BAR;
 			break;
 		default:
 			todo = CMD_ERROR;	/* command line error */

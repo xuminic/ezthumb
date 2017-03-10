@@ -1,3 +1,6 @@
+20170310: release 3.5.0
+	*) Added a progress bar dialog for integrating with file managers.
+
 20160809: release 3.4.1
 	*) Added factory reset
 	*) IUP updated to 3.10.1

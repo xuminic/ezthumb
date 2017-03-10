@@ -171,6 +171,10 @@ static int ezgui_setup_button_event_cancel(Ihandle *ih);
 
 static Ihandle *ezgui_page_about(EZGUI *gui);
 
+static int ezbar_event(void *vobj, int event, long param, long opt, void *block);
+static void *ezbar_main(void *vobj);
+static int ezbar_cb_cancel(Ihandle *ih);
+
 static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck);
 static int ezgui_sview_progress(Ihandle *ih, int percent);
 static int ezgui_sview_resize(Ihandle *ih, int width, int height);
@@ -218,6 +222,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	}
 
 	if ((gui = smm_alloc(sizeof(EZGUI))) == NULL) {
+		IupClose();
 		return NULL;
 	}
 
@@ -2071,6 +2076,122 @@ static Ihandle *ezgui_page_about(EZGUI *gui)
 	sbox = IupScrollBox(IupHbox(vbox, IupHbox(IupFill(), NULL), NULL));
 	IupSetAttribute(sbox, "SCROLLBAR", "VERTICAL");
 	return sbox;
+}
+
+
+/****************************************************************************
+ * A progress dialog for integrating with file managers
+ ****************************************************************************/
+int ezbar_init(EZOPT *ezopt)
+{
+	if (ezopt->flags & EZOP_PROGRESS_BAR) {
+		ezopt->notiback = ezopt->notify;
+		ezopt->notify = ezbar_event;
+	}
+	return 0;
+}
+
+extern char *video_media_in_buffer(EZVID *vidx, char *buf, int blen);
+
+static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
+{
+	EZVID	*vidx = block;
+	EZOPT   *ezopt = vobj;
+	EZGUI   *gui = ezopt->gui;
+	static	char	desc_buf[1024];
+
+	switch (event) {
+	case EN_BATCH_BEGIN:
+		if ((ezopt->gui = ezbar_main(vobj)) == NULL) {
+			exit(-1);	/* that's extreme! */
+		}
+		smm_sleep(1,0);
+		break;
+	case EN_BATCH_END:
+		break;
+	case EN_OPEN_BEGIN:
+		snprintf(desc_buf, sizeof(desc_buf)-1, 
+				"Opening %s ...", vidx->filename);
+		IupSetAttribute(gui->dlg_main, "DESCRIPTION", desc_buf);
+		smm_sleep(1,0);
+		break;
+	case EN_MEDIA_OPEN:
+		video_media_in_buffer(vidx, desc_buf, sizeof(desc_buf)-1);
+		IupSetAttribute(gui->dlg_main, "DESCRIPTION", desc_buf);
+		smm_sleep(1,0);
+		break;
+	case EN_PROC_BEGIN:
+		break;
+	case EN_PROC_CURRENT:
+		if (param == 0) { /* for key frame saving only */
+			IupSetAttribute(gui->dlg_main, "STATE", "UNDEFINED");
+			IupSetAttribute(gui->dlg_main, "INC", NULL);
+		} else {
+			IupSetInt(gui->dlg_main, "TOTALCOUNT", param);
+			IupSetInt(gui->dlg_main, "COUNT", opt);
+		}
+		break;
+	case EN_PROC_END:
+		IupSetInt(gui->dlg_main, "TOTALCOUNT", 100);
+		IupSetInt(gui->dlg_main, "COUNT", 100);
+		smm_sleep(1,0);
+		break;
+	}
+	return ezopt->notiback(vobj, event, param, opt, block);
+}
+
+static void *ezbar_main(void *vobj)
+{
+	EZGUI	*gui;
+
+	IupOpen(NULL, NULL);
+	IupImageLibOpen();
+
+	/* Note that these two lines must be kept in this sequence */
+	IupSetAttribute(NULL, "UTF8MODE", "YES");
+	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
+
+	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
+	if (!IupGetGlobal("SINGLEINSTANCE")) {
+		IupClose();
+		return NULL;
+	}
+
+	if ((gui = smm_alloc(sizeof(EZGUI))) == NULL) {
+		IupClose();
+		return NULL;
+	}
+
+	/* initialize GUI structure with parameters from command line */
+	gui->sysopt = vobj;
+
+	/* create window and widgets */
+	gui->dlg_main = IupProgressDlg();
+	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
+	IupSetAttribute(gui->dlg_main, "SIZE", "300");
+	IupSetAttribute(gui->dlg_main, "PROGRESSHEIGHT", "16");
+	IupSetAttribute(gui->dlg_main, "DESCRIPTION", "\n\n\n\n");
+	IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, (char*) gui);
+	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, ezicon_pixbuf));
+	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
+	IupSetCallback(gui->dlg_main, "CANCEL_CB", ezbar_cb_cancel);
+
+	IupShowXY(gui->dlg_main, IUP_CENTER, IUP_CENTER);
+	return gui;
+}
+
+static int ezbar_cb_cancel(Ihandle *ih)
+{
+	EZGUI	*gui;
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) != NULL) {
+		IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, NULL);
+	}
+
+	gui->sysopt->notify = gui->sysopt->notiback;
+	IupExitLoop();
+	exit(-1);
+	return IUP_DEFAULT;
 }
 
 

@@ -1847,6 +1847,34 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	return EZ_ERR_NONE;
 }
 
+char *video_media_in_buffer(EZVID *vidx, char *buf, int blen)
+{
+	AVStream	*stream;
+	char		tmp[32];
+	int		i;
+
+	if (vidx->dur_all) {	/* binding mode */
+		snprintf(buf, blen, "%s\n", vidx->anchor->filename);
+		csc_strlcat(buf, "Duration ", blen);
+		csc_strlcat(buf, meta_timestamp(vidx->dur_all, 0, tmp), blen);
+	} else {
+		snprintf(buf, blen, "%s\n", vidx->filename);
+		csc_strlcat(buf, "Duration ", blen);
+		csc_strlcat(buf, meta_timestamp(vidx->duration, 0, tmp), blen);
+	}
+	sprintf(tmp, " %.3f kbps\n", (float)vidx->bitrates / 1000.0);
+	csc_strlcat(buf, tmp, blen);
+
+	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
+		stream = vidx->formatx->streams[i];
+		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+			video_media_video(stream, buf + strlen(buf));
+			break;
+		}
+	}
+	return buf;
+}
+
 /* This function is used to find the video clip's duration. There are three
  * methods to retrieve the duration. First and the most common one is to
  * grab the duration data from the clip head, EZOP_DUR_HEAD. It's already 

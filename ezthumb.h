@@ -27,7 +27,7 @@
 #include "gd.h"
 #include "libcsoup.h"
 
-#define EZTHUMB_VERSION		"3.4.1"
+#define EZTHUMB_VERSION		"3.5.0"
 
 /* define the modules of libcsoup for easy debugging */
 #define EZTHUMB_MOD_CORE	SLOG_MODUL_ENUM(3)
@@ -81,6 +81,8 @@
 #define EN_OPEN_BEGIN		1030	/* start to check the duration */
 #define EN_OPEN_GOING		1031	/* checking duration in progress */
 #define EN_OPEN_END		1032	/* end of the checking */
+#define EN_BATCH_BEGIN		1033
+#define EN_BATCH_END		1034
 
 #define ENX_DUR_MHEAD		0	/* duration from media head */
 #define ENX_DUR_JUMP		1	/* jumping for a quick scan */
@@ -166,6 +168,8 @@
 							EZOP_PROC_FIELD))
 #define EZOP_PROC_MAKE(f,p)	(EZOP_PROC_CLEAR(f), EZOP_PROC_SET(f,p))
 
+/* reserved space in 0x0FF00000 */
+#define EZOP_PROGRESS_BAR	0x100000  /* standalone progress UI bar */
 
 /* debug use 0xF0000000 mask in the flag word */
 #define EZDBG_NONE		SLSHOW	/* no debug information at all */
@@ -432,6 +436,7 @@ typedef	struct	{
 
 	/* callback functions to indicate the progress */
 	int	(*notify)(void *nobj, int event, long param, long, void *);
+	int	(*notiback)(void *nobj, int event, long param, long, void *);
 
 	/* copy of runtime objects for signal breaking */
 	void	*vidobj;	/* copy of the runtime EZVID point */
