@@ -1,0 +1,137 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.69])
+AC_INIT([ezthumb], [3.5.1], [xuming@users.sourceforge.net])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([main.c])
+AC_CONFIG_HEADERS([config.h])
+AM_INIT_AUTOMAKE
+
+# Checks for programs.
+AC_PROG_CXX
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_MAKE_SET
+
+AC_ARG_ENABLE([debug-build],
+  AS_HELP_STRING([--enable-debug-build], [Enable the debug output (yes,no,0-7)]))
+AS_CASE([$enable_debug_build],
+  [yes|Yes|YES], [DEBUGS="-Wall -Wextra -g -DDEBUG=3 -O0"],
+  [1|2|3|4|5|6|7], [DEBUGS="-Wall -Wextra -g -DDEBUG=$enable_debug_build -O0"],
+  [DEBUGS="-Wall -Wextra -O4"])
+
+AC_ARG_WITH([gui], 
+  AS_HELP_STRING([--with-gui], [Build with the Graphic User Interface [yes] (no|gtk|gtk2|gtk3)]))
+
+case "$host_os" in
+  cygwin | mingw32*)
+    SYSTOOL=mingw
+    AS_CASE([$with_gui], [no|No|NO], [SYSGUI=CFG_GUI_OFF], [SYSGUI=CFG_GUI_ON])
+    # Checks for WIN32 programs.
+    AC_CHECK_PROG([WINDRES], [windres], [windres], [])
+    AC_CHECK_PROG([NSIS], [makensis], [makensis], [])
+    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/include/iup -I./libmingw/ffmpeg/include"
+    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib"
+    LIBCON="-liconv -mconsole"
+    LIBGUI="-liconv -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+	    -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32"
+    ;;
+  *)
+    SYSTOOL=unix
+    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I/usr/include/ffmpeg"
+    LDFLAGS="$LDFLAGS -L./external/libcsoup"
+    AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [])
+    if test "x$PKGCONFIG" = x; then
+      SYSGUI=CFG_GUI_OFF
+      AC_MSG_WARN([pkg-config is not found -- command line interface only])
+    else
+      SYSGUI=CFG_GUI_ON
+      AS_CASE([$with_gui],
+        [no|No|NO], 
+	  [SYSGUI=CFG_GUI_OFF],
+        [2|gtk2|Gtk2|GTK2], 
+	  [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
+              AC_MSG_RESULT([gtk+-2.0])
+              IUPCFG="USE_GTK2=1"], 
+            [PKG_CHECK_MODULES([GTK], [gtk+-3.0], 
+              [AC_MSG_WARN([Gtk 2.0 not found. Using Gtk 3.0 instead])],
+	      [SYSGUI=CFG_GUI_OFF])]
+	  )],
+	[3|gtk3|Gtk3|GTK3],
+          [PKG_CHECK_MODULES([GTK], [gtk+-3.0], , 
+            [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
+                AC_MSG_WARN([Gtk 3.0 not found. Using Gtk 2.0 instead])
+	        IUPCFG="USE_GTK2=1"],
+	      [SYSGUI=CFG_GUI_OFF])]
+	  )],
+        [PKG_CHECK_MODULES([GTK], [gtk+-3.0], 
+	  [AC_MSG_NOTICE([gtk+-3.0 found])],
+          [PKG_CHECK_MODULES([GTK], [gtk+-2.0], 
+            [AC_MSG_NOTICE([gtk+-2.0 found]) 
+	      IUPCFG="USE_GTK2=1"],
+	    [SYSGUI=CFG_GUI_OFF])]
+	  )])
+      AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
+          CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
+	  LIBS="$LIBS $GTK_LIBS -lX11"])
+    fi
+    ;;
+esac
+
+CFLAGS="-D$SYSGUI"
+
+AC_SUBST(SYSTOOL)
+AC_SUBST(SYSGUI)
+AC_SUBST(IUPCFG)
+AC_SUBST(DEBUGS)
+
+# Checks for IUP libraries. Rebuild them if they don't exist.
+AC_CHECK_LIB([iup], [IupOpen], [LIBS="-liupimglib $LIBS"],
+		[AC_MSG_WARN([Build IUP first.])])
+
+# Checks for libraries.
+AC_CHECK_LIB([m], [exp], [],
+		[AC_MSG_ERROR([libm not found.])])
+AC_CHECK_LIB([z], [zlibVersion], [],
+		[AC_MSG_ERROR([zlib not found.])])
+AC_CHECK_LIB([jpeg], [jpeg_read_header], [],
+		[AC_MSG_ERROR([libjpeg not found.])])
+AC_CHECK_LIB([png], [png_get_copyright], [],
+		[AC_MSG_ERROR([libpng not found.])])
+AC_CHECK_LIB([freetype], [FT_Library_Version], [],
+		[AC_MSG_ERROR([Freetype not found.])])
+AC_CHECK_LIB([gd], [gdImageCreate], [],
+		[AC_MSG_ERROR([libgd not found.])])
+AC_CHECK_LIB([avutil], [avutil_version], [],
+		[AC_MSG_ERROR([libavutil not found. Install FFMPEG dev first.])])
+AC_CHECK_LIB([swscale], [swscale_version], [],
+		[AC_MSG_ERROR([libswscale not found. Install FFMPEG dev first.])])
+AC_CHECK_LIB([avformat], [avformat_version], [],
+		[AC_MSG_ERROR([libavformat not found. Install FFMPEG dev first.])])
+AC_CHECK_LIB([avcodec], [avcodec_version], [],
+		[AC_MSG_ERROR([libavcodec not found. Install FFMPEG dev first.])])
+
+# Checks for header files.
+# AC_INCLUDES_DEFAULT can not output header defines automatically
+# You need to add these include files manually in your C codes.
+AC_CHECK_HEADERS([sys/time.h],,,[AC_INCLUDES_DEFAULT])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_INT64_T
+AC_TYPE_UINT8_T
+
+# Checks for library functions.
+AC_FUNC_STRTOD
+AC_CHECK_FUNCS([memset strcasecmp strchr strrchr strstr strtol])
+
+# Checks for operating system services or capabilities.
+AC_PATH_XTRA
+AC_SYS_LARGEFILE
+
+# Just for checking the function of AC_DEFINE().
+# It can add an object in config.h.in by autoheader and output what I need.
+# AC_DEFINE([HAVE_GUI],[1],[GUI is required])
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
