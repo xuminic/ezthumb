@@ -12,23 +12,17 @@ SUBDIRS = .
 DEFINES = -D_FILE_OFFSET_BITS=64 -D$(SYSGUI)
 #CFLAGS	= -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG) 
 
-DEFS	+= $(DEBUGS)
+DEFS	+= $(SYSDEFS)
 
 RELDATE := $(shell date +%Y%m%)
-RELVERS := $(shell grep EZTHUMB_VERSION ezthumb.h | cut -d\" -f 2)
+RELVERS := $(shell grep VERSION config.h | cut -d\" -f 2)
 RELDIR  = $(PROJECT)-$(RELVERS)
 RELWIN  = $(RELDIR)-win32-bin
-
-#OBJS	= $(OBJDIR)/main.o $(OBJDIR)/ezthumb.o  $(OBJDIR)/ezutil.o \
-#	  $(OBJDIR)/id_lookup.o
-DEFLIB	= -lavcodec -lavformat -lavcodec -lswscale -lavutil -lgd \
-	  -lfreetype -lpng -ljpeg -lz -lm -lcsoup
 
 
 
 bin_PROGRAMS	= ezthumb
 ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h
-
 
 # This list of files for source release
 RELLIST	= ChangeLog  conftest.c	 COPYING  ezgui.c  ezgui.h  ezicon.h  ezqiz \
@@ -47,36 +41,35 @@ RELLIST	= ChangeLog  conftest.c	 COPYING  ezgui.c  ezgui.h  ezicon.h  ezqiz \
 var:
 	@echo CFLAGS = $(CFLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
-	@echo DEBUG = $(DEBUG)
+	@echo DEBUGS = $(DEBUGS)
 	@echo IUPCFG = $(IUPCFG)
 	@echo LIBS = $(LIBS)
 	@echo SYSTOOL = $(SYSTOOL)
 	@echo SYSGUI = $(SYSGUI)
 	@echo COMPILE = $(COMPILE)
 	@echo LINK = $(LINK)
+	@echo TARGET = $(TARGET) : $(PROJECT) : $(POSTLIB)
 
 
 $(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
+libiup:
+	$(IUPCFG) make -C ./external/iup do_all
 
-ezconfig.h: conftest.c
-	./mkconfig.sh > ezconfig.h
+libiup-clean:
+	$(IUPCFG) make -C ./external/iup clean
 
-CONTEST = DUMMY
-conftest: conftest.c
-	$(CC) $(CFLAGS) $(SYSLDD) -D$(CONTEST) -o $@ $< $(DEFLIB)
+libcsoup:
+	make -C ./external/libcsoup all
+
+libcsoup-clean:
+	make -C ./external/libcsoup clean
 
 #clean:
 #	$(RM) -f $(OBJDIR)/*
 #	$(RM) $(TARGET)
 #	$(RM) -f conftest conftest.exe conftest.log ezconfig.h
-
-extlib:
-	$(IUPCFG) make -C external all
-
-extclean:
-	$(IUPCFG) make -C external clean
 
 
 release-win:
@@ -122,6 +115,12 @@ installer_win: release-win
 	@echo "OutFile \"$(RELDIR)-setup.exe\"" > nsis_version.txt
 	makensis ezthumb.nsi
 	@$(RM) nsis_version.txt 
+
+extlib:
+	$(IUPCFG) make -C external all
+
+extclean:
+	$(IUPCFG) make -C external clean
 
 
 # show DLLs linked to ezthumb in MSWindows

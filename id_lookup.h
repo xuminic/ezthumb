@@ -21,10 +21,6 @@
 #ifndef	_ID_LOOKUP_H_
 #define _ID_LOOKUP_H_
 
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
-
 #define ID_LOOKUP_VERSION	1
 
 struct	idtbl	{

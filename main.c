@@ -18,27 +18,20 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
 #ifdef	HAVE_CONFIG_H
 #include <config.h>
+#else
+#error "Run configure first"
 #endif
+
 #include <ctype.h>
 
-#include <stdio.h>
-#ifdef STDC_HEADERS
-  #include <stdlib.h>
-  #include <stddef.h>
-#else
-  #ifdef HAVE_STDLIB_H
-    #include <stdlib.h>
-  #endif
-#endif
-
 #include "ezthumb.h"
+#include "id_lookup.h"
+
 #ifndef	CFG_GUI_OFF
   #include "ezgui.h"
 #endif
-#include "id_lookup.h"
 
 /* re-use the debug convention in libcsoup */
 #define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
@@ -202,7 +195,7 @@ static	struct	cliopt	clist[] = {
 
 
 static	char	*version = "\
-ezthumb " EZTHUMB_VERSION ", to generate the thumbnails from video files.\n\n\
+ezthumb " VERSION ", to generate the thumbnails from video files.\n\n\
 Copyright (C) 2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\

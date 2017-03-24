@@ -20,14 +20,37 @@
 #ifndef	_EZTHUMB_H_
 #define _EZTHUMB_H_
 
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
-#include "libavutil/mathematics.h"
-#include "gd.h"
-#include "libcsoup.h"
+#ifdef	HAVE_AVCODEC_H
+#include <libavcodec/avcodec.h>
+#else
+#ifdef	HAVE_FFMPEG_AVCODEC_H
+#include <ffmpeg/libavcodec/avcodec.h>
+#endif
+#endif
+#ifdef	HAVE_AVFORMAT_H
+#include <libavformat/avformat.h>
+#else
+#ifdef	HAVE_FFMPEG_AVFORMAT_H
+#include <ffmpeg/libavformat/avformat.h>
+#endif
+#endif
+#ifdef	HAVE_SWSCALE_H
+#include <libswscale/swscale.h>
+#else
+#ifdef	HAVE_FFMPEG_SWSCALE_H
+#include <ffmpeg/libswscale/swscale.h>
+#endif
+#endif
+#ifdef	HAVE_AVUTIL_H
+#include <libavutil/avutil.h>
+#else
+#ifdef	HAVE_FFMPEG_AVUTIL_H
+#include <ffmpeg/libavutil/avutil.h>
+#endif
+#endif
 
-#define EZTHUMB_VERSION		"3.5.0"
+#include <gd.h>
+#include "libcsoup.h"
 
 /* define the modules of libcsoup for easy debugging */
 #define EZTHUMB_MOD_CORE	SLOG_MODUL_ENUM(3)

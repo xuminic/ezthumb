@@ -1,5 +1,74 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1 if you have the `avcodec_alloc_frame' function. */
+#undef HAVE_AVCODEC_ALLOC_FRAME
+
+/* Define 1 if you have the <libavcodec/avcodec.h> header file. */
+#undef HAVE_AVCODEC_H
+
+/* Define to 1 if you have the `avcodec_open' function. */
+#undef HAVE_AVCODEC_OPEN
+
+/* Define to 1 if you have the `avcodec_open2' function. */
+#undef HAVE_AVCODEC_OPEN2
+
+/* Define to 1 if you have the `avformat_close_input' function. */
+#undef HAVE_AVFORMAT_CLOSE_INPUT
+
+/* Define to 1 if you have the `avformat_find_stream_info' function. */
+#undef HAVE_AVFORMAT_FIND_STREAM_INFO
+
+/* Define 1 if you have the <libavformat/avformat.h> header file. */
+#undef HAVE_AVFORMAT_H
+
+/* Define to 1 if you have the `avformat_open_input' function. */
+#undef HAVE_AVFORMAT_OPEN_INPUT
+
+/* Define 1 if you have the <libavutil/avutil.h> header file. */
+#undef HAVE_AVUTIL_H
+
+/* Define to 1 if you have the `av_close_input_file' function. */
+#undef HAVE_AV_CLOSE_INPUT_FILE
+
+/* Define to 1 if you have the `av_dict_get' function. */
+#undef HAVE_AV_DICT_GET
+
+/* Define to 1 if you have the `av_dump_format' function. */
+#undef HAVE_AV_DUMP_FORMAT
+
+/* Define to 1 if you have the `av_find_best_stream' function. */
+#undef HAVE_AV_FIND_BEST_STREAM
+
+/* Define to 1 if you have the `av_find_stream_info' function. */
+#undef HAVE_AV_FIND_STREAM_INFO
+
+/* Define to 1 if you have the `av_frame_alloc' function. */
+#undef HAVE_AV_FRAME_ALLOC
+
+/* Define to 1 if you have the `av_frame_free' function. */
+#undef HAVE_AV_FRAME_FREE
+
+/* Define to 1 if you have the `av_metadata_get' function. */
+#undef HAVE_AV_METADATA_GET
+
+/* Define to 1 if you have the `av_open_input_file' function. */
+#undef HAVE_AV_OPEN_INPUT_FILE
+
+/* Define to 1 if you have the `dump_format' function. */
+#undef HAVE_DUMP_FORMAT
+
+/* Define 1 if you have the <ffmpeg/libavcodec/avcodec.h> header file. */
+#undef HAVE_FFMPEG_AVCODEC_H
+
+/* Define 1 if you have the <ffmpeg/libavformat/avformat.h> header file. */
+#undef HAVE_FFMPEG_AVFORMAT_H
+
+/* Define 1 if you have the <ffmpeg/libavutil/avutil.h> header file. */
+#undef HAVE_FFMPEG_AVUTIL_H
+
+/* Define 1 if you have the <ffmpeg/libswscale/swscale.h> header file. */
+#undef HAVE_FFMPEG_SWSCALE_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -66,6 +135,9 @@
 /* Define to 1 if you have the `strtol' function. */
 #undef HAVE_STRTOL
 
+/* Define 1 if you have the <libswscale/swscale.h> header file. */
+#undef HAVE_SWSCALE_H
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
@@ -131,3 +203,39 @@
 /* Define to the type of an unsigned integer type of width exactly 8 bits if
    such a type exists and the standard includes do not define it. */
 #undef uint8_t
+
+
+#include <stdio.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+

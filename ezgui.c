@@ -18,9 +18,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifdef  HAVE_CONFIG_H
+#include <config.h>
+#else
+#error "Run configure first"
+#endif
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
 
@@ -2056,7 +2059,7 @@ static Ihandle *ezgui_page_about(EZGUI *gui)
 	IupSetAttribute(icon, "IMAGE", "DLG_ICON");
 
 	/* show name and the version */
-	name = IupLabel("Ezthumb " EZTHUMB_VERSION);
+	name = IupLabel("Ezthumb " VERSION);
 	IupSetAttribute(name, "FONTSIZE", "20");
 	IupSetAttribute(name, "FONTSTYLE", "Bold");
 	
