@@ -1385,7 +1385,8 @@ static int load_default_config(EZOPT *opt)
 		}
 		csc_cfg_close(config);
 	}
-	return 0;
+	path = path;	/* to eliminate the gcc -Wuninitialized complain */
+	return items;
 }
 
 static int ezdebug_trans_module(int cw, char *buf, int blen)

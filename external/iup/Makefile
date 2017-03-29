@@ -21,6 +21,13 @@ else
 	echo 3 > VERSION.gtk
 endif
 
+do_what:
+ifdef	USE_GTK2
+	@echo GTK2
+else
+	@echo GTK3
+endif
+
 clean:
 	rm -rf ./lib/* ./obj/* VERSION.gtk
 

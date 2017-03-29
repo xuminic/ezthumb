@@ -9,30 +9,33 @@ SUBDIRS = .
 
 
 # _FILE_OFFSET_BITS=64 is used to support files over 2GB in 32-bit OS
-DEFINES = -D_FILE_OFFSET_BITS=64 -D$(SYSGUI)
-#CFLAGS	= -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG) 
+DEFINES = -D_FILE_OFFSET_BITS=64
 
 DEFS	+= $(SYSDEFS)
+LIBS	+= $(POSTLIB)
 
-RELDATE := $(shell date +%Y%m%)
-RELVERS := $(shell grep VERSION config.h | cut -d\" -f 2)
-RELDIR  = $(PROJECT)-$(RELVERS)
-RELWIN  = $(RELDIR)-win32-bin
-
-
-
+if	XAM_MSWIN
+bin_PROGRAMS		= ezthumb.exe ezthumb_win.exe
+ezthumb_exe_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+ezthumb_exe_LDADD	= main_con.o
+ezthumb_win_exe_SOURCES	= ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h
+ezthumb_win_exe_LDADD 	= main_win.o
+else
 bin_PROGRAMS	= ezthumb
+if	XAM_GUI
 ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h
+else
+ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+endif
+endif
 
 # This list of files for source release
-RELLIST	= ChangeLog  conftest.c	 COPYING  ezgui.c  ezgui.h  ezicon.h  ezqiz \
+EXTRA_DIST = ChangeLog  COPYING  ezgui.c  ezgui.h  ezicon.h  ezqiz \
 	  ezthumb.1  ezthumb.c  ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
 	  ezthumb.lsm  ezthumb.nsi  ezthumb.pdf	 ezutil.c  id_lookup.c	\
-	  id_lookup.h  main.c  Makefile	 mkconfig.sh  Readme.txt  TODO
+	  id_lookup.h  main.c  Makefile.ac Makefile.in Readme.txt  TODO
 
-
-#all: $(TARGET)
-#	@echo GTK=$(GTKVER) $(IUPCFG)
+RELVERS	= `grep PACKAGE_VERSION config.h | cut -d\" -f 2`
 
 #$(TARGET): objdir ezconfig.h $(OBJS)
 #	$(IUPCFG) make -C external all
@@ -66,10 +69,14 @@ libcsoup:
 libcsoup-clean:
 	make -C ./external/libcsoup clean
 
-#clean:
-#	$(RM) -f $(OBJDIR)/*
-#	$(RM) $(TARGET)
-#	$(RM) -f conftest conftest.exe conftest.log ezconfig.h
+myrelease:
+	RELDIR=ezthumb-$(RELVERS)-win32-bin; \
+	if test -d "$$RELDIR"; then \
+	  rm -rf "$$RELDIR"; \
+	fi; \
+	mkdir "$$RELDIR"; \
+	cp -af $(EXTRA_DIST) "$$RELDIR"; \
+	7z a -tzip "$$RELDIR.zip" "$$RELDIR"
 
 
 release-win:
@@ -112,7 +119,7 @@ gtkicons:
 	done
 
 installer_win: release-win
-	@echo "OutFile \"$(RELDIR)-setup.exe\"" > nsis_version.txt
+	@echo "OutFile \"ezthumb-$(RELVERS)-setup.exe\"" > nsis_version.txt
 	makensis ezthumb.nsi
 	@$(RM) nsis_version.txt 
 

@@ -27,7 +27,6 @@
 
 #include <sys/time.h>
 
-#include "ezconfig.h"
 #include "ezthumb.h"
 #include "id_lookup.h"
 

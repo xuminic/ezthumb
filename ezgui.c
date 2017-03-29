@@ -29,7 +29,6 @@
 
 #include "iup.h"
 
-#include "ezconfig.h"
 #include "libcsoup.h"
 #include "ezthumb.h"
 #include "ezgui.h"

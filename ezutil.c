@@ -27,7 +27,6 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "ezconfig.h"
 #include "libcsoup.h"
 #include "ezthumb.h"
 

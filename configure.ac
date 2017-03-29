@@ -43,11 +43,10 @@ case "$host_os" in
     LIBCON="-liconv -mconsole"
     LIBGUI="-liconv -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	    -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32"
-    TARGET="ezthumb.exe ezthumb_win.exe"
     ;;
   *)
     SYSTOOL=unix
-    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I/usr/include/ffmpeg"
+    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup/include -I/usr/include/ffmpeg"
     LDFLAGS="$LDFLAGS -L./external/libcsoup"
     AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [])
     if test "x$PKGCONFIG" = x; then
@@ -55,6 +54,7 @@ case "$host_os" in
       AC_MSG_WARN([pkg-config is not found -- command line interface only])
     else
       SYSGUI=CFG_GUI_ON
+      LDFLAGS="$LDFLAGS -L./external/iup/lib"
       AS_CASE([$with_gui],
         [no|No|NO], 
 	  [SYSGUI=CFG_GUI_OFF],
@@ -82,11 +82,17 @@ case "$host_os" in
 	  )])
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
-	  LIBS="$LIBS $GTK_LIBS -lX11"])
+	  LIBS="$LIBS $GTK_LIBS -lX11"
+	  BINSOURCE="main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h"
+      ], [
+          BINSOURCE="main.c ezthumb.c ezthumb.h id_lookup.c id_lookup.h"
+      ])
     fi
-    TARGET="ezthumb"
     ;;
 esac
+
+AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
+AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
 SYSDEFS="-D$SYSGUI" 
 CFLAGS=$DEBUGS
@@ -100,15 +106,20 @@ AC_SUBST(SYSDEFS)
 
 # Checks for libraries.
 # Checks for IUP libraries. Rebuild them if they don't exist.
-AC_CHECK_LIB([iup], [IupOpen], [POSTLIB="$POSTLIB -liupimglib"], [
-  PROJECT="$PROJECT libiup"
-  POSTLIB="$POSTLIB -liup -liupimglib"
-  AC_MSG_WARN([You need to build IUP first.])])
+AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
+  AC_CHECK_LIB([iup], [IupOpen],, [
+    PROJECT="$PROJECT libiup"
+    POSTLIB="$POSTLIB -liup"
+    AC_MSG_NOTICE([The libiup will be built soon.])
+    AC_CONFIG_COMMANDS_PRE([make $IUPCFG -C external/iup do_all])])
+  POSTLIB="$POSTLIB -liupimglib"
+])
 
 AC_CHECK_LIB([csoup], [smm_init],, [
   PROJECT="$PROJECT libcsoup"
   POSTLIB="$POSTLIB -lcsoup"
-  AC_MSG_WARN([You need to build libcsoup first.])])
+  AC_MSG_NOTICE([The libcsoup will be built soon.])
+  AC_CONFIG_COMMANDS_PRE([make -C external/libcsoup all])])
 
 AC_CHECK_LIB([m], [exp], [],
 		[AC_MSG_ERROR([libm not found.])])
