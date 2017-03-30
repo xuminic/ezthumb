@@ -261,7 +261,6 @@ CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
-DEBUGS = @DEBUGS@
 DEFS = @DEFS@ $(SYSDEFS)
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
@@ -372,10 +371,12 @@ DEFINES = -D_FILE_OFFSET_BITS=64
 @XAM_GUI_TRUE@@XAM_MSWIN_FALSE@ezthumb_SOURCES = main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h
 
 # This list of files for source release
-EXTRA_DIST = ChangeLog  COPYING  ezgui.c  ezgui.h  ezicon.h  ezqiz \
-	  ezthumb.1  ezthumb.c  ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
-	  ezthumb.lsm  ezthumb.nsi  ezthumb.pdf	 ezutil.c  id_lookup.c	\
-	  id_lookup.h  main.c  Makefile.ac Makefile.in Readme.txt  TODO
+EXTRA_DIST = aclocal.m4 ChangeLog config.h.in configure configure.ac COPYING \
+	     depcomp external ezgui.c  ezgui.h  ezicon.h  ezqiz \
+	     ezthumb.1  ezthumb.c  ezthumb.desktop ezthumb.h  ezthumb.ico  \
+	     ezthumb_icon.rc ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
+	     id_lookup.c id_lookup.h install-sh libmingw m4 main.c  \
+	     Makefile.am Makefile.in missing Readme.txt  TODO
 
 RELVERS = `grep PACKAGE_VERSION config.h | cut -d\" -f 2`
 all: config.h
@@ -931,10 +932,6 @@ uninstall-am: uninstall-binPROGRAMS
 	uninstall-binPROGRAMS
 
 
-#$(TARGET): objdir ezconfig.h $(OBJS)
-#	$(IUPCFG) make -C external all
-#	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $(OBJS) $(LIBS)
-
 var:
 	@echo CFLAGS = $(CFLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
@@ -1020,6 +1017,8 @@ extlib:
 
 extclean:
 	$(IUPCFG) make -C external clean
+
+release: extclean dist-bzip2
 
 # show DLLs linked to ezthumb in MSWindows
 showdll:

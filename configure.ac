@@ -6,7 +6,40 @@
 # The m4 directory can be empty if there was "AC_CONFIG_MACRO_DIR([m4])" in 
 # configure.ac and "ACLOCAL_AMFLAGS = -I m4 --install" in Makefile.am
 #
-# Using "autoreconf -i" to generate all files.
+# Using "autoreconf -i" to generate all files, not "autoconf".
+#
+# Test plan:
+# *) configure --enable-debug-build=yes
+#    should be "-g -DDEBUG=3 -O0" in compiling
+# *) configure --enable-debug-build=0
+#    same to --enable-debug-build=no, "-O4" in compiling
+# *) configure --enable-debug-build=6
+#    should be "-g -DDEBUG=6 -O0" in compiling
+# In MinGW, the installer should be created also:
+# *) configure --with-gui=no && make release
+#    should build the command line tool ezthumb.exe only, no ezthumb_win.exe
+# *) configure --with-gui=gtk2 && make release
+#    anything else doesn't matter, both ezthumb.exe and ezthumb_win.exe will be built.
+# In a clean Debian box
+# *) configure --with-gui=yes && make
+#    should issue a warning and build a command line version
+# *) configure --with-gui=gtk && make release
+#    same to above; the release only includes source codes.
+# *) _FILE_OFFSET_BITS should be set in 32-bit box and unset in 64 bit box.
+# Install gtk2-dev
+# *) configure --with-gui=no && make
+#    should build a command line only version
+# *) configure --with-gui=gtk3 && make
+#    should issue a warning but build a gtk2 version instead
+# Install gtk3-dev
+# *) configure && make
+#    should link default gui mode with gtk3
+# *) configure --with-gui=gtk2 && make
+#    should link gtk2
+#    make gnome-install
+#    install the icon and binary to gnome environment
+#    make gnome-uninstall
+#    revoke the install operation
 
 AC_PREREQ([2.69])
 AC_INIT([ezthumb], [3.5.1], [xuming@users.sourceforge.net])
@@ -100,7 +133,6 @@ CFLAGS=$DEBUGS
 AC_SUBST(SYSTOOL)
 AC_SUBST(SYSGUI)
 AC_SUBST(IUPCFG)
-AC_SUBST(DEBUGS)
 AC_SUBST(SYSDEFS)
 
 

@@ -30,16 +30,14 @@ endif
 endif
 
 # This list of files for source release
-EXTRA_DIST = ChangeLog  COPYING  ezgui.c  ezgui.h  ezicon.h  ezqiz \
-	  ezthumb.1  ezthumb.c  ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
-	  ezthumb.lsm  ezthumb.nsi  ezthumb.pdf	 ezutil.c  id_lookup.c	\
-	  id_lookup.h  main.c  Makefile.ac Makefile.in Readme.txt  TODO
+EXTRA_DIST = aclocal.m4 ChangeLog config.h.in configure configure.ac COPYING \
+	     depcomp external ezgui.c  ezgui.h  ezicon.h  ezqiz \
+	     ezthumb.1  ezthumb.c  ezthumb.desktop ezthumb.h  ezthumb.ico  \
+	     ezthumb_icon.rc ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
+	     id_lookup.c id_lookup.h install-sh libmingw m4 main.c  \
+	     Makefile.am Makefile.in missing Readme.txt  TODO
 
 RELVERS	= `grep PACKAGE_VERSION config.h | cut -d\" -f 2`
-
-#$(TARGET): objdir ezconfig.h $(OBJS)
-#	$(IUPCFG) make -C external all
-#	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $(OBJS) $(LIBS)
 
 var:
 	@echo CFLAGS = $(CFLAGS)
@@ -129,6 +127,7 @@ extlib:
 extclean:
 	$(IUPCFG) make -C external clean
 
+release: extclean dist-bzip2
 
 # show DLLs linked to ezthumb in MSWindows
 showdll:
