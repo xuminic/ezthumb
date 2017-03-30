@@ -15,18 +15,27 @@ DEFS	+= $(SYSDEFS)
 LIBS	+= $(POSTLIB)
 
 if	XAM_MSWIN
-bin_PROGRAMS		= ezthumb.exe ezthumb_win.exe
-ezthumb_exe_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
-ezthumb_exe_LDADD	= main_con.o
-ezthumb_win_exe_SOURCES	= ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h
-ezthumb_win_exe_LDADD 	= main_win.o
+if	XAM_GUI
+bin_PROGRAMS		= ezthumb ezthumb_win
+ezthumb_SOURCES		= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+ezthumb_LDADD		= main_con.o ezthumb_icon.o
+ezthumb_win_SOURCES	= ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h \
+			  ezutil.c id_lookup.c id_lookup.h
+ezthumb_win_LDADD 	= main_win.o ezthumb_icon.o
+else
+bin_PROGRAMS		= ezthumb 
+ezthumb_SOURCES		= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+ezthumb_LDADD		= main_con.o ezthumb_icon.o
+endif
 else
 bin_PROGRAMS	= ezthumb
 if	XAM_GUI
-ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h ezutil.c id_lookup.c id_lookup.h
+ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h \
+		  ezutil.c id_lookup.c id_lookup.h
 else
 ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
 endif
+BUILT_SOURCES 	= $(PRELIBS)
 endif
 
 # This list of files for source release
@@ -51,8 +60,13 @@ var:
 	@echo LINK = $(LINK)
 	@echo TARGET = $(TARGET) : $(PROJECT) : $(POSTLIB)
 
+main_con.o : main.c
+	$(COMPILE) -DCFG_GUI_OFF -c -o $@ $<
 
-$(OBJDIR)/ezthumb_icon.o: ezthumb_icon.rc
+main_win.o : main.c
+	$(COMPILE) -DCFG_GUI_ON -c -o $@ $<
+
+ezthumb_icon.o: ezthumb_icon.rc
 	windres $< -o $@
 
 libiup:
