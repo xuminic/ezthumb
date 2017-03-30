@@ -2110,7 +2110,7 @@ static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
 		if ((ezopt->gui = ezbar_main(vobj)) == NULL) {
 			exit(-1);	/* that's extreme! */
 		}
-		smm_sleep(1,0);
+		//smm_sleep(1,0);
 		break;
 	case EN_BATCH_END:
 		break;
@@ -2118,12 +2118,12 @@ static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
 		snprintf(desc_buf, sizeof(desc_buf)-1, 
 				"Opening %s ...", vidx->filename);
 		IupSetAttribute(gui->dlg_main, "DESCRIPTION", desc_buf);
-		smm_sleep(1,0);
+		//smm_sleep(1,0);
 		break;
 	case EN_MEDIA_OPEN:
 		video_media_in_buffer(vidx, desc_buf, sizeof(desc_buf)-1);
 		IupSetAttribute(gui->dlg_main, "DESCRIPTION", desc_buf);
-		smm_sleep(1,0);
+		//smm_sleep(1,0);
 		break;
 	case EN_PROC_BEGIN:
 		break;
@@ -2139,7 +2139,7 @@ static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
 	case EN_PROC_END:
 		IupSetInt(gui->dlg_main, "TOTALCOUNT", 100);
 		IupSetInt(gui->dlg_main, "COUNT", 100);
-		smm_sleep(1,0);
+		//smm_sleep(1,0);
 		break;
 	}
 	return ezopt->notiback(vobj, event, param, opt, block);

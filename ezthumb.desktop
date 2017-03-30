@@ -3,7 +3,7 @@
 Name=Ezthumb
 GenericName=Video Thumbnailer
 Comment=Create thumbnails of videos
-Exec=ezthumb
+Exec=ezthumb --gui-progress
 Icon=ezthumb
 Type=Application
 Terminal=false

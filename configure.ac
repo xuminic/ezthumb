@@ -61,9 +61,9 @@ AC_ARG_ENABLE([debug-build],
   AS_HELP_STRING([--enable-debug-build], 
       [Enable the debug output (yes,no,0-7)]))
 AS_CASE([$enable_debug_build],
-  [yes|Yes|YES], [DEBUGS="-Wall -Wextra -g -DDEBUG=3 -O0"],
-  [1|2|3|4|5|6|7], [DEBUGS="-Wall -Wextra -g -DDEBUG=$enable_debug_build -O0"],
-  [DEBUGS="-Wall -Wextra -O4"])
+  [yes|Yes|YES], [CFLAGS="-Wall -Wextra -g -DDEBUG=3 -O0"],
+  [1|2|3|4|5|6|7], [CFLAGS="-Wall -Wextra -g -DDEBUG=$enable_debug_build -O0"],
+  [CFLAGS="-Wall -Wextra -O4"])
 
 AC_ARG_WITH([gui], 
   AS_HELP_STRING([--with-gui], 
@@ -83,7 +83,7 @@ case "$host_os" in
     LIBGUI="-liconv -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool \
 	    -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid \
 	    -lcomctl32"
-    CFLAGS="-mms-bitfields"
+    CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL"
     ;;
   *)
@@ -135,20 +135,12 @@ esac
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
-CFLAGS="$CFLAGS $DEBUGS"
-
-AC_SUBST(SYSTOOL)
-AC_SUBST(SYSGUI)
-AC_SUBST(IUPCFG)
-AC_SUBST(SYSDEFS)
-
-
 # Checks for libraries.
 # Checks for IUP libraries. Rebuild them if they don't exist.
 AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
   AC_CHECK_LIB([iup], [IupOpen],, [
     POSTLIB="$POSTLIB -liup"
-    PRELIBS="$PRELIBS libiup"
+    PREFLIB="$PREFLIB libiup"
     AC_MSG_NOTICE([The libiup will be built soon.])],
     [$LIBGUI])
   POSTLIB="$LIBGUI $POSTLIB -liupimglib"], 
@@ -157,7 +149,7 @@ AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
 
 AC_CHECK_LIB([csoup], [smm_init],, [
   POSTLIB="$POSTLIB -lcsoup"
-  PRELIBS="$PRELIBS libcsoup"
+  PREFLIB="$PREFLIB libcsoup"
   AC_MSG_NOTICE([The libcsoup will be built soon.])])
 
 AC_CHECK_LIB([m], [exp], [],
@@ -180,8 +172,6 @@ AC_CHECK_LIB([avformat], [avformat_version], [],
   [AC_MSG_ERROR([libavformat not found. Install FFMPEG dev first.])])
 AC_CHECK_LIB([avcodec], [avcodec_version], [],
   [AC_MSG_ERROR([libavcodec not found. Install FFMPEG dev first.])])
-
-AC_SUBST(POSTLIB)
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
@@ -236,6 +226,13 @@ AC_SYS_LARGEFILE
 # Just for checking the function of AC_DEFINE().
 # It can add an object in config.h.in by autoheader and output what I need.
 # AC_DEFINE([HAVE_GUI],[1],[GUI is required])
+
+AC_SUBST(SYSTOOL)
+AC_SUBST(SYSGUI)
+AC_SUBST(IUPCFG)
+AC_SUBST(SYSDEFS)
+AC_SUBST(PREFLIB)
+AC_SUBST(POSTLIB)
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -3,13 +3,10 @@
 # CFG_SNAPSHOT_RAW is used to save each frames to YUV files
 # CFG_SNAPSHOT_RGB is used to save each frames to RGB files
 
-AUTOMAKE_OPTIONS = foreign
+AUTOMAKE_OPTIONS = no-dependencies foreign
 ACLOCAL_AMFLAGS = -I m4 --install
 SUBDIRS = .
 
-
-# _FILE_OFFSET_BITS=64 is used to support files over 2GB in 32-bit OS
-DEFINES = -D_FILE_OFFSET_BITS=64
 
 DEFS	+= $(SYSDEFS)
 LIBS	+= $(POSTLIB)
@@ -35,7 +32,7 @@ ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h \
 else
 ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
 endif
-BUILT_SOURCES 	= $(PRELIBS)
+BUILT_SOURCES 	= $(PREFLIB)
 endif
 
 # This list of files for source release
