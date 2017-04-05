@@ -46,11 +46,15 @@ Section "Ezthumb (required)"
   SetOutPath $INSTDIR
   
   ; Put file there
-  File "ezthumb.exe"
-  File "ezthumb_win.exe"
+  File "ezthumb*.exe"
   File "ezthumb.1"
   File "ezthumb.pdf"
   File "ezthumb.ico"
+  File "ezqiz"
+  File "COPYING"
+  File "ChangeLog"
+  File "Readme.txt"
+  File "TODO"
   File "libmingw\ffmpeg\bin\*.dll"
   File "libmingw\lib\*.dll"
   

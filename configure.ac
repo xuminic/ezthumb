@@ -72,19 +72,23 @@ AC_ARG_WITH([gui],
 case "$host_os" in
   cygwin | mingw*)
     SYSTOOL=mingw
-    AS_CASE([$with_gui], [no|No|NO], [SYSGUI=CFG_GUI_OFF], [SYSGUI=CFG_GUI_ON])
+    AS_CASE([$with_gui], [no|No|NO], [SYSGUI=CFG_GUI_OFF], [
+      SYSGUI=CFG_GUI_ON
+      PREFLIB=ezthumb_win])
     # Checks for WIN32 programs.
-    AC_CHECK_PROG([WINDRES], [windres], [windres], [])
-    AC_CHECK_PROG([NSIS], [makensis], [makensis], [])
+    AC_CHECK_PROG([WINDRES], [windres], [windres],
+      [AC_MSG_ERROR([windres not found.])])
+    AC_CHECK_PROG([NSIS], [makensis], [makensis], 
+     [AC_MSG_WARN([NSIS package not installed. \
+      You may not be able to create the installer executables.])])
     CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/include/iup \
 	    -I./libmingw/ffmpeg/include"
     LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib"
-    LIBCON="-liconv -mconsole"
-    LIBGUI="-liconv -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool \
-	    -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid \
-	    -lcomctl32"
     CFLAGS="$CFLAGS -mms-bitfields"
-    SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL"
+    SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL \
+	    -D$SYSGUI"
+    POSTLIB="-liconv -mconsole"
+    RELEASE="extclean dist-bzip2 installer-win"
     ;;
   *)
     SYSTOOL=unix
@@ -129,6 +133,16 @@ case "$host_os" in
       ])
     fi
     SYSDEFS="-D$SYSGUI" 
+    RELEASE="extclean dist-bzip2"
+
+    # Checks for IUP libraries. Rebuild them if they don't exist.
+    AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
+      AC_CHECK_LIB([iup], [IupOpen],, [
+        POSTLIB="$POSTLIB -liup"
+        PREFLIB="$PREFLIB libiup"
+        AC_MSG_NOTICE([The libiup will be built soon.])],
+        [$LIBGUI])
+      POSTLIB="$POSTLIB -liupimglib"])
     ;;
 esac
 
@@ -136,17 +150,6 @@ AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
 # Checks for libraries.
-# Checks for IUP libraries. Rebuild them if they don't exist.
-AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
-  AC_CHECK_LIB([iup], [IupOpen],, [
-    POSTLIB="$POSTLIB -liup"
-    PREFLIB="$PREFLIB libiup"
-    AC_MSG_NOTICE([The libiup will be built soon.])],
-    [$LIBGUI])
-  POSTLIB="$LIBGUI $POSTLIB -liupimglib"], 
-  [POSTLIB="$LIBCON"]
-)
-
 AC_CHECK_LIB([csoup], [smm_init],, [
   POSTLIB="$POSTLIB -lcsoup"
   PREFLIB="$PREFLIB libcsoup"
@@ -227,12 +230,17 @@ AC_SYS_LARGEFILE
 # It can add an object in config.h.in by autoheader and output what I need.
 # AC_DEFINE([HAVE_GUI],[1],[GUI is required])
 
-AC_SUBST(SYSTOOL)
-AC_SUBST(SYSGUI)
 AC_SUBST(IUPCFG)
 AC_SUBST(SYSDEFS)
 AC_SUBST(PREFLIB)
 AC_SUBST(POSTLIB)
+AC_SUBST(RELEASE)
+
+# This is for Win32 GUI porting only
+WIN32GUI="$LIBS -liup -liupimglib -liconv -mwindows -lkernel32 -luser32 \
+  -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 \
+  -luuid -lcomctl32"
+AC_SUBST(WIN32GUI)
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
