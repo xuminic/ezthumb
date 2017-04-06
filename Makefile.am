@@ -1,4 +1,9 @@
 
+# The line from 387, "am--refresh: Makefile" to 429, 
+# "$(srcdir)/config.h.in:  $(am__configure_deps)" need to be manually
+# removed after every 'automake' to prevent the automatic checking the 
+# irrelevant files# like m4, configure.ac, etc while type-in make commands.
+#
 # CFG_SNAPSHOT_DUMP is used to save each frames to JPEG pictures
 # CFG_SNAPSHOT_RAW is used to save each frames to YUV files
 # CFG_SNAPSHOT_RGB is used to save each frames to RGB files
@@ -64,9 +69,9 @@ ezthumb_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
 clean-local:
-	-test -z "ezthumb_win$(EXEEXT)" || rm -f ezthumb_win$(EXEEXT)
-	-test -z "$(distdir)-setup.exe" || rm -f $(distdir)-setup.exe
-	-test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
+	-test -e "ezthumb_win$(EXEEXT)" && rm -f ezthumb_win$(EXEEXT)
+	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
+	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all
