@@ -1,13 +1,21 @@
-20170310: release 3.5.0
-	*) Added a progress bar dialog for integrating with file managers.
+20170411:
+	* GNU autoconf: Added configure.ac, Makefile.am and other supportives
+	* IUP: Modified the buildsys to fit into autoconf.
+	* ezconfig: Been outdated by autoconf.
+	* id_lookup.c: Removed the codec table because it's jumping around
+	different ffmpeg versions.
+	* libav: should be supported now.
+
+20170310: 3.5.0
+	* ezgui.c: Added a progress bar dialog for integrating with file managers.
 
 20160809: release 3.4.1
-	*) Added factory reset
-	*) IUP updated to 3.10.1
-	*) Fixed the progress bar overlap status bar issue
-	*) Fixed the utf-8 filename issue in Windows
-	*) Fixed the core dump when verbose level reach 7
-	*) Fixed the failure of removing registry in Windows.
+	* Added factory reset
+	* IUP updated to 3.10.1
+	* Fixed the progress bar overlap status bar issue
+	* Fixed the utf-8 filename issue in Windows
+	* Fixed the core dump when verbose level reach 7
+	* Fixed the failure of removing registry in Windows.
 	
 20160809:
 	* libcsoup: updated to 0.9.6

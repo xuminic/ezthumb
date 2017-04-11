@@ -23,6 +23,40 @@
 #error "Run configure first"
 #endif
 
+#include <stdio.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #include "ezthumb.h"
 #include "id_lookup.h"
 
@@ -197,6 +231,22 @@ struct	idtbl	id_mprocess[] = {
 	{ 0, NULL }
 };
 
+
+
+#ifdef	HAVE_AVCODEC_DESCRIPTOR_GET
+char *id_lookup_codec(int idnum)
+{
+	const AVCodecDescriptor	*idcodec;
+
+	if ((idcodec = avcodec_descriptor_get(idnum)) == NULL) {
+		return NULL;
+	}
+	if (idcodec->long_name) {
+		return (char*) idcodec->long_name;
+	}
+	return (char*) idcodec->name;
+}
+#else	/* no avcodec_descriptor_get() defined */
 struct	idtbl	id_codec[] = {
 	{ CODEC_ID_NONE, "CODEC_ID_NONE" },
 
@@ -495,66 +545,20 @@ struct	idtbl	id_codec[] = {
 	{ 0, NULL }
 };
 
-
-struct	idtbl	id_codec_flag[] = {
-	{ CODEC_FLAG_QSCALE, "CODEC_FLAG_QSCALE" },
-	{ CODEC_FLAG_4MV, "CODEC_FLAG_4MV" },
-	{ CODEC_FLAG_QPEL, "CODEC_FLAG_QPEL" },
-	{ CODEC_FLAG_GMC, "CODEC_FLAG_GMC" },
-	{ CODEC_FLAG_MV0, "CODEC_FLAG_MV0" },
-	{ CODEC_FLAG_INPUT_PRESERVED, "CODEC_FLAG_INPUT_PRESERVED" },
-	{ CODEC_FLAG_PASS1, "CODEC_FLAG_PASS1" },
-	{ CODEC_FLAG_PASS2, "CODEC_FLAG_PASS2" },
-	{ CODEC_FLAG_GRAY, "CODEC_FLAG_GRAY" },
-	{ CODEC_FLAG_EMU_EDGE, "CODEC_FLAG_EMU_EDGE" },
-	{ CODEC_FLAG_PSNR, "CODEC_FLAG_PSNR" },
-	{ CODEC_FLAG_TRUNCATED, "CODEC_FLAG_TRUNCATED" },
-	{ CODEC_FLAG_NORMALIZE_AQP, "CODEC_FLAG_NORMALIZE_AQP" },
-	{ CODEC_FLAG_INTERLACED_DCT, "CODEC_FLAG_INTERLACED_DCT" },
-	{ CODEC_FLAG_LOW_DELAY, "CODEC_FLAG_LOW_DELAY" },
-	{ CODEC_FLAG_GLOBAL_HEADER, "CODEC_FLAG_GLOBAL_HEADER" },
-	{ CODEC_FLAG_BITEXACT, "CODEC_FLAG_BITEXACT" },
-	{ CODEC_FLAG_AC_PRED, "CODEC_FLAG_AC_PRED" },
-	//{ CODEC_FLAG_CBP_RD, "CODEC_FLAG_CBP_RD" },
-	//{ CODEC_FLAG_QP_RD, "CODEC_FLAG_QP_RD" },
-	{ CODEC_FLAG_LOOP_FILTER, "CODEC_FLAG_LOOP_FILTER" },
-	{ CODEC_FLAG_INTERLACED_ME, "CODEC_FLAG_INTERLACED_ME" },
-	{ CODEC_FLAG_CLOSED_GOP, "CODEC_FLAG_CLOSED_GOP" },
-	{ CODEC_FLAG2_FAST, "CODEC_FLAG2_FAST" },
-	//{ CODEC_FLAG2_STRICT_GOP, "CODEC_FLAG2_STRICT_GOP" },
-	{ CODEC_FLAG2_NO_OUTPUT, "CODEC_FLAG2_NO_OUTPUT" },
-	{ CODEC_FLAG2_LOCAL_HEADER, "CODEC_FLAG2_LOCAL_HEADER" },
-	{ CODEC_FLAG2_DROP_FRAME_TIMECODE, "CODEC_FLAG2_DROP_FRAME_TIMECODE" },
-	//{ CODEC_FLAG2_SKIP_RD, "CODEC_FLAG2_SKIP_RD" },
-	{ CODEC_FLAG2_CHUNKS, "CODEC_FLAG2_CHUNKS" },
-#if	LIBAVCODEC_VERSION_MAJOR <= 53
-	{ CODEC_FLAG_PART, "CODEC_FLAG_PART" },
-	{ CODEC_FLAG_EXTERN_HUFF, "CODEC_FLAG_EXTERN_HUFF" },
-	{ CODEC_FLAG_ALT_SCAN, "CODEC_FLAG_ALT_SCAN" },
-	{ CODEC_FLAG_H263P_UMV, "CODEC_FLAG_H263P_UMV" },
-	{ CODEC_FLAG_H263P_AIV, "CODEC_FLAG_H263P_AIV" },
-	{ CODEC_FLAG_OBMC, "CODEC_FLAG_OBMC" },
-	{ CODEC_FLAG_H263P_SLICE_STRUCT, "CODEC_FLAG_H263P_SLICE_STRUCT" },
-	{ CODEC_FLAG_SVCD_SCAN_OFFSET, "CODEC_FLAG_SVCD_SCAN_OFFSET" },
-	{ CODEC_FLAG2_BPYRAMID, "CODEC_FLAG2_BPYRAMID" },
-	{ CODEC_FLAG2_WPRED, "CODEC_FLAG2_WPRED" },
-	{ CODEC_FLAG2_MIXED_REFS, "CODEC_FLAG2_MIXED_REFS" },
-	{ CODEC_FLAG2_8X8DCT, "CODEC_FLAG2_8X8DCT" },
-	{ CODEC_FLAG2_FASTPSKIP, "CODEC_FLAG2_FASTPSKIP" },
-	{ CODEC_FLAG2_AUD, "CODEC_FLAG2_AUD" },
-	{ CODEC_FLAG2_BRDO, "CODEC_FLAG2_BRDO" },
-	{ CODEC_FLAG2_INTRA_VLC, "CODEC_FLAG2_INTRA_VLC" },
-	{ CODEC_FLAG2_MEMC_ONLY, "CODEC_FLAG2_MEMC_ONLY" },
-	{ CODEC_FLAG2_NON_LINEAR_QUANT, "CODEC_FLAG2_NON_LINEAR_QUANT" },
-	{ CODEC_FLAG2_BIT_RESERVOIR, "CODEC_FLAG2_BIT_RESERVOIR" },
-	{ CODEC_FLAG2_MBTREE, "CODEC_FLAG2_MBTREE" },
-	{ CODEC_FLAG2_PSY, "CODEC_FLAG2_PSY" },
-	{ CODEC_FLAG2_SSIM, "CODEC_FLAG2_SSIM" },
-#endif
-	{ 0, NULL }
-};
+char *id_lookup_codec(int idnum)
+{
+	return id_lookup(id_codec, idnum);
+}
+#endif	/* HAVE_AVCODEC_DESCRIPTOR_GET */
 
 
+
+#ifdef	HAVE_AV_GET_MEDIA_TYPE_STRING
+char *id_lookup_codec_type(int idnum)
+{
+	return av_get_media_type_string(idnum);
+}
+#else	/* no av_get_media_type_string() defined */
 /* Note that CODEC_TYPE_* are macros but AVMEDIA_TYPE_* are enums */
 #ifdef	CODEC_TYPE_UNKNOWN
 struct	idtbl	id_codec_type[] = {
@@ -578,8 +582,34 @@ struct	idtbl	id_codec_type[] = {
 	{ AVMEDIA_TYPE_NB, "AVMEDIA_TYPE_NB" },
 	{ 0, NULL }
 };
-#endif
+#endif	/* CODEC_TYPE_UNKNOWN */
 
+char *id_lookup_codec_type(int idnum)
+{
+	return id_lookup(id_codec_type, idnum);
+}
+#endif	/* HAVE_AV_GET_MEDIA_TYPE_STRING */
+
+
+#ifdef  HAVE_AV_GET_PICTURE_TYPE_CHAR
+struct	idtbl	id_pict_type[] = {
+	{ '?', "TYPE_NONE" },
+	{ 'I', "TYPE_I" },	///< Intra
+	{ 'P', "TYPE_P" },	///< Predicted
+	{ 'B', "TYPE_B" },	///< Bi-dir predicted
+	{ 'S', "TYPE_S" },	///< S(GMC)-VOP MPEG4
+	{ 'i', "TYPE_SI" },	///< Switching Intra
+	{ 'p', "TYPE_SP" },	///< Switching Predicted
+	{ 'b', "TYPE_BI" },	///< BI type
+	{ 0, NULL }
+};
+
+char *id_lookup_pict_type(int idnum)
+{
+	return id_lookup(id_pict_type, 
+			av_get_picture_type_char(idnum));
+}
+#else	/* no av_get_picture_type_char() defined */
 /* Note that FF_I_* are macros but AV_PICTURE_TYPE_* are enums */
 #ifdef	FF_I_TYPE
 struct	idtbl	id_pict_type[] = {
@@ -604,10 +634,29 @@ struct	idtbl	id_pict_type[] = {
 	{ AV_PICTURE_TYPE_BI, "AV_PICTURE_TYPE_BI" },	///< BI type
 	{ 0, NULL }
 };
+#endif	/* FF_I_TYPE */
+
+char *id_lookup_pict_type(int idnum)
+{
+	return id_lookup(id_pict_type, idnum);
+}
+#endif /* HAVE_AV_GET_PICTURE_TYPE_CHAR */
+
+
+#ifdef	HAVE_AV_GET_PIX_FMT_NAME
+#ifdef	HAVE_AVUTIL_H
+#include <libavutil/pixdesc.h>
+#else
+#ifdef  HAVE_FFMPEG_AVUTIL_H
+#include <ffmpeg/libavutil/pixdesc.h>
+#endif
 #endif
 
-
-
+char *id_lookup_pix_fmt(int idnum)
+{
+	return (char*) av_get_pix_fmt_name(idnum);
+}
+#else	/* no av_get_pix_fmt_name() defined */
 struct	idtbl	id_pix_fmt[] = {
 	{ PIX_FMT_NONE, "PIX_FMT_NONE" },
 	{ PIX_FMT_YUV420P, "PIX_FMT_YUV420P" },
@@ -681,6 +730,20 @@ struct	idtbl	id_pix_fmt[] = {
 	{ 0, NULL },
 };
 
+char *id_lookup_pix_fmt(int idnum)
+{
+	return id_lookup(id_pix_fmt, idnum);
+}
+#endif	/* HAVE_AV_GET_PIX_FMT_NAME */
+
+
+
+#ifdef	HAVE_AV_GET_SAMPLE_FMT_NAME
+char *id_lookup_sample_format(int idnum)
+{
+	return (char*) av_get_sample_fmt_name(idnum);
+}
+#else	/* no av_get_sample_fmt_name() defined */
 #if	LIBAVCODEC_VERSION_MAJOR <= 53
 struct	idtbl	id_sample_format[] = {
 	{ SAMPLE_FMT_NONE, "SAMPLE_FMT_NONE" },
@@ -708,7 +771,12 @@ struct	idtbl	id_sample_format[] = {	/* libavutil/samplefmt.h */
 	{ AV_SAMPLE_FMT_NB, "AV_SAMPLE_FMT_NB" },
 	{ 0, NULL }
 };
-#endif
+#endif	/* LIBAVCODEC_VERSION_MAJOR <= 53 */
+char *id_lookup_sample_format(int idnum)
+{
+	return id_lookup(id_sample_format, idnum);
+}
+#endif	/* HAVE_AV_GET_SAMPLE_FMT_NAME */
 
 
 

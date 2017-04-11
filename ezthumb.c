@@ -25,6 +25,40 @@
 #error "Run configure first"
 #endif
 
+#include <stdio.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #include <sys/time.h>
 
 #include "ezthumb.h"
@@ -1321,6 +1355,7 @@ static int video_free(EZVID *vidx)
 static int video_open(EZVID *vidx)
 {
 	AVCodec	*codec;
+	AVRational	rf_rate;
 	char	*mblock[] = { "mp3", "image2" };
 	int	i, den, num;
 
@@ -1416,8 +1451,15 @@ static int video_open(EZVID *vidx)
 	vidx->vstream->discard = AVDISCARD_DEFAULT;
 
 	/* calculate the DTS per frame */
-	num = vidx->vstream->r_frame_rate.num * vidx->vstream->time_base.num;
-	den = vidx->vstream->r_frame_rate.den * vidx->vstream->time_base.den;
+#ifdef	HAVE_AV_STREAM_GET_R_FRAME_RATE
+	rf_rate = av_stream_get_r_frame_rate(vidx->vstream);
+#elif	defined(HAVE_R_FRAME_RATE)
+	rf_rate = vidx->vstream->r_frame_rate;
+#else	/* you are probably using libav instead of ffmpeg */
+	rf_rate = vidx->vstream->avg_frame_rate;
+#endif
+	num = rf_rate.num * vidx->vstream->time_base.num;
+	den = rf_rate.den * vidx->vstream->time_base.den;
 	if (den) {
 		vidx->dts_rate = (num + den - 1) / den;
 	}
@@ -1823,17 +1865,29 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	/* Line 2+: the stream information */
 	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
-		sprintf(buffer, "%s: ", id_lookup_tail(id_codec_type, 
-					stream->codec->codec_type));
+		sprintf(buffer, "%s: ", 
+			id_lookup_codec_type(stream->codec->codec_type));
 		/* seems higher version doesn't support CODEC_TYPE_xxx */
 		switch (stream->codec->codec_type) {
-		case AVMEDIA_TYPE_VIDEO:	
+#ifdef	CODEC_TYPE_UNKNOWN
+		case  CODEC_TYPE_VIDEO:
+#else
+		case AVMEDIA_TYPE_VIDEO:
+#endif
 			video_media_video(stream, buffer);
 			break;
+#ifdef	CODEC_TYPE_UNKNOWN
+		case CODEC_TYPE_AUDIO:
+#else
 		case AVMEDIA_TYPE_AUDIO:
+#endif
 			video_media_audio(stream, buffer);
 			break;
+#ifdef	CODEC_TYPE_UNKNOWN
+		case CODEC_TYPE_SUBTITLE:
+#else
 		case AVMEDIA_TYPE_SUBTITLE:
+#endif
 			video_media_subtitle(stream, buffer);
 			break;
 		default:
@@ -3043,9 +3097,15 @@ static char *video_media_video(AVStream *stream, char *buffer)
 		strcat(buffer, tmp);
 	}
 
-	strcat(buffer, id_lookup_tail(id_pix_fmt, stream->codec->pix_fmt));
-	sprintf(tmp, "  %.3f FPS ", (float) stream->r_frame_rate.num / 
-			(float) stream->r_frame_rate.den);
+#ifdef	HAVE_AV_STREAM_GET_R_FRAME_RATE
+	dar = av_stream_get_r_frame_rate(stream);
+#elif	defined(HAVE_R_FRAME_RATE)
+	dar = stream->r_frame_rate;
+#else	/* you are probably using libav instead of ffmpeg */
+	dar = stream->avg_frame_rate;
+#endif
+	strcat(buffer, id_lookup_pix_fmt(stream->codec->pix_fmt));
+	sprintf(tmp, "  %.3f FPS ", (float) dar.num / (float) dar.den);
 	strcat(buffer, tmp);
 
 	if (stream->codec->bit_rate) {
@@ -3070,8 +3130,7 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 
 	sprintf(tmp, ": %s %d-CH  %s %dHz ", video_stream_language(stream),
 			stream->codec->channels, 
-			id_lookup_tail(id_sample_format, 
-					stream->codec->sample_fmt),
+			id_lookup_sample_format(stream->codec->sample_fmt),
 			stream->codec->sample_rate);
 	strcat(buffer, tmp);
 
@@ -4679,19 +4738,27 @@ static int dump_format_context(AVFormatContext *format)
 static int dump_stream_common(AVStream *stream, int sidx)
 {
 	AVCodec	*xcodec;
+	AVRational	rf_rate;
 
+#ifdef	HAVE_AV_STREAM_GET_R_FRAME_RATE
+	rf_rate = av_stream_get_r_frame_rate(stream);
+#elif	defined(HAVE_R_FRAME_RATE)
+	rf_rate = stream->r_frame_rate;
+#else	/* you are probably using libav instead of ffmpeg */
+	rf_rate = stream->avg_frame_rate;
+#endif
 	xcodec = avcodec_find_decoder(stream->codec->codec_id);
 	CDB_SHOW(("Stream #%d:%d: %s; Codec ID: %s; '%s' %s\n", 
 			sidx, stream->id,
-			id_lookup(id_codec_type, stream->codec->codec_type),
-			id_lookup(id_codec, stream->codec->codec_id),
+			id_lookup_codec_type(stream->codec->codec_type),
+			id_lookup_codec(stream->codec->codec_id),
 			xcodec ? xcodec->name : "Unknown",
 			xcodec ? xcodec->long_name : "Unknown"));
 	CDB_SHOW(("  Start Time  : %" PRId64 "; Duration: %" PRId64 
 			"; Frame Rate: %d/%d; Stream_AR: %d/%d; Lang: %s\n",
 			(stream->start_time < 0) ? -1 : stream->start_time, 
 			(stream->duration < 0) ? -1 : stream->duration,
-			stream->r_frame_rate.num, stream->r_frame_rate.den,
+			rf_rate.num, rf_rate.den,
 			stream->sample_aspect_ratio.num, 
 			stream->sample_aspect_ratio.den,
 			video_stream_language(stream)));
@@ -4702,7 +4769,7 @@ static int dump_video_context(AVCodecContext *codec)
 {
 	CDB_SHOW(("  Video Codec : %s; %dx%d+%d; Time Base: %d/%d; "
 				"BR=%d BF=%d; AR: %d/%d\n",
-			id_lookup(id_pix_fmt, codec->pix_fmt),
+			id_lookup_pix_fmt(codec->pix_fmt),
 			codec->width, codec->height, 
 			codec->frame_number, 
 			codec->time_base.num, codec->time_base.den,
@@ -4717,10 +4784,10 @@ static int dump_audio_context(AVCodecContext *codec)
 {
 	CDB_SHOW(("  Audio Codec : %s; Time Base: %d/%d; "
 				"CH=%d SR=%d %s BR=%d\n",
-			id_lookup(id_codec, codec->codec_id),
+			id_lookup_codec(codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->channels, codec->sample_rate,
-			id_lookup_tail(id_sample_format, codec->sample_fmt),
+			id_lookup_sample_format(codec->sample_fmt),
 			codec->bit_rate));
 	return 0;
 }
@@ -4728,7 +4795,7 @@ static int dump_audio_context(AVCodecContext *codec)
 static int dump_subtitle_context(AVCodecContext *codec)
 {
 	CDB_SHOW(("  Subtitles   : %s; Time Base: %d/%d; BR=%d\n",
-			id_lookup(id_codec, codec->codec_id),
+			id_lookup_codec(codec->codec_id),
 			codec->time_base.num, codec->time_base.den,
 			codec->bit_rate));
 	return 0;
@@ -4762,7 +4829,7 @@ static int dump_frame(EZFRM *ezfrm, int got_pic)
 			ezfrm->frame->key_frame, 
 			ezfrm->frame->coded_picture_number, 
 			ezfrm->keyflag,
-			id_lookup(id_pict_type, ezfrm->frame->pict_type),
+			id_lookup_pict_type(ezfrm->frame->pict_type),
 			(long long)packet->dts, packet->flags, 
 			(long long) ezfrm->rf_pos, ezfrm->rf_size));
 	return 0;
@@ -4779,7 +4846,7 @@ static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm)
 				"Type:%s %s PTS:%lld\n",
 			sn, ezfrm->rf_pac, vidx->vidframe->keyflag,
 			(long long) ezfrm->rf_dts, timestamp, 
-			id_lookup(id_pict_type, ezfrm->frame->pict_type), 
+			id_lookup_pict_type(ezfrm->frame->pict_type), 
 			ezfrm == vidx->picframe ? "CACHE" : "FRAME", 
 			(long long) ezfrm->rf_pts));
 	return 0;

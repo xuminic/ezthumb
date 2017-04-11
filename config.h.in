@@ -3,6 +3,9 @@
 /* Define to 1 if you have the `avcodec_alloc_frame' function. */
 #undef HAVE_AVCODEC_ALLOC_FRAME
 
+/* Define to 1 if you have the `avcodec_descriptor_get' function. */
+#undef HAVE_AVCODEC_DESCRIPTOR_GET
+
 /* Define 1 if you have the <libavcodec/avcodec.h> header file. */
 #undef HAVE_AVCODEC_H
 
@@ -48,11 +51,26 @@
 /* Define to 1 if you have the `av_frame_free' function. */
 #undef HAVE_AV_FRAME_FREE
 
+/* Define to 1 if you have the `av_get_media_type_string' function. */
+#undef HAVE_AV_GET_MEDIA_TYPE_STRING
+
+/* Define to 1 if you have the `av_get_picture_type_char' function. */
+#undef HAVE_AV_GET_PICTURE_TYPE_CHAR
+
+/* Define to 1 if you have the `av_get_pix_fmt_name' function. */
+#undef HAVE_AV_GET_PIX_FMT_NAME
+
+/* Define to 1 if you have the `av_get_sample_fmt_name' function. */
+#undef HAVE_AV_GET_SAMPLE_FMT_NAME
+
 /* Define to 1 if you have the `av_metadata_get' function. */
 #undef HAVE_AV_METADATA_GET
 
 /* Define to 1 if you have the `av_open_input_file' function. */
 #undef HAVE_AV_OPEN_INPUT_FILE
+
+/* Define to 1 if you have the `av_stream_get_r_frame_rate' function. */
+#undef HAVE_AV_STREAM_GET_R_FRAME_RATE
 
 /* Define to 1 if you have the `dump_format' function. */
 #undef HAVE_DUMP_FORMAT
@@ -65,6 +83,9 @@
 
 /* Define 1 if you have the <ffmpeg/libavutil/avutil.h> header file. */
 #undef HAVE_FFMPEG_AVUTIL_H
+
+/* Define 1 if you have the <ffmpeg/libavutil/mathematics.h> header file. */
+#undef HAVE_FFMPEG_MATHEMATICS_H
 
 /* Define 1 if you have the <ffmpeg/libswscale/swscale.h> header file. */
 #undef HAVE_FFMPEG_SWSCALE_H
@@ -108,11 +129,17 @@
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
 
+/* Define 1 if you have the <libavutil/mathematics.h> header file. */
+#undef HAVE_MATHEMATICS_H
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
+
+/* Define 1 if you have the r_frame_rate in the AVStream structure. */
+#undef HAVE_R_FRAME_RATE
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H

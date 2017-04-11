@@ -52,7 +52,6 @@ AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 
 # Checks for programs.
-AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
@@ -190,8 +189,8 @@ AC_CHECK_HEADER([libavcodec/avcodec.h],
 AC_CHECK_HEADER([libavformat/avformat.h], 
   [AC_DEFINE(HAVE_AVFORMAT_H, 1, 
     [Define 1 if you have the <libavformat/avformat.h> header file.])],
-  [AC_CHECK_HEADER([ffmpeg/libavformat/avformat.h],
-    [AC_DEFINE(HAVE_FFMPEG_AVFORMAT_H, 1,
+  [AC_CHECK_HEADER([ffmpeg/libavformat/avformat.h], 
+    [AC_DEFINE(HAVE_FFMPEG_AVFORMAT_H, 1, 
       [Define 1 if you have the <ffmpeg/libavformat/avformat.h> header file.])],
         [AC_MSG_ERROR([avformat.h not found])])])
 AC_CHECK_HEADER([libswscale/swscale.h], 
@@ -208,10 +207,23 @@ AC_CHECK_HEADER([libavutil/avutil.h],
     [AC_DEFINE(HAVE_FFMPEG_AVUTIL_H, 1,
       [Define 1 if you have the <ffmpeg/libavutil/avutil.h> header file.])],
         [AC_MSG_ERROR([avutil.h not found])])])
+AC_CHECK_HEADER([libavutil/mathematics.h], 
+  [AC_DEFINE(HAVE_MATHEMATICS_H, 1, 
+    [Define 1 if you have the <libavutil/mathematics.h> header file.])],
+  [AC_CHECK_HEADER([ffmpeg/libavutil/mathematics.h],
+    [AC_DEFINE(HAVE_FFMPEG_MATHEMATICS_H, 1,
+      [Define 1 if you have the <ffmpeg/libavutil/mathematics.h> header file.])],
+        [AC_MSG_ERROR([mathematics.h not found])])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT64_T
 AC_TYPE_UINT8_T
+AC_CHECK_MEMBER([struct AVStream.r_frame_rate], 
+  [AC_DEFINE(HAVE_R_FRAME_RATE, 1,
+    [Define 1 if you have the r_frame_rate in the AVStream structure.])],
+  [AC_MSG_WARN([Not found AVStream.r_frame_rate, you have libav installed?])],
+  [#include <libavformat/avformat.h>
+   #include <ffmpeg/libavformat/avformat.h>])
 
 # Checks for library functions.
 AC_FUNC_STRTOD
@@ -220,6 +232,8 @@ AC_CHECK_FUNCS([memset strcasecmp strchr strrchr strstr strtol \
     av_find_stream_info avcodec_open2 avcodec_open avformat_close_input \
     av_close_input_file av_find_best_stream av_frame_alloc av_frame_free \
     avcodec_alloc_frame av_dict_get av_metadata_get av_dump_format \
+    av_stream_get_r_frame_rate av_get_media_type_string avcodec_descriptor_get \
+    av_get_picture_type_char av_get_pix_fmt_name av_get_sample_fmt_name \
     dump_format])
 
 # Checks for operating system services or capabilities.

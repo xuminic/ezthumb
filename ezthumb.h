@@ -48,6 +48,13 @@
 #include <ffmpeg/libavutil/avutil.h>
 #endif
 #endif
+#ifdef	HAVE_MATHEMATICS_H
+#include <libavutil/mathematics.h>
+#else
+#ifdef  HAVE_FFMPEG_MATHEMATICS_H
+#include <ffmpeg/libavutil/mathematics.h>
+#endif
+#endif
 
 #include <gd.h>
 #include "libcsoup.h"
