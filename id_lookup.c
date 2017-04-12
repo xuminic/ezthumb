@@ -556,7 +556,7 @@ char *id_lookup_codec(int idnum)
 #ifdef	HAVE_AV_GET_MEDIA_TYPE_STRING
 char *id_lookup_codec_type(int idnum)
 {
-	return av_get_media_type_string(idnum);
+	return (char*) av_get_media_type_string(idnum);
 }
 #else	/* no av_get_media_type_string() defined */
 /* Note that CODEC_TYPE_* are macros but AVMEDIA_TYPE_* are enums */

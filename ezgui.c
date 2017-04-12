@@ -649,6 +649,8 @@ static int ezgui_page_main_reset(EZGUI *gui)
 
 static Ihandle *ezgui_page_main_button(EZGUI *gui)
 {
+	Ihandle	*hbox;
+
 	gui->button_add = xui_button("Add", NULL);
 	IupSetAttribute(gui->button_add, "IMAGE", "IUP_FileOpen");
 	IupSetCallback(gui->button_add, "ACTION",
@@ -661,7 +663,11 @@ static Ihandle *ezgui_page_main_button(EZGUI *gui)
 	IupSetAttribute(gui->button_run,"IMAGE", "IUP_ActionOk");
 	IupSetCallback(gui->button_run, "ACTION",
 			(Icallback) ezgui_event_main_run);
-	return IupHbox(gui->button_add, gui->button_del, gui->button_run,NULL);
+
+	hbox = IupHbox(gui->button_add, gui->button_del,
+			gui->button_run, NULL);
+	IupSetAttribute(hbox, "NORMALIZESIZE", "VERTICAL");
+	return hbox;
 }
 
 static int ezgui_event_main_add(Ihandle *ih)
@@ -2002,6 +2008,8 @@ static int ezgui_setup_format_event_param(Ihandle* ih)
 
 static Ihandle *ezgui_setup_button_create(EZGUI *gui)
 {
+	Ihandle	*hbox;
+
 	gui->butt_setup_apply = 
 		xui_button("OK", (Icallback) ezgui_setup_button_event_ok);
 	IupSetAttribute(gui->butt_setup_apply, EZOBJ_MAIN, (char*) gui);
@@ -2014,8 +2022,10 @@ static Ihandle *ezgui_setup_button_create(EZGUI *gui)
 	IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "NO");
 	IupSetAttribute(gui->butt_setup_cancel, "IMAGE", "IUP_ActionCancel");
 
-	return IupHbox(xui_label("", "320", NULL),  
+	hbox = IupHbox(xui_label("", "320", NULL),  
 			gui->butt_setup_cancel, gui->butt_setup_apply, NULL);
+	IupSetAttribute(hbox, "NORMALIZESIZE", "VERTICAL");
+	return hbox;
 }
 
 static int ezgui_setup_button_check_status(EZGUI *gui)

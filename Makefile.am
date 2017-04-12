@@ -55,6 +55,19 @@ var:
 	@echo LINK = $(LINK)
 	@echo RELEASE = $(RELEASE) : $(PREFLIB) : $(POSTLIB)
 
+help:
+	@echo "Useful targets other than 'all'"
+	@echo " clean             clean the object files of ezthumb only"
+	@echo " distclean         clean the object files and configure files of ezthumb"
+	@echo " extclean          clean the external libraries, i.e IUP and libcsoup"
+	@echo " install           install the ezthumb to PREFIX/bin"
+	@echo " gnome-install     also install the support files to GNOME desktop"
+	@echo " gnome-uninstall   remove the support files of GNOME desktop"
+	@echo " dist-gzip         create the source tar ball with .tar.gz"
+	@echo " release           create the source tar ball compressed by bzip2"
+	@echo "                   as well as an installer in Windows (nsis required)"
+	@echo " installer-win     create an installer in Windows (nsis required)"
+	@echo " showdll           display the linked DLLs in Windows"
 
 main_con.o : main.c
 	$(COMPILE) -DCFG_GUI_OFF -c -o $@ $<

@@ -14,6 +14,11 @@
 
 @SET_MAKE@
 
+# The line from 387, "am--refresh: Makefile" to 429, 
+# "$(srcdir)/config.h.in:  $(am__configure_deps)" need to be manually
+# removed after every 'automake' to prevent the automatic checking the 
+# irrelevant files# like m4, configure.ac, etc while type-in make commands.
+#
 # CFG_SNAPSHOT_DUMP is used to save each frames to JPEG pictures
 # CFG_SNAPSHOT_RAW is used to save each frames to YUV files
 # CFG_SNAPSHOT_RGB is used to save each frames to RGB files
@@ -244,9 +249,6 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
-CXX = @CXX@
-CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@ $(SYSDEFS)
 DEPDIR = @DEPDIR@
@@ -305,7 +307,6 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
-ac_ct_CXX = @ac_ct_CXX@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -384,7 +385,6 @@ all: $(BUILT_SOURCES) config.h
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
-
 distclean-hdr:
 	-rm -f config.h stamp-h1
 install-binPROGRAMS: $(bin_PROGRAMS)
@@ -875,6 +875,20 @@ var:
 	@echo COMPILE = $(COMPILE)
 	@echo LINK = $(LINK)
 	@echo RELEASE = $(RELEASE) : $(PREFLIB) : $(POSTLIB)
+
+help:
+	@echo "Useful targets other than 'all'"
+	@echo " clean             clean the object files of ezthumb only"
+	@echo " distclean         clean the object files and configure files of ezthumb"
+	@echo " extclean          clean the external libraries, i.e IUP and libcsoup"
+	@echo " install           install the ezthumb to PREFIX/bin"
+	@echo " gnome-install     also install the support files to GNOME desktop"
+	@echo " gnome-uninstall   remove the support files of GNOME desktop"
+	@echo " dist-gzip         create the source tar ball with .tar.gz"
+	@echo " release           create the source tar ball compressed by bzip2"
+	@echo "                   as well as an installer in Windows (nsis required)"
+	@echo " installer-win     create an installer in Windows (nsis required)"
+	@echo " showdll           display the linked DLLs in Windows"
 
 main_con.o : main.c
 	$(COMPILE) -DCFG_GUI_OFF -c -o $@ $<

@@ -5,6 +5,8 @@
 	* id_lookup.c: Removed the codec table because it's jumping around
 	different ffmpeg versions.
 	* libav: should be supported now.
+	* ezgui.c: normalized the button height because in gtk3 the icon size
+	diffs.
 
 20170310: 3.5.0
 	* ezgui.c: Added a progress bar dialog for integrating with file managers.
