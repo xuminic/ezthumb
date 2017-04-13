@@ -644,13 +644,7 @@ char *id_lookup_pict_type(int idnum)
 
 
 #ifdef	HAVE_AV_GET_PIX_FMT_NAME
-#ifdef	HAVE_AVUTIL_H
 #include <libavutil/pixdesc.h>
-#else
-#ifdef  HAVE_FFMPEG_AVUTIL_H
-#include <ffmpeg/libavutil/pixdesc.h>
-#endif
-#endif
 
 char *id_lookup_pix_fmt(int idnum)
 {
