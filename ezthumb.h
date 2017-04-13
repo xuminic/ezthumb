@@ -20,41 +20,11 @@
 #ifndef	_EZTHUMB_H_
 #define _EZTHUMB_H_
 
-#ifdef	HAVE_AVCODEC_H
 #include <libavcodec/avcodec.h>
-#else
-#ifdef	HAVE_FFMPEG_AVCODEC_H
-#include <ffmpeg/libavcodec/avcodec.h>
-#endif
-#endif
-#ifdef	HAVE_AVFORMAT_H
 #include <libavformat/avformat.h>
-#else
-#ifdef	HAVE_FFMPEG_AVFORMAT_H
-#include <ffmpeg/libavformat/avformat.h>
-#endif
-#endif
-#ifdef	HAVE_SWSCALE_H
 #include <libswscale/swscale.h>
-#else
-#ifdef	HAVE_FFMPEG_SWSCALE_H
-#include <ffmpeg/libswscale/swscale.h>
-#endif
-#endif
-#ifdef	HAVE_AVUTIL_H
 #include <libavutil/avutil.h>
-#else
-#ifdef	HAVE_FFMPEG_AVUTIL_H
-#include <ffmpeg/libavutil/avutil.h>
-#endif
-#endif
-#ifdef	HAVE_MATHEMATICS_H
 #include <libavutil/mathematics.h>
-#else
-#ifdef  HAVE_FFMPEG_MATHEMATICS_H
-#include <ffmpeg/libavutil/mathematics.h>
-#endif
-#endif
 
 #include <gd.h>
 #include "libcsoup.h"

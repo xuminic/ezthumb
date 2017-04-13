@@ -1,4 +1,4 @@
-20170411:
+20170411: 3.6.0
 	* GNU autoconf: Added configure.ac, Makefile.am and other supportives
 	* IUP: Modified the buildsys to fit into autoconf.
 	* ezconfig: Been outdated by autoconf.

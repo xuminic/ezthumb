@@ -42,7 +42,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([ezthumb], [3.5.1], [xuming@users.sourceforge.net])
+AC_INIT([ezthumb], [3.6.0], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -179,41 +179,8 @@ AC_CHECK_LIB([avcodec], [avcodec_version], [],
 # AC_INCLUDES_DEFAULT can not output header defines automatically
 # You need to add these include files manually in your C codes.
 AC_CHECK_HEADERS([sys/time.h],,,[AC_INCLUDES_DEFAULT])
-AC_CHECK_HEADER([libavcodec/avcodec.h], 
-  [AC_DEFINE(HAVE_AVCODEC_H, 1, 
-    [Define 1 if you have the <libavcodec/avcodec.h> header file.])],
-  [AC_CHECK_HEADER([ffmpeg/libavcodec/avcodec.h],
-    [AC_DEFINE(HAVE_FFMPEG_AVCODEC_H, 1,
-      [Define 1 if you have the <ffmpeg/libavcodec/avcodec.h> header file.])],
-        [AC_MSG_ERROR([avcodec.h not found])])])
-AC_CHECK_HEADER([libavformat/avformat.h], 
-  [AC_DEFINE(HAVE_AVFORMAT_H, 1, 
-    [Define 1 if you have the <libavformat/avformat.h> header file.])],
-  [AC_CHECK_HEADER([ffmpeg/libavformat/avformat.h], 
-    [AC_DEFINE(HAVE_FFMPEG_AVFORMAT_H, 1, 
-      [Define 1 if you have the <ffmpeg/libavformat/avformat.h> header file.])],
-        [AC_MSG_ERROR([avformat.h not found])])])
-AC_CHECK_HEADER([libswscale/swscale.h], 
-  [AC_DEFINE(HAVE_SWSCALE_H, 1, 
-    [Define 1 if you have the <libswscale/swscale.h> header file.])],
-  [AC_CHECK_HEADER([ffmpeg/libswscale/swscale.h],
-    [AC_DEFINE(HAVE_FFMPEG_SWSCALE_H, 1,
-      [Define 1 if you have the <ffmpeg/libswscale/swscale.h> header file.])],
-        [AC_MSG_ERROR([swscale.h not found])])])
-AC_CHECK_HEADER([libavutil/avutil.h], 
-  [AC_DEFINE(HAVE_AVUTIL_H, 1, 
-    [Define 1 if you have the <libavutil/avutil.h> header file.])],
-  [AC_CHECK_HEADER([ffmpeg/libavutil/avutil.h],
-    [AC_DEFINE(HAVE_FFMPEG_AVUTIL_H, 1,
-      [Define 1 if you have the <ffmpeg/libavutil/avutil.h> header file.])],
-        [AC_MSG_ERROR([avutil.h not found])])])
-AC_CHECK_HEADER([libavutil/mathematics.h], 
-  [AC_DEFINE(HAVE_MATHEMATICS_H, 1, 
-    [Define 1 if you have the <libavutil/mathematics.h> header file.])],
-  [AC_CHECK_HEADER([ffmpeg/libavutil/mathematics.h],
-    [AC_DEFINE(HAVE_FFMPEG_MATHEMATICS_H, 1,
-      [Define 1 if you have the <ffmpeg/libavutil/mathematics.h> header file.])],
-        [AC_MSG_ERROR([mathematics.h not found])])])
+AC_CHECK_HEADERS([libavcodec/avcodec.h libavformat/avformat.h \
+    libswscale/swscale.h libavutil/avutil.h libavutil/mathematics.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT64_T
@@ -222,8 +189,7 @@ AC_CHECK_MEMBER([struct AVStream.r_frame_rate],
   [AC_DEFINE(HAVE_R_FRAME_RATE, 1,
     [Define 1 if you have the r_frame_rate in the AVStream structure.])],
   [AC_MSG_WARN([Not found AVStream.r_frame_rate, you have libav installed?])],
-  [#include <libavformat/avformat.h>
-   #include <ffmpeg/libavformat/avformat.h>])
+  [#include <libavformat/avformat.h>])
 
 # Checks for library functions.
 AC_FUNC_STRTOD

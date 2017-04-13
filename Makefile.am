@@ -37,12 +37,13 @@ BUILT_SOURCES 	= $(PREFLIB)
 endif
 
 # This list of files for source release
-EXTRA_DIST = ChangeLog config.h.in configure configure.ac config.guess \
-	     config.sub COPYING external ezgui.c  ezgui.h  ezicon.h  ezqiz \
-	     ezthumb.1  ezthumb.c  ezthumb.desktop ezthumb.h  ezthumb.ico  \
-	     ezthumb_icon.rc ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
-	     id_lookup.c id_lookup.h install-sh libmingw main.c  \
-	     Makefile.am Makefile.in missing Readme.txt  TODO
+EXTRA_DIST = aclocal.m4 config.h.in configure configure.ac config.guess \
+	     config.sub Makefile.am Makefile.in missing install-sh m4 \
+	     COPYING ChangeLog Readme.txt TODO external libmingw \
+	     ezgui.c  ezgui.h  ezicon.h  ezqiz  ezthumb.1  ezthumb.c \
+	     ezthumb.desktop ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
+	     ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
+	     id_lookup.c id_lookup.h main.c  
 
 var:
 	@echo CFLAGS = $(CFLAGS)

@@ -6,9 +6,6 @@
 /* Define to 1 if you have the `avcodec_descriptor_get' function. */
 #undef HAVE_AVCODEC_DESCRIPTOR_GET
 
-/* Define 1 if you have the <libavcodec/avcodec.h> header file. */
-#undef HAVE_AVCODEC_H
-
 /* Define to 1 if you have the `avcodec_open' function. */
 #undef HAVE_AVCODEC_OPEN
 
@@ -21,14 +18,8 @@
 /* Define to 1 if you have the `avformat_find_stream_info' function. */
 #undef HAVE_AVFORMAT_FIND_STREAM_INFO
 
-/* Define 1 if you have the <libavformat/avformat.h> header file. */
-#undef HAVE_AVFORMAT_H
-
 /* Define to 1 if you have the `avformat_open_input' function. */
 #undef HAVE_AVFORMAT_OPEN_INPUT
-
-/* Define 1 if you have the <libavutil/avutil.h> header file. */
-#undef HAVE_AVUTIL_H
 
 /* Define to 1 if you have the `av_close_input_file' function. */
 #undef HAVE_AV_CLOSE_INPUT_FILE
@@ -75,32 +66,29 @@
 /* Define to 1 if you have the `dump_format' function. */
 #undef HAVE_DUMP_FORMAT
 
-/* Define 1 if you have the <ffmpeg/libavcodec/avcodec.h> header file. */
-#undef HAVE_FFMPEG_AVCODEC_H
-
-/* Define 1 if you have the <ffmpeg/libavformat/avformat.h> header file. */
-#undef HAVE_FFMPEG_AVFORMAT_H
-
-/* Define 1 if you have the <ffmpeg/libavutil/avutil.h> header file. */
-#undef HAVE_FFMPEG_AVUTIL_H
-
-/* Define 1 if you have the <ffmpeg/libavutil/mathematics.h> header file. */
-#undef HAVE_FFMPEG_MATHEMATICS_H
-
-/* Define 1 if you have the <ffmpeg/libswscale/swscale.h> header file. */
-#undef HAVE_FFMPEG_SWSCALE_H
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
 /* Define to 1 if you have the `avcodec' library (-lavcodec). */
 #undef HAVE_LIBAVCODEC
 
+/* Define to 1 if you have the <libavcodec/avcodec.h> header file. */
+#undef HAVE_LIBAVCODEC_AVCODEC_H
+
 /* Define to 1 if you have the `avformat' library (-lavformat). */
 #undef HAVE_LIBAVFORMAT
 
+/* Define to 1 if you have the <libavformat/avformat.h> header file. */
+#undef HAVE_LIBAVFORMAT_AVFORMAT_H
+
 /* Define to 1 if you have the `avutil' library (-lavutil). */
 #undef HAVE_LIBAVUTIL
+
+/* Define to 1 if you have the <libavutil/avutil.h> header file. */
+#undef HAVE_LIBAVUTIL_AVUTIL_H
+
+/* Define to 1 if you have the <libavutil/mathematics.h> header file. */
+#undef HAVE_LIBAVUTIL_MATHEMATICS_H
 
 /* Define to 1 if you have the `csoup' library (-lcsoup). */
 #undef HAVE_LIBCSOUP
@@ -126,11 +114,11 @@
 /* Define to 1 if you have the `swscale' library (-lswscale). */
 #undef HAVE_LIBSWSCALE
 
+/* Define to 1 if you have the <libswscale/swscale.h> header file. */
+#undef HAVE_LIBSWSCALE_SWSCALE_H
+
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
-
-/* Define 1 if you have the <libavutil/mathematics.h> header file. */
-#undef HAVE_MATHEMATICS_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -167,9 +155,6 @@
 
 /* Define to 1 if you have the `strtol' function. */
 #undef HAVE_STRTOL
-
-/* Define 1 if you have the <libswscale/swscale.h> header file. */
-#undef HAVE_SWSCALE_H
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
