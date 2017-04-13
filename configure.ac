@@ -84,8 +84,7 @@ case "$host_os" in
 	    -I./libmingw/ffmpeg/include"
     LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib"
     CFLAGS="$CFLAGS -mms-bitfields"
-    SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL \
-	    -D$SYSGUI"
+    SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL"
     POSTLIB="-liconv -mconsole"
     RELEASE="extclean dist-bzip2 installer-win"
     ;;
