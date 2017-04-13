@@ -44,8 +44,6 @@ EXTRA_DIST = ChangeLog config.h.in configure configure.ac config.guess \
 	     id_lookup.c id_lookup.h install-sh libmingw main.c  \
 	     Makefile.am Makefile.in missing Readme.txt  TODO
 
-RELVERS	= `grep PACKAGE_VERSION config.h | cut -d\" -f 2`
-
 var:
 	@echo CFLAGS = $(CFLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
@@ -135,6 +133,9 @@ installer-win: all
 
 # supportive rule for generating files 
 # since special tools are involved so they can be only internally used.
+
+# since the pdf file is in the target list, the automake would try to rebuild
+# it automatically. using an alter-form to avoid so.
 ezthumb-pdf: ezthumb.1
 	man -l -Tps $< | ps2pdf - ezthumb.pdf
 

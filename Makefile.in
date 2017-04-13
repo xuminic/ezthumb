@@ -379,7 +379,6 @@ EXTRA_DIST = ChangeLog config.h.in configure configure.ac config.guess \
 	     id_lookup.c id_lookup.h install-sh libmingw main.c  \
 	     Makefile.am Makefile.in missing Readme.txt  TODO
 
-RELVERS = `grep PACKAGE_VERSION config.h | cut -d\" -f 2`
 all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
