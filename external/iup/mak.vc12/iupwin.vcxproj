@@ -98,6 +98,7 @@
     <ClInclude Include="..\src\win\iupwin_str.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\win\iupwindows_help.c" />
     <ClCompile Include="..\src\win\iupwin_brush.c" />
     <ClCompile Include="..\src\win\iupwin_calendar.c" />
     <ClCompile Include="..\src\win\iupwin_common.c" />

@@ -304,6 +304,16 @@ static int winLabelMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT 
       iupwinButtonUp(ih, msg, wp, lp);
       break;
     }
+  case WM_MOUSEMOVE:
+  {
+    if (iupwinMouseMove(ih, msg, wp, lp))
+    {
+      /* refresh the cursor, it could have been changed in MOTION_CB */
+      iupwinRefreshCursor(ih);
+    }
+
+    break; /* let iupwinBaseMsgProc process enter/leavewin */
+  }
   case WM_NCCALCSIZE:
     {
       if (wp == TRUE)

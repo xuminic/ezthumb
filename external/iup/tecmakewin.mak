@@ -364,6 +364,10 @@ else
   GTK ?= x:/lng/gtk
 endif
 
+ifdef USE_IUPWEB
+  override USE_ATL = Yes
+endif
+
 GLUT ?= x:/lng/glut
 GLUT_LIB ?= $(GLUT)/lib
 GLUT_INC ?= $(GLUT)/include
@@ -1103,6 +1107,14 @@ ifdef USE_IUPGLCONTROLS
     LIBS += iupluaglcontrols$(LIBLUA_SFX)
   endif
   LIBS += iupglcontrols
+endif
+
+ifdef USE_IUPWEB
+  override USE_IUP = Yes
+  ifdef USE_IUPLUA
+    LIBS += iupluaweb$(LIBLUA_SFX)
+  endif
+  LIBS += iupweb iupole comsuppw
 endif
 
 ifdef USE_IMLUA

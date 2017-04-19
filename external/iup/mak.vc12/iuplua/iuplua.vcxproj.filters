@@ -196,6 +196,12 @@
     <ClCompile Include="..\..\srclua5\iuplua_draw.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatframe.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flattabs.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\srclua5\iuplua.def">
@@ -364,6 +370,12 @@
       <Filter>Lua\controls</Filter>
     </None>
     <None Include="..\..\srclua5\elem\parambox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatframe.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flattabs.lua">
       <Filter>Lua\controls</Filter>
     </None>
   </ItemGroup>

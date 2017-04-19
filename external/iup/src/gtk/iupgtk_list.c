@@ -239,7 +239,7 @@ static void gtkComboBoxChildrenToggleCb(GtkWidget *widget, gpointer client_data)
   }
 }
 
-static void gtkComboBoxChildrenBgColorCb(GtkWidget *widget, gpointer client_data)
+static void gtkComboBoxChildrenSetBgColor(GtkWidget *widget, gpointer client_data)
 {
   GdkColor* c = (GdkColor*)client_data;
   iupgtkSetBgColor(widget, (unsigned char)c->red, (unsigned char)c->green, (unsigned char)c->blue);
@@ -290,7 +290,7 @@ static int gtkListSetBgColorAttrib(Ihandle* ih, const char* value)
     c.blue = b;
     c.green = g;
     c.red = r;
-    gtk_container_forall(container, gtkComboBoxChildrenBgColorCb, &c);
+    gtk_container_forall(container, gtkComboBoxChildrenSetBgColor, &c);
 
     /* do not set for the event_box or 
        there will be an invalid background outside the dropdown */
@@ -1454,7 +1454,7 @@ static int gtkListMapMethod(Ihandle* ih)
     }
     else
     {
-      GtkWidget *toggle;
+      GtkWidget *toggle = NULL;
 
       /* had to add an event box so it can be positioned in an IupCanvas based control */
       if (ih->parent->iclass->nativetype == IUP_TYPECANVAS)
@@ -1464,19 +1464,32 @@ static int gtkListMapMethod(Ihandle* ih)
         iupAttribSet(ih, "_IUP_EXTRAPARENT", (char*)box);
       }
 
-      /* use the internal toggle for keyboard, focus and enter/leave */
-      gtk_container_forall((GtkContainer*)ih->handle, gtkComboBoxChildrenToggleCb, &toggle);
-
       renderer = gtk_cell_renderer_text_new();
       gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(ih->handle), renderer, TRUE);
       gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(ih->handle), renderer, "text", IUPGTK_LIST_TEXT, NULL);
 
-      g_signal_connect(G_OBJECT(toggle), "focus-in-event",  G_CALLBACK(gtkListComboFocusInOutEvent), ih);
-      g_signal_connect(G_OBJECT(toggle), "focus-out-event", G_CALLBACK(gtkListComboFocusInOutEvent), ih);
-      g_signal_connect(G_OBJECT(toggle), "enter-notify-event", G_CALLBACK(gtkListComboEnterLeaveEvent), ih);
-      g_signal_connect(G_OBJECT(toggle), "leave-notify-event", G_CALLBACK(gtkListComboEnterLeaveEvent), ih);
-      g_signal_connect(G_OBJECT(toggle), "key-press-event", G_CALLBACK(iupgtkKeyPressEvent), ih);
-      g_signal_connect(G_OBJECT(toggle), "show-help",       G_CALLBACK(iupgtkShowHelp), ih);
+      /* use the internal toggle for keyboard, focus and enter/leave */
+      gtk_container_forall((GtkContainer*)ih->handle, gtkComboBoxChildrenToggleCb, &toggle);
+
+      if (toggle)
+      {
+        g_signal_connect(G_OBJECT(toggle), "focus-in-event", G_CALLBACK(gtkListComboFocusInOutEvent), ih);
+        g_signal_connect(G_OBJECT(toggle), "focus-out-event", G_CALLBACK(gtkListComboFocusInOutEvent), ih);
+        g_signal_connect(G_OBJECT(toggle), "enter-notify-event", G_CALLBACK(gtkListComboEnterLeaveEvent), ih);
+        g_signal_connect(G_OBJECT(toggle), "leave-notify-event", G_CALLBACK(gtkListComboEnterLeaveEvent), ih);
+        g_signal_connect(G_OBJECT(toggle), "key-press-event", G_CALLBACK(iupgtkKeyPressEvent), ih);
+        g_signal_connect(G_OBJECT(toggle), "show-help", G_CALLBACK(iupgtkShowHelp), ih);
+      }
+      else
+      {
+        /* TODO: dummy code, actually it is NOT working */
+        g_signal_connect(G_OBJECT(ih->handle), "focus-in-event", G_CALLBACK(iupgtkFocusInOutEvent), ih);
+        g_signal_connect(G_OBJECT(ih->handle), "focus-out-event", G_CALLBACK(iupgtkFocusInOutEvent), ih);
+        g_signal_connect(G_OBJECT(ih->handle), "enter-notify-event", G_CALLBACK(iupgtkEnterLeaveEvent), ih);
+        g_signal_connect(G_OBJECT(ih->handle), "leave-notify-event", G_CALLBACK(iupgtkEnterLeaveEvent), ih);
+        g_signal_connect(G_OBJECT(ih->handle), "key-press-event", G_CALLBACK(iupgtkKeyPressEvent), ih);
+        g_signal_connect(G_OBJECT(ih->handle), "show-help", G_CALLBACK(iupgtkShowHelp), ih);
+      }
 
       if (!iupAttribGetBoolean(ih, "CANFOCUS"))
       {
@@ -1486,7 +1499,7 @@ static int gtkListMapMethod(Ihandle* ih)
       else
       {
         gtk_combo_box_set_focus_on_click((GtkComboBox*)ih->handle, TRUE);
-        iupgtkSetCanFocus(toggle, 1);
+        iupgtkSetCanFocus(ih->handle, 1);
       }
     }
 

@@ -36,6 +36,8 @@ Iclass* iupListNewClass(void);
 Iclass* iupTreeNewClass(void);
 Iclass* iupLinkNewClass(void);
 Iclass* iupFlatButtonNewClass(void);
+Iclass* iupFlatFrameNewClass(void);
+Iclass* iupFlatTabsNewClass(void);
 
 Iclass* iupMenuNewClass(void);
 Iclass* iupItemNewClass(void);

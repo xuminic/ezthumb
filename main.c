@@ -252,12 +252,12 @@ https://www.ffmpeg.org\n\
 Following Libraries were grabbed from GnuWin:\n\
 http://sourceforge.net/projects/gnuwin32/files\n\
 \n\
-gd-2.0.33-1\n\
+gd-2.0.35\n\
 jpeg-6b-4\n\
 libiconv-1.9.2-1\n\
 libpng-1.2.37\n\
-zlib-1.2.3\n\
-freetype-2.3.5-1\n\
+zlib-1.2.8\n\
+freetype-2.6.3\n\
 \n\
 The icon is a public domain under GNU Free Documentation License:\n\
 http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg\n\

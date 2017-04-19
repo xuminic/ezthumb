@@ -120,12 +120,6 @@ struct Iclass_
 
 
 
-  /** Returns the actual parent to add a child. The default implementation returns itself. \n
-   * Called only from IupAppend or IupReparent. \n
-   * This allows IUP elements to be a combination of other IUP elements in a single IUP element.
-   */
-  Ihandle* (*GetInnerContainer)(Ihandle* ih);
-
   /** Returns the internal native parent. The default implementation returns the handle of itself. \n
     * Called from \ref iupChildTreeGetNativeParentHandle. \n
     * This allows native elements to have an internal container
@@ -391,12 +385,6 @@ void iupClassObjectUnMap(Ihandle* ih);
  * \ingroup iclassobject
  */
 void iupClassObjectDestroy(Ihandle* ih);
-
-/** Calls \ref Iclass::GetInnerContainer method.
- * The parent class is ignored. If necessary the child class must handle the parent class internally.
- * \ingroup iclassobject
- */
-Ihandle* iupClassObjectGetInnerContainer(Ihandle* ih);
 
 /** Calls \ref Iclass::GetInnerNativeContainerHandle method. Returns ih->handle if there is no inner parent.
  * The parent class is ignored. If necessary the child class must handle the parent class internally.

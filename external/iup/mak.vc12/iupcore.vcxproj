@@ -102,6 +102,11 @@
     <ClCompile Include="..\src\iup_draw.c" />
     <ClCompile Include="..\src\iup_expander.c" />
     <ClCompile Include="..\src\iup_flatbutton.c" />
+    <ClCompile Include="..\src\iup_flatframe.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\iup_flattabs.c" />
     <ClCompile Include="..\src\iup_focus.c" />
     <ClCompile Include="..\src\iup_font.c" />
     <ClCompile Include="..\src\iup_func.c" />
@@ -126,7 +131,6 @@
     <ClCompile Include="..\src\iup_str.c" />
     <ClCompile Include="..\src\iup_strmessage.c" />
     <ClCompile Include="..\src\iup_table.c" />
-    <ClCompile Include="..\src\win\iupwindows_help.c" />
     <ClCompile Include="..\src\win\iupwindows_info.c" />
     <ClCompile Include="..\src\win\iupwindows_main.c" />
     <ClCompile Include="..\src\iup_box.c" />

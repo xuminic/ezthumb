@@ -17,11 +17,11 @@ endif
 do_all: iup iupimglib $(WINLIBS)
 
 clean:
-	rm -rf ./lib/* ./obj/* VERSION.gtk
+	rm -rf ./lib/* ./obj/*
 
 .PHONY: install
 install:
-	cp -f  ./lib/mingw4/*.a ../../libmingw/lib
+	cp -f  ./lib/*.a ../../libmingw/lib
 	cp -af ./include/* ../../libmingw/include/iup
 
 iup iupgtk iupmot:

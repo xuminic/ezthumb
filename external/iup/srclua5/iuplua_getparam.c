@@ -1,5 +1,5 @@
 /** \file
- * \brief IupGetParam bindig to Lua 5.
+ * \brief IupGetParam binding to Lua 5.
  *
  * See Copyright Notice in "iup.h"
  */

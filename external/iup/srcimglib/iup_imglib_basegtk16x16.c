@@ -16,6 +16,7 @@
 
 void iupImglibBaseLibGtk16x16Open(void)
 {
+  /* these are not 16x16 only... */
   iupImageStockSet("IUP_ActionCancel", 0, "gtk-cancel");
   iupImageStockSet("IUP_ActionOk", 0, "gtk-apply");
   iupImageStockSet("IUP_ArrowDown", 0, "gtk-go-down");

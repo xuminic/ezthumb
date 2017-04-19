@@ -95,21 +95,6 @@ static void iClassSetChildrenPosition(Iclass* ic, Ihandle* ih, int x, int y)
     ic->SetChildrenPosition(ih, x, y);
 }
 
-static Ihandle* iClassGetInnerContainer(Iclass* ic, Ihandle* ih)
-{
-  Ihandle* ih_container = ih;
-
-  if (ic->parent)
-    ih_container = iClassGetInnerContainer(ic->parent, ih);
-
-  /* if the class implements the function it will ignore the result of the parent class */
-
-  if (ic->GetInnerContainer)
-    ih_container = ic->GetInnerContainer(ih);
-
-  return ih_container;
-}
-
 static void* iClassGetInnerNativeContainerHandle(Iclass* ic, Ihandle* ih, Ihandle* child)
 {
   void* container_handle = ih->handle;
@@ -197,11 +182,6 @@ void iupClassObjectSetChildrenCurrentSize(Ihandle* ih, int shrink)
 void iupClassObjectSetChildrenPosition(Ihandle* ih, int x, int y)
 {
   iClassSetChildrenPosition(ih->iclass, ih, x, y);
-}
-
-Ihandle* iupClassObjectGetInnerContainer(Ihandle* ih)
-{
-  return iClassGetInnerContainer(ih->iclass, ih);
 }
 
 void* iupClassObjectGetInnerNativeContainerHandle(Ihandle* ih, Ihandle* child)

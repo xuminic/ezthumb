@@ -73,7 +73,7 @@
       <Culture>0x0416</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>setargv.obj;comctl32.lib;ole32.lib;iup.lib;iupcontrols.lib;cd.lib;freetype6.lib;zlib1.lib;iupcd.lib;iupgl.lib;opengl32.lib;glu32.lib;iupimglib.lib;im.lib;iupim.lib;vld.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\im\lib\Debug;..\..\cd\lib\Debug;..\lib\Debug;..\..\freetype\lib\Debug;..\..\ftgl\lib\Debug;..\..\zlib\lib\Debug;D:\LNG\vld\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

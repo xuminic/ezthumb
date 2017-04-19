@@ -89,10 +89,7 @@ static IgtkFont* gtkFindFont(const char *font)
       if (!iupFontParseX(font, typeface, &size, &is_bold, &is_italic, &is_underline, &is_strikeout))
       {
         if (!iupFontParsePango(font, typeface, &size, &is_bold, &is_italic, &is_underline, &is_strikeout))
-        {
-          iupERROR1("Failed to create Font: %s", font); 
           return NULL;
-        }
         else
           is_pango = 1;
       }
@@ -126,10 +123,7 @@ static IgtkFont* gtkFindFont(const char *font)
   }
 
   if (!fontdesc) 
-  {
-    iupERROR1("Failed to create Font: %s", font); 
     return NULL;
-  }
 
   /* create room in the array */
   fonts = (IgtkFont*)iupArrayInc(gtk_fonts);
@@ -156,7 +150,10 @@ static IgtkFont* gtkFontCreateNativeFont(Ihandle* ih, const char* value)
 {
   IgtkFont *gtkfont = gtkFindFont(value);
   if (!gtkfont)
+  {
+    iupERROR1("Failed to create Font: %s", value);
     return NULL;
+  }
 
   iupAttribSet(ih, "_IUP_GTKFONT", (char*)gtkfont);
   return gtkfont;
@@ -166,7 +163,11 @@ static IgtkFont* gtkFontGet(Ihandle *ih)
 {
   IgtkFont* gtkfont = (IgtkFont*)iupAttribGet(ih, "_IUP_GTKFONT");
   if (!gtkfont)
+  {
     gtkfont = gtkFontCreateNativeFont(ih, iupGetFontValue(ih));
+    if (!gtkfont)
+      gtkfont = gtkFontCreateNativeFont(ih, IupGetGlobal("DEFAULTFONT"));
+  }
   return gtkfont;
 }
 

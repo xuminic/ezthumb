@@ -137,10 +137,9 @@ $(OBJDIR)/iup_text.o: iup_text.c ../include/iup.h ../include/iupkey.h \
  iup_drvfont.h iup_stdcontrols.h iup_register.h iup_layout.h iup_mask.h \
  iup_array.h iup_text.h iup_assert.h
 $(OBJDIR)/iup_val.o: iup_val.c ../include/iup.h ../include/iupkey.h \
- ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h \
- ../include/iupcontrols.h iup_object.h iup_class.h iup_table.h \
- iup_classbase.h iup_attrib.h iup_str.h iup_drv.h iup_stdcontrols.h \
- iup_layout.h iup_val.h
+ ../include/iupdef.h ../include/iupcbs.h ../include/iupkey.h iup_object.h \
+ iup_class.h iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_stdcontrols.h iup_layout.h iup_val.h
 $(OBJDIR)/iup_box.o: iup_box.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
  iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
@@ -266,6 +265,16 @@ $(OBJDIR)/iup_draw.o: iup_draw.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupdraw.h iup_object.h iup_class.h \
  iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drvfont.h \
  iup_drvdraw.h iup_assert.h iup_image.h
+$(OBJDIR)/iup_flatframe.o: iup_flatframe.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
+ iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_drvfont.h iup_stdcontrols.h iup_layout.h iup_register.h \
+ iup_drvdraw.h iup_image.h
+$(OBJDIR)/iup_flattabs.o: iup_flattabs.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
+ iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
+ iup_drvfont.h iup_stdcontrols.h iup_layout.h iup_image.h iup_register.h \
+ iup_drvdraw.h
 $(OBJDIR)/iupgtk_loop.o: gtk/iupgtk_loop.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h
 $(OBJDIR)/iupgtk_timer.o: gtk/iupgtk_timer.c ../include/iup.h ../include/iupkey.h \
@@ -283,6 +292,10 @@ $(OBJDIR)/iup_datepick.o: iup_datepick.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h ../include/iupcbs.h iup_object.h iup_class.h \
  iup_table.h iup_classbase.h iup_attrib.h iup_str.h iup_drv.h \
  iup_drvfont.h iup_register.h iup_childtree.h
+$(OBJDIR)/iupgtk_draw.o: gtk/iupgtk_draw.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h iup_attrib.h iup_class.h iup_table.h iup_classbase.h \
+ iup_str.h iup_object.h iup_class.h iup_image.h iup_drvdraw.h \
+ gtk/iupgtk_drv.h
 $(OBJDIR)/iupgtk_help.o: gtk/iupgtk_help.c ../include/iup.h ../include/iupkey.h \
  ../include/iupdef.h iup_str.h
 $(OBJDIR)/iupunix_info.o: mot/iupunix_info.c iup_str.h iup_drvinfo.h

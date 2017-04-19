@@ -120,15 +120,15 @@ static void iMatrixExFindCreateDialog(ImatExData* matex_data)
   IupSetAttribute(options_box,"MARGIN","0x5");
 
   find_prev = IupButton("_@IUP_FIND_PREVIOUS", NULL);
-  IupSetAttribute(find_prev,"PADDING" ,IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(find_prev, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(find_prev, "ACTION", (Icallback)iMatrixExFindDialogFindPrevious_CB);
 
   find_next = IupButton("_@IUP_FIND_NEXT", NULL);
-  IupSetAttribute(find_next,"PADDING" ,IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(find_next, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(find_next, "ACTION", (Icallback)iMatrixExFindDialogFindNext_CB);
 
   close = IupButton("_@IUP_CLOSE", NULL);
-  IupSetAttribute(close,"PADDING" ,IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(close, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(close, "ACTION", (Icallback)iMatrixExFindDialogClose_CB);
 
   button_box = IupHbox(

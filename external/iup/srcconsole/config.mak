@@ -197,7 +197,9 @@ endif
 
 ifneq ($(findstring Win, $(TEC_SYSNAME)), )
   #Comment the following line to build under MingW
-  SLIB += setargv.obj
+  ifneq ($(findstring vc, $(TEC_UNAME)), )
+    SLIB += setargv.obj
+  endif
   SRC += iuplua5.rc
   INCLUDES = ../etc
 endif

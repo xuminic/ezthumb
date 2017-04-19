@@ -26,3 +26,4 @@ EXPORTS
   IupPlotSetSampleSelection
   IupPlotSetSampleExtra
   IupPlotFindSample
+  IupPlotFindSegment

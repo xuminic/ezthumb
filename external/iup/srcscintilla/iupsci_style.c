@@ -274,7 +274,7 @@ static int iScintillaSetWeightStyleAttrib(Ihandle* ih, int style, const char* va
       weight = 999;
   }
 
-  IupScintillaSendMessage(ih, SCI_STYLESETWEIGHT, style, 0);
+  IupScintillaSendMessage(ih, SCI_STYLESETWEIGHT, style, weight);
 
   return 0;
 }

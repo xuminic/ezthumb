@@ -61,9 +61,8 @@
 #include "iup.h"
 
 /* This appears only here to avoid changing the iup.h header for bug fixes */
-#define IUP_VERSION_FIX "1"
-#define IUP_VERSION_FIX_NUMBER 1
-#define IUP_VERSION_FIX_DATE "2016/07/04"
+#define IUP_VERSION_FIX ""
+#define IUP_VERSION_FIX_NUMBER 0
 /* #define IUP_VERSION_FIX_DATE "AAAA/MM/DD" */
 
 const char iup_ident[] = 

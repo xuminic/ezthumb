@@ -37,6 +37,7 @@ IupGetName
 IupHbox
 IupHelp
 IupExecute
+IupExecuteWait
 IupImage
 IupHide
 IupItem
@@ -122,6 +123,10 @@ IupGetChildCount
 IupGetAllAttributes
 IupSetAttributeHandle
 IupGetAttributeHandle
+IupSetAttributeHandleId
+IupGetAttributeHandleId
+IupSetAttributeHandleId2
+IupGetAttributeHandleId2
 IupExitLoop
 IupUpdate
 IupRedraw
@@ -145,6 +150,8 @@ IupVal
 IupProgressBar
 IupTabs
 IupTabsv
+IupFlatTabs
+IupFlatTabsv
 IupGetClassAttributes
 IupSetClassDefaultAttribute
 IupSaveClassAttributes
@@ -207,6 +214,7 @@ IupSetStrAttributeId2
 IupSetStrfId2
 IupSetStrGlobal
 IupFlatButton
+IupFlatFrame
 IupAnimatedLabel
 IupDatePick
 IupCalendar
@@ -413,7 +421,6 @@ iupClassObjectSetChildrenCurrentSize
 iupClassObjectSetAttribute
 iupClassObjectMap
 iupClassObjectLayoutUpdate
-iupClassObjectGetInnerContainer
 iupClassObjectGetAttribute
 iupClassObjectGetAttributeInfo
 iupClassObjectAttribIsNotString
@@ -573,3 +580,5 @@ iupwinStrToSystem
 iupwinStrToSystemLen
 iupwinStrChar2Wide
 iupwinStrWide2Char
+iupwinShowLastError
+iupwinSetInstance

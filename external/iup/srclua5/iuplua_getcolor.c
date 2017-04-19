@@ -1,5 +1,5 @@
 /** \file
- * \brief IupGetColor bindig to Lua 5.
+ * \brief IupGetColor binding to Lua 5.
  *
  * See Copyright Notice in "iup.h"
  */

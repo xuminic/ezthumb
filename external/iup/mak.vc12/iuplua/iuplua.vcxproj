@@ -108,6 +108,8 @@
     <ClCompile Include="..\..\srclua5\elem\il_filedlg.c" />
     <ClCompile Include="..\..\srclua5\elem\il_fill.c" />
     <ClCompile Include="..\..\srclua5\elem\il_flatbutton.c" />
+    <ClCompile Include="..\..\srclua5\elem\il_flatframe.c" />
+    <ClCompile Include="..\..\srclua5\elem\il_flattabs.c" />
     <ClCompile Include="..\..\srclua5\elem\il_fontdlg.c" />
     <ClCompile Include="..\..\srclua5\elem\il_frame.c" />
     <ClCompile Include="..\..\srclua5\elem\il_gridbox.c" />
@@ -172,6 +174,8 @@
     <None Include="..\..\srclua5\elem\filedlg.lua" />
     <None Include="..\..\srclua5\elem\fill.lua" />
     <None Include="..\..\srclua5\elem\flatbutton.lua" />
+    <None Include="..\..\srclua5\elem\flatframe.lua" />
+    <None Include="..\..\srclua5\elem\flattabs.lua" />
     <None Include="..\..\srclua5\elem\fontdlg.lua" />
     <None Include="..\..\srclua5\elem\frame.lua" />
     <None Include="..\..\srclua5\elem\gridbox.lua" />

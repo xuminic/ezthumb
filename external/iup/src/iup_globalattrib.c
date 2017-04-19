@@ -242,6 +242,7 @@ int iupGlobalIsPointer(const char* name)
 #ifndef GTK_MAC
   #ifdef WIN32
     {"HINSTANCE"},
+    {"DLL_HINSTANCE"},
   #else
     {"XDISPLAY"},
     {"XSCREEN"},

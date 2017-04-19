@@ -230,6 +230,23 @@ static int PlotFindSample(lua_State *L)
     return 1;
 }
 
+static int PlotFindSegment(lua_State *L)
+{
+  Ihandle *ih = iuplua_checkihandle(L, 1);
+  int ds_index, sample_index1, sample_index2;
+  int ret = IupPlotFindSegment(ih, luaL_checknumber(L, 2), luaL_checknumber(L, 3), &ds_index, &sample_index1, &sample_index2);
+  lua_pushinteger(L, ret);
+  if (ret)
+  {
+    lua_pushinteger(L, ds_index);
+    lua_pushinteger(L, sample_index1);
+    lua_pushinteger(L, sample_index2);
+    return 4;
+  }
+  else
+    return 1;
+}
+
 static int PlotInsert(lua_State *L)
 {
   Ihandle *ih = iuplua_checkihandle(L, 1);
@@ -406,7 +423,8 @@ void iuplua_plotfuncs_open (lua_State *L)
   iuplua_register(L, PlotLoadData    ,"PlotLoadData");
   iuplua_register(L, PlotSetFormula  ,"PlotSetFormula");
   iuplua_register(L, PlotFindSample  ,"PlotFindSample");
-  iuplua_register(L, PlotInsert      ,"PlotInsert");
+  iuplua_register(L, PlotFindSegment, "PlotFindSegment");
+  iuplua_register(L, PlotInsert, "PlotInsert");
   iuplua_register(L, PlotInsertStr   ,"PlotInsertStr");
   iuplua_register(L, PlotInsertSegment, "PlotInsertSegment");
   iuplua_register(L, PlotInsertSamples    ,"PlotInsertSamples");

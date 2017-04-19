@@ -186,7 +186,11 @@ static IwinFont* winFontGet(Ihandle *ih)
 {
   IwinFont* winfont = (IwinFont*)iupAttribGet(ih, "_IUP_WINFONT");
   if (!winfont)
+  {
     winfont = winFontCreateNativeFont(ih, iupGetFontValue(ih));
+    if (!winfont)
+      winfont = winFontCreateNativeFont(ih, IupGetGlobal("DEFAULTFONT"));
+  }
   return winfont;
 }
 

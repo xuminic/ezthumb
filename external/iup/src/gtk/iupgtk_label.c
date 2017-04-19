@@ -311,6 +311,7 @@ static int gtkLabelMapMethod(Ihandle* ih)
 
     g_signal_connect(G_OBJECT(box), "button-press-event", G_CALLBACK(iupgtkButtonEvent), ih);
     g_signal_connect(G_OBJECT(box), "button-release-event",G_CALLBACK(iupgtkButtonEvent), ih);
+    g_signal_connect(G_OBJECT(box), "motion-notify-event", G_CALLBACK(iupgtkMotionNotifyEvent), ih);
     g_signal_connect(G_OBJECT(box), "enter-notify-event", G_CALLBACK(iupgtkEnterLeaveEvent), ih);
     g_signal_connect(G_OBJECT(box), "leave-notify-event", G_CALLBACK(iupgtkEnterLeaveEvent), ih);
   }

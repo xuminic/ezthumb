@@ -63,15 +63,15 @@ void iuplua_show_error_message(const char *pname, const char* msg)
   if (value) IupSetStrAttribute(lbl, "TITLE", value);
 
   copy = IupButton("Copy", NULL);
-  IupSetAttribute(copy, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(copy, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(copy, "ACTION", show_error_copy_action);
 
   button = IupButton("Continue", NULL);
-  IupSetAttribute(button, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(button, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(button, "ACTION", show_error_continue_action);
 
   abort = IupButton("Exit", NULL);
-  IupSetAttribute(abort, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(abort, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(abort, "ACTION", show_error_exit_action);
 
   multi_text = IupMultiLine(NULL);
@@ -1038,6 +1038,13 @@ static void globalkeypress_cb(int key, int pressed)
   iuplua_call_global(L, 2);
 }
 
+static void globalctrlfunc_cb(int key)
+{
+  lua_State *L = iuplua_call_global_start("globalctrlfunc_cb");
+  lua_pushinteger(L, key);
+  iuplua_call_global(L, 1);
+}
+
 static int globalidle_cb(void)
 {
   lua_State *L = iuplua_call_global_start("idle_action");
@@ -1274,6 +1281,7 @@ int iuplua_open(lua_State * L)
   iuplua_register_cb(L, "GLOBALBUTTON_CB", (lua_CFunction)globalbutton_cb, NULL);
   iuplua_register_cb(L, "GLOBALMOTION_CB", (lua_CFunction)globalmotion_cb, NULL);
   iuplua_register_cb(L, "GLOBALKEYPRESS_CB", (lua_CFunction)globalkeypress_cb, NULL);
+  iuplua_register_cb(L, "GLOBALCTRLFUNC_CB", (lua_CFunction)globalctrlfunc_cb, NULL);
   iuplua_register_cb(L, "IDLE_ACTION", (lua_CFunction)globalidle_cb, NULL);
 
   /* Register Keys */
@@ -1329,10 +1337,12 @@ int iuplua_open(lua_State * L)
   iupclipboardlua_open(L);
   iupprogressdlglua_open(L);
   iupflatbuttonlua_open(L);
+  iupflatframelua_open(L);
   iupconfiglua_open(L);
   iupanimatedlabellua_open(L);
   iupcalendarlua_open(L);
   iupdatepicklua_open(L);
+  iupflattabslua_open(L);
 
   return 0; /* nothing in stack */
 }

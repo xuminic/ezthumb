@@ -84,6 +84,8 @@ typedef struct _ImatLinColData
   int total_visible_size;   /* Sum of the widths/heights of the columns/lines, not including the non scrollable cells */
   int current_visible_size; /* Width/height of the visible window, not including the non scrollable cells */
 
+  int total_size;   /* Sum of the widths/heights of all columns/lines */
+
   int focus_cell;   /* index of the current cell */
 } ImatLinColData;
 

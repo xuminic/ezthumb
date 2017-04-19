@@ -143,7 +143,7 @@ void iupdrvReparent(Ihandle* ih)
 {
   GtkWidget* old_parent;
   GtkWidget* new_parent = gtkGetNativeParent(ih);
-  GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT");  /* here is used as the native child because is the outermost component of the elemement */
+  GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT");  /* here is used as the native child because is the outermost component of the element */
   if (!widget) widget = ih->handle;
   old_parent = gtk_widget_get_parent(widget);
   if (old_parent != new_parent)
@@ -156,7 +156,7 @@ void iupdrvReparent(Ihandle* ih)
 void iupgtkAddToParent(Ihandle* ih)
 {
   GtkWidget* parent = gtkGetNativeParent(ih);
-  GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT"); /* here is used as the native child because is the outermost component of the elemement */
+  GtkWidget* widget = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT"); /* here is used as the native child because is the outermost component of the element */
   if (!widget) widget = ih->handle;
 
   iupgtkNativeContainerAdd(parent, widget);

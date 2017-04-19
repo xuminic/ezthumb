@@ -131,6 +131,20 @@ static int iDetachBoxSetRestoreAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
+static int iDetachDialogClose_CB(Ihandle* ih_dialog)
+{
+  Ihandle* ih = IupGetChild(ih_dialog, 0);
+  IFnnii cb = (IFnnii)IupGetCallback(ih, "RESTORED_CB");
+  if (cb)
+  {
+    int ret = cb(ih, ih->data->old_parent, 0, 0);
+    if (ret == IUP_IGNORE)
+      return IUP_DEFAULT;
+  }
+  IupSetAttribute(ih, "RESTORE", NULL);
+  return IUP_IGNORE;
+}
+
 static int iDetachBoxSetDetachAttrib(Ihandle* ih, const char* value)
 {
   int cur_x, cur_y;
@@ -142,6 +156,9 @@ static int iDetachBoxSetDetachAttrib(Ihandle* ih, const char* value)
 
   /* Set new dialog as child of the current application */
   IupSetAttributeHandle(new_parent, "PARENTDIALOG", old_dialog);
+
+  if (iupAttribGetBoolean(ih, "RESTOREWHENCLOSED"))
+    IupSetCallback(new_parent, "CLOSE_CB", iDetachDialogClose_CB);
 
   iupStrToIntInt(IupGetGlobal("CURSORPOS"), &cur_x, &cur_y, 'x');
 
@@ -541,7 +558,8 @@ Iclass* iupDetachBoxNewClass(void)
   ic->SetChildrenCurrentSize = iDetachBoxSetChildrenCurrentSizeMethod;
   ic->SetChildrenPosition    = iDetachBoxSetChildrenPositionMethod;
 
-  iupClassRegisterCallback(ic, "DETACHED_CB", "");
+  iupClassRegisterCallback(ic, "DETACHED_CB", "nii");
+  iupClassRegisterCallback(ic, "RESTORED_CB", "nii");
 
   /* Common */
   iupBaseRegisterCommonAttrib(ic);
@@ -560,7 +578,8 @@ Iclass* iupDetachBoxNewClass(void)
   iupClassRegisterAttribute(ic, "OLDBROTHER_HANDLE", iDetachBoxGetOldBrotherHandleAttrib, NULL, NULL, NULL, IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
   iupClassRegisterAttribute(ic, "RESTORE", NULL, iDetachBoxSetRestoreAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DETACH", NULL, iDetachBoxSetDetachAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
-  
+  iupClassRegisterAttribute(ic, "RESTOREWHENCLOSED", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+
   if (!IupGetHandle("IupDetachBoxCursor"))
     iDetachBoxCreateCursor();
 

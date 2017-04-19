@@ -44,7 +44,6 @@
 
 #include "iupsci.h"
 
-
 #ifndef GTK
 #define WM_IUPCARET WM_APP+1   /* Custom IUP message */
 #endif
@@ -141,7 +140,7 @@ static void iScintillaKeySetStatus(int state, char* status, int doubleclick)
     iupKEY_SETDOUBLE(status);
 }
 
-static void iScintillaNotify(Ihandle *ih, struct SCNotification* pMsg)
+static void iScintillaNotify(Ihandle *ih, struct Scintilla::SCNotification* pMsg)
 {
   int lin = IupScintillaSendMessage(ih, SCI_LINEFROMPOSITION, pMsg->position, 0);
   int col = IupScintillaSendMessage(ih, SCI_GETCOLUMN, pMsg->position, 0);
@@ -287,7 +286,7 @@ static void iScintillaCallCaretCb(Ihandle* ih)
 #ifdef GTK
 static void gtkScintillaNotify(GtkWidget *w, gint wp, gpointer lp, Ihandle *ih)
 {
-  struct SCNotification *pMsg =(struct SCNotification *)lp;
+  struct Scintilla::SCNotification *pMsg =(struct Scintilla::SCNotification *)lp;
 
   iScintillaNotify(ih, pMsg);
 
@@ -313,7 +312,7 @@ static gboolean gtkScintillaButtonEvent(GtkWidget *widget, GdkEventButton *evt, 
 
 static int winScintillaWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)
 {
-  struct SCNotification *pMsg = (struct SCNotification*)msg_info;
+  struct Scintilla::SCNotification *pMsg = (struct Scintilla::SCNotification*)msg_info;
 
   iScintillaNotify(ih, pMsg);
 

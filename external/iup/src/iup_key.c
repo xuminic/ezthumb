@@ -408,14 +408,16 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
   else if (code==K_ESC)
   {
     Ihandle* bt = IupGetAttributeHandle(IupGetDialog(ih), "DEFAULTESC");
-    if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "glbutton")))
+    if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "flatbutton")))
       iupKeyActivate(bt);
     return 1;
   }
   else if (code==K_CR || code==K_cCR)
   {
     int is_multiline = iupAttribGetInt(ih, "_IUP_MULTILINE_TEXT");
-    if ((code==K_CR && !is_multiline) || (code==K_cCR && is_multiline))
+    /* when in a multiline accept Ctrl+Enter */
+    /* when in a button does nothing because must activate the button itself. */
+    if (((code == K_CR && !is_multiline) || (code == K_cCR && is_multiline)) && !(IupClassMatch(ih, "button") || IupClassMatch(ih, "flatbutton")))
     {
       Ihandle* bt = IupGetAttributeHandle(IupGetDialog(ih), "DEFAULTENTER");
       if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "flatbutton")))
@@ -453,6 +455,13 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
       IupSetAttribute(IupGetDialog(ih), "SIZE", NULL);
       IupRefresh(ih);
     }
+  }
+  else if (iup_isCtrlXkey(code) && (iup_XkeyBase(code) >= K_F1 && iup_XkeyBase(code) <= K_F12))
+  {
+    /* Ctrl+'F?' */
+    IFi cb = (IFi)IupGetFunction("GLOBALCTRLFUNC_CB");
+    if (cb)
+      cb(code);
   }
 
   return 0;

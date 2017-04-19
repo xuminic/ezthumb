@@ -303,7 +303,7 @@ void* iupdrvImageCreateImageRaw(int width, int height, int bpp, iupColor* colors
 {
   int y,x,bmp_line_size,channels,bits_size,header_size;
   HANDLE hHandle;
-  BYTE* bits;   /* DIB bitmap bits, created in CreateDIBSection and filled here */
+  BYTE* bits;
   void* dib;
   BITMAPINFOHEADER* bmih;
 

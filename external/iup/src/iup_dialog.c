@@ -777,6 +777,44 @@ static int iDialogSetHideTaskbarAttrib(Ihandle *ih, const char *value)
   return 0;
 }
 
+static int iDialogSetSimulateModalAttrib(Ihandle *ih, const char *value)
+{
+  Ihandle *ih_dlg;
+
+  int sim_modal = iupStrBoolean(value);
+
+  /* disable all visible dialogs different than this one */
+  for (ih_dlg = iupDlgListFirst(); ih_dlg; ih_dlg = iupDlgListNext())
+  {
+    if (ih_dlg != ih &&
+        ih_dlg->handle &&
+        iupdrvDialogIsVisible(ih_dlg))
+    {
+      if (sim_modal)
+        iupdrvSetActive(ih_dlg, 0);
+      else
+        iupdrvSetActive(ih_dlg, 1);
+    }
+  }
+
+  return 0;
+}
+
+static int iDialogSetParentDialogAttrib(Ihandle *ih, const char *value)
+{
+  Ihandle* parent = IupGetHandle(value);
+  InativeHandle* native_parent;
+  if (parent && parent->handle)
+    native_parent = parent->handle;
+  else
+    native_parent = (InativeHandle*)iupAttribGet(ih, "NATIVEPARENT");
+
+  if (native_parent != iupDialogGetNativeParent(ih))
+    iupdrvDialogSetParent(ih, native_parent);
+
+  return 1;
+}
+
 static int iDialogSetDialogFrameAttrib(Ihandle *ih, const char *value)
 {
   if (iupStrBoolean(value))
@@ -950,11 +988,13 @@ Iclass* iupDialogNewClass(void)
   iupClassRegisterAttribute(ic, "DEFAULTENTER", NULL, NULL, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DEFAULTESC",   NULL, NULL, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DIALOGFRAME",  NULL, iDialogSetDialogFrameAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "PARENTDIALOG", NULL, NULL, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "PARENTDIALOG", NULL, iDialogSetParentDialogAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_IHANDLENAME | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHRINK",       NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "STARTFOCUS",   NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MODAL",        NULL, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "PLACEMENT",    NULL, NULL, "NORMAL", NULL, IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "SIMULATEMODAL", NULL, iDialogSetSimulateModalAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "NATIVEPARENT", NULL, NULL, NULL, NULL, IUPAF_NO_STRING);
 

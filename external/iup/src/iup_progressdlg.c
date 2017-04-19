@@ -22,8 +22,7 @@
 #include "iup_childtree.h"
 
 
-#define MIN_CLOCK 250   /* aprox in milliseconds */
-       
+      
 typedef struct _IprogressDlgData
 {
   Ihandle *progress, 
@@ -32,7 +31,8 @@ typedef struct _IprogressDlgData
   int state,          /* flag indicating if it was interrupted */
       percent,         /* current percent value */
       count, total_count,
-      last_clock, last_percent;      /* last time it was updated */
+      last_clock, last_percent,      /* last time it was updated */
+      min_percent, min_clock;
 } IprogressDlgData;
 
 
@@ -46,9 +46,9 @@ static void iProgressDlgSetPercent(IprogressDlgData* progress_data, int percent)
   if (progress_data->state != 1)
     return;
 
-  /* only set if a significant amount of time passed */
+  /* only set if a significant amount of time passed or 10% */
   cur_clock = (int)clock();
-  if (cur_clock > progress_data->last_clock + MIN_CLOCK || progress_data->percent < progress_data->last_percent + 10)
+  if (cur_clock > progress_data->last_clock + progress_data->min_clock || progress_data->percent < progress_data->last_percent + progress_data->min_percent)
   {
     /* avoid duplicate updates */
     if (percent != progress_data->percent)
@@ -182,6 +182,45 @@ static char* iProgressDlgGetPercentAttrib(Ihandle* ih)
   return iupStrReturnInt(progress_data->percent);
 }
 
+static int iProgressDlgSetMinPercentAttrib(Ihandle* ih, const char* value)
+{
+  IprogressDlgData* progress_data = (IprogressDlgData*)iupAttribGet(ih, "_IUP_PDLG_DATA");
+  int percent;
+  if (iupStrToInt(value, &percent) && (percent >= 0 && percent <= 100))
+    progress_data->min_percent = percent;
+  return 0;
+}
+
+static char* iProgressDlgGetMinPercentAttrib(Ihandle* ih)
+{
+  IprogressDlgData* progress_data = (IprogressDlgData*)iupAttribGet(ih, "_IUP_PDLG_DATA");
+  return iupStrReturnInt(progress_data->min_percent);
+}
+
+static int iProgressDlgSetMinClockAttrib(Ihandle* ih, const char* value)
+{
+  IprogressDlgData* progress_data = (IprogressDlgData*)iupAttribGet(ih, "_IUP_PDLG_DATA");
+  int min_clock;
+  if (iupStrToInt(value, &min_clock) && (min_clock >= 0 && min_clock <= 100))
+    progress_data->min_clock = min_clock;
+  return 0;
+}
+
+static char* iProgressDlgGetMinClockAttrib(Ihandle* ih)
+{
+  IprogressDlgData* progress_data = (IprogressDlgData*)iupAttribGet(ih, "_IUP_PDLG_DATA");
+  return iupStrReturnInt(progress_data->min_clock);
+}
+
+static int iProgressDlgSetProgressHeightAttrib(Ihandle* ih, const char* value)
+{
+  IprogressDlgData* progress_data = (IprogressDlgData*)iupAttribGet(ih, "_IUP_PDLG_DATA");
+  Ihandle* marquee = IupGetBrother(progress_data->progress);
+  IupSetStrf(progress_data->progress, "RASTERSIZE", "250x%s", value);
+  IupSetStrf(marquee, "RASTERSIZE", "250x%s", value);
+  return 1;
+}
+
 static int iProgressDlgSetDescriptionAttrib(Ihandle* ih, const char* value)
 {
   IprogressDlgData* progress_data = (IprogressDlgData*)iupAttribGet(ih, "_IUP_PDLG_DATA");
@@ -204,11 +243,15 @@ static int iProgressDlgCancel_CB(Ihandle* button)
 {
   Ihandle* ih = IupGetDialog(button);
   Icallback cb = IupGetCallback(ih, "CANCEL_CB");
+  int ret = IUP_CONTINUE;
 
-  if (!cb || cb(ih) != IUP_CONTINUE)
+  if (cb)
+    ret = cb(ih);
+
+  if (ret != IUP_CONTINUE)
     iProgressDlgSetStateAttrib(ih, "ABORTED");
 
-  return IUP_DEFAULT;
+  return ret;
 }
 
 /**************************************************************************************************************/
@@ -243,7 +286,7 @@ static int iProgressDlgCreateMethod(Ihandle* ih, void** params)
   IupSetAttribute(marquee,"VISIBLE","No");
 
   cancel = IupButton("_@IUP_CANCEL", NULL);
-  IupSetAttribute(cancel,"PADDING",IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(cancel, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(cancel, "ACTION", (Icallback) iProgressDlgCancel_CB);
   IupSetAttributeHandle(ih, "DEFAULTESC", cancel);
 
@@ -265,6 +308,9 @@ static int iProgressDlgCreateMethod(Ihandle* ih, void** params)
   progress_data->total_count = 1;
   progress_data->last_clock = clock();
   progress_data->last_percent = 0;
+
+  progress_data->min_clock = 250;
+  progress_data->min_percent = 10;
 
   (void)params;
   return IUP_NOERROR;
@@ -289,6 +335,9 @@ Iclass* iupProgressDlgNewClass(void)
   iupClassRegisterAttribute(ic, "COUNT", iProgressDlgGetCountAttrib, iProgressDlgSetCountAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "INC", NULL, iProgressDlgSetIncAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "PERCENT", iProgressDlgGetPercentAttrib, iProgressDlgSetPercentAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "PROGRESSHEIGHT", NULL, iProgressDlgSetProgressHeightAttrib, IUPAF_SAMEASSYSTEM, "30", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MINCLOCK", iProgressDlgGetMinClockAttrib, iProgressDlgSetMinClockAttrib, IUPAF_SAMEASSYSTEM, "250", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MINPERCENT", iProgressDlgGetMinPercentAttrib, iProgressDlgSetMinPercentAttrib, IUPAF_SAMEASSYSTEM, "10", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "STATE", iProgressDlgGetStateAttrib, iProgressDlgSetStateAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DESCRIPTION", iProgressDlgGetDescriptionAttrib, iProgressDlgSetDescriptionAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

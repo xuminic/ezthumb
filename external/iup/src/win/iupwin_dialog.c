@@ -104,6 +104,12 @@ static int winDialogSetTaskBarProgressStateAttrib(Ihandle *ih, const char *value
 /****************************************************************
                      Utilities
 ****************************************************************/
+
+void iupdrvDialogSetParent(Ihandle* ih, InativeHandle* parent)
+{
+  SetParent(ih->handle, parent);
+}
+
 int iupdrvDialogIsVisible(Ihandle* ih)
 {
   return iupdrvIsVisible(ih);
@@ -1118,8 +1124,7 @@ static int winDialogMapMethod(Ihandle* ih)
 
   if (iupAttribGetBoolean(ih, "CONTROL") && native_parent) 
   {
-    /* TODO: this were used by LuaCom to create embedded controls, 
-       don't know if it is still working */
+    /* this is used to create embedded controls in COM or OLE */
     dwStyle = WS_CHILD | WS_TABSTOP | WS_CLIPCHILDREN;
     classname = TEXT("IupDialogControl");
   }

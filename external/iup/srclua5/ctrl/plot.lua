@@ -10,6 +10,7 @@ local ctrl = {
   callback = {
     drawsample_cb = "nnddn",
     clicksample_cb = "nnddn",
+    clicksegment_cb = "nnddnddn",
     select_cb = "nnddn",
     selectbegin_cb = "",
     selectend_cb = "",

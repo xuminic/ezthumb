@@ -145,4 +145,6 @@ void iupRegisterInternalClasses(void)
   iupRegisterClass(iupLinkNewClass());
   iupRegisterClass(iupGridBoxNewClass());
   iupRegisterClass(iupAnimatedLabelNewClass());
+  iupRegisterClass(iupFlatFrameNewClass());
+  iupRegisterClass(iupFlatTabsNewClass());
 }

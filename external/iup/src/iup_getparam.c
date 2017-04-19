@@ -958,6 +958,50 @@ static Ihandle* iParamCreateCtrlBox(Ihandle* param, const char *type)
                     Creates the Dialog and Normalize Sizes
 *******************************************************************************************/
 
+static int iParamBoxSetLabelAlignAttrib(Ihandle* param_box, const char* value)
+{
+  int i, count = iupAttribGetInt(param_box, "PARAMCOUNT");
+
+  for (i = 0; i < count; i++)
+  {
+    Ihandle* param = (Ihandle*)iupAttribGetId(param_box, "PARAM", i);
+    Ihandle* label = (Ihandle*)iupAttribGet(param, "LABEL");
+    IupSetStrAttribute(label, "ALIGNMENT", value);
+  }
+
+  return 1;
+}
+
+static int iParamBoxSetModifiableAttrib(Ihandle* param_box, const char* value)
+{
+  int i, count = iupAttribGetInt(param_box, "PARAMCOUNT");
+
+  for (i = 0; i < count; i++)
+  {
+    Ihandle* param = (Ihandle*)iupAttribGetId(param_box, "PARAM", i);
+    Ihandle* label = (Ihandle*)iupAttribGet(param, "LABEL");
+    Ihandle* ctrl = (Ihandle*)iupAttribGet(param, "CONTROL");
+    Ihandle* aux = (Ihandle*)iupAttribGet(param, "AUXCONTROL");
+
+    IupSetStrAttribute(label, "ACTIVE", value);
+
+    if (IupClassMatch(ctrl, "text"))
+    {
+      if (iupStrBoolean(value))
+        IupSetStrAttribute(ctrl, "READONLY", "No");
+      else
+        IupSetStrAttribute(ctrl, "READONLY", "Yes");
+    }
+    else
+      IupSetStrAttribute(ctrl, "ACTIVE", value);
+
+    if (aux)
+      IupSetStrAttribute(aux, "ACTIVE", value);
+  }
+
+  return 1;
+}
+
 static void iParamBoxNormalizeSize(Ihandle** params, int count)
 {
   int i, lbl_width;
@@ -1014,7 +1058,7 @@ static void iParamBoxNormalizeSize(Ihandle** params, int count)
   }
 }
 
-static Ihandle* iupParamBoxDlg(Ihandle *param_box)
+static Ihandle* iupParamBoxDlg(Ihandle *param_box, const char* title)
 {
   Ihandle* button1, *button2;
   Ihandle* dlg = IupDialog(param_box);
@@ -1037,6 +1081,12 @@ static Ihandle* iupParamBoxDlg(Ihandle *param_box)
 
   IupSetAttributeHandle(dlg, "DEFAULTENTER", button1);
   IupSetAttributeHandle(dlg, "DEFAULTESC", button2);
+
+  IupSetAttribute(dlg, "PARENTDIALOG", IupGetGlobal("PARENTDIALOG"));
+  IupSetAttribute(dlg, "ICON", IupGetGlobal("ICON"));
+  IupSetStrAttribute(dlg, "TITLE", (char*)title);
+  IupSetCallback(dlg, "CLOSE_CB", (Icallback)iParamDlgClose_CB);
+  iupAttribSet(dlg, "PARAMBOX", (char*)param_box);  /* found by inheritance */
 
   return dlg;
 }
@@ -1062,11 +1112,11 @@ static int iParamBoxCreateMethod(Ihandle* param_box, void** vparams)
     return IUP_ERROR;
 
   button_1 = IupButton("_@IUP_APPLY", NULL);
-  IupSetAttribute(button_1, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(button_1, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(button_1, "ACTION", (Icallback)iParamButton1_CB);
 
   button_2 = IupButton("_@IUP_RESET", NULL);
-  IupSetAttribute(button_2, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(button_2, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(button_2, "ACTION", (Icallback)iParamButton2_CB);
   
   ctrl_box = IupVbox(NULL);
@@ -1085,7 +1135,7 @@ static int iParamBoxCreateMethod(Ihandle* param_box, void** vparams)
       if (value && *value) 
       {
         button_3 = IupButton(value, NULL);
-        IupSetAttribute(button_3, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+        IupSetStrAttribute(button_3, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
         IupSetCallback(button_3, "ACTION", (Icallback)iParamButton3_CB);
       }
 
@@ -1673,14 +1723,12 @@ int IupGetParamv(const char* title, Iparamcb action, void* user_data, const char
   IupSetCallback(param_box, "PARAM_CB", (Icallback)action);
   iupAttribSet(param_box, "USERDATA", (char*)user_data);
 
-  dlg = iupParamBoxDlg(param_box);
-  IupSetAttribute(dlg, "PARENTDIALOG", IupGetGlobal("PARENTDIALOG"));
-  IupSetAttribute(dlg, "ICON", IupGetGlobal("ICON"));
-  IupSetStrAttribute(dlg, "TITLE", (char*)title);
-  IupSetCallback(dlg, "CLOSE_CB", (Icallback)iParamDlgClose_CB);
+  dlg = iupParamBoxDlg(param_box, title);
 
   if (action)
   {
+    action(param_box, IUP_GETPARAM_MAP, user_data);
+
     IupMap(dlg);
 
     action(param_box, IUP_GETPARAM_INIT, user_data);
@@ -1913,6 +1961,8 @@ Iclass* iupParamBoxNewClass(void)
   iupClassRegisterAttribute(ic, "BUTTON2", NULL, NULL, NULL, NULL, IUPAF_IHANDLE | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "BUTTON3", NULL, NULL, NULL, NULL, IUPAF_IHANDLE | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "USERDATA", NULL, NULL, NULL, NULL, IUPAF_NO_STRING | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "LABELALIGN", NULL, iParamBoxSetLabelAlignAttrib, IUPAF_SAMEASSYSTEM, "ALEFT", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "MODIFIABLE", NULL, iParamBoxSetModifiableAttrib, IUPAF_SAMEASSYSTEM, "ALEFT", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   /* ATTENTION: can NOT set IUPAF_READONLY if get is not defined when attribute is used before map. 
      In iupAttribUpdate (called by IupMap) store will be 0 for read-only attributes, then attribute will be removed from the hash table.

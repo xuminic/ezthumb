@@ -1365,6 +1365,48 @@ static void iMatrixDrawMatrix(Ihandle* ih)
     ih->data->lines.num_noscroll - 1, ih->data->columns.last);
   iupMatrixDrawCells(ih, ih->data->lines.first, ih->data->columns.first,
                      ih->data->lines.last, ih->data->columns.last);
+
+  if (iupAttribGetBoolean(ih, "FRAMEBORDER"))
+  {
+    long framecolor = cdIupConvertColor(iupAttribGetStr(ih, "FRAMECOLOR"));
+    cdCanvasForeground(ih->data->cd_canvas, framecolor);
+
+    /* if vertical scrollbar is visible */
+    if (!iupAttribGetBoolean(ih, "YHIDDEN"))
+    {
+      float posy = IupGetFloat(ih, "POSY");
+      float dy = IupGetFloat(ih, "DY");
+      int width = ih->data->w;
+      if (width > ih->data->columns.total_size)
+        width = ih->data->columns.total_size;
+
+      /* if scrollbar at top, top line is not necessary */
+      if (posy > 0)
+        iupMATRIX_LINE(ih, 0, 0, width - 1, 0);  /* top horizontal line */
+
+      /* if scrollbar at bottom, bottom line is not necessary */
+      if (posy < 1.0f - dy)
+        iupMATRIX_LINE(ih, 0, ih->data->h - 1, width - 1, ih->data->h - 1);  /* bottom horizontal line */
+    }
+
+    /* if horizontal scrollbar is visible */
+    if (!iupAttribGetBoolean(ih, "XHIDDEN"))
+    {
+      float posx = IupGetFloat(ih, "POSX");
+      float dx = IupGetFloat(ih, "DX");
+      int height = ih->data->h;
+      if (height > ih->data->lines.total_size)
+        height = ih->data->lines.total_size;
+
+      /* if scrollbar at left, left line is not necessary */
+      if (posx > 0)
+        iupMATRIX_LINE(ih, 0, 0, 0, height - 1);  /* left vertical line */
+
+      /* if scrollbar at right, right line is not necessary */
+      if (posx < 1.0f - dx)
+        iupMATRIX_LINE(ih, ih->data->w - 1, 0, ih->data->w - 1, height - 1);  /* right vertical line */
+    }
+  }
 }
 
 void iupMatrixDraw(Ihandle* ih, int update)

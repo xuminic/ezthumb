@@ -833,6 +833,13 @@ void IupSetAttributeHandle(Ihandle* ih, const char* name, Ihandle* ih_named)
   IupStoreAttribute(ih, name, handle_name);
 }
 
+void IupSetAttributeHandleId(Ihandle* ih, const char* name, int id, Ihandle* ih_named)
+{
+  char nameid[100];
+  sprintf(nameid, "%s%d", name, id);
+  IupSetAttributeHandle(ih, nameid, ih_named);
+}
+
 Ihandle* IupGetAttributeHandle(Ihandle *ih, const char* name)
 {
   char* handle_name;
@@ -843,6 +850,37 @@ Ihandle* IupGetAttributeHandle(Ihandle *ih, const char* name)
 
   handle_name = IupGetAttribute(ih, name);
   return IupGetHandle(handle_name);
+}
+
+Ihandle* IupGetAttributeHandleId(Ihandle *ih, const char* name, int id)
+{
+  char nameid[100];
+  sprintf(nameid, "%s%d", name, id);
+  return IupGetAttributeHandle(ih, nameid);
+}
+
+static void iAttribSetNameId2(char* nameid, const char* name, int lin, int col)
+{
+  if (lin == IUP_INVALID_ID)
+    sprintf(nameid, "%s*:%d", name, col);
+  else if (col == IUP_INVALID_ID)
+    sprintf(nameid, "%s%d:*", name, lin);
+  else
+    sprintf(nameid, "%s%d:%d", name, lin, col);
+}
+
+void IupSetAttributeHandleId2(Ihandle* ih, const char* name, int lin, int col, Ihandle* ih_named)
+{
+  char nameid[100];
+  iAttribSetNameId2(nameid, name, lin, col);
+  IupSetAttributeHandle(ih, nameid, ih_named);
+}
+
+Ihandle* IupGetAttributeHandleId2(Ihandle *ih, const char* name, int lin, int col)
+{
+  char nameid[100];
+  iAttribSetNameId2(nameid, name, lin, col);
+  return IupGetAttributeHandle(ih, nameid);
 }
 
 Ihandle* IupSetAtt(const char* handle_name, Ihandle* ih, const char* name, ...)
@@ -965,16 +1003,6 @@ void iupAttribSetStrId(Ihandle *ih, const char* name, int id, const char* value)
   char nameid[100];
   sprintf(nameid, "%s%d", name, id);
   iupAttribSetStr(ih, nameid, value);
-}
-
-static void iAttribSetNameId2(char* nameid, const char* name, int lin, int col)
-{
-  if (lin==IUP_INVALID_ID)
-    sprintf(nameid, "%s*:%d", name, col);
-  else if (col==IUP_INVALID_ID)
-    sprintf(nameid, "%s%d:*", name, lin);
-  else
-    sprintf(nameid, "%s%d:%d", name, lin, col);
 }
 
 void iupAttribSetId2(Ihandle *ih, const char* name, int lin, int col, const char* value)

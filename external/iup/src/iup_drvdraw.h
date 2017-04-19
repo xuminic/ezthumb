@@ -94,6 +94,23 @@ void iupdrvDrawSelectRect(IdrawCanvas* dc, int x1, int y1, int x2, int y2);
 void iupdrvDrawFocusRect(IdrawCanvas* dc, int x1, int y1, int x2, int y2);
 
 
+/**********************************************************************************************************/
+
+enum{ IUP_IMGPOS_LEFT, IUP_IMGPOS_RIGHT, IUP_IMGPOS_TOP, IUP_IMGPOS_BOTTOM };
+
+int iupFlatGetHorizontalAlignment(const char* value);
+int iupFlatGetVerticalAlignment(const char* value);
+int iupFlatGetImagePosition(const char* value);
+
+void iupFlatDrawBorder(IdrawCanvas* dc, int xmin, int xmax, int ymin, int ymax, int border_width, const char* color, char* bgcolor, int active);
+
+void iupFlatDrawBox(IdrawCanvas* dc, int xmin, int xmax, int ymin, int ymax, const char* color, char* bgcolor, int active);
+
+void iupFlatDrawIcon(Ihandle* ih, IdrawCanvas* dc, int icon_x, int icon_y, int icon_width, int icon_height,
+                     int img_position, int spacing, int horiz_alignment, int vert_alignment, int horiz_padding, int vert_padding,
+                     const char* imagename, int make_inactive, const char* title, const char* fgcolor, const char* bgcolor, int active);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -294,6 +294,10 @@ ifdef GTK_DEFAULT
     ifneq ($(findstring cygw, $(TEC_UNAME)), )
       USE_GTK3 = Yes
     endif
+    #Homebrew
+    #ifneq ($(findstring MacOS10, $(TEC_UNAME)), )
+    #  USE_GTK3 = Yes
+    #endif
   endif
 endif
 
@@ -558,6 +562,12 @@ MOTIFGL_LIB := GLw              #include <GL/GLwMDrawA.h>
 
 # Definitions for Freetype
 FREETYPE_INC := /usr/include/freetype2
+ifneq ($(findstring MacOS, $(TEC_UNAME)), )
+  #Homebrew
+  #FREETYPE_INC := /usr/local/include/freetype2
+  #Fink
+  FREETYPE_INC := /sw/include/freetype2
+endif
 
 # Definitions for GTK
 ifdef GTK_BASE
@@ -565,6 +575,8 @@ ifdef GTK_BASE
 else
   ifneq ($(findstring MacOS, $(TEC_UNAME)), )
   # Prefer using GTK_BASE then changing this
+  # Homebrew GTK port
+  #  GTK = /usr/local
   # Fink GTK port
     GTK = /sw
   # MacPorts GTK
@@ -585,10 +597,10 @@ ifneq ($(findstring Linux, $(TEC_UNAME)), )
   UNIX_LINUX = Yes
   ifdef BUILD_64
     ifeq ($(TEC_SYSARCH), ia64)
-      STDFLAGS += -fPIC
+      STDFLAGS += -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
       X11_LIB := /usr/X11R6/lib
     else
-      STDFLAGS += -m64 -fPIC
+      STDFLAGS += -m64 -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
       X11_LIB := /usr/X11R6/lib64
     endif
   else
@@ -606,10 +618,10 @@ ifneq ($(findstring CentOS, $(TEC_UNAME)), )
   UNIX_LINUX = Yes
   ifdef BUILD_64
     ifeq ($(TEC_SYSARCH), ia64)
-      STDFLAGS += -fPIC
+      STDFLAGS += -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
       X11_LIB := /usr/X11R6/lib
     else
-      STDFLAGS += -m64 -fPIC
+      STDFLAGS += -m64 -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
       X11_LIB := /usr/X11R6/lib64
     endif
   else
@@ -711,6 +723,13 @@ ifneq ($(findstring SunOS, $(TEC_UNAME)), )
 endif
 
 ifneq ($(findstring MacOS, $(TEC_UNAME)), )
+  #Homebrew
+  #STDINCS += /usr/local/include
+  #LDIR += /usr/local/lib
+  #Fink
+  STDINCS += /sw/include
+  LDIR += /sw/lib
+  
   UNIX_BSD = Yes
   X11_LIBS := Xp Xext X11
   X11_LIB := /usr/X11R6/lib /usr/X11/lib
@@ -908,6 +927,25 @@ ifdef USE_IUPGLCONTROLS
     SLIB += $(IUP_LIB)/libiupglcontrols.a
   else
     LIBS += iupglcontrols
+  endif
+endif
+
+ifdef USE_IUPWEB
+  override USE_IUP = Yes
+  override LINK_WEBKIT = Yes
+  
+  ifdef USE_IUPLUA
+    ifdef USE_STATIC
+      SLIB += $(IUPLUA_LIB)/libiupluaweb$(LIBLUA_SFX).a
+    else
+      LIBS += iupluaweb$(LIBLUA_SFX)
+    endif
+  endif
+  
+  ifdef USE_STATIC
+    SLIB += $(IUP_LIB)/libiupweb.a
+  else
+    LIBS += iupweb
   endif
 endif
 
@@ -1156,6 +1194,22 @@ ifdef USE_IM
   INCLUDES += $(IM_INC)
 endif
 
+ifdef LINK_WEBKIT
+  ifneq ($(findstring Linux4, $(TEC_UNAME)), )
+    LIBS += webkitgtk-3.0
+  else 
+    ifneq ($(findstring Linux3, $(TEC_UNAME)), )
+      ifneq ($(findstring Linux31, $(TEC_UNAME)), )
+        LIBS += webkitgtk-3.0
+      else
+        LIBS += webkitgtk-1.0
+      endif
+    else
+      LIBS += webkit-1.0
+    endif
+  endif
+endif
+
 ifdef USE_FTGL
   LINK_FTGL = Yes
   USE_FREETYPE = Yes
@@ -1179,7 +1233,7 @@ endif
 ifdef USE_FREETYPE
   LINK_FREETYPE = Yes
   
-  INCLUDES += $(FREETYPE_INC)
+  STDINCS += $(FREETYPE_INC)
 endif
 
 ifdef LINK_FREETYPE

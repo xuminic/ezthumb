@@ -42,7 +42,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([ezthumb], [3.6.0], [xuming@users.sourceforge.net])
+AC_INIT([ezthumb], [3.6.1], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -80,9 +80,9 @@ case "$host_os" in
     AC_CHECK_PROG([NSIS], [makensis], [makensis], 
      [AC_MSG_WARN([NSIS package not installed. \
       You may not be able to create the installer executables.])])
-    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/include/iup \
+    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/iup/include \
 	    -I./libmingw/ffmpeg/include"
-    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib"
+    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL"
     POSTLIB="-liconv -mconsole"

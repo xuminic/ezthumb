@@ -28,23 +28,20 @@ else
     USE_GTK = Yes
     INCLUDES += ../src/gtk
     STDINCS += $(GTK)/include/webkit-1.0 $(GTK)/include/libsoup-2.4
+    LINK_WEBKIT = Yes
     
     ifneq ($(findstring Linux4, $(TEC_UNAME)), )
       USE_GTK3 = Yes
-      LIBS += webkitgtk-3.0
       STDINCS += $(GTK)/include/webkitgtk-3.0
     else 
       ifneq ($(findstring Linux3, $(TEC_UNAME)), )
         ifneq ($(findstring Linux31, $(TEC_UNAME)), )
           USE_GTK3 = Yes
-          LIBS += webkitgtk-3.0
           STDINCS += $(GTK)/include/webkitgtk-3.0
         else
-          LIBS += webkitgtk-1.0
           STDINCS += $(GTK)/include/webkitgtk-1.0
         endif
       else
-        LIBS += webkit-1.0
       endif
     endif
   else
@@ -57,4 +54,17 @@ ifneq ($(findstring MacOS, $(TEC_UNAME)), )
   ifneq ($(TEC_SYSMINOR), 4)
     BUILD_DYLIB=Yes
   endif
+endif
+
+ifneq ($(findstring mingw, $(TEC_UNAME)), )
+  $(error No support for WebBrowser in MingW)
+endif
+ifneq ($(findstring dllw, $(TEC_UNAME)), )
+  $(error No support for WebBrowser in MingW)
+endif
+ifneq ($(findstring owc, $(TEC_UNAME)), )
+  $(error No support for WebBrowser in OpenWatcom)
+endif
+ifneq ($(findstring bc, $(TEC_UNAME)), )
+  $(error No support for WebBrowser in BorlandC)
 endif

@@ -34,6 +34,7 @@
 #include "iup_drvinfo.h"
 #include "iup_array.h"
 #include "iup_predialogs.h"
+#include "iup_key.h"
 
 #include "iupmot_drv.h"
 
@@ -163,12 +164,17 @@ static int motFileDlgGetMultipleFiles(Ihandle* ih, const char* dir, Widget wList
 
   XtVaGetValues(wList, XmNitems, &items, NULL);
 
+  /* check if just one file is selected */
   if (sel_count == 1)
   {
     filename = iupmotGetXmString(items[pos[0] - 1]);  /* XmListGetSelectedPos starts at 1 */
     if (filename)
     {
-      iupAttribSetStrId(ih, "MULTIVALUE", 0, dir);
+      iupAttribSetStrId(ih, "MULTIVALUE", 0, dir);  /* same as directory, includes last separator */
+
+      if (iupAttribGetBoolean(ih, "MULTIVALUEPATH"))
+        dir_len = 0;
+
       iupAttribSetStrId(ih, "MULTIVALUE", 1, filename + dir_len);
 
       iupAttribSetStr(ih, "VALUE", filename);  /* here value is not separated by '|' */
@@ -191,8 +197,11 @@ static int motFileDlgGetMultipleFiles(Ihandle* ih, const char* dir, Widget wList
     memcpy(all_names, dir, len);  /* does NOT includes last separator */
     all_names[len] = '|';
 
-    iupAttribSetStrId(ih, "MULTIVALUE", count, dir);  /* here count=0 always */  /* same as directory, includes last separator */
+    iupAttribSetStrId(ih, "MULTIVALUE", 0, dir);  /* same as directory, includes last separator */
     count++;
+
+    if (iupAttribGetBoolean(ih, "MULTIVALUEPATH"))
+      dir_len = 0;
 
     for (i = 0; i < sel_count; i++)
     {
@@ -440,6 +449,40 @@ static void motFileDlgNewFolderCallback(Widget w, Widget filebox, XtPointer call
 
   (void)call_data;
   (void)w;
+}
+
+static void motFileDlgPreviewCanvasInputCallback(Widget w, Ihandle *ih, XtPointer call_data)
+{
+  XEvent *evt = ((XmDrawingAreaCallbackStruct*)call_data)->event;
+
+  if (!XtWindow(w) || !ih) return;
+
+  switch (evt->type)
+  {
+  case ButtonPress:
+  case ButtonRelease:
+  {
+    XButtonEvent *but_evt = (XButtonEvent*)evt;
+    Boolean cont = True;
+    iupmotButtonPressReleaseEvent(w, ih, evt, &cont);
+    if (cont == False)
+      return;
+
+    if ((evt->type == ButtonPress) && (but_evt->button == Button4 || but_evt->button == Button5))
+    {
+      IFnfiis wcb = (IFnfiis)IupGetCallback(ih, "WHEEL_CB");
+      if (wcb)
+      {
+        char status[IUPKEY_STATUS_SIZE] = IUPKEY_STATUS_INIT;
+        int delta = but_evt->button == Button4 ? 1 : -1;
+        iupmotButtonKeySetStatus(but_evt->state, but_evt->button, status, 0);
+
+        wcb(ih, (float)delta, but_evt->x, but_evt->y, status);
+      }
+    }
+  }
+  break;
+  }
 }
 
 static void motFileDlgPreviewCanvasResizeCallback(Widget w, Ihandle *ih, XtPointer call_data)
@@ -694,6 +737,8 @@ static int motFileDlgPopup(Ihandle* ih, int x, int y)
 
         XtAddCallback(preview_canvas, XmNexposeCallback, (XtCallbackProc)motFileDlgPreviewCanvasExposeCallback, (XtPointer)ih);
         XtAddCallback(preview_canvas, XmNresizeCallback, (XtCallbackProc)motFileDlgPreviewCanvasResizeCallback,  (XtPointer)ih);
+        XtAddCallback(preview_canvas, XmNinputCallback, (XtCallbackProc)motFileDlgPreviewCanvasInputCallback, (XtPointer)ih);
+        XtAddEventHandler(preview_canvas, PointerMotionMask, False, (XtEventHandler)iupmotPointerMotionEvent, (XtPointer)ih);
 
         iupAttribSet(ih, "_IUPDLG_FILEBOX", (char*)filebox);
       }
@@ -768,7 +813,4 @@ static int motFileDlgPopup(Ihandle* ih, int x, int y)
 void iupdrvFileDlgInitClass(Iclass* ic)
 {
   ic->DlgPopup = motFileDlgPopup;
-
-  iupClassRegisterAttribute(ic, "EXTDEFAULT", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "MULTIPLEFILES", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

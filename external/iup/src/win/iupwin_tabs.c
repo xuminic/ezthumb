@@ -46,7 +46,6 @@
 static void winTabsInitializeCloseImage(void)
 {
   Ihandle *image_close;
-  COLORREF bgcolor;
 
   unsigned char img_close[ITABS_CLOSE_SIZE * ITABS_CLOSE_SIZE] =
   {
@@ -71,8 +70,7 @@ static void winTabsInitializeCloseImage(void)
 
   image_close = IupImage(ITABS_CLOSE_SIZE, ITABS_CLOSE_SIZE, img_close);
   IupSetAttribute(image_close, "0", "BGCOLOR");
-  bgcolor = GetSysColor(COLOR_HIGHLIGHT);
-  IupSetRGB(image_close, "1", GetRValue(bgcolor), GetGValue(bgcolor), GetBValue(bgcolor));
+  IupSetStrAttribute(image_close, "1", IupGetGlobal("TXTHLCOLOR"));
   IupSetHandle("IMGCLOSEHIGH", image_close);
 }
 

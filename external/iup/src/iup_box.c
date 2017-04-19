@@ -188,7 +188,7 @@ static int iBoxCreateMethod(Ihandle* ih, void** params)
     }
   }
 
-  IupSetCallback(ih, "UPDATEATTRIBFROMFONT", iBoxUpdateAttribFromFont);
+  IupSetCallback(ih, "UPDATEATTRIBFROMFONT_CB", iBoxUpdateAttribFromFont);
 
   return IUP_NOERROR;
 }
@@ -206,6 +206,9 @@ Iclass* iupBoxNewClassBase(void)
   ic->New = iupBoxNewClassBase;
   ic->Create = iBoxCreateMethod;
   ic->Map = iupBaseTypeVoidMapMethod;
+
+  /* Internal Callback */
+  iupClassRegisterCallback(ic, "UPDATEATTRIBFROMFONT_CB", "");
 
   /* Common */
   iupBaseRegisterCommonAttrib(ic);

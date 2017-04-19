@@ -56,7 +56,6 @@ Section "Ezthumb (required)"
   File "Readme.txt"
   File "TODO"
   File "libmingw\ffmpeg\bin\*.dll"
-  File "libmingw\lib\*.dll"
   
   ; Write the installation path into the registry
   WriteRegStr HKLM SOFTWARE\ezthumb "Install_Dir" "$INSTDIR"

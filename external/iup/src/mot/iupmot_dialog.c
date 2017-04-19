@@ -46,6 +46,10 @@ static int motDialogSetBgColorAttrib(Ihandle* ih, const char* value);
                      Utilities
 ****************************************************************/
 
+void iupdrvDialogSetParent(Ihandle* ih, InativeHandle* parent)
+{
+  XSetTransientForHint(iupmot_display, XtWindow(ih->handle), XtWindow(parent));
+}
 
 int iupdrvDialogIsVisible(Ihandle* ih)
 {

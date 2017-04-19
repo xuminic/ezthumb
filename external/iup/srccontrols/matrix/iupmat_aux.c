@@ -265,7 +265,8 @@ static void iMatrixAuxFillSizeVec(Ihandle* ih, int m)
 
   /* Calculate total width/height of the matrix and the width/height of each column */
   p->total_visible_size = 0;
-  for(i = 0; i < p->num; i++)
+  p->total_size = 0;
+  for (i = 0; i < p->num; i++)
   {
     if (m == IMAT_PROCESS_LIN)
       p->dt[i].size = iupMatrixGetLineHeight(ih, i, 1);
@@ -274,6 +275,8 @@ static void iMatrixAuxFillSizeVec(Ihandle* ih, int m)
 
     if (i >= p->num_noscroll)
       p->total_visible_size += p->dt[i].size;
+
+    p->total_size += p->dt[i].size;
   }
 }
 

@@ -128,7 +128,7 @@ static int iOleControlMapMethod(Ihandle* ih)
 
 static int iOleControlCreateMethod(Ihandle* ih, void **params)
 {
-  /* free the data alocated by IupCanvas */
+  /* free the data allocated by IupCanvas */
   free(ih->data);
   ih->data = iupALLOCCTRLDATA();
   ih->data->olehandler = new tOleHandler();
@@ -159,7 +159,12 @@ static void iOleControlDestroyMethod(Ihandle* ih)
 static void iOleControlRelease(Iclass* ic)
 {
   (void)ic;
-  OleUninitialize();
+
+  if (IupGetGlobal("_IUPWIN_OLEINITIALIZE"))
+  {
+    OleUninitialize();
+    IupSetGlobal("_IUPWIN_OLEINITIALIZE", NULL);
+  }
 }
 
 static Iclass* iOleControlNewClass(void)

@@ -27,7 +27,7 @@ void iupdrvImageGetData(void* handle, unsigned char* imgdata)
   GdkPixbuf* pixbuf = (GdkPixbuf*)handle;
   int w, h, y, bpp;
   guchar *pixdata, *pixline_data;
-  int rowstride, channels, planesize;
+  int rowstride, planesize;
   unsigned char *line_data;
 
   if (!iupdrvImageGetInfo(handle, &w, &h, &bpp))
@@ -38,7 +38,6 @@ void iupdrvImageGetData(void* handle, unsigned char* imgdata)
 
   pixdata = gdk_pixbuf_get_pixels(pixbuf);
   rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-  channels = gdk_pixbuf_get_n_channels(pixbuf);
 
   /* planes are packed and top-bottom in this imgdata */
   planesize = w*h;
@@ -428,7 +427,11 @@ static GdkPixbuf *gtkImageLoadFactoryIcon(const char* name, int render_icon_size
 
       icon_set = gtk_icon_factory_lookup_default(sname);
       if (icon_set)
+      {
         pixbuf = gtkImageRenderPixbuf(icon_set, render_icon_size, GTK_TEXT_DIR_LTR);
+        if (!pixbuf)
+          pixbuf = gtkImageRenderPixbuf(icon_set, render_icon_size, GTK_TEXT_DIR_NONE);
+      }
     }
     else if (strstr(name, "-rtl")!=0)
     {
@@ -438,7 +441,11 @@ static GdkPixbuf *gtkImageLoadFactoryIcon(const char* name, int render_icon_size
 
       icon_set = gtk_icon_factory_lookup_default(sname);
       if (icon_set)
+      {
         pixbuf = gtkImageRenderPixbuf(icon_set, render_icon_size, GTK_TEXT_DIR_RTL);
+        if (!pixbuf)
+          pixbuf = gtkImageRenderPixbuf(icon_set, render_icon_size, GTK_TEXT_DIR_NONE);
+      }
     }
   }
 
@@ -471,35 +478,68 @@ void* iupdrvImageLoad(const char* name, int type)
     int stock_size = 16;
     GdkPixbuf *pixbuf = NULL;
     GtkIconTheme* icon_theme;
+    GError *error;
 
     stock_size = iupImageStockGetSize();
 
-    /* approach for older GTK version */
+    /* default approach */
     icon_theme = gtk_icon_theme_get_default();
     if (icon_theme)
     {
-      GError *error = NULL;
+      error = NULL;
       pixbuf = gtk_icon_theme_load_icon(icon_theme, name, stock_size, 0, &error);
-      if (error)
-        g_error_free(error);
+      if (error) g_error_free(error);
     }
 
-    /* approach for newer GTK version but less than 3.10 */
-#if !GTK_CHECK_VERSION(3, 10, 0)
     if (!pixbuf)
     {
+#if GTK_CHECK_VERSION(3, 10, 0)
+      /* approach for GTK version >= 3.10 */
+      if (iupStrEqualPartial(name, "gtk-"))
+      {
+        /* try just removing the prefix */
+        error = NULL;
+        pixbuf = gtk_icon_theme_load_icon(icon_theme, name+4, stock_size, 0, &error);
+        if (error) g_error_free(error);
+
+        if (!pixbuf)
+        {
+          /* try the new names */
+#define IUP_GTK_STOCK_NAMES 6
+          int i;
+          const char* old_names[IUP_GTK_STOCK_NAMES] = { "find", "sort-ascending", "sort-descending", "zoom-fit", "zoom-100", "media-play-rtl" };
+          const char* new_names[IUP_GTK_STOCK_NAMES] = { "edit-find", "view-sort-ascending", "view-sort-descending", "zoom-fit-best", "zoom-original", "media-playback-start-rtl" };
+          
+          for (i = 0; i < IUP_GTK_STOCK_NAMES; i++)
+          {
+            if (iupStrEqual(name+4, old_names[i]))
+            {
+              error = NULL;
+              pixbuf = gtk_icon_theme_load_icon(icon_theme, new_names[i], stock_size, 0, &error);
+              if (error) g_error_free(error);
+              break;
+            }
+          }
+        }
+      }
+#else
+      /* approach for newer GTK version but less than 3.10 */
       GtkIconSize render_icon_size = gtkImageGetRenderIconSize(stock_size);
       pixbuf = gtkImageLoadFactoryIcon(name, render_icon_size);
-    }
 #endif
+    }
 
     if (!pixbuf)
     {
-      GError *error = NULL;
+      error = NULL;
       pixbuf = gdk_pixbuf_new_from_file(iupgtkStrConvertToSystem(name), &error);  /* filename here is in UTF-8, do NOT use iupgtkStrConvertToFilename */ 
-      if (error)
-        g_error_free(error);
+      if (error) g_error_free(error);
     }
+
+#if 0 /* for debugging */
+    if (!pixbuf)
+      printf("Couldn't load icon (%s)", name);
+#endif
 
     return pixbuf;
   }

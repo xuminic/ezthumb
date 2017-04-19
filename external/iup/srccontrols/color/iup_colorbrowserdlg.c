@@ -44,7 +44,7 @@ typedef struct _IcolorDlgData
 
   long previous_color, color;
 
-  float hue, saturation, intensity;
+  double hue, saturation, intensity;
   unsigned char red, green, blue, alpha;
 
   Ihandle *red_txt, *green_txt, *blue_txt, *alpha_txt;
@@ -147,7 +147,7 @@ static void iColorBrowserDlgBrowserRGB_Update(IcolorDlgData* colordlg_data)
 
 static void iColorBrowserDlgBrowserHSI_Update(IcolorDlgData* colordlg_data)
 {
-  IupSetfAttribute(colordlg_data->color_browser, "HSI", IUP_FLOAT2STR" "IUP_FLOAT2STR" "IUP_FLOAT2STR, colordlg_data->hue, colordlg_data->saturation, colordlg_data->intensity);
+  IupSetfAttribute(colordlg_data->color_browser, "HSI", IUP_DOUBLE2STR" "IUP_DOUBLE2STR" "IUP_DOUBLE2STR, colordlg_data->hue, colordlg_data->saturation, colordlg_data->intensity);
 }
 
 /*****************************************\
@@ -350,7 +350,7 @@ static int iColorBrowserDlgHueAction_CB(Ihandle* ih, int c, char *value)
 
   if (iupStrToInt(value, &vi))
   {
-    colordlg_data->hue = (float)vi;
+    colordlg_data->hue = (double)vi;
     iColorBrowserDlgHSIChanged(colordlg_data);
   }
 
@@ -362,7 +362,7 @@ static int iColorBrowserDlgHueSpin_CB(Ihandle* ih, int vi)
 {
   IcolorDlgData* colordlg_data = (IcolorDlgData*)iupAttribGetInherit(ih, "_IUP_GC_DATA");
 
-  colordlg_data->hue = (float)vi;
+  colordlg_data->hue = (double)vi;
   iColorBrowserDlgHSIChanged(colordlg_data);
 
   return IUP_DEFAULT;
@@ -375,7 +375,7 @@ static int iColorBrowserDlgSaturationAction_CB(Ihandle* ih, int c, char *value)
 
   if (iupStrToInt(value, &vi))
   {
-    colordlg_data->saturation = (float)vi/100.0f;
+    colordlg_data->saturation = (double)vi/100.0;
     iColorBrowserDlgHSIChanged(colordlg_data);
   }
 
@@ -387,7 +387,7 @@ static int iColorBrowserDlgSaturationSpin_CB(Ihandle* ih, int vi)
 {
   IcolorDlgData* colordlg_data = (IcolorDlgData*)iupAttribGetInherit(ih, "_IUP_GC_DATA");
 
-  colordlg_data->saturation = (float)vi/100.0f;
+  colordlg_data->saturation = (double)vi/100.0;
   iColorBrowserDlgHSIChanged(colordlg_data);
 
   return IUP_DEFAULT;
@@ -400,7 +400,7 @@ static int iColorBrowserDlgIntensityAction_CB(Ihandle* ih, int c, char *value)
 
   if (iupStrToInt(value, &vi))
   {
-    colordlg_data->intensity = (float)vi/100.0f;
+    colordlg_data->intensity = (double)vi/100.0;
     iColorBrowserDlgHSIChanged(colordlg_data);
   }
 
@@ -412,7 +412,7 @@ static int iColorBrowserDlgIntensitySpin_CB(Ihandle* ih, int vi)
 {
   IcolorDlgData* colordlg_data = (IcolorDlgData*)iupAttribGetInherit(ih, "_IUP_GC_DATA");
 
-  colordlg_data->intensity = (float)vi/100.0f;
+  colordlg_data->intensity = (double)vi/100.0;
   iColorBrowserDlgHSIChanged(colordlg_data);
 
   return IUP_DEFAULT;
@@ -745,9 +745,9 @@ static int iColorBrowserDlgSetValueHSIAttrib(Ihandle* ih, const char* value)
   if (!iupStrToHSI_Int(value, &hue, &saturation, &intensity))
     return 0;
   
-  colordlg_data->hue = (float)hue;
-  colordlg_data->saturation = (float)saturation/100.0f;
-  colordlg_data->intensity = (float)intensity/100.0f;
+  colordlg_data->hue = (double)hue;
+  colordlg_data->saturation = (double)saturation/100.0;
+  colordlg_data->intensity = (double)intensity/100.0;
 
   iColorBrowserDlgHSI2RGB(colordlg_data);
   colordlg_data->previous_color = cdEncodeColor(colordlg_data->red, colordlg_data->green, colordlg_data->blue);
@@ -863,17 +863,17 @@ static int iColorBrowserDlgCreateMethod(Ihandle* ih, void** params)
   /* BUTTONS   ============================================================= */
   /* ======================================================================= */
   ok_bt = IupButton("_@IUP_OK", NULL);                      /* Ok Button */
-  IupSetAttribute(ok_bt, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(ok_bt, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback (ok_bt, "ACTION", (Icallback)iColorBrowserDlgButtonOK_CB);
   IupSetAttributeHandle(ih, "DEFAULTENTER", ok_bt);
 
   cancel_bt = IupButton("_@IUP_CANCEL", NULL);          /* Cancel Button */
-  IupSetAttribute(cancel_bt, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(cancel_bt, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback (cancel_bt, "ACTION", (Icallback)iColorBrowserDlgButtonCancel_CB);
   IupSetAttributeHandle(ih, "DEFAULTESC", cancel_bt);
 
   colordlg_data->help_bt = IupButton("_@IUP_HELP", NULL);            /* Help Button */
-  IupSetAttribute(colordlg_data->help_bt, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(colordlg_data->help_bt, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback (colordlg_data->help_bt, "ACTION", (Icallback)iColorBrowserDlgButtonHelp_CB);
 
   /* ======================================================================= */

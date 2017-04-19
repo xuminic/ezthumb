@@ -73,7 +73,7 @@
       <Culture>0x0416</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>comctl32.lib;ole32.lib;gtk-win32-2.0.lib;gdk-win32-2.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk.lib;iupcontrols.lib;cd.lib;freetype6.lib;zlib1.lib;iupcd.lib;iupgl.lib;opengl32.lib;glu32.lib;iupimglib.lib;im.lib;iupim.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\im\lib\Debug;d:\lng\gtk2\lib;..\..\cd\lib\Debug;..\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

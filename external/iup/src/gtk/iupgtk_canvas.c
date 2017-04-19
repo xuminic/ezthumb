@@ -706,6 +706,9 @@ static int gtkCanvasMapMethod(Ihandle* ih)
 
   iupAttribSet(ih, "_IUP_EXTRAPARENT", (char*)sb_win);
 
+  /* the application intends to draw on the widget */
+  gtk_widget_set_app_paintable(ih->handle, TRUE);
+
   /* add to the parent, all GTK controls must call this. */
   iupgtkAddToParent(ih);
 

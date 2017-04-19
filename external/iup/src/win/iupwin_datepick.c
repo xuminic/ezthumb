@@ -56,6 +56,7 @@ static int winDatePickSetValueAttrib(Ihandle* ih, const char* value)
     if (sscanf(value, "%d/%d/%d", &year, &month, &day) == 3)
     {
       SYSTEMTIME st;
+      ZeroMemory(&st, sizeof(SYSTEMTIME));
 
       if (month < 1) month = 1;
       if (month > 12) month = 12;
@@ -154,26 +155,6 @@ static int winDatePickSetOrderAttrib(Ihandle* ih, const char* value)
 
 
 /*********************************************************************************************/
-
-#if 0
-// We are changing the date in the Edit box, so sign it
-if (NULL == DateTime_GetMonthCal(hWndStartDate))
-bFirstEnter = true;
-// We are changing the date in the Month Control, we only handle the second notification
-else
-bFirstEnter = !bFirstEnter;
-
-if (bFirstEnter)
-{
-  Date = (LPNMDATETIMECHANGE)lParam;
-  if (Date->nmhdr.hwndFrom == hWndStartDate || Date->nmhdr.hwndFrom == hWndStartTime)
-  {
-    DateTime_SetRange(hWndStartDate, GDTR_MAX, &st);
-    DateTime_SetRange(hWndStartTime, GDTR_MAX, &st);
-    MessageBox(NULL, _T("hello"), _T("hello"), MB_OK);
-  }
-}
-#endif
 
 
 static int winDatePickWmNotify(Ihandle* ih, NMHDR* msg_info, int *result)

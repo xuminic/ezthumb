@@ -39,7 +39,7 @@ typedef struct _iLayoutDialog {
 
 static char* iLayoutGetTitle(Ihandle* ih)
 {
-  char* title = IupGetAttribute(ih, "TITLE");
+  char* title = iupAttribGetLocal(ih, "TITLE");
   char* name = IupGetName(ih);
   char* str = iupStrGetMemory(200);
   if (title)
@@ -1044,7 +1044,7 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
   if (w<=0) w=1;
   if (h<=0) h=1;
 
-  bgcolor = iupAttribGetLocal(ih, "BGCOLOR");
+  bgcolor = IupGetAttribute(ih, "BGCOLOR");
   if (bgcolor && ih->iclass->nativetype!=IUP_TYPEVOID)
   {
     r = br, g = bg, b = bb;
@@ -1082,7 +1082,7 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
     if (IupClassMatch(ih, "tabs"))
     {
       /* TABORIENTATION is ignored */
-      char* tabtype = iupAttribGetLocal(ih, "TABTYPE");
+      char* tabtype = IupGetAttribute(ih, "TABTYPE");
       if (iupStrEqualNoCase(tabtype, "BOTTOM"))
       {
         int cw = 0, ch = 0;
@@ -1103,9 +1103,9 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
   {
     char *title, *image;
 
-    image = iupAttribGetLocal(ih, "IMAGE0");  /* Tree root node title */
+    image = IupGetAttribute(ih, "IMAGE0");  /* Tree root node title */
     if (!image) 
-      image = iupAttribGetLocal(ih, "TABIMAGE0");  /* Tabs first tab image */
+      image = IupGetAttribute(ih, "TABIMAGE0");  /* Tabs first tab image */
     if (image)
     {
       /* returns the image of the active tab */
@@ -1113,7 +1113,7 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
       image = IupGetAttributeId(ih, "TABIMAGE", pos);
     }
     if (!image) 
-      image = iupAttribGetLocal(ih, "IMAGE");
+      image = IupGetAttribute(ih, "IMAGE");
     if (image)
     {
       char* position;
@@ -1123,7 +1123,7 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
 
       iupdrvDrawImage(dc, image, 0, x+1, y+1);
 
-      position = iupAttribGetLocal(ih, "IMAGEPOSITION");  /* used only for buttons */
+      position = IupGetAttribute(ih, "IMAGEPOSITION");  /* used only for buttons */
       if (position &&
           (iupStrEqualNoCase(position, "BOTTOM") ||
            iupStrEqualNoCase(position, "TOP")))
@@ -1132,14 +1132,14 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
         x += img_w;  /* position text usually at right */
     }
 
-    title = iupAttribGetLocal(ih, "0:0");  /* Matrix title cell */
+    title = IupGetAttribute(ih, "0:0");  /* Matrix title cell */
     if (!title) 
-      title = iupAttribGetLocal(ih, "1");  /* List first item */
+      title = IupGetAttribute(ih, "1");  /* List first item */
     if (!title) 
-      title = iupAttribGetLocal(ih, "TITLE0");  /* Tree root node title */
+      title = IupGetAttribute(ih, "TITLE0");  /* Tree root node title */
     if (!title)
     {
-      title = iupAttribGetLocal(ih, "TABTITLE0");  /* Tabs first tab title */
+      title = IupGetAttribute(ih, "TABTITLE0");  /* Tabs first tab title */
       if (title)
       {
         /* returns the title of the active tab */
@@ -1154,7 +1154,7 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
       int len;
       iupStrNextLine(title, &len);  /* get the size of the first line */
       r = fr, g = fg, b = fb;
-      iupStrToRGB(iupAttribGetLocal(ih, "FGCOLOR"), &r, &g, &b);
+      iupStrToRGB(IupGetAttribute(ih, "FGCOLOR"), &r, &g, &b);
       iupdrvDrawText(dc, title, len, x+1, y+1, r, g, b, IupGetAttribute(ih, "FONT"));
     }
 
@@ -1167,8 +1167,8 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
         double max = IupGetDouble(ih, "MAX");
         double val = IupGetDouble(ih, "VALUE");
         r = fr, g = fg, b = fb;
-        iupStrToRGB(iupAttribGetLocal(ih, "FGCOLOR"), &r, &g, &b);
-        if (iupStrEqualNoCase(iupAttribGetLocal(ih, "ORIENTATION"), "VERTICAL"))
+        iupStrToRGB(IupGetAttribute(ih, "FGCOLOR"), &r, &g, &b);
+        if (iupStrEqualNoCase(IupGetAttribute(ih, "ORIENTATION"), "VERTICAL"))
         {
           int ph = (int)(((max-val)*(h-5))/(max-min));
           iupdrvDrawRectangle(dc, x+2, y+2, x+w-3, y+ph, r, g, b, IUP_DRAW_FILL);
@@ -1185,8 +1185,8 @@ static void iLayoutDrawElement(IdrawCanvas* dc, Ihandle* ih, int marked, int nat
         double max = IupGetDouble(ih, "MAX");
         double val = IupGetDouble(ih, "VALUE");
         r = fr, g = fg, b = fb;
-        iupStrToRGB(iupAttribGetLocal(ih, "FGCOLOR"), &r, &g, &b);
-        if (iupStrEqualNoCase(iupAttribGetLocal(ih, "ORIENTATION"), "VERTICAL"))
+        iupStrToRGB(IupGetAttribute(ih, "FGCOLOR"), &r, &g, &b);
+        if (iupStrEqualNoCase(IupGetAttribute(ih, "ORIENTATION"), "VERTICAL"))
         {
           int ph = (int)(((max-val)*(h-5))/(max-min));
           iupdrvDrawRectangle(dc, x+2, y+ph-1, x+w-3, y+ph+1, r, g, b, IUP_DRAW_FILL);
@@ -1473,7 +1473,7 @@ static int iLayoutPropertiesSetColor_CB(Ihandle *colorbut)
   Ihandle* color_dlg = IupColorDlg();
   IupSetAttributeHandle(color_dlg, "PARENTDIALOG", IupGetDialog(colorbut));
   IupSetAttribute(color_dlg, "TITLE", "Choose Color");
-  IupStoreAttribute(color_dlg, "VALUE", iupAttribGetLocal(colorbut, "BGCOLOR"));
+  IupStoreAttribute(color_dlg, "VALUE", IupGetAttribute(colorbut, "BGCOLOR"));
 
   IupPopup(color_dlg, IUP_CENTER, IUP_CENTER);
 
@@ -1588,7 +1588,7 @@ static int iLayoutPropertiesList1_CB(Ihandle *list1, char *name, int item, int s
     char* def_value;
     int flags;
     Ihandle* elem = (Ihandle*)iupAttribGetInherit(list1, "_IUP_PROPELEMENT");
-    char* value = iupAttribGetLocal(elem, name);
+    char* value = IupGetAttribute(elem, name);
     Ihandle* txt1 = IupGetDialogChild(list1, "VALUE1A");
     Ihandle* lbl2 = IupGetDialogChild(list1, "VALUE1B");
     Ihandle* lbl3 = IupGetDialogChild(list1, "VALUE1C");
@@ -1614,7 +1614,7 @@ static int iLayoutPropertiesList1_CB(Ihandle *list1, char *name, int item, int s
     else
       IupSetAttribute(lbl2, "TITLE", "NULL");
 
-    IupSetfAttribute(lbl3, "TITLE", "%s\n%s%s%s%s%s", flags&(IUPAF_NO_INHERIT|IUPAF_NO_STRING)? "Inheritable": "NON Inheritable", 
+    IupSetfAttribute(lbl3, "TITLE", "%s\n%s%s%s%s%s", flags&(IUPAF_NO_INHERIT|IUPAF_NO_STRING)? "NON Inheritable": "Inheritable", 
                                                       flags&IUPAF_NO_STRING? "NOT a String\n": "", 
                                                       flags&IUPAF_HAS_ID? "Has ID\n":"", 
                                                       flags&IUPAF_READONLY? "Read-Only\n": (flags&IUPAF_WRITEONLY? "Write-Only\n": ""),
@@ -1755,7 +1755,7 @@ static int iLayoutPropertiesTabChangePos_CB(Ihandle* ih, int new_pos, int old_po
   /* TODO: move this code to iupgtk_tabs.c */
   if (iupStrEqualNoCase(IupGetGlobal("DRIVER"), "GTK"))
   {
-    char* tabtype = iupAttribGetLocal(ih, "TABTYPE");
+    char* tabtype = IupGetAttribute(ih, "TABTYPE");
     int x = 0;
     int y = 0;
     int w = ih->currentwidth;
@@ -1793,7 +1793,7 @@ static Ihandle* iLayoutPropertiesCreateDialog(iLayoutDialog* layoutdlg, Ihandle*
           *tabs, *box1, *box11, *box2, *box22, *box3, *box33, *set, *showidlist;
 
   close = IupButton("Close", NULL);
-  IupSetAttribute(close,"PADDING" ,IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(close, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(close, "ACTION", (Icallback)iLayoutPropertiesClose_CB);
 
   button_box = IupHbox(
@@ -1825,7 +1825,7 @@ static Ihandle* iLayoutPropertiesCreateDialog(iLayoutDialog* layoutdlg, Ihandle*
 
   set = IupButton("Set", NULL);
   IupSetCallback(set, "ACTION", iLayoutPropertiesSet_CB);
-  IupSetAttribute(set, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+  IupSetStrAttribute(set, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetAttribute(set, "NAME", "SETBUT");
 
   showidlist = IupList(NULL);
@@ -1883,10 +1883,13 @@ static Ihandle* iLayoutPropertiesCreateDialog(iLayoutDialog* layoutdlg, Ihandle*
   box2 = IupHbox(IupSetAttributes(IupVbox(IupLabel("Name:"), list2, NULL), "MARGIN=0x0, GAP=0"), box22, NULL);
   box3 = IupHbox(IupSetAttributes(IupVbox(IupLabel("Name:"), list3, NULL), "MARGIN=0x0, GAP=0"), box33, NULL);
 
-  box2 = IupSetAttributes(IupVbox(box2, IupSetAttributes(IupHbox(IupSetAttributes(IupVbox(IupLabel("Name:"), IupSetAttributes(IupText(NULL), "VISIBLECOLUMNS=9, NAME=NAME22"),  NULL), "GAP=0"), 
-                                                IupSetAttributes(IupVbox(IupLabel("Value:"), IupSetAttributes(IupText(NULL), "EXPAND=HORIZONTAL, NAME=VALUE22"),  NULL), "GAP=0"), 
-                                                IupSetCallbacks(IupSetAttributes(IupButton("Set", NULL), "PADDING=3x0"), "ACTION", iLayoutPropertiesSetStr_CB, NULL),
-                                                NULL), "ALIGNMENT=ABOTTOM"), NULL), "MARGIN=0x0");
+  box2 = IupSetAttributes(IupVbox(
+    box2, 
+    IupSetAttributes(IupFrame(IupSetAttributes(IupHbox(IupSetAttributes(IupVbox(IupLabel("Name:"), IupSetAttributes(IupText(NULL), "VISIBLECOLUMNS=9, NAME=NAME22"), NULL), "GAP=0"),
+                                                       IupSetAttributes(IupVbox(IupLabel("Value:"), IupSetAttributes(IupText(NULL), "EXPAND=HORIZONTAL, NAME=VALUE22"),  NULL), "GAP=0"), 
+                                                       IupSetAttributes(IupVbox(IupLabel(""), IupSetCallbacks(IupSetAttributes(IupButton("Set", NULL), "PADDING=3x0"), "ACTION", iLayoutPropertiesSetStr_CB, NULL), NULL), "GAP=0"),
+                                                       NULL), "ALIGNMENT=ACENTER, NMARGIN=5x5")), "TITLE=\"New Attribute:\""),
+    NULL), "NMARGIN=0x0");
 
   tabs = IupTabs(box1, box2, box3, NULL);
   IupSetAttribute(tabs, "TABTITLE0", "Registered Attributes");

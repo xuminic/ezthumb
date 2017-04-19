@@ -1,3 +1,8 @@
+20170419: 3.6.1
+	* IUP: updated to 3.21 to workaround the missing GTK icons.
+	* IUP: using the officially distributed WIN32 libs from IUP home page.
+	- It looks the "IUP_MessageInfo" issue is persistent.
+
 20170411: 3.6.0
 	* GNU autoconf: Added configure.ac, Makefile.am and other supportives
 	* IUP: Modified the buildsys to fit into autoconf.

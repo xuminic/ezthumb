@@ -309,6 +309,7 @@ Iclass* iupGLToggleNewClass(void)
   iupClassRegisterAttribute(ic, "CHECKMARK", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CHECKMARKWIDTH", NULL, NULL, IUPAF_SAMEASSYSTEM, "14", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "RIGHTBUTTON", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "IGNORERADIO", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   return ic;
 }

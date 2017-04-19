@@ -76,7 +76,7 @@
       <AdditionalIncludeDirectories>..\etc</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>gdiplus.lib;cdcontextplus.lib;comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;iup.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;cd.lib;freetype6.lib;zlib1.lib;iupcd.lib;iup_plot.lib;iup_mglplot.lib;vld.lib;cdgl.lib;ftgl.lib;iupim.lib;im.lib;im_process.lib;iupmatrixex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gdiplus.lib;cdcontextplus.lib;comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;iup.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_scintilla.lib;Imm32.lib;cd.lib;freetype6.lib;zlib1.lib;iupcd.lib;iup_plot.lib;iup_mglplot.lib;vld.lib;cdgl.lib;ftgl.lib;iupim.lib;im.lib;im_process.lib;iupmatrixex.lib;iupole.lib;iupweb.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\lib\Debug;..\..\cd\lib\Debug;..\..\im\lib\Debug;..\..\freetype\lib\Debug;..\..\ftgl\lib\Debug;..\..\zlib\lib\Debug;D:\LNG\vld\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -114,7 +114,7 @@
       <AdditionalIncludeDirectories>..\etc</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>gdiplus.lib;cdcontextplus.lib;comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;iup.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;cd.lib;freetype6.lib;zlib1.lib;iupcd.lib;iup_plot.lib;iup_mglplot.lib;cdgl.lib;ftgl.lib;iupim.lib;im.lib;im_process.lib;iupmatrixex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>gdiplus.lib;cdcontextplus.lib;comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;iup.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_scintilla.lib;Imm32.lib;cd.lib;freetype6.lib;zlib1.lib;iupcd.lib;iup_plot.lib;iup_mglplot.lib;cdgl.lib;ftgl.lib;iupim.lib;im.lib;im_process.lib;iupmatrixex.lib;iupole.lib;iupweb.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\lib\Debug_64;..\..\cd\lib\Debug_64;..\..\im\lib\Debug_64;..\..\freetype\lib\Debug_64;..\..\ftgl\lib\Debug_64;..\..\zlib\lib\Debug_64;d:\lng\vld\lib\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -141,6 +141,7 @@
     <ClCompile Include="..\html\examples\tests\canvas_scrollbar.c" />
     <ClCompile Include="..\html\examples\tests\canvas_scrollbar2.c" />
     <ClCompile Include="..\html\examples\tests\canvas_scrollbar3.c" />
+    <ClCompile Include="..\html\examples\tests\cbox.c" />
     <ClCompile Include="..\html\examples\tests\cells_checkboard.c" />
     <ClCompile Include="..\html\examples\tests\cells_degrade.c" />
     <ClCompile Include="..\html\examples\tests\cells_numbering.c" />
@@ -149,10 +150,13 @@
     <ClCompile Include="..\html\examples\tests\clipboard.c" />
     <ClCompile Include="..\html\examples\tests\colorbar.c" />
     <ClCompile Include="..\html\examples\tests\colorbrowser.c" />
+    <ClCompile Include="..\html\examples\tests\detachbox.c" />
     <ClCompile Include="..\html\examples\tests\dial.c" />
     <ClCompile Include="..\html\examples\tests\dialog.c" />
     <ClCompile Include="..\html\examples\tests\expander.c" />
     <ClCompile Include="..\html\examples\tests\flatbutton.c" />
+    <ClCompile Include="..\html\examples\tests\flatframe.c" />
+    <ClCompile Include="..\html\examples\tests\flattabs.c" />
     <ClCompile Include="..\html\examples\tests\frame.c" />
     <ClCompile Include="..\html\examples\tests\gauge.c" />
     <ClCompile Include="..\html\examples\tests\getcolor.c" />
@@ -165,11 +169,14 @@
     <ClCompile Include="..\html\examples\tests\label.c" />
     <ClCompile Include="..\html\examples\tests\link.c" />
     <ClCompile Include="..\html\examples\tests\list.c" />
+    <ClCompile Include="..\html\examples\tests\mathglsamples.c" />
     <ClCompile Include="..\html\examples\tests\matrix.c" />
+    <ClCompile Include="..\html\examples\tests\matrixlist.c" />
     <ClCompile Include="..\html\examples\tests\matrix_cbmode.c" />
     <ClCompile Include="..\html\examples\tests\matrix_cbs.c" />
     <ClCompile Include="..\html\examples\tests\mdi.c" />
     <ClCompile Include="..\html\examples\tests\menu.c" />
+    <ClCompile Include="..\html\examples\tests\mgllabel.c" />
     <ClCompile Include="..\html\examples\tests\mglplot.c" />
     <ClCompile Include="..\html\examples\tests\ole.cpp" />
     <ClCompile Include="..\html\examples\tests\plot.c" />
@@ -179,6 +186,7 @@
     <ClCompile Include="..\html\examples\tests\sample.c" />
     <ClCompile Include="..\html\examples\tests\sbox.c" />
     <ClCompile Include="..\html\examples\tests\scanf.c" />
+    <ClCompile Include="..\html\examples\tests\scintilla.c" />
     <ClCompile Include="..\html\examples\tests\scrollbox.c" />
     <ClCompile Include="..\html\examples\tests\spin.c" />
     <ClCompile Include="..\html\examples\tests\split.c" />
@@ -192,6 +200,7 @@
     <ClCompile Include="..\html\examples\tests\tree.c" />
     <ClCompile Include="..\html\examples\tests\val.c" />
     <ClCompile Include="..\html\examples\tests\vbox.c" />
+    <ClCompile Include="..\html\examples\tests\webbrowser.c" />
     <ClCompile Include="..\html\examples\tests\zbox.c" />
   </ItemGroup>
   <ItemGroup>

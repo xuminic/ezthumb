@@ -88,12 +88,12 @@ static void gtkTextParseParagraphFormat(Ihandle* formattag, GtkTextTag* tag)
 
     while (format)
     {
-      str = iupStrDupUntil((char**)&format, ' ');
+      str = iupStrDupUntil((const char**)&format, ' ');
       if (!str) break;
       pos = atoi(str);
       free(str);
 
-      str = iupStrDupUntil((char**)&format, ' ');
+      str = iupStrDupUntil((const char**)&format, ' ');
       if (!str) break;
 
 /*      if (iupStrEqualNoCase(str, "DECIMAL"))    unsupported for now
@@ -1158,6 +1158,18 @@ static int gtkTextSetTabSizeAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
+static int gtkTextSetCueBannerAttrib(Ihandle *ih, const char *value)
+{
+  if (!ih->data->is_multiline)
+  {
+#if GTK_CHECK_VERSION(3, 2, 0)
+    gtk_entry_set_placeholder_text(GTK_ENTRY(ih->handle), iupgtkStrConvertToSystem(value));
+    return 1;
+#endif
+  }
+  return 0;
+}
+
 static int gtkTextSetOverwriteAttrib(Ihandle* ih, const char* value)
 {
   if (!ih->data->is_multiline)
@@ -1755,8 +1767,8 @@ void iupdrvTextInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "REMOVEFORMATTING", NULL, gtkTextSetRemoveFormattingAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "TABSIZE", NULL, gtkTextSetTabSizeAttrib, "8", NULL, IUPAF_DEFAULT);  /* force new default value */
   iupClassRegisterAttribute(ic, "PASSWORD", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CUEBANNER", NULL, gtkTextSetCueBannerAttrib, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* Not Supported */
-  iupClassRegisterAttribute(ic, "CUEBANNER", NULL, NULL, NULL, NULL, IUPAF_NOT_SUPPORTED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTER", NULL, NULL, NULL, NULL, IUPAF_NOT_SUPPORTED|IUPAF_NO_INHERIT);
 }

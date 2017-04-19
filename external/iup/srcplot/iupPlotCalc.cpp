@@ -313,10 +313,15 @@ bool iupPlot::CalculateXRange(double &outXMin, double &outXMax)
 
     if (theXData->GetCount() == 0)
       continue;
-    
+
     double theXMin;
     double theXMax;
-    if (!theXData->CalculateRange(theXMin, theXMax)) 
+    if (mDataSetList[ds]->mMode == IUP_PLOT_PIE)
+    {
+      theXMin = -1;
+      theXMax = 1;
+    }
+    else if (!theXData->CalculateRange(theXMin, theXMax))
       return false;
     
     if (theFirst) 
@@ -349,7 +354,12 @@ bool iupPlot::CalculateYRange(double &outYMin, double &outYMax)
 
     double theYMin;
     double theYMax;
-    if (!theYData->CalculateRange(theYMin, theYMax)) 
+    if (mDataSetList[ds]->mMode == IUP_PLOT_PIE)
+    {
+      theYMin = -1;
+      theYMax = 1;
+    }
+    else if (!theYData->CalculateRange(theYMin, theYMax))
       return false;
     
     if (theFirst) 
