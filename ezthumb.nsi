@@ -78,6 +78,10 @@ Section "Start Menu Shortcuts"
   
 SectionEnd
 
+Section "Add to Context Menu"
+  WriteRegStr HKCR "SystemFileAssociations\video\shell\ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
+SectionEnd
+
 ;--------------------------------
 
 ; Uninstaller
@@ -88,6 +92,8 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Ezthumb"
   DeleteRegKey HKLM SOFTWARE\Ezthumb
   DeleteRegKey HKCU SOFTWARE\ezthumb
+
+  DeleteRegKey HKCR "SystemFileAssociations\video\shell\ezthumbnailer"
 
   ; Remove files and uninstaller
   Delete $INSTDIR\*.*
