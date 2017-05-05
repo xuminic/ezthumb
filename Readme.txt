@@ -13,10 +13,12 @@ curve profiles.
 
 Release Notes
 =============
-Version 3.6.0:
+Version 3.6.1:
 *) Building system moved to autoconf/automake.
 *) Added a progress bar dialog for integrating with file managers.
+*) Added to the context menu in Windows File Manager.
 *) Supported libav.
+*) IUP updated to 3.21 and using the official WIN32 libs distributed by IUP.
 *) Fixed the uneven vertical size of buttons in GTK3.
 
 Version 3.4.1:

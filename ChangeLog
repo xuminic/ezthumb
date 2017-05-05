@@ -1,4 +1,7 @@
-20170419: 3.6.1
+20170505: 3.6.1
+	* ezthumb.nsi: added a section to add to context menu (Win32).
+
+20170419:
 	* IUP: updated to 3.21 to workaround the missing GTK icons.
 	* IUP: using the officially distributed WIN32 libs from IUP home page.
 	- It looks the "IUP_MessageInfo" issue is persistent.
