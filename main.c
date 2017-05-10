@@ -730,8 +730,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			break;
 		case CMD_FOR_M_AT:	
 			/* Examples: png, jpg@90, gif, gif@1000 */
-			opt->img_quality = meta_image_format(optarg, 
-					opt->img_format, 8);
+			opt->img_format = meta_image_format(optarg);
 			break;
 		case CMD_O_UTPUT:
 			opt->pathout = optarg;

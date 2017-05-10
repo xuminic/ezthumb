@@ -198,6 +198,15 @@ AC_CHECK_MEMBER([struct AVFrame.best_effort_timestamp],
     [AC_MSG_WARN([Not found pkt_pts or best_effort_timestamp in the AVFrame structure.])],
     [#include <libavutil/avutil.h>])],
   [#include <libavutil/avutil.h>])
+AC_CHECK_MEMBER([struct AVFormatContext.file_size],
+  [AC_DEFINE(HAVE_AVFORMATCONTEXT_FILE_SIZE, 1,
+    [Define 1 if you have file_size in the AVFormatContext structure.])],
+  [AC_CHECK_MEMBER([struct AVFormatContext.pb],
+    [AC_DEFINE(HAVE_AVFORMATCONTEXT_PB, 1, 
+      [Define 1 if you have pb in the AVFormatContext structure.])],
+    [AC_MSG_WARN([Not found file_size or pb in the AVFormatContext structure.])],
+    [#include <libavformat/avformat.h>])],
+  [#include <libavformat/avformat.h>])
 
 # Checks for library functions.
 AC_FUNC_STRTOD
@@ -208,7 +217,7 @@ AC_CHECK_FUNCS([memset strcasecmp strchr strrchr strstr strtol \
     avcodec_alloc_frame av_dict_get av_metadata_get av_dump_format \
     av_stream_get_r_frame_rate av_get_media_type_string avcodec_descriptor_get \
     av_get_picture_type_char av_get_pix_fmt_name av_get_sample_fmt_name \
-    dump_format])
+    dump_format gdImageGifAnimBegin gdFTUseFontConfig])
 
 # Checks for operating system services or capabilities.
 AC_PATH_XTRA

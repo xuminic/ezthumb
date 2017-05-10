@@ -12,6 +12,12 @@
 /* Define to 1 if you have the `avcodec_open2' function. */
 #undef HAVE_AVCODEC_OPEN2
 
+/* Define 1 if you have file_size in the AVFormatContext structure. */
+#undef HAVE_AVFORMATCONTEXT_FILE_SIZE
+
+/* Define 1 if you have pb in the AVFormatContext structure. */
+#undef HAVE_AVFORMATCONTEXT_PB
+
 /* Define to 1 if you have the `avformat_close_input' function. */
 #undef HAVE_AVFORMAT_CLOSE_INPUT
 
@@ -20,6 +26,12 @@
 
 /* Define to 1 if you have the `avformat_open_input' function. */
 #undef HAVE_AVFORMAT_OPEN_INPUT
+
+/* Define 1 if you have the best_effort_timestamp in the AVFrame structure. */
+#undef HAVE_AVFRAME_BEST_ETS
+
+/* Define 1 if you have the pkt_pts in the AVFrame structure. */
+#undef HAVE_AVFRAME_PKT_PTS
 
 /* Define to 1 if you have the `av_close_input_file' function. */
 #undef HAVE_AV_CLOSE_INPUT_FILE
@@ -65,6 +77,12 @@
 
 /* Define to 1 if you have the `dump_format' function. */
 #undef HAVE_DUMP_FORMAT
+
+/* Define to 1 if you have the `gdFTUseFontConfig' function. */
+#undef HAVE_GDFTUSEFONTCONFIG
+
+/* Define to 1 if you have the `gdImageGifAnimBegin' function. */
+#undef HAVE_GDIMAGEGIFANIMBEGIN
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H

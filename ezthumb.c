@@ -156,7 +156,7 @@ static int image_gdcanvas_strlen(EZIMG *image, int fsize, char *s);
 static int image_gdcanvas_puts(EZIMG *image, int fsize, int x, int y, 
 		int c, char *s);
 static int image_gdcanvas_background(EZIMG *image);
-#ifdef	HAVE_GD_IMAGE_GIFANIMATION
+#ifdef	HAVE_GDIMAGEGIFANIMBEGIN
 static FILE *image_gif_anim_open(EZIMG *image, char *filename);
 static int image_gif_anim_add(EZIMG *image, FILE *fout, int interval);
 static int image_gif_anim_close(EZIMG *image, FILE *fout);
@@ -232,8 +232,7 @@ void ezopt_init(EZOPT *ezopt, char *profile)
 	ezopt->ins_position = EZ_POS_RIGHTTOP;
 	ezopt->ins_shadow = EZ_TEXT_SHADOW_OFF;
 
-	strcpy(ezopt->img_format, "jpg");
-	ezopt->img_quality = 85;
+	ezopt->img_format = EZ_IMG_INIT(EZ_IMG_FMT_JPEG, 85);
 	strcpy(ezopt->suffix, "_thumb");
 
 	ezopt->bg_position = EZ_POS_MIDCENTER;
@@ -340,7 +339,7 @@ int ezopt_load_config(EZOPT *ezopt, void *config)
 
 	s = csc_cfg_copy(config, NULL, CFG_KEY_FILE_FORMAT, 0);
 	if (s != NULL) {
-		ezopt->img_quality = meta_image_format(s, ezopt->img_format, 8);
+		ezopt->img_format = meta_image_format(s);
 		smm_free(s);
 	}
 	s = csc_cfg_copy(config, NULL, CFG_KEY_TRANSPARENCY, 0);
@@ -477,11 +476,12 @@ int ezopt_store_config(EZOPT *ezopt, void *config)
 	csc_cfg_write(config, NULL, CFG_KEY_INSET_LAYOUT,
 		id_lookup(id_layout, ezopt->ins_position & EZ_POS_MASK));
 
-	if (ezopt->img_quality) {
-		sprintf(buf, "%s@%d", ezopt->img_format, ezopt->img_quality);
-	} else {
-		strcpy(buf, ezopt->img_format);
+	strcpy(buf, meta_image_abbre(ezopt->img_format));
+	if (EZ_IMG_PARAM_GET(ezopt->img_format)) {
+		sprintf(buf + strlen(buf), "@%d", 
+				EZ_IMG_PARAM_GET(ezopt->img_format));
 	}
+
 	csc_cfg_write(config, NULL, CFG_KEY_FILE_FORMAT, buf);
 
 	if (ezopt->flags & EZOP_TRANSPARENT) {
@@ -531,7 +531,7 @@ int ezopt_store_config(EZOPT *ezopt, void *config)
 void ezopt_review(EZOPT *ezopt)
 {
 	/* foolproof the right transparent setting */
-	if (!strcmp(ezopt->img_format, "jpg")) {
+	if (EZ_IMG_FMT_GET(ezopt->img_format) == EZ_IMG_FMT_JPEG) {
 		ezopt->flags &= ~EZOP_TRANSPARENT;
 	}
 
@@ -2423,7 +2423,7 @@ static int video_snap_begin(EZVID *vidx, EZIMG *image, int method)
 	/* If the output format is the animated GIF89a, then it opens
 	 * the target file and device */
 	image->gifx_fp = NULL;
-#ifdef	HAVE_GD_IMAGE_GIFANIMATION
+#ifdef	HAVE_GDIMAGEGIFANIMBEGIN
 	if ((image->gifx_opt = image_cal_gif_animix(image->sysopt)) > 0) {
 		/* 20130627 using vidx->filename should be fine here because 
 		 * only the first clip would be processed by this function */
@@ -2479,7 +2479,7 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 
 	if (image->gdcanvas) {
 		image_gdcanvas_update(image, image->taken);
-#ifdef	HAVE_GD_IMAGE_GIFANIMATION
+#ifdef	HAVE_GDIMAGEGIFANIMBEGIN
 	} else if (image->gifx_fp) {
 		image_gif_anim_add(image, image->gifx_fp, image->gifx_opt);
 #endif
@@ -2551,7 +2551,7 @@ static int video_snap_end(EZVID *vidx, EZIMG *image)
 		} else {
 			image_gdcanvas_save(image, vidx->filename);
 		}
-#ifdef	HAVE_GD_IMAGE_GIFANIMATION
+#ifdef	HAVE_GDIMAGEGIFANIMBEGIN
 	} else if (image->gifx_fp) {
 		image_gif_anim_close(image, image->gifx_fp);
 #endif
@@ -3791,12 +3791,18 @@ static int image_gdframe_save(EZIMG *image, char *filename, int idx)
 		return EZ_ERR_FILE;
 	}
 
-	if (!strcmp(image->sysopt->img_format, "png")) {
+	switch (EZ_IMG_FMT_GET(image->sysopt->img_format)) {
+	case EZ_IMG_FMT_PNG:
 		gdImagePng(image->gdframe, fout);
-	} else if (!strcmp(image->sysopt->img_format, "gif")) {
+		break;
+	case EZ_IMG_FMT_GIF:
+	case EZ_IMG_FMT_GIFA:
 		gdImageGif(image->gdframe, fout);
-	} else {
-		gdImageJpeg(image->gdframe, fout, image->sysopt->img_quality);
+		break;
+	default:
+		gdImageJpeg(image->gdframe, fout, 
+				EZ_IMG_PARAM_GET(image->sysopt->img_format));
+		break;
 	}
 	fclose(fout);
 	return EZ_ERR_NONE;
@@ -3855,12 +3861,18 @@ static int image_gdcanvas_save(EZIMG *image, char *filename)
 	if (image->sysopt->flags & EZOP_TRANSPARENT) {
 		gdImageColorTransparent(image->gdcanvas, image->color_canvas);
 	}
-	if (!strcmp(image->sysopt->img_format, "png")) {
+	switch (EZ_IMG_FMT_GET(image->sysopt->img_format)) {
+	case EZ_IMG_FMT_PNG:
 		gdImagePng(image->gdcanvas, fout);
-	} else if (!strcmp(image->sysopt->img_format, "gif")) {
+		break;
+	case EZ_IMG_FMT_GIF:
+	case EZ_IMG_FMT_GIFA:
 		gdImageGif(image->gdcanvas, fout);
-	} else {
-		gdImageJpeg(image->gdcanvas, fout, image->sysopt->img_quality);
+		break;
+	default:
+		gdImageJpeg(image->gdcanvas, fout, 
+				EZ_IMG_PARAM_GET(image->sysopt->img_format));
+		break;
 	}
 	fclose(fout);
 	return EZ_ERR_NONE;
@@ -4112,7 +4124,7 @@ static int image_gdcanvas_background(EZIMG *image)
 	return 0;
 }
 
-#ifdef	HAVE_GD_IMAGE_GIFANIMATION
+#ifdef	HAVE_GDIMAGEGIFANIMBEGIN
 static FILE *image_gif_anim_open(EZIMG *image, char *filename)
 {
 	gdImage	*imgif;
@@ -4164,7 +4176,7 @@ static int image_gif_anim_close(EZIMG *image, FILE *fout)
 	fclose(fout);
 	return 0;
 }
-#endif 	/* HAVE_GD_IMAGE_GIFANIMATION */
+#endif 	/* HAVE_GDIMAGEGIFANIMBEGIN */
 
 static FILE *image_create_file(EZIMG *image, char *filename, int idx)
 {
@@ -4231,11 +4243,8 @@ static EZTIME image_cal_timestep(EZTIME duration, int shots, int mode)
 
 static int image_cal_gif_animix(EZOPT *ezopt)
 {
-	if (strcmp(ezopt->img_format, "gif")) {
-		return 0;
-	}
-	if (ezopt->img_quality > 0) {
-		return ezopt->img_quality / 10;
+	if (EZ_IMG_FMT_GET(ezopt->img_format) == EZ_IMG_FMT_GIFA) {
+		return EZ_IMG_PARAM_GET(ezopt->img_format) / 10;
 	}
 	return 0;
 }
@@ -4302,7 +4311,8 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	 * 'pathout' is something like "abc.jpg", the 'pathout' actually
 	 * is the output file. But if 'pathout' is "abc.jpg/", then it's
 	 * still a path */
-	if (!csc_cmp_file_extname(ezopt->pathout, ezopt->img_format)) {
+	strcpy(tmp, meta_image_abbre(ezopt->img_format));
+	if (!csc_cmp_file_extname(ezopt->pathout, tmp)) {
 		if (buf) {
 			strcpy(buf, ezopt->pathout);
 		}
@@ -4321,7 +4331,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 	} else {
 		sprintf(tmp, "%03d.", idx);
 	}
-	strcat(tmp, ezopt->img_format);
+	strcat(tmp, meta_image_abbre(ezopt->img_format));
 	ezopt_name_build(ezopt->pathout, fname, buf, tmp);
 
 	for (i = 1; i < 256; i++) {
@@ -4347,7 +4357,7 @@ static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 		} else {
 			sprintf(tmp, "%03d.%d.", idx, i);
 		}
-		strcat(tmp, ezopt->img_format);
+		strcat(tmp, meta_image_abbre(ezopt->img_format));
 		ezopt_name_build(ezopt->pathout, fname, buf, tmp);
 	}
 	if (i == 256) {
@@ -4990,8 +5000,9 @@ static int dump_ezthumb(EZOPT *ezopt, EZIMG *image)
 	if (ezopt->ins_font) {
 		CDB_SHOW(("Font Inset Shots:  %s\n", ezopt->ins_font));
 	}
-	CDB_SHOW(("Output file name:  %s.%s (%d)\n", 
-			ezopt->suffix, ezopt->img_format, ezopt->img_quality));
+	CDB_SHOW(("Output file name:  %s.%s (%d)\n", ezopt->suffix, 
+			meta_image_abbre(ezopt->img_format), 
+			EZ_IMG_PARAM_GET(ezopt->img_format)));
 	CDB_SHOW(("Flags:             %s %s %s %s %s %s %s %s %s "
 				"0x%x D%d P%d\n", 
 			ezopt->flags & EZOP_INFO ? "MI" : "",

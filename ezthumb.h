@@ -20,9 +20,6 @@
 #ifndef	_EZTHUMB_H_
 #define _EZTHUMB_H_
 
-#define HAVE_GD_IMAGE_GIFANIMATION      1
-#define HAVE_GD_USE_FONTCONFIG          1
-
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
@@ -240,6 +237,19 @@
 #define EZ_THUMB_COPIABLE	3	/* file existed: make a copy */
 #define EZ_THUMB_OVERCOPY	4	/* copy full: override the last one */
 
+/* define image format */
+#define EZ_IMG_FMT_MASK		0xf0000000
+#define EZ_IMG_FMT_JPEG		0
+#define EZ_IMG_FMT_PNG		0x10000000
+#define EZ_IMG_FMT_GIF		0x20000000
+#define EZ_IMG_FMT_GIFA		0x30000000
+#define EZ_IMG_FMT_SET(m,d)	((m) &= ~EZ_IMG_FMT_MASK, (m) |= (d))
+#define EZ_IMG_FMT_GET(m)	((m) & EZ_IMG_FMT_MASK)
+#define EZ_IMG_PARAM_MASK	0xffffff
+#define EZ_IMG_PARAM_SET(m,d)	((m) &= ~EZ_IMG_PARAM_MASK, (m) |= (d))
+#define EZ_IMG_PARAM_GET(m)	((m) & EZ_IMG_PARAM_MASK)
+#define EZ_IMG_INIT(m,d)	((m) | (d))
+
 /* Duration Seeking Challenge Profile */
 #define EZ_DSCP_RANGE_INIT	10000	/* range of initial scan (ms) */
 #define EZ_DSCP_RANGE_EXT	10	/* extended rate of initial range */
@@ -419,8 +429,7 @@ typedef	struct	{
 	int	ins_shadow;	/* width of the shadow of the inset text */
 	int	ins_position;	/* layout position of the inset text */
 
-	char	img_format[8];	/* only support jpg, png and gif */
-	int	img_quality;	/* for jpeg quality */
+	int	img_format;	/* only support jpg, png and gif */
 	char	suffix[64];	/* suffix of the target file name (utf-8) */
 
 	char	*background;	/* picture for the canvas background */
@@ -666,7 +675,8 @@ int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
 int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
 char *meta_filesize(int64_t size, char *buffer);
 char *meta_timestamp(EZTIME ms, int enms, char *buffer);
-int meta_image_format(char *input, char *fmt, int flen);
+int meta_image_format(char *input);
+char *meta_image_abbre(int fmt);
 int meta_make_color(char *s, EZBYTE *color);
 int meta_export_color(EZBYTE *color, char *buf, int blen);
 char *meta_make_fontdir(char *s);

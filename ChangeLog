@@ -1,3 +1,9 @@
+20170510:
+	* configure.ac: added tests for	HAVE_AVFRAME_PKT_PTS, HAVE_AVFRAME_BEST_ETS,
+	HAVE_GD_USE_FONTCONFIG and HAVE_GD_IMAGE_GIFANIMATION
+	* ezthumb.h: EZOPT.img_format changed to integer type
+	* ezgui.c: Fixed the bug which failed to save to png and gif.
+
 20170505: 3.6.1
 	* ezthumb.nsi: added a section to add to context menu (Win32).
 

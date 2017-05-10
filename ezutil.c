@@ -589,10 +589,10 @@ char *meta_timestamp(EZTIME ms, int enms, char *buffer)
  * "Jpeg", "Png", "Animated GIF" or "GIF", therefore the form like
  * "Animated GIF@1000" is also supported. To be compatible with CLI version,
  * the output string will be reformed to "jpg", "gif" or "png". */
-int meta_image_format(char *input, char *fmt, int flen)
+int meta_image_format(char *input)
 {
 	char	*p, arg[128];
-	int	quality = 0;
+	int	format, quality = 0;
 
 	csc_strlcpy(arg, input, sizeof(arg));
 	if ((p = strchr(arg, '@')) != NULL) {
@@ -602,22 +602,44 @@ int meta_image_format(char *input, char *fmt, int flen)
 
 	/* foolproof of the quality parameter */
 	if (!strcasecmp(arg, "png")) {
-		csc_strlcpy(fmt, "png", flen);
-		quality = 0;
-	} else if (!strcasecmp(arg, "gif") || 
-			!strcasecmp(arg, "Animated GIF")) {
-		csc_strlcpy(fmt, "gif", flen);
-		if (quality && (quality < 15)) {
-			quality = 1000;	/* 1 second as default */
+		format = EZ_IMG_INIT(EZ_IMG_FMT_PNG, quality);
+	} else if (!strcasecmp(arg, "gif")) {
+		if (quality == 0) {
+			format = EZ_IMG_INIT(EZ_IMG_FMT_GIF, 0);
+		} else if (quality < 15) {
+			format = EZ_IMG_INIT(EZ_IMG_FMT_GIFA, 1000);
+		} else {
+			format = EZ_IMG_INIT(EZ_IMG_FMT_GIFA, quality);
+		}
+	} else if (!strcasecmp(arg, "Animated GIF")) {
+		if (quality == 0) {
+			format = EZ_IMG_INIT(EZ_IMG_FMT_GIFA, 1000);
+		} else {
+			format = EZ_IMG_INIT(EZ_IMG_FMT_GIFA, quality);
 		}
 	} else {	/* jpeg is the default */
-		csc_strlcpy(fmt, "jpg", flen);
 		if ((quality < 5) || (quality > 100)) {
 			quality = 85;	/* as default */
 		}
+		format = EZ_IMG_INIT(EZ_IMG_FMT_JPEG, quality);
 	}
-	return quality;
+	return format;
 }
+
+char *meta_image_abbre(int fmt)
+{
+	static	const	char	*image[] = { "jpg", "png", "gif" };
+
+	switch (EZ_IMG_FMT_GET(fmt)) {
+	case EZ_IMG_FMT_PNG:
+		return (char*) image[1];
+	case EZ_IMG_FMT_GIF:
+	case EZ_IMG_FMT_GIFA:
+		return (char*) image[2];
+	}
+	return (char*) image[0];
+}
+
 
 int meta_make_color(char *s, EZBYTE *color)
 {
@@ -648,7 +670,7 @@ int meta_export_color(EZBYTE *color, char *buf, int blen)
 
 char *meta_make_fontdir(char *s)
 {
-#ifdef	HAVE_GD_USE_FONTCONFIG
+#ifdef	HAVE_GDFTUSEFONTCONFIG
 	char	*p;
 
 	/* review whether the fontconfig pattern like "times:bold:italic"
@@ -662,7 +684,7 @@ char *meta_make_fontdir(char *s)
 			return csc_strcpy_alloc(s, 0);
 		}
 	}
-#endif	/* HAVE_GD_USE_FONTCONFIG */
+#endif	/* HAVE_GDFTUSEFONTCONFIG */
 	return smm_fontpath(s, NULL);
 }
 

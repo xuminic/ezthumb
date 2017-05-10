@@ -1569,7 +1569,7 @@ static Ihandle *ezgui_setup_font_create(EZGUI *gui)
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
 	IupSetAttribute(vbox, "NGAP", "4");
 
-#ifdef  HAVE_GD_USE_FONTCONFIG
+#ifdef  HAVE_GDFTUSEFONTCONFIG
 	gdFTUseFontConfig(1);
 #endif
 	return vbox;
@@ -1845,47 +1845,43 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 	IupSetAttribute(vbox, "NGAP", "4");
 
 	/* find the index of drop down lists: the file format drop down */
-	s = csc_cfg_copy(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT, 0);
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT);
 	if (s) {
 		printf("ezgui_setup_format_create: %s\n", s);
-		meta_image_format(s, gui->sysopt->img_format, 8);
-		if (!strcmp(s, CFG_PIC_FMT_GIFA)) {
-			csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
-				CFG_KEY_GIF_FRATE, &gui->sysopt->img_quality);
-		}
-		smm_free(s);
-	}
-	if (!strcasecmp(gui->sysopt->img_format, "png")) {
-		gui->fmt_idx = lookup_index_string(uir_format, 0, 
-				CFG_PIC_FMT_PNG);
-	} else if (strcasecmp(gui->sysopt->img_format, "gif")) {
-		gui->fmt_idx = lookup_index_string(uir_format, 0, 
-				CFG_PIC_FMT_JPEG);
-	} else if (gui->sysopt->img_quality) {
-		gui->fmt_idx = lookup_index_string(uir_format, 0, 
-				CFG_PIC_FMT_GIFA);
-	} else {
-		gui->fmt_idx = lookup_index_string(uir_format, 0, 
-				CFG_PIC_FMT_GIF);
+		gui->sysopt->img_format = meta_image_format(s);
 	}
 
 	/* seperate the image quality and frame rate */
-	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_JPG_QUALITY, 
+	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_JPG_QUALITY,
 				&gui->tmp_jpg_qf) != SMM_ERR_NONE) {
 		gui->tmp_jpg_qf  = 85;
-		if (!strcmp(gui->sysopt->img_format, "jpg")) {
-			gui->tmp_jpg_qf  = gui->sysopt->img_quality;
-		}
 	}
-
-	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_GIF_FRATE, 
+	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_GIF_FRATE,
 				&gui->tmp_gifa_fr) != SMM_ERR_NONE) {
 		gui->tmp_gifa_fr = 1000;
-		if (!strcmp(gui->sysopt->img_format, "gif") && 
-				gui->sysopt->img_quality) {
-			gui->tmp_gifa_fr = gui->sysopt->img_quality;
-		}
 	}
+
+	switch (EZ_IMG_FMT_GET(gui->sysopt->img_format)) {
+	case EZ_IMG_FMT_PNG:
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_PNG);
+		break;
+	case EZ_IMG_FMT_GIF:
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_GIF);
+		break;
+	case EZ_IMG_FMT_GIFA:
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_GIFA);
+		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_gifa_fr);
+		break;
+	default:
+		gui->fmt_idx = lookup_index_string(uir_format, 0, 
+				CFG_PIC_FMT_JPEG);
+		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_jpg_qf);
+		break;
+	}
+
 	printf("ezgui_setup_format_create: %d %d %d\n", gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr);
 	return vbox;
 }
@@ -1927,12 +1923,17 @@ static int ezgui_setup_format_update(EZGUI *gui)
 			CFG_KEY_GIF_FRATE, gui->tmp_gifa_fr);
 
 	/* update the runtime parameters */
-	meta_image_format(uir_format[gui->fmt_idx].s, 
-			gui->sysopt->img_format, 8);
-	if (!strcmp(uir_format[gui->fmt_idx].s, CFG_PIC_FMT_GIFA)) {
-		gui->sysopt->img_quality = gui->tmp_gifa_fr;
+	gui->sysopt->img_format = 
+		meta_image_format(uir_format[gui->fmt_idx].s);
+	switch (EZ_IMG_FMT_GET(gui->sysopt->img_format)) {
+	case EZ_IMG_FMT_GIFA:
+		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_gifa_fr);
+		break;
+	case EZ_IMG_FMT_JPEG:
+		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_jpg_qf);
+		break;
 	}
-
+	
 	val = IupGetAttribute(gui->fmt_transp, "VALUE");
 	if (!strcmp(val, "ON")) {
 		gui->sysopt->flags |= EZOP_TRANSPARENT;
@@ -2494,7 +2495,7 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
 
 	/* 20160115 content in 'text' is not stable */
-	printf("ezgui_sview_event_run: %s\n", gui->sysopt->img_format);
+	printf("ezgui_sview_event_run: %x\n", gui->sysopt->img_format);
 	smm_codepage_set(65001);
 	fname = csc_strcpy_alloc(text, 0);
 	ezthumb(fname, gui->sysopt);
