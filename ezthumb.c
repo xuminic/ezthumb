@@ -354,7 +354,7 @@ int ezopt_load_config(EZOPT *ezopt, void *config)
 	}
 	s = csc_cfg_copy(config, NULL, CFG_KEY_FILE_SUFFIX, 0);
 	if (s != NULL) {
-		csc_strlcpy(ezopt->suffix, s, 64);
+		csc_strlcpy(ezopt->suffix, s, sizeof(ezopt->suffix));
 		smm_free(s);
 	}
 	s = csc_cfg_copy(config, NULL, CFG_KEY_BG_PICTURE, 0);
@@ -401,7 +401,7 @@ int ezopt_load_config(EZOPT *ezopt, void *config)
 	}
 	s = csc_cfg_read(config, NULL, CFG_KEY_FILE_SUFFIX);
 	if (s != NULL) {
-		csc_strlcpy(ezopt->suffix, s, 64);
+		csc_strlcpy(ezopt->suffix, s, sizeof(ezopt->suffix));
 	}
 	s = csc_cfg_read(config, NULL, CFG_KEY_MEDIA_PROC);
 	if (s != NULL) {

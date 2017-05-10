@@ -430,7 +430,7 @@ typedef	struct	{
 	int	ins_position;	/* layout position of the inset text */
 
 	int	img_format;	/* only support jpg, png and gif */
-	char	suffix[64];	/* suffix of the target file name (utf-8) */
+	char	suffix[256];	/* suffix of the target file name (utf-8) */
 
 	char	*background;	/* picture for the canvas background */
 	int	bg_position;	/* the position of the background */

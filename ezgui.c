@@ -1694,6 +1694,13 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 static Ihandle *ezgui_setup_suffix_create(EZGUI *gui)
 {
 	Ihandle *hbox;
+	char	*s;
+
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_SUFFIX);
+	if (s) {
+		csc_strlcpy(gui->sysopt->suffix, s, 
+				sizeof(gui->sysopt->suffix));
+	}
 
 	hbox = xui_text(&gui->fmt_suffix, "Suffix of Thumbnails");
 	IupSetAttribute(gui->fmt_suffix, "VALUE", gui->sysopt->suffix);
@@ -1715,7 +1722,10 @@ static int ezgui_setup_suffix_update(EZGUI *gui)
 
 	val = IupGetAttribute(gui->fmt_suffix, "VALUE");
 	if (csc_strcmp_param(val, gui->sysopt->suffix)) {
-		csc_strlcpy(gui->sysopt->suffix, val, 64);
+		csc_strlcpy(gui->sysopt->suffix, val, 
+				sizeof(gui->sysopt->suffix));
+		csc_cfg_write(gui->config, EZGUI_MAINKEY,
+				CFG_KEY_FILE_SUFFIX, gui->sysopt->suffix);
 	}
 	return 0;
 }
@@ -1847,7 +1857,6 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 	/* find the index of drop down lists: the file format drop down */
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT);
 	if (s) {
-		printf("ezgui_setup_format_create: %s\n", s);
 		gui->sysopt->img_format = meta_image_format(s);
 	}
 
@@ -1881,14 +1890,11 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_jpg_qf);
 		break;
 	}
-
-	printf("ezgui_setup_format_create: %d %d %d\n", gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr);
 	return vbox;
 }
 
 static int ezgui_setup_format_reset(EZGUI *gui)
 {
-	printf("ezgui_setup_format_reset: %d\n", gui->fmt_idx);
 	IupSetInt(gui->fmt_list, "VALUE", gui->fmt_idx + 1);
 	
 	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
@@ -2495,7 +2501,6 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
 
 	/* 20160115 content in 'text' is not stable */
-	printf("ezgui_sview_event_run: %x\n", gui->sysopt->img_format);
 	smm_codepage_set(65001);
 	fname = csc_strcpy_alloc(text, 0);
 	ezthumb(fname, gui->sysopt);

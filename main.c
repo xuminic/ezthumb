@@ -833,7 +833,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			prof_size = 0;	/* disable the profile */
 			break;
 		case CMD_SUFFI_X:
-			csc_strlcpy(opt->suffix, optarg, 64);
+			csc_strlcpy(opt->suffix, optarg, sizeof(opt->suffix));
 			break;
 		case CMD_PROGRESS:
 			opt->flags |= EZOP_PROGRESS_BAR;
