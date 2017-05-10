@@ -80,10 +80,12 @@ ezthumb_icon.o: ezthumb_icon.rc
 ezthumb_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
+if	XAM_MSWIN
 clean-local:
 	-test -e "ezthumb_win$(EXEEXT)" && rm -f ezthumb_win$(EXEEXT)
 	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
 	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
+endif
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all

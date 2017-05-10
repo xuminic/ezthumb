@@ -71,8 +71,8 @@
 
 /* re-use the debug convention in libcsoup */
 //#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_DEBUG)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_MODULE)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_GUI, SLOG_LVL_DEBUG)
 #include "libcsoup_debug.h"
 
 
@@ -1803,6 +1803,7 @@ static int ezgui_setup_dupname_event(Ihandle *ih, char *text, int i, int s)
 static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 {
 	Ihandle	*hbox3, *hbox4, *vbox;
+	char	*s;
 	int	i;
 
 	/* third line: file format of thumbnails */
@@ -1844,10 +1845,20 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 	IupSetAttribute(vbox, "NGAP", "4");
 
 	/* find the index of drop down lists: the file format drop down */
-	if (!strcmp(gui->sysopt->img_format, "png")) {
+	s = csc_cfg_copy(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT, 0);
+	if (s) {
+		printf("ezgui_setup_format_create: %s\n", s);
+		meta_image_format(s, gui->sysopt->img_format, 8);
+		if (!strcmp(s, CFG_PIC_FMT_GIFA)) {
+			csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_GIF_FRATE, &gui->sysopt->img_quality);
+		}
+		smm_free(s);
+	}
+	if (!strcasecmp(gui->sysopt->img_format, "png")) {
 		gui->fmt_idx = lookup_index_string(uir_format, 0, 
 				CFG_PIC_FMT_PNG);
-	} else if (strcmp(gui->sysopt->img_format, "gif")) {
+	} else if (strcasecmp(gui->sysopt->img_format, "gif")) {
 		gui->fmt_idx = lookup_index_string(uir_format, 0, 
 				CFG_PIC_FMT_JPEG);
 	} else if (gui->sysopt->img_quality) {
@@ -1859,25 +1870,29 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 	}
 
 	/* seperate the image quality and frame rate */
-	gui->tmp_jpg_qf  = 85;
-	if (!csc_strcmp_list(gui->sysopt->img_format, "jpg", "jpeg", NULL)) {
-		gui->tmp_jpg_qf  = gui->sysopt->img_quality;
+	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_JPG_QUALITY, 
+				&gui->tmp_jpg_qf) != SMM_ERR_NONE) {
+		gui->tmp_jpg_qf  = 85;
+		if (!strcmp(gui->sysopt->img_format, "jpg")) {
+			gui->tmp_jpg_qf  = gui->sysopt->img_quality;
+		}
 	}
-	csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
-			CFG_KEY_JPG_QUALITY, &gui->tmp_jpg_qf);
 
-	gui->tmp_gifa_fr = 1000;
-	if (!strcmp(gui->sysopt->img_format, "gif") && 
-			gui->sysopt->img_quality) {
-		gui->tmp_gifa_fr = gui->sysopt->img_quality;
+	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_GIF_FRATE, 
+				&gui->tmp_gifa_fr) != SMM_ERR_NONE) {
+		gui->tmp_gifa_fr = 1000;
+		if (!strcmp(gui->sysopt->img_format, "gif") && 
+				gui->sysopt->img_quality) {
+			gui->tmp_gifa_fr = gui->sysopt->img_quality;
+		}
 	}
-	csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
-			CFG_KEY_GIF_FRATE, &gui->tmp_gifa_fr);
+	printf("ezgui_setup_format_create: %d %d %d\n", gui->fmt_idx, gui->tmp_jpg_qf, gui->tmp_gifa_fr);
 	return vbox;
 }
 
 static int ezgui_setup_format_reset(EZGUI *gui)
 {
+	printf("ezgui_setup_format_reset: %d\n", gui->fmt_idx);
 	IupSetInt(gui->fmt_list, "VALUE", gui->fmt_idx + 1);
 	
 	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
@@ -1910,6 +1925,13 @@ static int ezgui_setup_format_update(EZGUI *gui)
 			IupGetAttribute(gui->fmt_gif_fr, "VALUE"), NULL, 10);
 	csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_GIF_FRATE, gui->tmp_gifa_fr);
+
+	/* update the runtime parameters */
+	meta_image_format(uir_format[gui->fmt_idx].s, 
+			gui->sysopt->img_format, 8);
+	if (!strcmp(uir_format[gui->fmt_idx].s, CFG_PIC_FMT_GIFA)) {
+		gui->sysopt->img_quality = gui->tmp_gifa_fr;
+	}
 
 	val = IupGetAttribute(gui->fmt_transp, "VALUE");
 	if (!strcmp(val, "ON")) {
@@ -2472,6 +2494,7 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
 
 	/* 20160115 content in 'text' is not stable */
+	printf("ezgui_sview_event_run: %s\n", gui->sysopt->img_format);
 	smm_codepage_set(65001);
 	fname = csc_strcpy_alloc(text, 0);
 	ezthumb(fname, gui->sysopt);
@@ -2571,7 +2594,7 @@ static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
 
 	line  = IupConvertXYToPos(ih, x, y);
 
-	CDB_MODL(("EVT_Motion: %d %d %d\n", x, y, line));
+	//CDB_MODL(("EVT_Motion: %d %d %d\n", x, y, line));
 
 	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;

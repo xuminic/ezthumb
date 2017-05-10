@@ -20,6 +20,9 @@
 #ifndef	_EZTHUMB_H_
 #define _EZTHUMB_H_
 
+#define HAVE_GD_IMAGE_GIFANIMATION      1
+#define HAVE_GD_USE_FONTCONFIG          1
+
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>

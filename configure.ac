@@ -189,6 +189,15 @@ AC_CHECK_MEMBER([struct AVStream.r_frame_rate],
     [Define 1 if you have the r_frame_rate in the AVStream structure.])],
   [AC_MSG_WARN([Not found AVStream.r_frame_rate, you have libav installed?])],
   [#include <libavformat/avformat.h>])
+AC_CHECK_MEMBER([struct AVFrame.best_effort_timestamp],
+  [AC_DEFINE(HAVE_AVFRAME_BEST_ETS, 1,
+    [Define 1 if you have the best_effort_timestamp in the AVFrame structure.])],
+  [AC_CHECK_MEMBER([struct AVFrame.pkt_pts],
+    [AC_DEFINE(HAVE_AVFRAME_PKT_PTS, 1,
+      [Define 1 if you have the pkt_pts in the AVFrame structure.])],
+    [AC_MSG_WARN([Not found pkt_pts or best_effort_timestamp in the AVFrame structure.])],
+    [#include <libavutil/avutil.h>])],
+  [#include <libavutil/avutil.h>])
 
 # Checks for library functions.
 AC_FUNC_STRTOD

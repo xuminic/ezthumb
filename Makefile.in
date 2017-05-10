@@ -385,6 +385,52 @@ all: $(BUILT_SOURCES) config.h
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
+am--refresh: Makefile
+	@:
+$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
+	@for dep in $?; do \
+	  case '$(am__configure_deps)' in \
+	    *$$dep*) \
+	      echo ' cd $(srcdir) && $(AUTOMAKE) --foreign'; \
+	      $(am__cd) $(srcdir) && $(AUTOMAKE) --foreign \
+		&& exit 0; \
+	      exit 1;; \
+	  esac; \
+	done; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign Makefile'; \
+	$(am__cd) $(top_srcdir) && \
+	  $(AUTOMAKE) --foreign Makefile
+.PRECIOUS: Makefile
+Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
+	@case '$?' in \
+	  *config.status*) \
+	    echo ' $(SHELL) ./config.status'; \
+	    $(SHELL) ./config.status;; \
+	  *) \
+	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe)'; \
+	    cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe);; \
+	esac;
+
+$(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
+	$(SHELL) ./config.status --recheck
+
+$(top_srcdir)/configure:  $(am__configure_deps)
+	$(am__cd) $(srcdir) && $(AUTOCONF)
+$(ACLOCAL_M4):  $(am__aclocal_m4_deps)
+	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
+$(am__aclocal_m4_deps):
+
+config.h: stamp-h1
+	@if test ! -f $@; then rm -f stamp-h1; else :; fi
+	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) stamp-h1; else :; fi
+
+stamp-h1: $(srcdir)/config.h.in $(top_builddir)/config.status
+	@rm -f stamp-h1
+	cd $(top_builddir) && $(SHELL) ./config.status config.h
+$(srcdir)/config.h.in:  $(am__configure_deps) 
+	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
+	rm -f stamp-h1
+	touch $@
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
@@ -776,6 +822,7 @@ maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
 	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
+@XAM_MSWIN_FALSE@clean-local:
 clean: clean-recursive
 
 clean-am: clean-binPROGRAMS clean-generic clean-local mostlyclean-am
@@ -903,10 +950,10 @@ ezthumb_icon.o: ezthumb_icon.rc
 ezthumb_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
-clean-local:
-	-test -e "ezthumb_win$(EXEEXT)" && rm -f ezthumb_win$(EXEEXT)
-	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
-	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
+@XAM_MSWIN_TRUE@clean-local:
+@XAM_MSWIN_TRUE@	-test -e "ezthumb_win$(EXEEXT)" && rm -f ezthumb_win$(EXEEXT)
+@XAM_MSWIN_TRUE@	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
+@XAM_MSWIN_TRUE@	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all

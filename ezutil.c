@@ -585,6 +585,10 @@ char *meta_timestamp(EZTIME ms, int enms, char *buffer)
 }
 
 /* input: jpg@85, gif@1000, png */
+/* 20190510 In GUI configuration file the image format can be:
+ * "Jpeg", "Png", "Animated GIF" or "GIF", therefore the form like
+ * "Animated GIF@1000" is also supported. To be compatible with CLI version,
+ * the output string will be reformed to "jpg", "gif" or "png". */
 int meta_image_format(char *input, char *fmt, int flen)
 {
 	char	*p, arg[128];
@@ -595,22 +599,22 @@ int meta_image_format(char *input, char *fmt, int flen)
 		*p++ = 0;
 		quality = strtol(p, NULL, 0);
 	}
-	csc_strlcpy(fmt, arg, flen);
 
 	/* foolproof of the quality parameter */
-	if (!strcmp(fmt, "jpg") || !strcmp(fmt, "jpeg")) {
-		if ((quality < 5) || (quality > 100)) {
-			quality = 85;	/* as default */
-		}
-	} else if (!strcmp(fmt, "png")) {
+	if (!strcasecmp(arg, "png")) {
+		csc_strlcpy(fmt, "png", flen);
 		quality = 0;
-	} else if (!strcmp(fmt, "gif")) {
+	} else if (!strcasecmp(arg, "gif") || 
+			!strcasecmp(arg, "Animated GIF")) {
+		csc_strlcpy(fmt, "gif", flen);
 		if (quality && (quality < 15)) {
 			quality = 1000;	/* 1 second as default */
 		}
-	} else {
-		strcpy(fmt, "jpg");	/* as default */
-		quality = 85;
+	} else {	/* jpeg is the default */
+		csc_strlcpy(fmt, "jpg", flen);
+		if ((quality < 5) || (quality > 100)) {
+			quality = 85;	/* as default */
+		}
 	}
 	return quality;
 }
