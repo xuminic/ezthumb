@@ -1,12 +1,12 @@
-20170510:
-	* ezthumb.h: EZOPT.suffix expands to 256
-	* ezgui.c: Fixed the bug which failed to save the suffix to the config file.
 
 20170510:
 	* configure.ac: added tests for	HAVE_AVFRAME_PKT_PTS, HAVE_AVFRAME_BEST_ETS,
 	HAVE_GD_USE_FONTCONFIG and HAVE_GD_IMAGE_GIFANIMATION
 	* ezthumb.h: EZOPT.img_format changed to integer type
 	* ezgui.c: Fixed the bug which failed to save to png and gif.
+	* ezthumb.h: EZOPT.suffix expands to 256
+	* ezgui.c: Fixed the bug which failed to save the suffix to the config file.
+	* ezgui.c: Fixed the bug which failed to save to the specified path.
 
 20170505: 3.6.1
 	* ezthumb.nsi: added a section to add to context menu (Win32).

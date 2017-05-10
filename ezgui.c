@@ -336,6 +336,9 @@ int ezgui_close(EZGUI *gui)
 			xui_config_status(gui->config, "Finalize");
 			csc_cfg_close(gui->config);
 		}
+		if (gui->sysopt->pathout) {
+			smm_free(gui->sysopt->pathout);
+		}
 		smm_free(gui);
 	}
 	return 0;
@@ -1441,6 +1444,13 @@ static Ihandle *ezgui_setup_outputdir_create(EZGUI *gui)
 	vbox = IupVbox(hbox1,  hbox2, NULL);
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
 	IupSetAttribute(vbox, "NGAP", "4");
+
+	/* safe landing the sysopt->pathout with allocated memory */
+	if (gui->sysopt->pathout) {
+		/* so this pathout must come from the cli */
+		gui->sysopt->pathout = 
+			csc_strcpy_alloc(gui->sysopt->pathout, 0);
+	}
 	return vbox;
 }
 
@@ -1461,8 +1471,11 @@ static int ezgui_setup_outputdir_reset(EZGUI *gui)
 		IupSetAttribute(gui->dir_path, "VISIBLE", "NO");
 	} else {	/* CFG_PIC_ODIR_PATH */
 		IupSetAttribute(gui->dir_path, "VISIBLE", "YES");
-		gui->sysopt->pathout = csc_cfg_read(gui->config, 
-					EZGUI_MAINKEY, CFG_KEY_OUTPUT_PATH);
+		if (gui->sysopt->pathout) {
+			smm_free(gui->sysopt->pathout);
+		}
+		gui->sysopt->pathout = csc_cfg_copy(gui->config, 
+				EZGUI_MAINKEY, CFG_KEY_OUTPUT_PATH, 0);
 		if (gui->sysopt->pathout) {
 			IupSetAttribute(gui->dir_path, "VALUE", 
 						gui->sysopt->pathout);
@@ -1480,10 +1493,15 @@ static int ezgui_setup_outputdir_update(EZGUI *gui)
 			CFG_KEY_OUTPUT_METHOD, uir_outdir[gui->dir_idx].s);
 	
 	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
-		gui->sysopt->pathout = IupGetAttribute(gui->dir_path,"VALUE");
+		if (gui->sysopt->pathout) {
+			smm_free(gui->sysopt->pathout);
+		}
+		gui->sysopt->pathout = csc_strcpy_alloc(
+				IupGetAttribute(gui->dir_path, "VALUE"), 0);
 		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
 				CFG_KEY_OUTPUT_PATH, gui->sysopt->pathout);
 	}
+	printf("ezgui_setup_outputdir_update: %s\n", gui->sysopt->pathout);
 	return 0;
 }
 
