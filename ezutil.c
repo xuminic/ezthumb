@@ -328,6 +328,7 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
 		}
 		break;
 	}
+	//printf("ezopt_profile_zooming: %d %d\n", *wid, *hei);
 	return 0;
 }
 

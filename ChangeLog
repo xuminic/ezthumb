@@ -9,6 +9,8 @@
 	been mapped. Therefore the virtual list can not remove its contents,
 	which caused the filename list couldn't match with the attribution
 	list.
+	* ezgui.c: Fixed the bug which failed to recover the 'auto' zooming if
+	other zooms were chosen once.
 
 20170510:
 	* configure.ac: added tests for	HAVE_AVFRAME_PKT_PTS, HAVE_AVFRAME_BEST_ETS,

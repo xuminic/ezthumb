@@ -156,8 +156,6 @@ static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s);
 static Ihandle *ezgui_setup_zoom_create(EZGUI *gui);
 static Ihandle *ezgui_setup_zoom_groupbox(Ihandle *zoombox);
 static int ezgui_setup_zoom_reset(Ihandle *zoombox);
-//static int ezgui_setup_zoom_read_index(Ihandle *zoombox);
-//static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index);
 static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status);
 static int ezgui_setup_zoom_check(Ihandle *zoombox);
 static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s);
@@ -1180,31 +1178,6 @@ static int ezgui_setup_zoom_reset(Ihandle *zoombox)
 	return IUP_DEFAULT;
 }
 
-/*
-static int ezgui_setup_zoom_read_index(Ihandle *zoombox)
-{
-	SetZoom	*zoom;
-
-	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
-	if (zoom != NULL) {
-		return zoom->zoom_idx;
-	}
-	return -1;
-}
-
-static int ezgui_setup_zoom_write_index(Ihandle *zoombox, int index)
-{
-	SetZoom	*zoom;
-
-	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
-	if (zoom != NULL) {
-		zoom->zoom_idx = index;
-		return index;
-	}
-	return -1;
-}
-*/
-
 static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
 {
 	SetZoom	*zoom;
@@ -1223,9 +1196,11 @@ static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
 	csc_cfg_write(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_ZOOM, uir_zoom[zoom->zoom_idx].s);
 
+	printf("ezgui_setup_zoom_update: %d\n", zoom->zoom_idx);
 	switch (zoom->zoom_idx) {
 	case 0:
 		strcpy(tmp, "Auto Zoom ");
+		opt->tn_width  = opt->tn_height = 0;
 		break;
 	case 1:
 		opt->tn_facto  = xui_text_get_number(zoom->entry_zoom_ratio);
