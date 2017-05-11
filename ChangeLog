@@ -1,3 +1,8 @@
+20170511:
+	* libcsoup: updated to 0.9.7 to remove the -Wshift-negative-value warning.
+	* ezgui.c: Fixed the bug which deleting all entries in GTK3.
+	In GTK3 once an entry was removed, the focus automatically moved to
+	the next entry, unlike GTK2, which caused the constantly deleting.
 
 20170510:
 	* configure.ac: added tests for	HAVE_AVFRAME_PKT_PTS, HAVE_AVFRAME_BEST_ETS,

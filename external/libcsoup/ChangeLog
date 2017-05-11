@@ -1,3 +1,10 @@
+20170511: 0.9.7
+	* libcsoup.h: removed the (-1<<4) macro to avoid the warning come from
+	-Wshift-negative-value in gcc 6.3.1.
+	../libcsoup.h:157:30: warning: left shift of negative value
+	[-Wshift-negative-value]
+	+ Added: csc_strcount_char.c and csc_strcount_str.c
+
 20160808: 0.9.6
 	* slog_core.c: applying the array of translators instead of chain list
 	because csc_cdll also uses slog, which caused a dead loop between slog

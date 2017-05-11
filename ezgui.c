@@ -1501,7 +1501,6 @@ static int ezgui_setup_outputdir_update(EZGUI *gui)
 		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
 				CFG_KEY_OUTPUT_PATH, gui->sysopt->pathout);
 	}
-	printf("ezgui_setup_outputdir_update: %s\n", gui->sysopt->pathout);
 	return 0;
 }
 
@@ -2554,7 +2553,6 @@ static int ezgui_sview_event_dropfiles(Ihandle *ih,
 static int ezgui_sview_event_multi_select(Ihandle *ih, char *value)
 {
 	SView	*sview;
-	int	i, n;
 
 	if ((sview = (SView *) IupGetAttribute(ih, EZOBJ_SVIEW)) == NULL) {
 		return IUP_DEFAULT;
@@ -2566,20 +2564,10 @@ static int ezgui_sview_event_multi_select(Ihandle *ih, char *value)
 	
 	/* the parameter 'value' is useless. grab list myself */
 	/*value = IupGetAttribute(sview->list_fname, "VALUE");
-	for (i = 0; value[i]; i++) {
-		if (value[i] == '+') {
-			IupSetAttribute(gui->button_del, "ACTIVE", "YES");
-			return IUP_DEFAULT;
-		}
-	}
 	IupSetAttribute(gui->button_del, "ACTIVE", "NO");*/
 	value = IupGetAttribute(sview->filename, "VALUE");
-	for (i = n = 0; value[i]; i++) {
-		if (value[i] == '+') {
-			n++;
-		}
-	}
-	ezgui_sview_active_update(sview, EZGUI_SVIEW_ACTIVE_SELECT, n);
+	ezgui_sview_active_update(sview, EZGUI_SVIEW_ACTIVE_SELECT, 
+			csc_strcount_char(value, "+"));
 	return IUP_DEFAULT;
 }
 
@@ -2747,23 +2735,22 @@ static int ezgui_sview_add(SView *sview)
 static int ezgui_sview_remove(SView *sview)
 {
 	char	*value;
-	int	i;
+	int	i = 0;
 
-	while (1) {
-		value = IupGetAttribute(sview->filename, "VALUE");
-		CDB_PROG(("EVT_Remove: %s\n", value));
-		for (i = 0; value[i]; i++) {
-			if (value[i] == '+') {
-				ezgui_sview_file_remove(sview, i+1);
-				break;
-			}
+	value = IupGetAttribute(sview->filename, "VALUE");
+	CDB_PROG(("EVT_Remove: %s\n", value));
+	while (*value) {
+		if (*value == '+') {
+			ezgui_sview_file_remove(sview, i+1);
+		} else {
+			i++;
 		}
-		if (!value[i]) {
-			break;
-		}
+		value++;
 	}
-	ezgui_sview_active_update(sview, 
-			EZGUI_SVIEW_ACTIVE_SELECT, 0);
+
+	value = IupGetAttribute(sview->filename, "VALUE");
+	ezgui_sview_active_update(sview, EZGUI_SVIEW_ACTIVE_SELECT, 
+			csc_strcount_char(value, "+"));
 	ezgui_sview_active_update(sview, 
 			EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
 	return IUP_DEFAULT;

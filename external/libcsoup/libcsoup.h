@@ -32,7 +32,7 @@
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	6		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	7		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -450,6 +450,10 @@ int csc_strcmp_list(char *dest, char *src, ...);
 
 /* see csc_strcmp_param.c */
 int csc_strcmp_param(char *s1, char *s2);
+
+/* see csc_strcount_char.c and csc_strcount_str.c */
+int csc_strcount_char(char *s, char *acct);
+int csc_strcount_str(char *s, char *needle);
 
 char *csc_path_basename(char *path, char *buffer, int blen);
 char *csc_path_path(char *path, char *buffer, int blen);
