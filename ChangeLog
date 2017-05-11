@@ -3,6 +3,12 @@
 	* ezgui.c: Fixed the bug which deleting all entries in GTK3.
 	In GTK3 once an entry was removed, the focus automatically moved to
 	the next entry, unlike GTK2, which caused the constantly deleting.
+	* ezgui.c: Fixed the bug which generating screenshot with wrong
+	attribution if some videoes were removed from the list control.
+	Root Cause: The REMOVEITEM only affective after the list control has
+	been mapped. Therefore the virtual list can not remove its contents,
+	which caused the filename list couldn't match with the attribution
+	list.
 
 20170510:
 	* configure.ac: added tests for	HAVE_AVFRAME_PKT_PTS, HAVE_AVFRAME_BEST_ETS,

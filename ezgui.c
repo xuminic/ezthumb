@@ -2296,7 +2296,8 @@ static int ezbar_cb_cancel(Ihandle *ih)
 
 static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 {
-	Ihandle	*vb_main, *vb_size, *vb_len, *vb_res, *vb_prog, *hbox;
+	Ihandle	*vb_main, *vb_size, *vb_len, *vb_res, *vb_prog, *vb_attr;
+	Ihandle	*hbox;
 	SView	*sview;
 
 	if ((sview = smm_alloc(sizeof(SView))) == NULL) {
@@ -2366,14 +2367,14 @@ static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 			sview->progress, NULL);
 
 	sview->attrib = IupList(NULL);
-	IupSetAttribute(sview->attrib, "SIZE", "50");
+	IupSetAttribute(sview->attrib, "SIZE", "5");
 	IupSetAttribute(sview->attrib, "EXPAND", "VERTICAL");
 	IupSetAttribute(sview->attrib, "SCROLLBAR", "NO");
 	IupSetAttribute(sview->attrib, "ACTIVE", "NO");
-	IupVbox(xui_label("Attribution", "50", NULL), 
-			sview->attrib, NULL);
+	IupSetAttribute(sview->attrib, "VISIBLE", "NO");
+	vb_attr = IupVbox(IupFill(), sview->attrib, NULL);
 
-	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, NULL);
+	hbox = IupHbox(vb_main, vb_size, vb_len, vb_res, vb_prog, vb_attr, NULL);
 	IupSetAttribute(hbox, EZOBJ_SVIEW, (char*) sview);
 	return hbox;
 }
