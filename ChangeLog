@@ -1,3 +1,10 @@
+20170512:
+	* ezgui.c: Fixed the bug that the zoom option layout is inconsistent in 
+	different distros. In GTK2 the text control applied the vertical
+	alignment of the "+/-" button. In GTK3 on the other hand, the "+/-"
+	button turned to be horizontal, which means the text control need a
+	larger size attribution.
+
 20170511:
 	* libcsoup: updated to 0.9.7 to remove the -Wshift-negative-value warning.
 	* ezgui.c: Fixed the bug which deleting all entries in GTK3.

@@ -237,7 +237,9 @@ static int xui_list_get_idx(Ihandle *ih);
 static int xui_text_get_number(Ihandle *ih);
 static int xui_get_size(Ihandle *ih, char *attr, int *height);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
-static Ihandle *xui_text_grid(char *label, 
+static Ihandle *xui_text_single_grid(char *label, 
+		Ihandle **xcol, int size, char *ext);
+static Ihandle *xui_text_double_grid(char *label, 
 		Ihandle **xcol, Ihandle **xrow, char *ext);
 static Ihandle *xui_button(char *prompt, Icallback ntf);
 static int xui_config_status(void *config, char *prompt);
@@ -841,18 +843,18 @@ static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 	/* create the zbox of grid parameters */
 	grid->zbox = IupZbox(IupFill(), NULL);
 
-	hbox = xui_text_grid("Grid", 
+	hbox = xui_text_double_grid("Grid", 
 			&grid->entry_col_grid, &grid->entry_row, NULL);
 	IupAppend(grid->zbox, hbox);
 	
-	hbox = xui_text_grid("Column", 
+	hbox = xui_text_double_grid("Column", 
 			&grid->entry_col_step, &grid->entry_step, "(s)");
 	IupAppend(grid->zbox, hbox);
 
-	hbox = xui_text_grid("Total", &grid->entry_dss_amnt, NULL, NULL);
+	hbox = xui_text_single_grid("Total", &grid->entry_dss_amnt, 0, NULL);
 	IupAppend(grid->zbox, hbox);
 
-	hbox = xui_text_grid("Every", &grid->entry_dss_step, NULL, "(s)");
+	hbox = xui_text_single_grid("Every", &grid->entry_dss_step, 0, "(s)");
 	IupAppend(grid->zbox, hbox);
 
 	IupAppend(grid->zbox, IupFill());
@@ -1100,9 +1102,8 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	/* create the zbox of zoom parameters */
 	zoom->zbox = IupZbox(IupFill(), NULL);
 
-	hbox = xui_text_grid("Ratio", &zoom->entry_zoom_ratio, NULL, "%");
-	//IupSetAttribute(zoom->entry_zoom_ratio, "SIZE", "24x11");
-	IupSetAttribute(zoom->entry_zoom_ratio, "SIZE", "30");
+	hbox = xui_text_single_grid("Ratio", 
+			&zoom->entry_zoom_ratio, 60, NULL);
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPIN", "YES");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINMIN", "5");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINMAX", "200");
@@ -1111,11 +1112,11 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINVALUE", "50");
 	IupAppend(zoom->zbox, hbox);
 
-	hbox = xui_text_grid("Pixel", 
+	hbox = xui_text_double_grid("Pixel", 
 			&zoom->entry_zoom_wid, &zoom->entry_zoom_hei, NULL);
 	IupAppend(zoom->zbox, hbox);
 	
-	hbox = xui_text_grid("Width", &zoom->entry_width, NULL, NULL);
+	hbox = xui_text_single_grid("Width", &zoom->entry_width, 0, NULL);
 	IupAppend(zoom->zbox, hbox);
 	
 	/* create zoom drop list */
@@ -2952,41 +2953,45 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 	return hbox;
 }
 
-static Ihandle *xui_text_grid(char *label, 
-		Ihandle **xcol, Ihandle **xrow, char *ext)
+static Ihandle *xui_text_single_grid(char *label, 
+		Ihandle **xcol, int size, char *ext)
 {
-	Ihandle	*hbox, *text1, *text2, *title;
-
-	if ((xcol == NULL) && (xrow == NULL)) {
-		return NULL;
-	}
+	Ihandle	*hbox, *title;
 
 	title = IupZbox(NULL);
 	IupAppend(title, xui_label(label, NULL, NULL));
 	IupAppend(title, IupLabel("Column"));	/* dummy for fixing widths */
 
-	/* Just one text control */
-	if ((xcol == NULL) || (xrow == NULL)) {
-		text1 = IupText(NULL);
-		IupSetAttribute(text1, "SIZE", EGPS_GRID_FST_TEXT);
-		if (xcol) {
-			*xcol = text1;
-		} else {
-			*xrow = text1;
-		}
-		hbox = IupHbox(title, text1, ext ? IupLabel(ext) : NULL,NULL);
-		IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
-		//IupSetAttribute(hbox, "NGAP", "4");
-		return hbox;
+	*xcol = IupText(NULL);
+	if (size) {
+		IupSetInt(*xcol, "SIZE", size);
+	} else {
+		IupSetAttribute(*xcol, "SIZE", EGPS_GRID_FST_TEXT);
 	}
 
-	text1 = IupText(NULL);
-	*xcol = text1;
-	IupSetAttribute(text1, "SIZE", EGPS_GRID_SND_TEXT);
-	text2 = IupText(NULL);
-	*xrow = text2;
-	IupSetAttribute(text2, "SIZE", EGPS_GRID_SND_TEXT);
-	hbox = IupHbox(title, text1, IupLabel("x"), text2, 
+	hbox = IupHbox(title, *xcol, ext ? IupLabel(ext) : NULL,NULL);
+	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
+	//IupSetAttribute(hbox, "NGAP", "4");
+	return hbox;
+}
+
+
+static Ihandle *xui_text_double_grid(char *label, 
+		Ihandle **xcol, Ihandle **xrow, char *ext)
+{
+	Ihandle	*hbox, *title;
+
+	title = IupZbox(NULL);
+	IupAppend(title, xui_label(label, NULL, NULL));
+	IupAppend(title, IupLabel("Column"));	/* dummy for fixing widths */
+
+	*xcol = IupText(NULL);
+	IupSetAttribute(*xcol, "SIZE", EGPS_GRID_SND_TEXT);
+
+	*xrow = IupText(NULL);
+	IupSetAttribute(*xrow, "SIZE", EGPS_GRID_SND_TEXT);
+
+	hbox = IupHbox(title, *xcol, IupLabel("x"), *xrow, 
 			ext ? IupLabel(ext) : NULL, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	//IupSetAttribute(hbox, "NGAP", "4");
