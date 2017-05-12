@@ -1617,6 +1617,7 @@ static int ezgui_setup_font_update(EZGUI *gui)
 		gui->sysopt->mi_font = gui->sysopt->ins_font = 
 			xui_make_font(gui->font_gtk_name, &gui->sysopt->mi_size);
 	}
+	CDB_DEBUG(("Font Update: %s\n", gui->sysopt->mi_font));
 	return 0;
 }
 

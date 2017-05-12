@@ -78,6 +78,9 @@ Section "Start Menu Shortcuts"
   
 SectionEnd
 
+; http://nsis.sourceforge.net/Windows_7_Cascading_Context_Menu
+; https://github.com/NSIS-Dev/Windows-7-Context-Menu/blob/master/installer.nsi
+; http://stackoverflow.com/questions/370114/how-can-i-add-a-context-menu-to-the-windows-explorer-for-a-java-application
 Section "Add to Context Menu"
   WriteRegStr HKCR "SystemFileAssociations\video\shell\ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
   WriteRegStr HKCR "ezthumb\W7Menu\shell\ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
