@@ -4,6 +4,8 @@
 	alignment of the "+/-" button. In GTK3 on the other hand, the "+/-"
 	button turned to be horizontal, which means the text control need a
 	larger size attribution.
+	* id_lookup.c: Normalized the information label in the head margin of
+	the screenshot canvas.
 
 20170511:
 	* libcsoup: updated to 0.9.7 to remove the -Wshift-negative-value warning.

@@ -552,38 +552,45 @@ char *id_lookup_codec(int idnum)
 #endif	/* HAVE_AVCODEC_DESCRIPTOR_GET */
 
 
-
-#ifdef	HAVE_AV_GET_MEDIA_TYPE_STRING
-char *id_lookup_codec_type(int idnum)
-{
-	return (char*) av_get_media_type_string(idnum);
-}
-#else	/* no av_get_media_type_string() defined */
 /* Note that CODEC_TYPE_* are macros but AVMEDIA_TYPE_* are enums */
 #ifdef	CODEC_TYPE_UNKNOWN
 struct	idtbl	id_codec_type[] = {
-	{ CODEC_TYPE_UNKNOWN, "CODEC_TYPE_UNKNOWN" },
-	{ CODEC_TYPE_VIDEO, "CODEC_TYPE_VIDEO" },
-	{ CODEC_TYPE_AUDIO, "CODEC_TYPE_AUDIO" },
-	{ CODEC_TYPE_DATA, "CODEC_TYPE_DATA" },
-	{ CODEC_TYPE_SUBTITLE, "CODEC_TYPE_SUBTITLE" },
-	{ CODEC_TYPE_ATTACHMENT, "CODEC_TYPE_ATTACHMENT" },
-	{ CODEC_TYPE_NB, "CODEC_TYPE_NB" },
+	{ CODEC_TYPE_UNKNOWN, "Unknown" },
+	{ CODEC_TYPE_VIDEO, "Video" },
+	{ CODEC_TYPE_AUDIO, "Audio" },
+	{ CODEC_TYPE_DATA, "Data" },
+	{ CODEC_TYPE_SUBTITLE, "Subtitle" },
+	{ CODEC_TYPE_ATTACHMENT, "Attachment" },
+	{ CODEC_TYPE_NB, "NB" },
 	{ 0, NULL }
 };
 #else
 struct	idtbl	id_codec_type[] = {
-	{ AVMEDIA_TYPE_UNKNOWN, "AVMEDIA_TYPE_UNKNOWN" },
-	{ AVMEDIA_TYPE_VIDEO, "AVMEDIA_TYPE_VIDEO" },
-	{ AVMEDIA_TYPE_AUDIO, "AVMEDIA_TYPE_AUDIO" },
-	{ AVMEDIA_TYPE_DATA, "AVMEDIA_TYPE_DATA" },
-	{ AVMEDIA_TYPE_SUBTITLE, "AVMEDIA_TYPE_SUBTITLE" },
-	{ AVMEDIA_TYPE_ATTACHMENT, "AVMEDIA_TYPE_ATTACHMENT" },
-	{ AVMEDIA_TYPE_NB, "AVMEDIA_TYPE_NB" },
+	{ AVMEDIA_TYPE_UNKNOWN, "Unknown" },
+	{ AVMEDIA_TYPE_VIDEO, "Video" },
+	{ AVMEDIA_TYPE_AUDIO, "Audio" },
+	{ AVMEDIA_TYPE_DATA, "Data" },
+	{ AVMEDIA_TYPE_SUBTITLE, "Subtitle" },
+	{ AVMEDIA_TYPE_ATTACHMENT, "Attachment" },
+	{ AVMEDIA_TYPE_NB, "NB" },
 	{ 0, NULL }
 };
 #endif	/* CODEC_TYPE_UNKNOWN */
 
+#ifdef	HAVE_AV_GET_MEDIA_TYPE_STRING
+char *id_lookup_codec_type(int idnum)
+{
+	char	*s = (char*) av_get_media_type_string(idnum);
+	int	i;
+
+	for (i = 0; id_codec_type[i].s; i++) {
+		if (!strcasecmp(s, id_codec_type[i].s)) {
+			return id_codec_type[i].s;
+		}
+	}
+	return s;
+}
+#else	/* no av_get_media_type_string() defined */
 char *id_lookup_codec_type(int idnum)
 {
 	return id_lookup(id_codec_type, idnum);

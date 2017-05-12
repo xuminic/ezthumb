@@ -1824,7 +1824,7 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 		return EZ_ERR_LOWMEM;
 	}
 
-	strcpy(buffer, "NAME: ");
+	strcpy(buffer, "Name: ");
 	if (vidx->dur_all) {	/* binding mode */
 		csc_path_basename(vidx->anchor->filename, buffer + 6, i - 6);
 		sprintf(tmp, "  + %d more", vidx->bound - 1);
@@ -3088,7 +3088,8 @@ static char *video_media_video(AVStream *stream, char *buffer)
 		strcat(buffer, xcodec->long_name);
 	}
 
-	sprintf(tmp, ": %dx%d ", stream->codec->width, stream->codec->height);
+	sprintf(tmp, " (Resolution: %dx%d) ", 
+			stream->codec->width, stream->codec->height);
 	strcat(buffer, tmp);
 
 	video_display_ar(stream, &dar);
