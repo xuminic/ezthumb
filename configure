@@ -5293,6 +5293,7 @@ else
 fi
 
 
+# Special modification for testing FFMPEG 3.3 source package
 CPPFLAGS="-I/home/andy/working/ffmpeg-3.3 $CPPFLAGS"
 LDFLAGS="$LDFLAGS -L/home/andy/working/ffmpeg-3.3/lib"
 LIBS="$LIBS -lswresample -ldl -lpthread -llzma"
