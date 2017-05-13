@@ -68,6 +68,13 @@ AC_ARG_WITH([gui],
   AS_HELP_STRING([--with-gui], 
       [Build with the Graphic User Interface [yes] (no|gtk|gtk2|gtk3)]))
 
+AC_ARG_WITH([simple-label], 
+  AS_HELP_STRING([--with-simple-label], 
+      [Using simple display of the media information [yes] ]))
+AS_IF([test "$with_simple_label" = no],
+  [AC_DEFINE(HAVE_MULTILINE_LABEL, 1, 
+    [Define 1 if you need multiple lines of media information. ])])
+
 case "$host_os" in
   cygwin | mingw*)
     SYSTOOL=mingw
@@ -147,6 +154,11 @@ esac
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
+# Special modification for testing FFMPEG 3.3 source package
+CPPFLAGS="-I/home/andy/working/ffmpeg-3.3 $CPPFLAGS"
+LDFLAGS="$LDFLAGS -L/home/andy/working/ffmpeg-3.3/lib"
+LIBS="$LIBS -lswresample -ldl -lpthread -llzma"
+
 # Checks for libraries.
 AC_CHECK_LIB([csoup], [smm_init],, [
   POSTLIB="$POSTLIB -lcsoup"
@@ -169,25 +181,36 @@ AC_CHECK_LIB([avutil], [avutil_version], [],
   [AC_MSG_ERROR([libavutil not found. Install FFMPEG dev first.])])
 AC_CHECK_LIB([swscale], [swscale_version], [],
   [AC_MSG_ERROR([libswscale not found. Install FFMPEG dev first.])])
-AC_CHECK_LIB([avformat], [avformat_version], [],
-  [AC_MSG_ERROR([libavformat not found. Install FFMPEG dev first.])])
 AC_CHECK_LIB([avcodec], [avcodec_version], [],
   [AC_MSG_ERROR([libavcodec not found. Install FFMPEG dev first.])])
+AC_CHECK_LIB([avformat], [avformat_version], [],
+  [AC_MSG_ERROR([libavformat not found. Install FFMPEG dev first.])])
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
 # You need to add these include files manually in your C codes.
 AC_CHECK_HEADERS([sys/time.h],,,[AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([libavcodec/avcodec.h libavformat/avformat.h \
-    libswscale/swscale.h libavutil/avutil.h libavutil/mathematics.h])
+    libswscale/swscale.h libavutil/avutil.h libavutil/mathematics.h \
+    libavutil/imgutils.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT64_T
 AC_TYPE_UINT8_T
+
+AC_CHECK_DECL([AV_PIX_FMT_RGB24], 
+  [AC_DEFINE(HAVE_AV_PIXEL_FORMAT, 1,
+    [Define 1 if you have the AVPixelFormat in the pixfmt.h.])], ,
+  [#include <libavutil/pixfmt.h>]) 
+
 AC_CHECK_MEMBER([struct AVStream.r_frame_rate], 
   [AC_DEFINE(HAVE_R_FRAME_RATE, 1,
     [Define 1 if you have the r_frame_rate in the AVStream structure.])],
   [AC_MSG_WARN([Not found AVStream.r_frame_rate, you have libav installed?])],
+  [#include <libavformat/avformat.h>])
+AC_CHECK_MEMBER([struct AVStream.codecpar], 
+  [AC_DEFINE(HAVE_AVS_CODECPAR, 1,
+    [Define 1 if you have the codecpar in the AVStream structure.])], ,
   [#include <libavformat/avformat.h>])
 AC_CHECK_MEMBER([struct AVFrame.best_effort_timestamp],
   [AC_DEFINE(HAVE_AVFRAME_BEST_ETS, 1,
@@ -195,9 +218,16 @@ AC_CHECK_MEMBER([struct AVFrame.best_effort_timestamp],
   [AC_CHECK_MEMBER([struct AVFrame.pkt_pts],
     [AC_DEFINE(HAVE_AVFRAME_PKT_PTS, 1,
       [Define 1 if you have the pkt_pts in the AVFrame structure.])],
-    [AC_MSG_WARN([Not found pkt_pts or best_effort_timestamp in the AVFrame structure.])],
-    [#include <libavutil/avutil.h>])],
-  [#include <libavutil/avutil.h>])
+    [AC_CHECK_MEMBER([struct AVFrame.pts],
+      [AC_DEFINE(HAVE_AVFRAME_PTS, 1,
+        [Define 1 if you have the pts in the AVFrame structure.])],
+      [AC_MSG_WARN([Not found pkt_pts/pts/best_effort_timestamp in the AVFrame structure.])],
+      [#include <libavutil/avutil.h> 
+       #include <libavcodec/avcodec.h])],
+    [#include <libavutil/avutil.h> 
+     #include <libavcodec/avcodec.h])],
+  [#include <libavutil/avutil.h> 
+   #include <libavcodec/avcodec.h>])
 AC_CHECK_MEMBER([struct AVFormatContext.file_size],
   [AC_DEFINE(HAVE_AVFORMATCONTEXT_FILE_SIZE, 1,
     [Define 1 if you have file_size in the AVFormatContext structure.])],
@@ -207,6 +237,7 @@ AC_CHECK_MEMBER([struct AVFormatContext.file_size],
     [AC_MSG_WARN([Not found file_size or pb in the AVFormatContext structure.])],
     [#include <libavformat/avformat.h>])],
   [#include <libavformat/avformat.h>])
+
 
 # Checks for library functions.
 AC_FUNC_STRTOD
@@ -218,6 +249,8 @@ AC_CHECK_FUNCS([memset strcasecmp strchr strrchr strstr strtol \
     av_stream_get_r_frame_rate av_get_media_type_string avcodec_descriptor_get \
     av_get_picture_type_char av_get_pix_fmt_name av_get_sample_fmt_name \
     dump_format gdImageGifAnimBegin gdFTUseFontConfig])
+AC_CHECK_FUNCS([av_packet_unref av_image_get_buffer_size av_image_fill_arrays \
+    av_image_copy avcodec_receive_frame avcodec_alloc_context3])
 
 # Checks for operating system services or capabilities.
 AC_PATH_XTRA

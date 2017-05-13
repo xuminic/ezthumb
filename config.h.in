@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1 if you have the `avcodec_alloc_context3' function. */
+#undef HAVE_AVCODEC_ALLOC_CONTEXT3
+
 /* Define to 1 if you have the `avcodec_alloc_frame' function. */
 #undef HAVE_AVCODEC_ALLOC_FRAME
 
@@ -11,6 +14,9 @@
 
 /* Define to 1 if you have the `avcodec_open2' function. */
 #undef HAVE_AVCODEC_OPEN2
+
+/* Define to 1 if you have the `avcodec_receive_frame' function. */
+#undef HAVE_AVCODEC_RECEIVE_FRAME
 
 /* Define 1 if you have file_size in the AVFormatContext structure. */
 #undef HAVE_AVFORMATCONTEXT_FILE_SIZE
@@ -32,6 +38,12 @@
 
 /* Define 1 if you have the pkt_pts in the AVFrame structure. */
 #undef HAVE_AVFRAME_PKT_PTS
+
+/* Define 1 if you have the pts in the AVFrame structure. */
+#undef HAVE_AVFRAME_PTS
+
+/* Define 1 if you have the codecpar in the AVStream structure. */
+#undef HAVE_AVS_CODECPAR
 
 /* Define to 1 if you have the `av_close_input_file' function. */
 #undef HAVE_AV_CLOSE_INPUT_FILE
@@ -66,11 +78,26 @@
 /* Define to 1 if you have the `av_get_sample_fmt_name' function. */
 #undef HAVE_AV_GET_SAMPLE_FMT_NAME
 
+/* Define to 1 if you have the `av_image_copy' function. */
+#undef HAVE_AV_IMAGE_COPY
+
+/* Define to 1 if you have the `av_image_fill_arrays' function. */
+#undef HAVE_AV_IMAGE_FILL_ARRAYS
+
+/* Define to 1 if you have the `av_image_get_buffer_size' function. */
+#undef HAVE_AV_IMAGE_GET_BUFFER_SIZE
+
 /* Define to 1 if you have the `av_metadata_get' function. */
 #undef HAVE_AV_METADATA_GET
 
 /* Define to 1 if you have the `av_open_input_file' function. */
 #undef HAVE_AV_OPEN_INPUT_FILE
+
+/* Define to 1 if you have the `av_packet_unref' function. */
+#undef HAVE_AV_PACKET_UNREF
+
+/* Define 1 if you have the AVPixelFormat in the pixfmt.h. */
+#undef HAVE_AV_PIXEL_FORMAT
 
 /* Define to 1 if you have the `av_stream_get_r_frame_rate' function. */
 #undef HAVE_AV_STREAM_GET_R_FRAME_RATE
@@ -104,6 +131,9 @@
 
 /* Define to 1 if you have the <libavutil/avutil.h> header file. */
 #undef HAVE_LIBAVUTIL_AVUTIL_H
+
+/* Define to 1 if you have the <libavutil/imgutils.h> header file. */
+#undef HAVE_LIBAVUTIL_IMGUTILS_H
 
 /* Define to 1 if you have the <libavutil/mathematics.h> header file. */
 #undef HAVE_LIBAVUTIL_MATHEMATICS_H
@@ -143,6 +173,9 @@
 
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
+
+/* Define 1 if you need multiple lines of media information. */
+#undef HAVE_MULTILINE_LABEL
 
 /* Define 1 if you have the r_frame_rate in the AVStream structure. */
 #undef HAVE_R_FRAME_RATE

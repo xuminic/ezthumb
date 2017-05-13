@@ -3389,7 +3389,11 @@ static EZIMG *image_allocate(EZVID *vidx, EZTIME rt_during, int *errcode)
 		image->dst_width  = (pro_height * src_width / ar_height) & ~1;
 		image->dst_height = pro_height;
 	}
+#ifdef	HAVE_AV_PIXEL_FORMAT
+	image->dst_pixfmt = AV_PIX_FMT_RGB24;
+#else
 	image->dst_pixfmt = PIX_FMT_RGB24;
+#endif
 
 	/* calculate the canvas, the screenshots, timestep and the gaps */
 	if (pro_col < 1) {	/* user wants separated screen shots */
