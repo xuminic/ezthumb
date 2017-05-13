@@ -1,3 +1,7 @@
+20170513:
+	* ffmpeg_3_x: Merged the 'deprecated build' from the ffmpeg_3_x branch
+	because this build can barely work on ffmpeg 3.3.
+
 20170512:
 	* ezgui.c: Fixed the bug that the zoom option layout is inconsistent in 
 	different distros. In GTK2 the text control applied the vertical

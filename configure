@@ -5293,9 +5293,10 @@ else
 fi
 
 
-CPPFLAGS="-I/home/andy/working/ffmpeg-3.3 $CPPFLAGS"
-LDFLAGS="$LDFLAGS -L/home/andy/working/ffmpeg-3.3/lib"
-LIBS="$LIBS -lswresample -ldl -lpthread -llzma"
+# Special modification for testing FFMPEG 3.3 source package
+#CPPFLAGS="-I/home/andy/working/ffmpeg-3.3 $CPPFLAGS"
+#LDFLAGS="$LDFLAGS -L/home/andy/working/ffmpeg-3.3/lib"
+#LIBS="$LIBS -lswresample -ldl -lpthread -llzma"
 
 # Checks for libraries.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for smm_init in -lcsoup" >&5

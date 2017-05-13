@@ -155,9 +155,9 @@ AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
 # Special modification for testing FFMPEG 3.3 source package
-CPPFLAGS="-I/home/andy/working/ffmpeg-3.3 $CPPFLAGS"
-LDFLAGS="$LDFLAGS -L/home/andy/working/ffmpeg-3.3/lib"
-LIBS="$LIBS -lswresample -ldl -lpthread -llzma"
+#CPPFLAGS="-I/home/andy/working/ffmpeg-3.3 $CPPFLAGS"
+#LDFLAGS="$LDFLAGS -L/home/andy/working/ffmpeg-3.3/lib"
+#LIBS="$LIBS -lswresample -ldl -lpthread -llzma"
 
 # Checks for libraries.
 AC_CHECK_LIB([csoup], [smm_init],, [
