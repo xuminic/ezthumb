@@ -1,3 +1,9 @@
+20170514:
+	* ezgui.c: Fixed the bug that the label control has a different
+	background colour than the dialog background.
+	The bug was caused by the tab control which came from the Windows
+	theme.
+
 20170513:
 	* ffmpeg_3_x: Merged the 'deprecated build' from the ffmpeg_3_x branch
 	because this build can barely work on ffmpeg 3.3.

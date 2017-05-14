@@ -406,10 +406,9 @@ static int ezgui_create_window(EZGUI *gui)
 			ezgui_page_setup(gui), 
 			ezgui_page_about(gui), 
 			NULL);
-	IupSetAttribute(tabs, "TABTITLE0", "&Generate");
-	IupSetAttribute(tabs, "TABTITLE1", " &Setup  ");
-	//IupSetAttribute(tabs, "TABTITLE2", "Advanced");
-	IupSetAttribute(tabs, "TABTITLE2", " &About  ");
+	IupSetAttributeId(tabs, "TABTITLE", 0, "&Generate");
+	IupSetAttributeId(tabs, "TABTITLE", 1, " &Setup  ");
+	IupSetAttributeId(tabs, "TABTITLE", 2, " &About  ");
 	IupSetAttribute(tabs, "PADDING", "6x2");
 
 	tabox = IupHbox(tabs, NULL);
@@ -418,7 +417,21 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, ezicon_pixbuf));
 	gui->dlg_main = IupDialog(tabox);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
-	
+
+	/* 20170514 The dialog has a different background color setting
+	 * to the tab control, so align the dialog to the tab:
+	 * 
+	 * BGCOLOR: In Windows and in GTK when in Windows, the tab buttons 
+	 * background it will be always defined by the system. In Windows 
+	 * the default background is different from the dialog background. 
+	 * Default: the global attribute DLGBGCOLOR. 
+	 *
+	 * The side effect is the text control would align with the tab 
+	 * control too so it's necessary to explictly set the background 
+	 * of text controls. */
+	IupSetAttribute(gui->dlg_main, "BGCOLOR",
+			IupGetAttribute(tabs, "BGCOLOR"));
+
 	/* retrieve the previous window size */
 	gui->win_width = gui->win_height = 0;
 	csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
@@ -2873,6 +2886,7 @@ static Ihandle *xui_text(Ihandle **xlst, char *label)
 
 	text = IupText(NULL);
 	IupSetAttribute(text, "SIZE", EGPS_SETUP_DROPDOWN);
+	IupSetAttribute(text, "BGCOLOR", "TXTBGCOLOR");
 
 	hbox = IupHbox(xui_label(label, EGPS_SETUP_DESCR, NULL), text, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
@@ -2942,6 +2956,7 @@ static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext)
 
 	text = IupText(NULL);
 	IupSetAttribute(text, "SIZE", EGPS_SETUP_SHORT_TEXT);
+	IupSetAttribute(text, "BGCOLOR", "TXTBGCOLOR");
 
 	hbox = IupHbox(IupLabel(label), text,
 			ext ? IupLabel(ext) : NULL, NULL);
@@ -2969,6 +2984,7 @@ static Ihandle *xui_text_single_grid(char *label,
 	} else {
 		IupSetAttribute(*xcol, "SIZE", EGPS_GRID_FST_TEXT);
 	}
+	IupSetAttribute(*xcol, "BGCOLOR", "TXTBGCOLOR");
 
 	hbox = IupHbox(title, *xcol, ext ? IupLabel(ext) : NULL,NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
@@ -2988,9 +3004,11 @@ static Ihandle *xui_text_double_grid(char *label,
 
 	*xcol = IupText(NULL);
 	IupSetAttribute(*xcol, "SIZE", EGPS_GRID_SND_TEXT);
+	IupSetAttribute(*xcol, "BGCOLOR", "TXTBGCOLOR");
 
 	*xrow = IupText(NULL);
 	IupSetAttribute(*xrow, "SIZE", EGPS_GRID_SND_TEXT);
+	IupSetAttribute(*xrow, "BGCOLOR", "TXTBGCOLOR");
 
 	hbox = IupHbox(title, *xcol, IupLabel("x"), *xrow, 
 			ext ? IupLabel(ext) : NULL, NULL);
