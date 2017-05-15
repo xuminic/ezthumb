@@ -13,6 +13,19 @@ curve profiles.
 
 Release Notes
 =============
+Version 3.6.2:
+The 3.6.1 build was so broken it must be replaced asap.
+*) The 'deprecated build' supports ffmpeg 3.3.
+*) Fixed the bug that failed to restore the default value of the Grid Setting as well as the text control detection.
+*) Fixed the bug that the label control has a different background colour than the dialog background.
+*) Fixed the bug that the zoom option layout is inconsistent in different distros.
+*) Fixed the bug which deleting all entries in GTK3.
+*) Fixed the bug which generating screenshot with wrong attribution if some videoes were removed from the list control.
+*) Fixed the bug which failed to recover the 'auto' zooming if other zooms were chosen once.
+*) Fixed the bug which failed to save to png and gif.
+*) Fixed the bug which failed to save the suffix to the config file.
+*) Fixed the bug which failed to save to the specified path.
+
 Version 3.6.1:
 *) Building system moved to autoconf/automake.
 *) Added a progress bar dialog for integrating with file managers.

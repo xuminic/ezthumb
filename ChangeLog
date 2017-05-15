@@ -1,4 +1,4 @@
-20170515:
+20170515: 3.6.2
 	* ezgui.c: Fixed the bug that failed to restore the default value
 	of the Grid Setting as well as the text control detection.
 	Three issues were related to this bug:
