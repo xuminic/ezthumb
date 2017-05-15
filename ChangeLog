@@ -1,3 +1,12 @@
+20170515:
+	* ezgui.c: Fixed the bug that failed to restore the default value
+	of the Grid Setting as well as the text control detection.
+	Three issues were related to this bug:
+	1. text control didn't hook up the event process
+	2. the profile was disabled but failed to enable again
+	3. the font_gtk_name field dereferenced to the volatile contents 
+	of IupGetAttribute().
+
 20170514:
 	* ezgui.c: Fixed the bug that the label control has a different
 	background colour than the dialog background.

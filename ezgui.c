@@ -152,6 +152,7 @@ static int ezgui_setup_grid_reset(Ihandle *gridbox);
 //static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx);
 static int ezgui_setup_grid_update(Ihandle *gridbox, char *status);
 static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s);
+static int ezgui_setup_grid_entry_event(Ihandle *ih);
 
 static Ihandle *ezgui_setup_zoom_create(EZGUI *gui);
 static Ihandle *ezgui_setup_zoom_groupbox(Ihandle *zoombox);
@@ -159,6 +160,7 @@ static int ezgui_setup_zoom_reset(Ihandle *zoombox);
 static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status);
 static int ezgui_setup_zoom_check(Ihandle *zoombox);
 static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s);
+static int ezgui_setup_zoom_entry_event(Ihandle *ih);
 
 static Ihandle *ezgui_setup_media_create(EZGUI *gui);
 static int ezgui_setup_media_reset(EZGUI *gui);
@@ -230,6 +232,7 @@ static int ezgui_sview_file_append(SView *sview, char *fname);
 static int ezgui_sview_file_remove(SView *sview, int idx);
 static int ezgui_sview_active_update(SView *sview, int type, int num);
 
+static int xui_copy_attribute(char **dst, Ihandle *ih, char *name);
 static Ihandle *xui_label(char *label, char *size, char *font);
 static Ihandle *xui_text(Ihandle **xlst, char *label);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
@@ -859,16 +862,28 @@ static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 	hbox = xui_text_double_grid("Grid", 
 			&grid->entry_col_grid, &grid->entry_row, NULL);
 	IupAppend(grid->zbox, hbox);
+	IupSetCallback(grid->entry_col_grid, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_grid_entry_event);
+	IupSetCallback(grid->entry_row, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_grid_entry_event);
 	
 	hbox = xui_text_double_grid("Column", 
 			&grid->entry_col_step, &grid->entry_step, "(s)");
 	IupAppend(grid->zbox, hbox);
+	IupSetCallback(grid->entry_col_step, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_grid_entry_event);
+	IupSetCallback(grid->entry_step, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_grid_entry_event);
 
 	hbox = xui_text_single_grid("Total", &grid->entry_dss_amnt, 0, NULL);
 	IupAppend(grid->zbox, hbox);
+	IupSetCallback(grid->entry_dss_amnt, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_grid_entry_event);
 
 	hbox = xui_text_single_grid("Every", &grid->entry_dss_step, 0, "(s)");
 	IupAppend(grid->zbox, hbox);
+	IupSetCallback(grid->entry_dss_step, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_grid_entry_event);
 
 	IupAppend(grid->zbox, IupFill());
 
@@ -887,7 +902,7 @@ static Ihandle *ezgui_setup_grid_create(EZGUI *gui)
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_GRID);
 	if (s) {
 		grid->grid_idx = lookup_index_string(uir_grid, 0, s);
-	} else if (ezopt->pro_grid != NULL) {
+	} else if (ezopt_profile_stat(ezopt) & EZ_PROF_LENGTH) {
 		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_AUTO);
 	} else if (ezopt->grid_col && ezopt->grid_row) {
 		grid->grid_idx = lookup_index_string(uir_grid, 0, CFG_PIC_GRID_DIM);
@@ -984,6 +999,7 @@ static int ezgui_setup_grid_update(Ihandle *gridbox, char *status)
 	switch (grid->grid_idx) {
 	case 0:
 		strcpy(tmp, "Auto Grid ");
+		ezopt_profile_enable(opt, EZ_PROF_LENGTH);
 		break;
 	case 1:
 		opt->grid_col = xui_text_get_number(grid->entry_col_grid);
@@ -1103,6 +1119,11 @@ static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s)
 	return IUP_DEFAULT;
 }
 
+static int ezgui_setup_grid_entry_event(Ihandle *ih)
+{
+	return ezgui_setup_suffix_event(ih);
+}
+
 static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 {
 	static	SetZoom	setzoombuffer;
@@ -1123,13 +1144,21 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPININC", "5");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINALIGN", "LEFT");
 	IupSetAttribute(zoom->entry_zoom_ratio, "SPINVALUE", "50");
+	IupSetCallback(zoom->entry_zoom_ratio, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_zoom_entry_event);
 	IupAppend(zoom->zbox, hbox);
 
 	hbox = xui_text_double_grid("Pixel", 
 			&zoom->entry_zoom_wid, &zoom->entry_zoom_hei, NULL);
+	IupSetCallback(zoom->entry_zoom_wid, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_zoom_entry_event);
+	IupSetCallback(zoom->entry_zoom_hei, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_zoom_entry_event);
 	IupAppend(zoom->zbox, hbox);
 	
 	hbox = xui_text_single_grid("Width", &zoom->entry_width, 0, NULL);
+	IupSetCallback(zoom->entry_width, "VALUECHANGED_CB",
+			(Icallback) ezgui_setup_zoom_entry_event);
 	IupAppend(zoom->zbox, hbox);
 	
 	/* create zoom drop list */
@@ -1147,7 +1176,7 @@ static Ihandle *ezgui_setup_zoom_create(EZGUI *gui)
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_ZOOM);
 	if (s) {
 		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, s);
-	} else if (ezopt->pro_size != NULL) {
+	} else if (ezopt_profile_stat(ezopt) & EZ_PROF_WIDTH) {
 		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_AUTO);
 	} else if (ezopt->tn_facto) {
 		zoom->zoom_idx = lookup_index_string(uir_zoom, 0, CFG_PIC_ZOOM_RATIO);
@@ -1215,6 +1244,7 @@ static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
 	case 0:
 		strcpy(tmp, "Auto Zoom ");
 		opt->tn_width  = opt->tn_height = 0;
+		ezopt_profile_enable(opt, EZ_PROF_WIDTH);
 		break;
 	case 1:
 		opt->tn_facto  = xui_text_get_number(zoom->entry_zoom_ratio);
@@ -1269,6 +1299,8 @@ static int ezgui_setup_zoom_check(Ihandle *zoombox)
 	opt = zoom->ezgui->sysopt;
 	switch (zoom->zoom_idx) {
 	case 1:
+		printf("ezgui_setup_zoom_check: %d %d\n", opt->tn_facto,
+				xui_text_get_number(zoom->entry_zoom_ratio));
 		if (opt->tn_facto != xui_text_get_number(zoom->entry_zoom_ratio)) {
 			return 1;
 		}
@@ -1304,6 +1336,10 @@ static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s)
 	return IUP_DEFAULT;
 }
 
+static int ezgui_setup_zoom_entry_event(Ihandle *ih)
+{
+	return ezgui_setup_suffix_event(ih);
+}
 
 static Ihandle *ezgui_setup_media_create(EZGUI *gui)
 {
@@ -1482,11 +1518,8 @@ static int ezgui_setup_outputdir_update(EZGUI *gui)
 			CFG_KEY_OUTPUT_METHOD, uir_outdir[gui->dir_idx].s);
 	
 	if (!strcmp(uir_outdir[gui->dir_idx].s, CFG_PIC_ODIR_PATH)) {
-		if (gui->sysopt->pathout) {
-			smm_free(gui->sysopt->pathout);
-		}
-		gui->sysopt->pathout = csc_strcpy_alloc(
-				IupGetAttribute(gui->dir_path, "VALUE"), 0);
+		xui_copy_attribute(&gui->sysopt->pathout, 
+				gui->dir_path, "VALUE");
 		csc_cfg_write(gui->config, EZGUI_MAINKEY, 
 				CFG_KEY_OUTPUT_PATH, gui->sysopt->pathout);
 	}
@@ -1605,7 +1638,7 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 		} else {
 			IupSetAttribute(gui->font_face, "VALUE", "");
 		}
-		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
+		xui_copy_attribute(&gui->font_gtk_name, gui->font_face, "VALUE");
 	}
 	return 0;
 }
@@ -1623,7 +1656,7 @@ static int ezgui_setup_font_update(EZGUI *gui)
 		/* don't update configure if using system font */
 		gui->sysopt->mi_font = gui->sysopt->ins_font = NULL;
 	} else {	/* CFG_PIC_FONT_BROWSE */
-		gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE");
+		xui_copy_attribute(&gui->font_gtk_name, gui->font_face, "VALUE");
 		csc_cfg_write(gui->config, EZGUI_MAINKEY,
 				CFG_KEY_FONT_FACE, gui->font_gtk_name);
 
@@ -2066,16 +2099,25 @@ static Ihandle *ezgui_setup_button_create(EZGUI *gui)
 
 static int ezgui_setup_button_check_status(EZGUI *gui)
 {
-	int	counter = 0;
+	int	rc, counter = 0;
 
-	counter += ezgui_setup_grid_check(gui->prof_grid);
-	counter += ezgui_setup_zoom_check(gui->prof_zoom);
-	counter += ezgui_setup_media_check(gui);
-	counter += ezgui_setup_outputdir_check(gui);
-	counter += ezgui_setup_font_check(gui);
-	counter += ezgui_setup_suffix_check(gui);
-	counter += ezgui_setup_dupname_check(gui);
-	counter += ezgui_setup_format_check(gui);
+	rc = ezgui_setup_grid_check(gui->prof_grid);	/* 0x80 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_zoom_check(gui->prof_zoom);	/* 0x40 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_media_check(gui);		/* 0x20 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_outputdir_check(gui);		/* 0x10 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_font_check(gui);		/* 0x8 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_suffix_check(gui);		/* 0x4 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_dupname_check(gui);		/* 0x2 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+	rc = ezgui_setup_format_check(gui);		/* 0x1 */
+	counter = (counter << 1) | (rc ? 1 : 0);
+
 	if (counter == 0) {
 		IupSetAttribute(gui->butt_setup_apply, "ACTIVE", "NO");
 		IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "NO");
@@ -2083,6 +2125,7 @@ static int ezgui_setup_button_check_status(EZGUI *gui)
 		IupSetAttribute(gui->butt_setup_apply, "ACTIVE", "YES");
 		IupSetAttribute(gui->butt_setup_cancel, "ACTIVE", "YES");
 	}
+	CDB_MODL(("EVT_CHECK: 0x%x\n", counter));
 	return counter;
 }
 
@@ -2866,6 +2909,27 @@ static int ezgui_sview_active_update(SView *sview, int type, int num)
 /****************************************************************************
  * Support Functions 
  ****************************************************************************/
+/* 20170515 Just surprisingly (re)found the contents of IupGetAttribute() was 
+ * volatile. For example, the
+ *   gui->font_gtk_name = IupGetAttribute(gui->font_face, "VALUE")
+ * After a while the contents changed from font face to the contents of
+ * suffix text control. */
+static int xui_copy_attribute(char **dst, Ihandle *ih, char *name)
+{
+	char	*s = IupGetAttribute(ih, name);
+
+	if (dst) {
+		if (*dst) {
+			free(*dst);
+			*dst = NULL;
+		}
+		if (s) {
+			*dst = csc_strcpy_alloc(s, 0);
+		}
+	}
+	return (s != NULL);
+}
+
 static Ihandle *xui_label(char *label, char *size, char *font)
 {
 	Ihandle	*ih;

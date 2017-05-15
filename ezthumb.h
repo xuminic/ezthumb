@@ -464,8 +464,8 @@ typedef	struct	{
 
 	/* predefined profile structure */
 	EZPROF	*pro_grid;	/* profile of the canvas grid */
-	EZPROF	*pro_gext;	/* grid extension, linked to pro_size */
 	EZPROF	*pro_size;	/* profile of the size of each snapshots */
+	int	pro_mask;
 	EZPROF	pro_pool[EZ_PROF_MAX_ENTRY];
 } EZOPT;
 
@@ -669,7 +669,9 @@ int ezopt_profile_setup(EZOPT *opt, char *s);
 int ezopt_profile_dump(EZOPT *opt, char *pmt_grid, char *pmt_size);
 int ezopt_profile_export(EZOPT *ezopt, char *buf, int blen);
 char *ezopt_profile_export_alloc(EZOPT *ezopt);
+int ezopt_profile_enable(EZOPT *ezopt, int prof);
 int ezopt_profile_disable(EZOPT *ezopt, int prof);
+int ezopt_profile_stat(EZOPT *ezopt);
 int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
 int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
 int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);

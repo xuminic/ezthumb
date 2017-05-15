@@ -98,9 +98,9 @@ int ezopt_profile_setup(EZOPT *opt, char *s)
 	for (i = 0; i < len; i++) {
 		ezopt_profile_append(opt, plist[i]);
 	}
-	/* 20130809 make a copy of pro_size as an extension of grip profile */
-	opt->pro_gext = opt->pro_size;
-	
+	/* 20170515 using mask to enable or disable the profile */
+	opt->pro_mask = EZ_PROF_ALL;
+
 	smm_free(tmp);
 	return 0;
 }
@@ -175,7 +175,19 @@ char *ezopt_profile_export_alloc(EZOPT *ezopt)
 	return s;
 }
 
+int ezopt_profile_enable(EZOPT *ezopt, int prof)
+{
+	ezopt->pro_mask |= prof;
+	return ezopt_profile_stat(ezopt);
+}
+
 int ezopt_profile_disable(EZOPT *ezopt, int prof)
+{
+	ezopt->pro_mask &= ~prof;
+	return ezopt_profile_stat(ezopt);
+}
+
+/*int ezopt_profile_disable(EZOPT *ezopt, int prof)
 {
 	if (prof == EZ_PROF_LENGTH) {
 		ezopt->pro_grid = NULL;
@@ -186,6 +198,21 @@ int ezopt_profile_disable(EZOPT *ezopt, int prof)
 		ezopt->pro_size = NULL;
 	}
 	return 0;
+}*/
+
+int ezopt_profile_stat(EZOPT *ezopt)
+{
+	if ((ezopt->pro_mask == EZ_PROF_ALL) && 
+			ezopt->pro_grid && ezopt->pro_size) {
+		return EZ_PROF_ALL;
+	}
+	if ((ezopt->pro_mask & EZ_PROF_LENGTH) && ezopt->pro_grid) {
+		return EZ_PROF_LENGTH;
+	}
+	if ((ezopt->pro_mask & EZ_PROF_WIDTH) && ezopt->pro_size) {
+		return EZ_PROF_WIDTH;
+	}
+	return 0;	/* totally disabled */
 }
 
 int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row)
@@ -193,7 +220,7 @@ int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row)
 	EZPROF	*node;
 	int	snap;
 
-	if (ezopt->pro_grid == NULL) {
+	if ((ezopt_profile_stat(ezopt) & EZ_PROF_LENGTH) == 0) {
 		return -1;	/* profile disabled */
 	}
 
@@ -232,13 +259,11 @@ int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row)
 {
 	EZPROF	*node;
 
-	/* 20130809 Using pro_gext instead of pro_size because it won't 
-	 * be reset by -s and -w option */
-	if (ezopt->pro_gext == NULL) {
+	if ((ezopt_profile_stat(ezopt) & EZ_PROF_WIDTH) == 0) {
 		return bs;	/* profile disabled so ignore it */
 	}
 
-	for (node = ezopt->pro_gext; node->next; node = node->next) {
+	for (node = ezopt->pro_size; node->next; node = node->next) {
 		if (vw <= node->weight) {
 			break;
 		}
@@ -269,7 +294,7 @@ int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra)
 	float	ratio;
 	int	neari;
 
-	if (ezopt->pro_size == NULL) {
+	if ((ezopt_profile_stat(ezopt) & EZ_PROF_WIDTH) == 0) {
 		return 0;	/* profile disabled so ignore it */
 	}
 
