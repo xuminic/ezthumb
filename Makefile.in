@@ -929,7 +929,6 @@ release: $(RELEASE)
 @XAM_MSWIN_TRUE@	mkdir "$(distdir)-win32-bin"; \
 @XAM_MSWIN_TRUE@	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"; \
 @XAM_MSWIN_TRUE@	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"; \
-@XAM_MSWIN_TRUE@	cp -a ./libmingw/lib/*.dll "$(distdir)-win32-bin"; \
 @XAM_MSWIN_TRUE@	cp -a ezthumb*.exe ezqiz "$(distdir)-win32-bin"; \
 @XAM_MSWIN_TRUE@	cp -a COPYING ChangeLog Readme.txt TODO "$(distdir)-win32-bin"
 

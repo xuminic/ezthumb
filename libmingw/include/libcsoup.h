@@ -27,11 +27,12 @@
 
 #include <stdio.h>
 #include <getopt.h>
+#include <limits.h>
 
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	6		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	7		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -154,7 +155,7 @@ slog(int control_word, char *fmt, ...);
 #define SLOG_LVL_FUNC		7
 #define SLOG_LVL_MASK		7
 #define SLOG_FLUSH		8	/* no prefix */
-#define SLOG_MODUL_MASK		(-1 << 4)
+#define SLOG_MODUL_MASK		(UINT_MAX << 4)
 
 #define SLOG_LEVEL_GET(l)	((l) & SLOG_LVL_MASK)
 #define SLOG_LEVEL_SET(l,x)	(((l) & ~SLOG_LVL_MASK) | (x))
@@ -163,7 +164,7 @@ slog(int control_word, char *fmt, ...);
 #define SLOG_MODUL_GET(m)	((m) & SLOG_MODUL_MASK)
 #define SLOG_MODUL_SET(m,x)	((m) | SLOG_MODUL_ENUM(x))
 #define SLOG_MODUL_CLR(m,x)	((m) & ~SLOG_MODUL_ENUM(x))
-#define SLOG_MODUL_ALL(m)	((m) | (-1 << 4))
+#define SLOG_MODUL_ALL(m)	((m) | SLOG_MODUL_MASK)
 
 #define SLOG_CWORD(m,l)		(SLOG_MODUL_GET(m) | SLOG_LEVEL_GET(l))
 
@@ -449,6 +450,10 @@ int csc_strcmp_list(char *dest, char *src, ...);
 
 /* see csc_strcmp_param.c */
 int csc_strcmp_param(char *s1, char *s2);
+
+/* see csc_strcount_char.c and csc_strcount_str.c */
+int csc_strcount_char(char *s, char *acct);
+int csc_strcount_str(char *s, char *needle);
 
 char *csc_path_basename(char *path, char *buffer, int blen);
 char *csc_path_path(char *path, char *buffer, int blen);
