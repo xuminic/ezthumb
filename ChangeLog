@@ -1,3 +1,9 @@
+20170517:
+	* ezgui.c: Added event to font_face text entry so it can choose
+	fonts directly.
+	* ezgui.c: Using IUP internal iupGetFontInfo() function to parse the
+	font face.
+
 20170515: 3.6.2
 	* ezgui.c: Fixed the bug that failed to restore the default value
 	of the Grid Setting as well as the text control detection.

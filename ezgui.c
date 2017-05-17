@@ -179,6 +179,9 @@ static int ezgui_setup_font_reset(EZGUI *gui);
 static int ezgui_setup_font_update(EZGUI *gui);
 static int ezgui_setup_font_check(EZGUI *gui);
 static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s);
+static int ezgui_setup_font_update_event(Ihandle* ih, int button, 
+		int pressed, int x, int y, char* status);
+static int ezgui_setup_font_chooser(EZGUI *gui);
 
 static Ihandle *ezgui_setup_suffix_create(EZGUI *gui);
 static int ezgui_setup_suffix_reset(EZGUI *gui);
@@ -247,7 +250,7 @@ static Ihandle *xui_text_double_grid(char *label,
 static Ihandle *xui_button(char *prompt, Icallback ntf);
 static int xui_config_status(void *config, char *prompt);
 static char *xui_make_filters(char *slist);
-static char *xui_make_font(char *face, int *size);
+static char *xui_make_fc_fontface(char *face, int *size);
 
 
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
@@ -1603,6 +1606,8 @@ static Ihandle *ezgui_setup_font_create(EZGUI *gui)
 
 	hbox2 = xui_text(&gui->font_face, "");
 	IupSetAttribute(gui->font_face, "READONLY", "YES");
+	IupSetCallback(gui->font_face, "BUTTON_CB",
+			(Icallback) ezgui_setup_font_update_event);
 
 	vbox = IupVbox(hbox1,  hbox2, NULL);
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
@@ -1661,9 +1666,10 @@ static int ezgui_setup_font_update(EZGUI *gui)
 				CFG_KEY_FONT_FACE, gui->font_gtk_name);
 
 		gui->sysopt->mi_font = gui->sysopt->ins_font = 
-			xui_make_font(gui->font_gtk_name, &gui->sysopt->mi_size);
+			xui_make_fc_fontface(gui->font_gtk_name, &gui->sysopt->mi_size);
 	}
-	CDB_DEBUG(("Font Update: %s\n", gui->sysopt->mi_font));
+	CDB_DEBUG(("Font Update: %s [%d]\n", 
+				gui->sysopt->mi_font, gui->sysopt->mi_size));
 	return 0;
 }
 
@@ -1686,7 +1692,6 @@ static int ezgui_setup_font_check(EZGUI *gui)
 static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 {
 	EZGUI	*gui;
-	char	*val;
 
 	(void) i;
 
@@ -1702,7 +1707,41 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 		ezgui_setup_button_check_status(gui);
 		return IUP_DEFAULT;
 	}
-	
+
+	if (ezgui_setup_font_chooser(gui) < 0) {	/* cancel choosing */
+		/* 20151110 can not update list control inside the event 
+		 * callback, otherwise the list control will miss calculate 
+		 * the change and confuse the window manager */
+		gui->font_ppp_flag = 1;
+	}
+	return IUP_DEFAULT;
+}
+
+static int ezgui_setup_font_update_event(Ihandle* ih, int button, 
+		int pressed, int x, int y, char* status)
+{
+	EZGUI	*gui;
+
+	(void) x; (void) y; (void) status;
+
+	if (button != IUP_BUTTON1) {	/*  left mouse button (button 1) */
+		return IUP_DEFAULT;
+	}
+	if (pressed) {	/* waiting for button release event */
+		return IUP_DEFAULT;
+	}
+
+	if ((gui = (EZGUI *) IupGetAttribute(ih, EZOBJ_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	ezgui_setup_font_chooser(gui);
+	return IUP_DEFAULT;
+}
+
+static int ezgui_setup_font_chooser(EZGUI *gui)
+{
+	char	*val;
+
 	val = IupGetAttribute(gui->font_face, "VALUE");
 	if (val) {
 		IupSetAttribute(gui->dlg_font, "VALUE", val);
@@ -1711,11 +1750,7 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 	IupPopup(gui->dlg_font, IUP_CENTERPARENT, IUP_CENTERPARENT);
 
 	if (IupGetAttribute(gui->dlg_font, "STATUS") == NULL) {
-		/* 20151110 can not update list control inside the event 
-		 * callback, otherwise the list control will miss calculate 
-		 * the change and confuse the window manager */
-		gui->font_ppp_flag = 1;
-		return IUP_DEFAULT;	/* cancelled */
+		return -1;	/* cancelled */
 	}
 
 	val = IupGetAttribute(gui->dlg_font, "VALUE");
@@ -1728,7 +1763,7 @@ static int ezgui_setup_font_event(Ihandle *ih, char *text, int i, int s)
 		IupSetAttribute(gui->font_face, "VALUE", val);
 	}
 	ezgui_setup_button_check_status(gui);
-	return IUP_DEFAULT;
+	return csc_strcmp_param(val, gui->font_gtk_name) ? 1 : 0;
 }
 
 static Ihandle *ezgui_setup_suffix_create(EZGUI *gui)
@@ -3131,36 +3166,32 @@ static char *xui_make_filters(char *slist)
 /* translate the font face style to the GD accepted one:
  *   Nimbus Sans Bold Italic 10  --> Nimbus Sans:Bold:Italic
  *   Nimbus Sans Italic 10  --> Nimbus Sans:Italic
- *   Nimbus Sans 10  --> Nimbus Sans:Regular  */
-static char *xui_make_font(char *face, int *size)
+ *   Nimbus Sans 10  --> Nimbus Sans:Regular  
+ *   PT Sans Narrow Condensed 12 --> PT Sans Narrow:Regular
+ */
+extern int iupGetFontInfo(const char* font, char *typeface, int *size, 
+	int *is_bold, int *is_italic, int *is_underline, int *is_strikeout);
+
+static char *xui_make_fc_fontface(char *face, int *size)
 {
-	char	*p, *s = csc_strcpy_alloc(face, 16);
-
-	/* isolate the number of font size */
-	if (((p = strrchr(s, ' ')) != NULL) && isdigit(p[1])) {
-		*p++ = 0;
-		if (size) {
-			*size = (int) strtol(p, NULL, 0);
-		}
-	}
+	char	typeface[1024];
+	int	is_bold, is_italic, is_underline, is_strikeout;
 	
-	/* Sans Bold Italic 10 */
-	if ((p = strstr(s, "Bold")) != NULL) {
-		*--p = ':';
-	}
-	if ((p = strstr(s, "Italic")) != NULL) {
-		*--p = ':';
-	}
-	if (strchr(s, ':') == NULL) {
-		if ((p = strstr(s, "Regular")) != NULL) {
-			*--p = ':';
-		} else {
-			strcat(s, ":Regular");
-		}
-	}
+	iupGetFontInfo(face, typeface, size, &is_bold, &is_italic, &is_underline, &is_strikeout);
+	
+	CDB_MODL(("Font Config: %s %d %d %d %d %d\n", typeface, *size, 
+			is_bold, is_italic, is_underline, is_strikeout));
 
-	//printf("xui_make_font: %s\n", s);
-	return s;
+	if (is_bold) {
+		strcat(typeface, ":bold");
+	}
+	if (is_italic) {
+		strcat(typeface, ":italic");
+	}
+	if (!is_bold && !is_italic) {
+		strcat(typeface, ":regular");
+	}
+	return csc_strcpy_alloc(typeface, 16);
 }
 
 

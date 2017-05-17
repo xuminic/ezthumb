@@ -82,8 +82,7 @@ SectionEnd
 ; https://github.com/NSIS-Dev/Windows-7-Context-Menu/blob/master/installer.nsi
 ; http://stackoverflow.com/questions/370114/how-can-i-add-a-context-menu-to-the-windows-explorer-for-a-java-application
 Section "Add to Context Menu"
-  WriteRegStr HKCR "SystemFileAssociations\video\shell\ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
-  WriteRegStr HKCR "ezthumb\W7Menu\shell\ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
+  WriteRegStr HKCR "SystemFileAssociations\video\shell\Ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
 SectionEnd
 
 ;--------------------------------
@@ -97,8 +96,7 @@ Section "Uninstall"
   DeleteRegKey HKLM SOFTWARE\Ezthumb
   DeleteRegKey HKCU SOFTWARE\ezthumb
 
-  DeleteRegKey HKCR "SystemFileAssociations\video\shell\ezthumbnailer"
-  DeleteRegKey HKCR "ezthumb"
+  DeleteRegKey HKCR "SystemFileAssociations\video\shell\Ezthumbnailer"
 
   ; Remove files and uninstaller
   Delete $INSTDIR\*.*
