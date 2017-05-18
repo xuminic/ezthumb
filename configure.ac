@@ -92,8 +92,10 @@ case "$host_os" in
     LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL"
-    POSTLIB="-liconv -mconsole"
+    POSTLIB="-mconsole"
     RELEASE="extclean dist-bzip2 installer-win"
+    AC_CHECK_LIB([iconv], [libiconv_open], [],
+      [AC_MSG_ERROR([libiconv not found.])])
     ;;
   *)
     SYSTOOL=unix
