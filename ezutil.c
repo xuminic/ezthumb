@@ -773,10 +773,12 @@ int font_attirb(char *fontpath)
 		CDB_DEBUG(("FTNAME::encoding_id: %d\n", aname.encoding_id));
 		CDB_DEBUG(("FTNAME::language_id: %d\n", aname.language_id));
 		CDB_DEBUG(("FTNAME::name_id:     %d\n", aname.name_id));
-		CDB_DEBUG(("FTNAME::string_len:  %d\n", aname.string_len));
-		memset(tmp, 0, sizeof(tmp));
-		memcpy(tmp, aname.string, aname.string_len);
-		CDB_DEBUG(("FTNAME::string:      %s\n", tmp));
+		if (aname.name_id == TT_NAME_ID_FONT_FAMILY) {
+			memset(tmp, 0, sizeof(tmp));
+			memcpy(tmp, aname.string, aname.string_len);
+			CDB_DEBUG(("FTNAME::string:(%3d) %s\n", 
+						aname.string_len, tmp));
+		}
 	}
 
 	FT_Done_Face    ( face );
