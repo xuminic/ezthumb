@@ -345,10 +345,9 @@ int ezopt_load_config(EZOPT *ezopt, void *config)
 	s = csc_cfg_copy(config, NULL, CFG_KEY_TRANSPARENCY, 0);
 	if (s != NULL) {
 		if (!strcasecmp(s, "yes")) {
-			ezopt->flags |= EZOP_TRANSPARENT;
-			ezopt->canvas_color[3] = 0;
+			para_transparent(ezopt, 1);
 		} else {
-			ezopt->flags &= ~EZOP_TRANSPARENT;
+			para_transparent(ezopt, 0);
 		}
 		smm_free(s);
 	}
@@ -532,7 +531,7 @@ void ezopt_review(EZOPT *ezopt)
 {
 	/* foolproof the right transparent setting */
 	if (EZ_IMG_FMT_GET(ezopt->img_format) == EZ_IMG_FMT_JPEG) {
-		ezopt->flags &= ~EZOP_TRANSPARENT;
+		para_transparent(ezopt, 0);
 	}
 
 	/* synchronize the full scan and twopass option */

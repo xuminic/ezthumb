@@ -285,7 +285,6 @@ static	char	*sysprof[] = {
 
 static	EZOPT	sysopt;
 
-
 static int command_line_parser(int argc, char **argv, EZOPT *opt);
 static int signal_handler(int sig);
 static int main_close(EZOPT *opt);
@@ -606,8 +605,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case CMD_TRANSPRT:
-			opt->flags |= EZOP_TRANSPARENT;
-			opt->canvas_color[3] = 0;
+			para_transparent(opt, 1);	/* set transparent */
 			break;
 		case CMD_VID_IDX:	/* index */
 			if (!isdigit(*optarg)) {
@@ -1023,6 +1021,26 @@ static int env_init(EZOPT *ezopt)
 	command_line_parser(len, arg, ezopt);
 	smm_free(vcmd);
 	return 0;
+}
+
+
+static	EZBYTE	alpha_store = 0x80;
+int para_transparent(EZOPT *opt, int flag)
+{
+	if (flag > 0) {		/* set transparent */
+		if ((opt->flags & EZOP_TRANSPARENT) == 0) {
+			opt->flags |= EZOP_TRANSPARENT;
+			alpha_store = opt->canvas_color[3];
+			opt->canvas_color[3] = 0;
+		}
+	}
+	if (flag == 0) {	/* set opaque */
+		if (opt->flags & EZOP_TRANSPARENT) {
+			opt->flags &= ~EZOP_TRANSPARENT;
+			opt->canvas_color[3] = alpha_store;
+		}
+	}
+	return (opt->flags & EZOP_TRANSPARENT);
 }
 
 static int para_get_ratio(char *s)

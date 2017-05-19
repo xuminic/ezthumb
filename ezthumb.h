@@ -683,5 +683,8 @@ int meta_make_color(char *s, EZBYTE *color);
 int meta_export_color(EZBYTE *color, char *buf, int blen);
 char *meta_make_fontdir(char *s);
 
+/* main.c */
+int para_transparent(EZOPT *opt, int flag);
+
 #endif	/* _EZTHUMB_H_ */
 

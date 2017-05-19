@@ -1242,7 +1242,6 @@ static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
 	csc_cfg_write(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_ZOOM, uir_zoom[zoom->zoom_idx].s);
 
-	printf("ezgui_setup_zoom_update: %d\n", zoom->zoom_idx);
 	switch (zoom->zoom_idx) {
 	case 0:
 		strcpy(tmp, "Auto Zoom ");
@@ -1302,8 +1301,6 @@ static int ezgui_setup_zoom_check(Ihandle *zoombox)
 	opt = zoom->ezgui->sysopt;
 	switch (zoom->zoom_idx) {
 	case 1:
-		printf("ezgui_setup_zoom_check: %d %d\n", opt->tn_facto,
-				xui_text_get_number(zoom->entry_zoom_ratio));
 		if (opt->tn_facto != xui_text_get_number(zoom->entry_zoom_ratio)) {
 			return 1;
 		}
@@ -1907,6 +1904,15 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 			(Icallback) ezgui_setup_format_event_transparent);
 	IupAppend(hbox3, gui->fmt_transp);
 
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY);
+	if (s && !strcmp(s, "ON")) {
+		para_transparent(gui->sysopt, 1);
+		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
+	} else {
+		para_transparent(gui->sysopt, 0);
+		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
+	}
+
 	/* optional line: attribute of the file format */
 	gui->fmt_zbox = IupZbox(IupFill(), 
 			xui_text_setting(&gui->fmt_gif_fr, "FRate:", "(ms)"),
@@ -1933,7 +1939,7 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 	if (s) {
 		gui->sysopt->img_format = meta_image_format(s);
 	}
-
+	
 	/* seperate the image quality and frame rate */
 	if (csc_cfg_read_int(gui->config, EZGUI_MAINKEY, CFG_KEY_JPG_QUALITY,
 				&gui->tmp_jpg_qf) != SMM_ERR_NONE) {
@@ -1974,7 +1980,7 @@ static int ezgui_setup_format_reset(EZGUI *gui)
 	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
 	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
 
-	if (gui->sysopt->flags & EZOP_TRANSPARENT) {
+	if (para_transparent(gui->sysopt, -1)) {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
 	} else {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
@@ -2016,9 +2022,9 @@ static int ezgui_setup_format_update(EZGUI *gui)
 	
 	val = IupGetAttribute(gui->fmt_transp, "VALUE");
 	if (!strcmp(val, "ON")) {
-		gui->sysopt->flags |= EZOP_TRANSPARENT;
+		para_transparent(gui->sysopt, 1);
 	} else {
-		gui->sysopt->flags &= ~EZOP_TRANSPARENT;
+		para_transparent(gui->sysopt, 0);
 	}
 	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY, val);
 	
@@ -2030,6 +2036,7 @@ static int ezgui_setup_format_update(EZGUI *gui)
 static int ezgui_setup_format_check(EZGUI *gui)
 {
 	char	*val;
+	int	rc;
 
 	if (gui->fmt_idx != xui_list_get_idx(gui->fmt_list)) {
 		return 1;
@@ -2045,15 +2052,11 @@ static int ezgui_setup_format_check(EZGUI *gui)
 	}
 	val = IupGetAttribute(gui->fmt_transp, "VALUE");
 	if (!strcmp(val, "ON")) {
-		if ((gui->sysopt->flags & EZOP_TRANSPARENT) == 0) {
-			return 1;
-		}
+		rc = para_transparent(gui->sysopt, -1) ? 0 : 1;
 	} else {
-		if (gui->sysopt->flags & EZOP_TRANSPARENT) {
-			return 1;
-		}
+		rc = para_transparent(gui->sysopt, -1) ? 1 : 0;
 	}
-	return 0;
+	return rc;
 }
 
 static int ezgui_setup_format_event_picture(Ihandle *ih, char *text, int i, int s)
