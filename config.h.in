@@ -105,9 +105,6 @@
 /* Define to 1 if you have the `dump_format' function. */
 #undef HAVE_DUMP_FORMAT
 
-/* Define to 1 if you have the `gdFTUseFontConfig' function. */
-#undef HAVE_GDFTUSEFONTCONFIG
-
 /* Define to 1 if you have the `gdImageGifAnimBegin' function. */
 #undef HAVE_GDIMAGEGIFANIMBEGIN
 

@@ -250,7 +250,7 @@ AC_CHECK_FUNCS([memset strcasecmp strchr strrchr strstr strtol \
     avcodec_alloc_frame av_dict_get av_metadata_get av_dump_format \
     av_stream_get_r_frame_rate av_get_media_type_string avcodec_descriptor_get \
     av_get_picture_type_char av_get_pix_fmt_name av_get_sample_fmt_name \
-    dump_format gdImageGifAnimBegin gdFTUseFontConfig])
+    dump_format gdImageGifAnimBegin])
 AC_CHECK_FUNCS([av_packet_unref av_image_get_buffer_size av_image_fill_arrays \
     av_image_copy avcodec_receive_frame avcodec_alloc_context3])
 

@@ -1612,10 +1612,6 @@ static Ihandle *ezgui_setup_font_create(EZGUI *gui)
 	vbox = IupVbox(hbox1,  hbox2, NULL);
 	IupSetAttribute(vbox, "NMARGIN", "16x4");
 	IupSetAttribute(vbox, "NGAP", "4");
-
-#ifdef  HAVE_GDFTUSEFONTCONFIG
-	gdFTUseFontConfig(1);
-#endif
 	return vbox;
 }
 
@@ -1643,7 +1639,8 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 		} else {
 			IupSetAttribute(gui->font_face, "VALUE", "");
 		}
-		xui_copy_attribute(&gui->font_gtk_name, gui->font_face, "VALUE");
+		xui_copy_attribute(&gui->font_gtk_name, 
+				gui->font_face, "VALUE");
 	}
 	return 0;
 }
@@ -1661,12 +1658,14 @@ static int ezgui_setup_font_update(EZGUI *gui)
 		/* don't update configure if using system font */
 		gui->sysopt->mi_font = gui->sysopt->ins_font = NULL;
 	} else {	/* CFG_PIC_FONT_BROWSE */
-		xui_copy_attribute(&gui->font_gtk_name, gui->font_face, "VALUE");
+		xui_copy_attribute(&gui->font_gtk_name, 
+				gui->font_face, "VALUE");
 		csc_cfg_write(gui->config, EZGUI_MAINKEY,
 				CFG_KEY_FONT_FACE, gui->font_gtk_name);
 
 		gui->sysopt->mi_font = gui->sysopt->ins_font = 
-			xui_make_fc_fontface(gui->font_gtk_name, &gui->sysopt->mi_size);
+			xui_make_fc_fontface(gui->font_gtk_name, 
+					&gui->sysopt->mi_size);
 	}
 	CDB_DEBUG(("Font Update: %s [%d]\n", 
 				gui->sysopt->mi_font, gui->sysopt->mi_size));
@@ -3177,7 +3176,8 @@ static char *xui_make_fc_fontface(char *face, int *size)
 	char	typeface[1024];
 	int	is_bold, is_italic, is_underline, is_strikeout;
 	
-	iupGetFontInfo(face, typeface, size, &is_bold, &is_italic, &is_underline, &is_strikeout);
+	iupGetFontInfo(face, typeface, size, &is_bold, &is_italic, 
+			&is_underline, &is_strikeout);
 	
 	CDB_MODL(("Font Config: %s %d %d %d %d %d\n", typeface, *size, 
 			is_bold, is_italic, is_underline, is_strikeout));
@@ -3191,7 +3191,7 @@ static char *xui_make_fc_fontface(char *face, int *size)
 	if (!is_bold && !is_italic) {
 		strcat(typeface, ":regular");
 	}
-	return csc_strcpy_alloc(typeface, 16);
+	return meta_make_fontdir(typeface);
 }
 
 
