@@ -115,7 +115,7 @@ endif
 
 gnome-install: install
 	$(INSTALL_DATA) ezthumb.desktop /usr/share/applications
-	@for res in 16 22 24 32 48 256; do \
+	@for res in 16 22 24 32 48 64 256; do \
 	 $(INSTALL_DATA) -T ./external/icons/ezthumb"$$res".png \
 	    /usr/share/icons/hicolor/"$$res"x"$$res"/apps/ezthumb.png; \
 	done
@@ -123,7 +123,7 @@ gnome-install: install
 
 gnome-uninstall: uninstall
 	rm -f /usr/share/applications/ezthumb.desktop
-	@for res in 16 22 24 32 48 256; do \
+	@for res in 16 22 24 32 48 64 256; do \
 	  rm -f /usr/share/icons/hicolor/"$$res"x"$$res"/apps/ezthumb.png; \
 	done
 	gtk-update-icon-cache -f /usr/share/icons/hicolor
@@ -142,7 +142,7 @@ ezthumb-pdf: ezthumb.1
 	man -l -Tps $< | ps2pdf - ezthumb.pdf
 
 gtkicons:
-	@for res in 16 22 24 32 48 128 256; do \
+	@for res in 16 22 24 32 48 64 128 256; do \
 	  convert -background transparent ./external/icons/SMirC-thumbsup.svg \
 	    -resize "$$res"x"$$res" ./external/icons/ezthumb"$$res".png; \
 	done

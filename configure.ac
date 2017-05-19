@@ -136,7 +136,7 @@ case "$host_os" in
 	  )])
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
-	  LIBS="$LIBS $GTK_LIBS -lX11"
+	  LIBS="$LIBS $GTK_LIBS"
       ])
     fi
     SYSDEFS="-D$SYSGUI" 
@@ -149,7 +149,7 @@ case "$host_os" in
         PREFLIB="$PREFLIB libiup"
         AC_MSG_NOTICE([The libiup will be built soon.])],
         [$LIBGUI])
-      POSTLIB="$POSTLIB -liupimglib"])
+      POSTLIB="$POSTLIB -liupimglib -lX11"])
     ;;
 esac
 

@@ -144,6 +144,9 @@
 /* Define to 1 if you have the `gd' library (-lgd). */
 #undef HAVE_LIBGD
 
+/* Define to 1 if you have the `iconv' library (-liconv). */
+#undef HAVE_LIBICONV
+
 /* Define to 1 if you have the `iup' library (-liup). */
 #undef HAVE_LIBIUP
 

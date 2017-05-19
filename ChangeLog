@@ -1,3 +1,9 @@
+20170519:
+	* configure.ac: adjusted the link sequence to avoid the 
+	".../libX11.so: error adding symbols: DSO missing ..." issue.
+	* libcsoup: disabled the build of the test program for Android.
+	* Makefile.am: Added the 64x64 icon.
+
 20170517:
 	* ezgui.c: Added event to font_face text entry so it can choose
 	fonts directly.
