@@ -13,6 +13,11 @@ curve profiles.
 
 Release Notes
 =============
+Version 3.6.3 quick release:
+*) Fixed the bug which failed to save the transparent screenshots in GUI.
+*) Fixed the linking sequence issue between libiup and libX11.
+*) Added the missing 64x64 icon.
+
 Version 3.6.2:
 The 3.6.1 build was so broken it must be replaced asap.
 *) The 'deprecated build' supports ffmpeg 3.3.
