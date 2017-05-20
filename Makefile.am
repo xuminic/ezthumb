@@ -14,7 +14,7 @@ SUBDIRS = .
 
 
 DEFS	+= $(SYSDEFS)
-LIBS	+= $(POSTLIB)
+LIBS	= $(POSTLIB) $(CURRLIB)
 
 if	XAM_MSWIN
 bin_PROGRAMS	= ezthumb 

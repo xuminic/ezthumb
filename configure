@@ -627,6 +627,7 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 WIN32GUI
 RELEASE
+CURRLIB
 POSTLIB
 PREFLIB
 SYSDEFS
@@ -5088,7 +5089,7 @@ esac
       if ! test "$SYSGUI" = CFG_GUI_OFF; then :
 
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
-	  LIBS="$LIBS $GTK_LIBS"
+	  LIBS="$LIBS $GTK_LIBS -lX11"
 
 fi
     fi
@@ -5149,7 +5150,7 @@ else
 $as_echo "$as_me: The libiup will be built soon." >&6;}
 fi
 
-      POSTLIB="$POSTLIB -liupimglib -lX11"
+      POSTLIB="$POSTLIB -liupimglib"
 fi
     ;;
 esac
@@ -5699,6 +5700,8 @@ else
   as_fn_error $? "libavformat not found. Install FFMPEG dev first." "$LINENO" 5
 fi
 
+
+CURRLIB="$LIBS"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
@@ -7273,6 +7276,7 @@ fi
 # Just for checking the function of AC_DEFINE().
 # It can add an object in config.h.in by autoheader and output what I need.
 # AC_DEFINE([HAVE_GUI],[1],[GUI is required])
+
 
 
 

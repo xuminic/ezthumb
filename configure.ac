@@ -136,7 +136,7 @@ case "$host_os" in
 	  )])
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
-	  LIBS="$LIBS $GTK_LIBS"
+	  LIBS="$LIBS $GTK_LIBS -lX11"
       ])
     fi
     SYSDEFS="-D$SYSGUI" 
@@ -149,7 +149,7 @@ case "$host_os" in
         PREFLIB="$PREFLIB libiup"
         AC_MSG_NOTICE([The libiup will be built soon.])],
         [$LIBGUI])
-      POSTLIB="$POSTLIB -liupimglib -lX11"])
+      POSTLIB="$POSTLIB -liupimglib"])
     ;;
 esac
 
@@ -187,6 +187,8 @@ AC_CHECK_LIB([avcodec], [avcodec_version], [],
   [AC_MSG_ERROR([libavcodec not found. Install FFMPEG dev first.])])
 AC_CHECK_LIB([avformat], [avformat_version], [],
   [AC_MSG_ERROR([libavformat not found. Install FFMPEG dev first.])])
+
+CURRLIB="$LIBS"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
@@ -266,6 +268,7 @@ AC_SUBST(IUPCFG)
 AC_SUBST(SYSDEFS)
 AC_SUBST(PREFLIB)
 AC_SUBST(POSTLIB)
+AC_SUBST(CURRLIB)
 AC_SUBST(RELEASE)
 
 # This is for Win32 GUI porting only

@@ -1,3 +1,7 @@
+20170520:
+	* configure: adjusted the link sequence so libiup would be ahead of
+	any gtk/X11 libraries.
+
 20170519: 3.6.3
 	* configure.ac: adjusted the link sequence to avoid the 
 	".../libX11.so: error adding symbols: DSO missing ..." issue.
