@@ -738,6 +738,7 @@ char *meta_make_fontdir(char *s)
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_SFNT_NAMES_H 
+#include FT_TRUETYPE_IDS_H
 
 #include "libcsoup.h"
 
@@ -749,35 +750,41 @@ static	TCHAR	*font_subkey[2] = {
 /* http://stackoverflow.com/questions/4577784/get-a-font-filename-based-on-font-name-and-style-bold-italic */
 int font_attirb(char *fontpath)
 {
-	FT_Library    library;
-	FT_Face       face;
-	FT_SfntName   aname;
-	char	tmp[1024];
-	int	i, n;
+	FT_Library	library;
+	FT_SfntName	aname;
+	FT_Face		face;
+	char		tmp[1024];
+	int		i, n;
 
 	FT_Init_FreeType( &library );
-	if (!strchr(fontpath, '/') && !strchr(fontpath, '\\')) {
-		strcpy(tmp, "C:\\WINDOWS\\Fonts\\");
-		strcat(tmp, fontpath);
-		FT_New_Face(library, tmp, 0, &face );
-	} else {
-		FT_New_Face(library, fontpath, 0, &face );
-	}
+
+	fontpath = smm_fontpath(fontpath, NULL);
+	FT_New_Face(library, fontpath, 0, &face );
+	smm_free(fontpath);
 
 	n = FT_Get_Sfnt_Name_Count(face);
 	for (i = 0; i < n; i++) {
 		if (FT_Get_Sfnt_Name(face, i, &aname)) {
 			continue;
 		}
-		CDB_DEBUG(("FTNAME::platform_id: %d\n", aname.platform_id));
-		CDB_DEBUG(("FTNAME::encoding_id: %d\n", aname.encoding_id));
-		CDB_DEBUG(("FTNAME::language_id: %d\n", aname.language_id));
-		CDB_DEBUG(("FTNAME::name_id:     %d\n", aname.name_id));
-		if (aname.name_id == TT_NAME_ID_FONT_FAMILY) {
-			memset(tmp, 0, sizeof(tmp));
-			memcpy(tmp, aname.string, aname.string_len);
-			CDB_DEBUG(("FTNAME::string:(%3d) %s\n", 
-						aname.string_len, tmp));
+
+		memset(tmp, 0, sizeof(tmp));
+		memcpy(tmp, aname.string, aname.string_len);
+
+		fontpath = tmp;
+		if (aname.encoding_id == TT_MS_ID_UNICODE_CS) {
+			fontpath = smm_wcstombs_alloc((void*) tmp);
+		}
+		CDB_DEBUG(("FTNAME::%3d %3d %3d %5d %4d %s\n", 
+					aname.platform_id,
+					aname.encoding_id, 
+					aname.name_id,
+					aname.language_id,
+					aname.string_len,
+					fontpath));
+
+		if (fontpath != tmp) {
+			smm_free(fontpath);
 		}
 	}
 
@@ -786,12 +793,58 @@ int font_attirb(char *fontpath)
 	return 0;
 }
 
+void dump_win_font(char *ftface, char *ftpath)
+{
+	FT_Library	library;
+	FT_SfntName	aname;
+	FT_Face		face;
+	char		tmp[256];
+	int		i, n;
+
+	FT_Init_FreeType( &library );
+
+	CDB_DEBUG(("Font enum: %s\n", ftpath));
+	//ftpath = smm_fontpath(ftpath, NULL);
+	//FT_New_Face(library, ftpath, 0, &face );
+	//smm_free(ftpath);
+
+	/*
+	n = FT_Get_Sfnt_Name_Count(face);
+	for (i = 0; i < n; i++) {
+		if (FT_Get_Sfnt_Name(face, i, &aname)) {
+			continue;
+		}
+
+		if ((aname.encoding_id == TT_MS_ID_SYMBOL_CS) &&
+				(aname.name_id == TT_NAME_ID_FONT_FAMILY)) {
+			break;
+		}
+	}
+
+	if (i == n) {
+		CDB_DEBUG(("Font enum: %s\n", ftface));
+	} else {
+		memset(tmp, 0, sizeof(tmp));
+		memcpy(tmp, aname.string, aname.string_len);
+		CDB_DEBUG(("Font enum: %s [%s]\n", ftface, tmp));
+	}
+	*/
+	FT_Done_Face    ( face );
+	FT_Done_FreeType( library );
+
+	/*if (!strcasecmp(ftpath, "simhei.ttf")) {
+		font_attirb(ftpath);
+	}*/
+}
+
+/* http://stackoverflow.com/questions/4577784/get-a-font-filename-based-on-
+ * font-name-and-style-bold-italic */
 char *GetFontFile(char *fontface)
 {
 	OSVERSIONINFO	osinfo;
 	HKEY		hkey;
 	TCHAR		*subkey, reg_name[2 * MAX_PATH];
-	char		*ftname, reg_data[2 * MAX_PATH];
+	char		*ftname, *ftpath, reg_data[2 * MAX_PATH];
 	DWORD		namelen, datalen;
 	int		i, fclen;
 
@@ -819,28 +872,33 @@ char *GetFontFile(char *fontface)
 				(LPBYTE)reg_data, &datalen) != ERROR_SUCCESS) {
 			break;
 		}
+
 		if ((ftname = smm_wcstombs_alloc(reg_name)) == NULL) {
 			break;
 		}
-		CDB_DEBUG(("Font enum: %s\n", ftname));
-		{
-			char	*s = smm_wcstombs_alloc(reg_data);
-
-			/*if (!csc_cmp_file_extname(s,"ttf") || 
-					!csc_cmp_file_extname(s,"ttc")) {
-				font_attirb(s);
-			}*/
-			if (!strcasecmp(s, "simhei.ttf")) {
-				font_attirb(s);
-			}
-			smm_free(s);
+		if ((ftpath =  smm_wcstombs_alloc(reg_data)) == NULL) {
+			smm_free(ftname);
+			break;
 		}
+		
+		/* ezthumb only working with TTF fonts */
+		if (csc_cmp_file_extname(ftpath,"ttf") &&
+				csc_cmp_file_extname(ftpath,"ttc")) {
+			smm_free(ftpath);
+			smm_free(ftname);
+			continue;
+		}
+
+		dump_win_font(ftname, ftpath);
 
 		if (!strncasecmp(fontface, ftname, fclen)) {
+			char *s = smm_fontpath(ftpath, NULL);
+			smm_free(ftpath);
 			smm_free(ftname);
 			RegCloseKey(hkey);
-			return smm_wcstombs_alloc(reg_data);
+			return s;
 		}
+		smm_free(ftpath);
 		smm_free(ftname);
 	}
 
