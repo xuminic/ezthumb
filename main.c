@@ -338,6 +338,7 @@ int main(int argc, char **argv)
 #endif
 	todo = command_line_parser(argc, argv, &sysopt);
 	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
+	CDB_SHOW(("CodePage: %d\n", smm_sys_cp));
 	
 	/* review the command option structure to make sure there is no
 	 * controdicted options */

@@ -803,12 +803,10 @@ void dump_win_font(char *ftface, char *ftpath)
 
 	FT_Init_FreeType( &library );
 
-	CDB_DEBUG(("Font enum: %s\n", ftpath));
-	//ftpath = smm_fontpath(ftpath, NULL);
-	//FT_New_Face(library, ftpath, 0, &face );
-	//smm_free(ftpath);
+	ftpath = smm_fontpath(ftpath, NULL);
+	FT_New_Face(library, ftpath, 0, &face );
+	smm_free(ftpath);
 
-	/*
 	n = FT_Get_Sfnt_Name_Count(face);
 	for (i = 0; i < n; i++) {
 		if (FT_Get_Sfnt_Name(face, i, &aname)) {
@@ -828,13 +826,46 @@ void dump_win_font(char *ftface, char *ftpath)
 		memcpy(tmp, aname.string, aname.string_len);
 		CDB_DEBUG(("Font enum: %s [%s]\n", ftface, tmp));
 	}
-	*/
 	FT_Done_Face    ( face );
 	FT_Done_FreeType( library );
 
 	/*if (!strcasecmp(ftpath, "simhei.ttf")) {
 		font_attirb(ftpath);
 	}*/
+}
+
+int CALLBACK GetFontsCallback(const LOGFONT *pk_Font, const TEXTMETRIC* 
+		pk_Metric, DWORD e_FontType, LPARAM lParam)
+{
+	ENUMLOGFONTEX	*ftext = (ENUMLOGFONTEX *) pk_Font;
+	char	*ftface, *ftname;
+
+	ftface = smm_wcstombs_alloc(pk_Font->lfFaceName);
+	ftname = smm_wcstombs_alloc(ftext->elfFullName);
+	CDB_DEBUG(("FONT: %s # %s\n", ftface, ftname));
+	smm_free(ftname);
+	smm_free(ftface);
+	return 1;
+}
+
+extern void CDB_DUMP(char *prompt, void *data, int len);
+void dump_win_face(char *fontface)
+{
+	LOGFONT	lf;
+	HDC	hdc;
+	TCHAR	*s;
+
+	memset(&lf, 0, sizeof(lf));
+	lf.lfCharSet = DEFAULT_CHARSET;
+
+	s = smm_mbstowcs_alloc(fontface);
+	CDB_DUMP("WCSFACE", s, 0);
+	wcsncpy(lf.lfFaceName, s, LF_FACESIZE);
+	smm_free(s);
+
+	hdc = CreateCompatibleDC(NULL);
+	EnumFontFamiliesEx(hdc, &lf, GetFontsCallback, 0, 0);
+	DeleteDC(hdc);
 }
 
 /* http://stackoverflow.com/questions/4577784/get-a-font-filename-based-on-
@@ -847,6 +878,8 @@ char *GetFontFile(char *fontface)
 	char		*ftname, *ftpath, reg_data[2 * MAX_PATH];
 	DWORD		namelen, datalen;
 	int		i, fclen;
+
+	dump_win_face(fontface);
 
 	osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	if (!GetVersionEx(&osinfo)) {
@@ -889,7 +922,7 @@ char *GetFontFile(char *fontface)
 			continue;
 		}
 
-		dump_win_font(ftname, ftpath);
+		//dump_win_font(ftname, ftpath);
 
 		if (!strncasecmp(fontface, ftname, fclen)) {
 			char *s = smm_fontpath(ftpath, NULL);

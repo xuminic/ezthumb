@@ -25,6 +25,9 @@
 #include <string.h>
 
 #include "libcsoup.h"
+//#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_MODULE)
+#include "libcsoup_debug.h"
 
 struct	FTINF	{
 	char	*ftpath;
@@ -97,13 +100,10 @@ char *smm_fontpath(char *ftname, char **userdir)
 #ifdef	CFG_WIN32_API
 	/* search Windows system font */
 	if (GetWindowsDirectory(wpbuf, MAX_PATH)) {
+		wcsncat(wpbuf, TEXT("\\Fonts"), MAX_PATH);
 		if ((home = smm_wcstombs_alloc(wpbuf)) == NULL) {
 			return NULL;
 		}
-		if (realloc(home, strlen(home) + 16) == NULL) {
-			return NULL;
-		}
-		strcat(home, "\\Fonts");
 
 		ftinfo.ftpath = ftname;
 		ftinfo.ftname = NULL;
@@ -154,7 +154,7 @@ static int findfont(void *option, char *path, int type, void *info)
 	(void)info;		/* stop the gcc warning */
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		//slogz("Entering %s:\n", path);
+		//CDB_SHOW(("Entering %s:\n", path));
 		break;
 	case SMM_MSG_PATH_EXEC:
 #ifdef	CFG_WIN32_API
@@ -170,14 +170,14 @@ static int findfont(void *option, char *path, int type, void *info)
 		}
 		strcat(ftinfo->ftname, SMM_DEF_DELIM);
 		strcat(ftinfo->ftname, path);
-		//slogz("Found %s\n", ftinfo->ftname);
+		//CDB_SHOW(("Found %s\n", ftinfo->ftname));
 		return SMM_NTF_PATH_EOP;
 
 	case SMM_MSG_PATH_BREAK:
-		//slog(SLWARN, "Failed to process %s\n", path);
+		//CDB_SHOW(("Failed to process %s\n", path));
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		//slogz("Leaving %s\n", path);
+		//CDB_SHOW(("Leaving %s\n", path));
 		break;
 	}
 	return SMM_NTF_PATH_NONE;
