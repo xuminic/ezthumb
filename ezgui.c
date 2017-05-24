@@ -325,6 +325,12 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	IupSetAttribute(NULL, "UTF8MODE", "YES");
 	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
 
+	/* 20170524 Enforce the libcsoup into the UTF-8 mode because
+	 * the libiup has been set to UTF-8.
+	 * Note that the ezthumb console is still stay in CP_ACP so it
+	 * can display through the Windows console */
+	smm_codepage_set(CP_UTF8);
+
 	ezgui_create_window(gui);
 
 	/* filling the work area with file names from command line */
@@ -2340,6 +2346,8 @@ static void *ezbar_main(void *vobj)
 	/* Note that these two lines must be kept in this sequence */
 	IupSetAttribute(NULL, "UTF8MODE", "YES");
 	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
+
+	smm_codepage_set(CP_UTF8);
 
 	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
 	if (!IupGetGlobal("SINGLEINSTANCE")) {

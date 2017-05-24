@@ -65,8 +65,7 @@
 #include "ezthumb.h"
 
 /* re-use the debug convention in libcsoup */
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_DEBUG)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
 #include "libcsoup_debug.h"
 
 
@@ -695,8 +694,6 @@ int meta_export_color(EZBYTE *color, char *buf, int blen)
 	return len;
 }
 
-extern char *GetFontFile(char *fontface);
-
 char *meta_make_fontdir(char *s)
 {
 	char	tmp[256];
@@ -725,220 +722,11 @@ char *meta_make_fontdir(char *s)
 	if ((s = strchr(tmp, ':')) != NULL) {
 		*s = 0;
 	}
-#ifdef	HAVE_MULTILINE_LABEL	/* just borrowed it */
-	return GetFontFile(tmp);
+
+#ifdef	WINVER
+	return ezwinfont_faceoff(tmp);
 #else
 	return NULL;
 #endif
 }
-
-#ifdef	HAVE_MULTILINE_LABEL	/* just borrowed it */
-
-#include <windows.h>
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_SFNT_NAMES_H 
-#include FT_TRUETYPE_IDS_H
-
-#include "libcsoup.h"
-
-static	TCHAR	*font_subkey[2] = {
-	TEXT("Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"),
-	TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Fonts")
-};
-
-/* http://stackoverflow.com/questions/4577784/get-a-font-filename-based-on-font-name-and-style-bold-italic */
-int font_attirb(char *fontpath)
-{
-	FT_Library	library;
-	FT_SfntName	aname;
-	FT_Face		face;
-	char		tmp[1024];
-	int		i, n;
-
-	FT_Init_FreeType( &library );
-
-	fontpath = smm_fontpath(fontpath, NULL);
-	FT_New_Face(library, fontpath, 0, &face );
-	smm_free(fontpath);
-
-	n = FT_Get_Sfnt_Name_Count(face);
-	for (i = 0; i < n; i++) {
-		if (FT_Get_Sfnt_Name(face, i, &aname)) {
-			continue;
-		}
-
-		memset(tmp, 0, sizeof(tmp));
-		memcpy(tmp, aname.string, aname.string_len);
-
-		fontpath = tmp;
-		if (aname.encoding_id == TT_MS_ID_UNICODE_CS) {
-			fontpath = smm_wcstombs_alloc((void*) tmp);
-		}
-		CDB_DEBUG(("FTNAME::%3d %3d %3d %5d %4d %s\n", 
-					aname.platform_id,
-					aname.encoding_id, 
-					aname.name_id,
-					aname.language_id,
-					aname.string_len,
-					fontpath));
-
-		if (fontpath != tmp) {
-			smm_free(fontpath);
-		}
-	}
-
-	FT_Done_Face    ( face );
-	FT_Done_FreeType( library );
-	return 0;
-}
-
-void dump_win_font(char *ftface, char *ftpath)
-{
-	FT_Library	library;
-	FT_SfntName	aname;
-	FT_Face		face;
-	char		tmp[256];
-	int		i, n;
-
-	FT_Init_FreeType( &library );
-
-	ftpath = smm_fontpath(ftpath, NULL);
-	FT_New_Face(library, ftpath, 0, &face );
-	smm_free(ftpath);
-
-	n = FT_Get_Sfnt_Name_Count(face);
-	for (i = 0; i < n; i++) {
-		if (FT_Get_Sfnt_Name(face, i, &aname)) {
-			continue;
-		}
-
-		if ((aname.encoding_id == TT_MS_ID_SYMBOL_CS) &&
-				(aname.name_id == TT_NAME_ID_FONT_FAMILY)) {
-			break;
-		}
-	}
-
-	if (i == n) {
-		CDB_DEBUG(("Font enum: %s\n", ftface));
-	} else {
-		memset(tmp, 0, sizeof(tmp));
-		memcpy(tmp, aname.string, aname.string_len);
-		CDB_DEBUG(("Font enum: %s [%s]\n", ftface, tmp));
-	}
-	FT_Done_Face    ( face );
-	FT_Done_FreeType( library );
-
-	/*if (!strcasecmp(ftpath, "simhei.ttf")) {
-		font_attirb(ftpath);
-	}*/
-}
-
-int CALLBACK GetFontsCallback(const LOGFONT *pk_Font, const TEXTMETRIC* 
-		pk_Metric, DWORD e_FontType, LPARAM lParam)
-{
-	ENUMLOGFONTEX	*ftext = (ENUMLOGFONTEX *) pk_Font;
-	char	*ftface, *ftname;
-
-	ftface = smm_wcstombs_alloc(pk_Font->lfFaceName);
-	ftname = smm_wcstombs_alloc(ftext->elfFullName);
-	CDB_DEBUG(("FONT: %s # %s\n", ftface, ftname));
-	smm_free(ftname);
-	smm_free(ftface);
-	return 1;
-}
-
-extern void CDB_DUMP(char *prompt, void *data, int len);
-void dump_win_face(char *fontface)
-{
-	LOGFONT	lf;
-	HDC	hdc;
-	TCHAR	*s;
-
-	memset(&lf, 0, sizeof(lf));
-	lf.lfCharSet = DEFAULT_CHARSET;
-
-	s = smm_mbstowcs_alloc(fontface);
-	CDB_DUMP("WCSFACE", s, 0);
-	wcsncpy(lf.lfFaceName, s, LF_FACESIZE);
-	smm_free(s);
-
-	hdc = CreateCompatibleDC(NULL);
-	EnumFontFamiliesEx(hdc, &lf, GetFontsCallback, 0, 0);
-	DeleteDC(hdc);
-}
-
-/* http://stackoverflow.com/questions/4577784/get-a-font-filename-based-on-
- * font-name-and-style-bold-italic */
-char *GetFontFile(char *fontface)
-{
-	OSVERSIONINFO	osinfo;
-	HKEY		hkey;
-	TCHAR		*subkey, reg_name[2 * MAX_PATH];
-	char		*ftname, *ftpath, reg_data[2 * MAX_PATH];
-	DWORD		namelen, datalen;
-	int		i, fclen;
-
-	dump_win_face(fontface);
-
-	osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	if (!GetVersionEx(&osinfo)) {
-		return NULL;
-	}
-
-	if (osinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
-		subkey = font_subkey[1];
-	} else {
-		subkey = font_subkey[0];
-	}
-
-	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, subkey, 0, KEY_ALL_ACCESS, 
-				&hkey) != ERROR_SUCCESS) {
-		return NULL;
-	}
-
-	fclen = strlen(fontface);
-	for (i = 0; ; i++) {
-		namelen = sizeof(reg_name) - 1;
-		datalen = sizeof(reg_data) - 1;
-		if (RegEnumValue(hkey, i, reg_name, &namelen, NULL, NULL, 
-				(LPBYTE)reg_data, &datalen) != ERROR_SUCCESS) {
-			break;
-		}
-
-		if ((ftname = smm_wcstombs_alloc(reg_name)) == NULL) {
-			break;
-		}
-		if ((ftpath =  smm_wcstombs_alloc(reg_data)) == NULL) {
-			smm_free(ftname);
-			break;
-		}
-		
-		/* ezthumb only working with TTF fonts */
-		if (csc_cmp_file_extname(ftpath,"ttf") &&
-				csc_cmp_file_extname(ftpath,"ttc")) {
-			smm_free(ftpath);
-			smm_free(ftname);
-			continue;
-		}
-
-		//dump_win_font(ftname, ftpath);
-
-		if (!strncasecmp(fontface, ftname, fclen)) {
-			char *s = smm_fontpath(ftpath, NULL);
-			smm_free(ftpath);
-			smm_free(ftname);
-			RegCloseKey(hkey);
-			return s;
-		}
-		smm_free(ftpath);
-		smm_free(ftname);
-	}
-
-	RegCloseKey(hkey);
-	return NULL;
-}
-
-
-#endif	/* HAVE_MULTILINE_LABEL */
 
