@@ -688,6 +688,7 @@ char *meta_make_fontdir(char *s);
 int ezwinfont_open(void);
 int ezwinfont_close(void);
 char *ezwinfont_faceoff(char *fontface);
+int ezwinfont_testing(char *fontface);
 #endif
 
 #endif	/* _EZTHUMB_H_ */

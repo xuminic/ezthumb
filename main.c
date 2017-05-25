@@ -332,6 +332,7 @@ int main(int argc, char **argv)
 #ifdef	CFG_WIN32RT
 	i = ezwinfont_open();
 	CDB_DEBUG(("%d FONT LOADED\n", i));
+	ezwinfont_testing(NULL);
 #endif
 
 #ifndef	CFG_GUI_OFF

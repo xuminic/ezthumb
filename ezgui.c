@@ -253,28 +253,6 @@ static char *xui_make_filters(char *slist);
 static char *xui_make_fc_fontface(char *face, int *size);
 
 
-void CDB_DUMP(char *prompt, void *data, int len)
-{
-	unsigned char	*s = data;
-	char	buf[128], tmp[16];
-	int	i;
-
-	if (data == NULL) {
-		return;
-	}
-	if ((len < 1) || (len > 16)) {
-		len = 16;
-	}
-	sprintf(buf, "%s: ", prompt);
-	for (i = 0; i < len; i++) {
-		sprintf(tmp, "%02x ", s[i]);
-		strcat(buf, tmp);
-	}
-	CDB_SHOW(("%s\n", buf));
-}
-
-
-
 EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 {
 	EZGUI	*gui;
@@ -1665,7 +1643,6 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 		IupSetAttribute(gui->font_face, "VISIBLE", "YES");
 		s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_FACE);
 		if (s) {
-			CDB_DUMP("Font RESET", s, strlen(s));
 			IupSetAttribute(gui->font_face, "VALUE", s);
 		} else {
 			IupSetAttribute(gui->font_face, "VALUE", "");
@@ -1701,7 +1678,6 @@ static int ezgui_setup_font_update(EZGUI *gui)
 	}
 	CDB_DEBUG(("Font Update: %s [%d]\n", 
 				gui->sysopt->mi_font, gui->sysopt->mi_size));
-	CDB_DUMP("Font Update", gui->sysopt->mi_font, 0);
 	return 0;
 }
 
@@ -1787,7 +1763,6 @@ static int ezgui_setup_font_chooser(EZGUI *gui)
 
 	val = IupGetAttribute(gui->dlg_font, "VALUE");
 	CDB_DEBUG(("Font Face: %s\n", val));
-	CDB_DUMP("Font Face", val, strlen(val));
 	CDB_DEBUG(("Font Color: %s\n",
 				IupGetAttribute(gui->dlg_font, "COLOR")));
 
@@ -3218,7 +3193,6 @@ static char *xui_make_fc_fontface(char *face, int *size)
 	
 	CDB_MODL(("Font Config: %s %d %d %d %d %d\n", typeface, *size, 
 			is_bold, is_italic, is_underline, is_strikeout));
-	CDB_DUMP("Font Config", typeface, strlen(typeface));
 
 	if (is_bold) {
 		strcat(typeface, ":bold");

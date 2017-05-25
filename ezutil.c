@@ -718,9 +718,10 @@ char *meta_make_fontdir(char *s)
 	/* FontConfig is not available then convert the font face to
 	 * the full path of font file */
 #ifdef	CFG_WIN32RT
-	return ezwinfont_faceoff(s);
-#else
-	return NULL;	/* default font */
+	if ((s = ezwinfont_faceoff(s)) != NULL) {
+		return csc_strcpy_alloc(s, 0);
+	}
 #endif
+	return NULL;	/* default font */
 }
 
