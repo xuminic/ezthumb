@@ -683,11 +683,11 @@ int meta_make_color(char *s, EZBYTE *color);
 int meta_export_color(EZBYTE *color, char *buf, int blen);
 char *meta_make_fontdir(char *s);
 
-#ifdef	WINVER
+#ifdef	CFG_WIN32RT
 /* ezwinfont.c */
 int ezwinfont_open(void);
 int ezwinfont_close(void);
-char *ezwinfont_faceoff(char *fontface)
+char *ezwinfont_faceoff(char *fontface);
 #endif
 
 #endif	/* _EZTHUMB_H_ */

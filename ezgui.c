@@ -225,7 +225,7 @@ static int ezgui_sview_event_multi_select(Ihandle *ih, char *value);
 static int ezgui_sview_event_moused(Ihandle *ih, 
 		int button, int pressed, int x, int y, char *status);
 static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status);
-#if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+#ifdef	CFG_WIN32RT
 static int ezgui_sview_event_ctrl_a(Ihandle *ih, int c);
 #endif
 static int ezgui_sview_add(SView *sview);
@@ -2430,7 +2430,8 @@ static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 		IupSetCallback(sview->filename, "DBLCLICK_CB", 
 				(Icallback) ezgui_sview_event_run);
 	}
-#if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+
+#ifdef	CFG_WIN32RT
 	/* 20160812: In Windows the list control doesn't support Ctrl-A to
 	 * select all items so I put a workaround here */
 	IupSetCallback(sview->filename, "K_cA",
@@ -2730,7 +2731,7 @@ static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
 	return IUP_DEFAULT;
 }
 
-#if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+#ifdef	CFG_WIN32RT
 static int ezgui_sview_event_ctrl_a(Ihandle *ih, int c)
 {
 	SView	*sview;

@@ -67,7 +67,6 @@
 #include FT_SFNT_NAMES_H 
 #include FT_TRUETYPE_IDS_H
 
-#define LIBICONV_STATIC
 #include "iconv.h"
 
 #include "libcsoup.h"
@@ -84,51 +83,83 @@ static	TCHAR	*font_subkey[2] = {
 	TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Fonts")
 };
 
-static	struct  struct	{
+static	struct	{
 	int	platform;
 	int	encoding;
 	char	*codename;
 } encode_table[] = {
-	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_DEFAULT,  "UNICODE" },
-	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_UNICODE_1_1,	NULL },
-	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_ISO_10646, NULL },
-	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_UNICODE_2_0, NULL },
-	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_UNICODE_32, NULL },
+	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_DEFAULT,  "UTF-16" },
+	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_UNICODE_1_1, "UTF-16" },
+	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_ISO_10646, "ISO-10646" },
+	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_UNICODE_2_0, "UTF-16" },
+	{ TT_PLATFORM_APPLE_UNICODE, TT_APPLE_ID_UNICODE_32, "UTF-32" },
 
-	{ TT_PLATFORM_MACINTOSH, TT_MAC_ID_ROMAN, "macintosh" },
+	{ TT_PLATFORM_MACINTOSH, TT_MAC_ID_ROMAN, "MACINTOSH" },
 	{ TT_PLATFORM_MACINTOSH, TT_MAC_ID_SIMPLIFIED_CHINESE, "gb2312" },
 	
-	{ TT_PLATFORM_MICROSOFT, TT_MS_ID_SYMBOL_CS, NULL },
+	{ TT_PLATFORM_MICROSOFT, TT_MS_ID_SYMBOL_CS, "ucs-2be" },
 	{ TT_PLATFORM_MICROSOFT, TT_MS_ID_UNICODE_CS, "ucs-2be" },
 
 	{ -1, -1, NULL }		
 };
 
-#define	MAX_FONT_LOOKUP	1024
+#define	MAX_FONT_LOOKUP		2048
+
+#define EZFONT_STYLE_NONE	0
+#define EZFONT_STYLE_BOLD	1
+#define EZFONT_STYLE_ITALIC	2
+#define EZFONT_STYLE_ALL	3
+
+static	int	style_eval[3][16] = {
+	/*  EXPECT              RECEIVED                VALUE  */
+	{ EZFONT_STYLE_NONE,	EZFONT_STYLE_NONE,	0 },
+	{ EZFONT_STYLE_NONE,	EZFONT_STYLE_BOLD,	1 },
+	{ EZFONT_STYLE_NONE,	EZFONT_STYLE_ITALIC,	1 },
+	{ EZFONT_STYLE_NONE,	EZFONT_STYLE_ALL,	1 },
+	{ EZFONT_STYLE_BOLD,	EZFONT_STYLE_NONE,	2 },
+	{ EZFONT_STYLE_BOLD,	EZFONT_STYLE_BOLD,	0 },
+	{ EZFONT_STYLE_BOLD,	EZFONT_STYLE_ITALIC,	3 },
+	{ EZFONT_STYLE_BOLD,	EZFONT_STYLE_ALL,	1 },
+	{ EZFONT_STYLE_ITALIC,	EZFONT_STYLE_NONE,	2 },
+	{ EZFONT_STYLE_ITALIC,	EZFONT_STYLE_BOLD,	3 },
+	{ EZFONT_STYLE_ITALIC,	EZFONT_STYLE_ITALIC,	0 },
+	{ EZFONT_STYLE_ITALIC,	EZFONT_STYLE_ALL,	1 },
+	{ EZFONT_STYLE_ALL,	EZFONT_STYLE_NONE,	2 },
+	{ EZFONT_STYLE_ALL,	EZFONT_STYLE_BOLD,	1 },
+	{ EZFONT_STYLE_ALL,	EZFONT_STYLE_ITALIC,	1 },
+	{ EZFONT_STYLE_ALL,	EZFONT_STYLE_ALL,	0 }
+};
 
 static	struct	{
 	char	*font_path;
 	char	*font_face;
+	int	style;		/* 1=bold 2=italic 3=bold&italic */
 } winfont_list[MAX_FONT_LOOKUP];
 
 static	int	winfont_idx = 0;
 
 
+static int ezwinfont_add_fontface(char *ftpath, int style);
+static int ezwinfont_convert(FT_SfntName *aname, char *buf, size_t blen);
+static int ezwinfont_style_from_face(TCHAR *ftface);
+
 int ezwinfont_open(void)
 {
 	OSVERSIONINFO	osinfo;
 	HKEY		hkey;
-	TCHAR		ftfile[MAX_PATH], wpbuf[MAX_PATH];
-	DWORD		fflen;
+	TCHAR		ftfile[MAX_PATH], ftface[MAX_PATH], wpbuf[MAX_PATH];
+	DWORD		fflen, fclen;
 	LONG		rc;
 	char		*ftpath;
-	int		i;
+	int		i, ftstyle;
 
 	osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	if (!GetVersionEx(&osinfo)) {
 		return -1;
 	}
-
+	if (!GetWindowsDirectory(wpbuf, MAX_PATH)) {
+		return -2;
+	}
 	if (osinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
 		rc = RegOpenKeyEx(HKEY_LOCAL_MACHINE, font_subkey[1],
 				0, KEY_ALL_ACCESS, &hkey);
@@ -140,24 +171,26 @@ int ezwinfont_open(void)
 		return -2;
 	}
 
-
+	wcsncat(wpbuf, TEXT("\\Fonts\\"), MAX_PATH);
 	for (i = 0; ; i++) {
+		fclen = sizeof(ftface) - 1;
 		fflen = sizeof(ftfile) - 1;
-		if (RegEnumValue(hkey, i, NULL, NULL, NULL, NULL, 
+		if (RegEnumValue(hkey, i, ftface, &fclen, NULL, NULL, 
 				(LPBYTE) ftfile, &fflen) != ERROR_SUCCESS) {
 			break;
 		}
 
+		ftstyle = ezwinfont_style_from_face(ftface);
+
 		if (wcschr(ftfile, L'\\')) {
 			/* it's already the full path */
 			ftpath = smm_wcstombs_alloc(ftfile);
-		} else if (!GetWindowsDirectory(wpbuf, MAX_PATH)) {
-			ftpath = NULL;
 		} else {
-			wcsncat(wpbuf, TEXT("\\Fonts\\"), MAX_PATH);
-			wcsncat(wpbuf, ftfile, MAX_PATH);
-			ftpath = smm_wcstombs_alloc(wpbuf);
+			wcsncpy(ftface, wpbuf, MAX_PATH);
+			wcsncat(ftface, ftfile, MAX_PATH);
+			ftpath = smm_wcstombs_alloc(ftface);
 		}
+		//CDB_DEBUG(("Read: %s\n", ftpath));
 
 		/* only support the TrueType */		
 		if (csc_cmp_file_extname(ftpath,"ttf") &&
@@ -169,7 +202,7 @@ int ezwinfont_open(void)
 		/* the ftpath was dynamically allocated so if it's
 		 * successfully added to the font lookup table, it shall
 		 * be freed only in ezwinfont_close() */
-		if (ezwinfont_add_fontface(ftpath) < 0) {
+		if (ezwinfont_add_fontface(ftpath, ftstyle) < 0) {
 			/* free the memory if it was failed to add up */
 			smm_free(ftpath);
 		}
@@ -183,6 +216,7 @@ int ezwinfont_close(void)
 {
 	int	i;
 
+	CDB_DEBUG(("ezwinfont_close\n"));
 	for (i = 0; i < winfont_idx; i++) {
 		if (winfont_list[i].font_face) {
 			smm_free(winfont_list[i].font_face);
@@ -198,19 +232,66 @@ int ezwinfont_close(void)
 
 char *ezwinfont_faceoff(char *fontface)
 {
-	int	i;
+	char	buf[256];
+	int	i, style, can_val, can_idx = -1;
+	
+	CDB_DEBUG(("FACEOFF: %s\n", fontface));
+	
+	style = EZFONT_STYLE_NONE;
+	if (!strstr(fontface, ":bold")) {
+		style |= EZFONT_STYLE_BOLD;
+	}
+	if (!strstr(fontface, ":italic")) {
+		style |= EZFONT_STYLE_ITALIC;
+	}
 
+	if (*fontface == '@') {	/* skip the vertical flag */
+		fontface++;
+	}
+	csc_strlcpy(buf, fontface, sizeof(buf));
+	if ((fontface = strchr(buf, ':')) != NULL) {       
+		*fontface = 0;
+	}
+
+	CDB_DEBUG(("FACEOFF: %s %d\n", buf, winfont_idx));
 	for (i = 0; i < winfont_idx; i++) {
-		if (winfont_list[i].font_face) {
-			if (strstr(winfont_list[i].font_face, fontface)) {
-				return winfont_list[i].font_path;
+		if (winfont_list[i].font_face == NULL) {
+			continue;
+		}
+		/*CDB_DEBUG(("FACEOFF: Searching %s %d -> %s %d\n",
+ 				winfont_list[i].font_face,
+				winfont_list[i].style,
+				buf, style));*/
+		if (strstr(winfont_list[i].font_face, buf) == NULL) {
+			continue;
+		}
+
+		if (can_idx == -1) {
+			can_idx = i;	/* least matched */
+			can_val = 
+		} else if ((winfont_list[i].style & style) == style) {
+			likely = i;	/* exactly matched */
+		} else if (winfont_list[i].style & style) {
+			if ((winfont_list[likely].style & style) == 0) {
+				likely = i;	/* better matched */
 			}
+		} else {
+
+			int	last, now;
+			last = winfont_list[likely].style & style;
+			now  = winfont_list[i].style & style;
+			
+
+
 		}
 	}
-	return NULL;
+	if (likely == -1) {
+		return NULL;
+	}
+	return winfont_list[likely].font_path;
 }
 
-static int ezwinfont_add_fontface(char *ftpath)
+static int ezwinfont_add_fontface(char *ftpath, int ftstyle)
 {
 	FT_Library	library;
 	FT_SfntName	aname;
@@ -232,6 +313,7 @@ static int ezwinfont_add_fontface(char *ftpath)
 	/* store the allocated string of the font path */
 	winfont_list[winfont_idx].font_path = ftpath;
 	winfont_list[winfont_idx].font_face = NULL;
+	winfont_list[winfont_idx].style = ftstyle;
 
 	namecnt = FT_Get_Sfnt_Name_Count(face);
 	for (i = 0, winfont_idx++; i < namecnt; i++) {
@@ -239,7 +321,7 @@ static int ezwinfont_add_fontface(char *ftpath)
 			continue;
 		}
 		
-		/*
+#if 0
 		ezwinfont_convert(&aname, tmp, sizeof(tmp));
 		CDB_DEBUG(("FTNAME::%3d %3d %3d %5d %4d %s\n", 
 					aname.platform_id,
@@ -248,7 +330,7 @@ static int ezwinfont_add_fontface(char *ftpath)
 					aname.language_id,
 					aname.string_len,
 					tmp));
-		*/
+#endif
 
 		if (aname.name_id != TT_NAME_ID_FONT_FAMILY) {
 			continue;
@@ -257,11 +339,15 @@ static int ezwinfont_add_fontface(char *ftpath)
 			break;
 		}
 
-		if (ezwinfont_convert(&aname, tmp, sizeof(tmp)) == 0) {
-			CDB_DEBUG(("FTFACE:: %d %d %s\n",
-				aname.platform_id, aname.encoding_id, tmp));
-		}
+		winfont_list[winfont_idx].style = ftstyle;
 
+#if 0
+		ftstyle = ezwinfont_convert(&aname, tmp, sizeof(tmp));
+		CDB_DEBUG(("FTFACE:: %2d %2d %2d %s [%s]\n", ftstyle,
+			aname.platform_id, aname.encoding_id, tmp, ftpath));
+#else
+		ezwinfont_convert(&aname, tmp, sizeof(tmp));
+#endif
 		winfont_list[winfont_idx].font_path = ftpath; /* just a copy */
 		winfont_list[winfont_idx].font_face = csc_strcpy_alloc(tmp, 0);
 		winfont_idx++;
@@ -276,8 +362,7 @@ static int ezwinfont_convert(FT_SfntName *aname, char *buf, size_t blen)
 {
 	iconv_t cd;
 	char	*iconv_in = (char*) aname->string;
-	size_t	lenin = aname->string_len;
-	int	i;
+	size_t	i, lenin = aname->string_len;
 
 	for (i = 0; encode_table[i].platform != -1; i++) {
 		if (aname->platform_id != encode_table[i].platform) {
@@ -290,20 +375,41 @@ static int ezwinfont_convert(FT_SfntName *aname, char *buf, size_t blen)
 			break;
 		}
 
-		if ((cd = iconv_open("utf-8", encode_table[i].codename)) < 0) {
+		cd = iconv_open("utf-8", encode_table[i].codename);
+		if (cd == (iconv_t) -1) {
 			break;
 		}
-		i = iconv(cd, &iconv_in, &lenin, &buf, &blen);
+		i = blen;
+		iconv(cd, (const char **) &iconv_in, &lenin, &buf, &blen);
 		iconv_close(cd);
-		return i;
+		*buf = 0;	/* iconv doesn't end string */
+		return (int)(i - blen);
 	}
 	/* doesn't find the encoding, or doesn't need to convert */
 	memset(buf, 0, blen);
 	memcpy(buf, iconv_in, lenin);
-	return 0;
+	CDB_DEBUG(("ezwinfont_convert: %d %s\n", lenin, iconv_in));
+	return -1;
 }
 
+static int ezwinfont_style_from_face(TCHAR *ftface)
+{
+	char	*s = smm_wcstombs_alloc(ftface);
+	int	style = EZFONT_STYLE_NONE;
 
+	if (s) {
+		if (!strstr(s, "Bold")) {
+			style |= EZFONT_STYLE_BOLD;
+		}
+		if (!strstr(s, "Italic")) {
+			style |= EZFONT_STYLE_ITALIC;
+		}
+		smm_free(s);
+	}
+	return style;
+}
+
+#if 0
 static void CDB_DUMP(char *prompt, void *data, int len)
 {
 	unsigned char   *s = data;
@@ -324,81 +430,6 @@ static void CDB_DUMP(char *prompt, void *data, int len)
 	CDB_SHOW(("%s\n", buf));
 }
 
-
-
-void dump_win_font(char *ftface, char *ftpath)
-{
-	FT_Library	library;
-	FT_SfntName	aname;
-	FT_Face		face;
-	char		*s, tmp[256];
-	int		i, n;
-	
-	if (strcasecmp(ftpath, "simhei.ttf")) {
-		return;
-	}
-	
-
-	FT_Init_FreeType( &library );
-
-	ftpath = smm_fontpath(ftpath, NULL);
-	FT_New_Face(library, ftpath, 0, &face );
-	smm_free(ftpath);
-
-	n = FT_Get_Sfnt_Name_Count(face);
-	for (i = 0; i < n; i++) {
-		if (FT_Get_Sfnt_Name(face, i, &aname)) {
-			continue;
-		}
-		if (aname.name_id != TT_NAME_ID_FONT_FAMILY) {
-			continue;
-		}
-
-		memset(tmp, 0, sizeof(tmp));
-		memcpy(tmp, aname.string, aname.string_len);
-		if (aname.encoding_id == TT_MS_ID_UNICODE_CS) {
-			iconv_t cd;
-			char *iconv_in = (char*) aname.string;
-			char *iconv_out = tmp;
-			size_t	lenin, lenout;
-
-			lenin = aname.string_len;
-			lenout = sizeof(tmp);
-			cd = iconv_open ("utf-8", "ucs-2be");
-			if (cd < 0) {
-				CDB_DEBUG(("BUGGAR\n"));
-			}
-			iconv(cd, &iconv_in, &lenin, &iconv_out, &lenout);
-			iconv_close(cd);
-		}
-		CDB_DEBUG(("Font enum: %d %d %s\n",
-				aname.platform_id,
-				aname.encoding_id,
-				tmp));
-
-
-		/*
-		if (aname.encoding_id == TT_MS_ID_SYMBOL_CS) {
-			CDB_DEBUG(("Font enum: %s [%s]\n", ftface, tmp));
-		} else if (aname.encoding_id == TT_MS_ID_UNICODE_CS) {
-			s = smm_wcstombs_alloc((void*) tmp);
-			CDB_DEBUG(("Font enum: %s [%s]\n", ftface, s));
-			smm_free(s);
-		} else {
-			s = smm_wcstombs_alloc((void*) tmp);
-			CDB_DEBUG(("Font enum: %s [%s][%d]\n", 
-					ftface, tmp, aname.string_len));
-			smm_free(s);
-		}*/
-	}
-
-	FT_Done_Face    ( face );
-	FT_Done_FreeType( library );
-
-	/*if (!strcasecmp(ftpath, "simhei.ttf")) {
-		font_attirb(ftpath);
-	}*/
-}
 
 int CALLBACK GetFontsCallback(const LOGFONT *pk_Font, const TEXTMETRIC* 
 		pk_Metric, DWORD e_FontType, LPARAM lParam)
@@ -508,6 +539,6 @@ char *GetFontFile(char *fontface)
 	RegCloseKey(hkey);
 	return NULL;
 }
-
+#endif
 
 

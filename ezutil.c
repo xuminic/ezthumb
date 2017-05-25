@@ -696,12 +696,11 @@ int meta_export_color(EZBYTE *color, char *buf, int blen)
 
 char *meta_make_fontdir(char *s)
 {
-	char	tmp[256];
-
 	/* review whether the fontconfig pattern like "times:bold:italic"
 	 * was specified. The fontconfig pattern could be used directly.
 	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
-	if (!csc_cmp_file_extname(s,"ttf") || !csc_cmp_file_extname(s,"ttc")) {
+	if (!csc_cmp_file_extname(s, "ttf") || 
+			!csc_cmp_file_extname(s, "ttc")) {
 		return smm_fontpath(s, NULL);
 	}
 
@@ -718,15 +717,10 @@ char *meta_make_fontdir(char *s)
 
 	/* FontConfig is not available then convert the font face to
 	 * the full path of font file */
-	csc_strlcpy(tmp, s, sizeof(tmp));
-	if ((s = strchr(tmp, ':')) != NULL) {
-		*s = 0;
-	}
-
-#ifdef	WINVER
-	return ezwinfont_faceoff(tmp);
+#ifdef	CFG_WIN32RT
+	return ezwinfont_faceoff(s);
 #else
-	return NULL;
+	return NULL;	/* default font */
 #endif
 }
 

@@ -68,7 +68,8 @@
 #endif
 
 /* re-use the debug convention in libcsoup */
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_DEBUG)
 #include "libcsoup_debug.h"
 
 
@@ -317,18 +318,21 @@ int main(int argc, char **argv)
 	int	i, todo;
 
 	smm_init();			/* initialize the libsmm */
-#if	defined(DEBUG) && defined(CFG_WIN32_API) && defined(CFG_GUI_ON)
+#if	defined(DEBUG) && defined(CFG_WIN32RT) && defined(CFG_GUI_ON)
 	dbgc = slog_csoup_open(NULL, "win32.log");
 #else
 	dbgc = slog_csoup_open(NULL, NULL);
 #endif
 	slog_translate_setup(dbgc, SLOG_TRANSL_MODUL,
 			ezdebug_trans_module);
-	CDB_INFO(("CodePage: %d\n", smm_sys_cp));
 
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
+#ifdef	CFG_WIN32RT
+	i = ezwinfont_open();
+	CDB_DEBUG(("%d FONT LOADED\n", i));
+#endif
 
 #ifndef	CFG_GUI_OFF
 	if (command_line_parser(argc, argv, NULL) == CMD_G_UI) {
@@ -338,7 +342,7 @@ int main(int argc, char **argv)
 #endif
 	todo = command_line_parser(argc, argv, &sysopt);
 	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
-	CDB_SHOW(("CodePage: %d\n", smm_sys_cp));
+	CDB_DEBUG(("CodePage: %d\n", smm_sys_cp));
 	
 	/* review the command option structure to make sure there is no
 	 * controdicted options */
@@ -451,6 +455,9 @@ int main(int argc, char **argv)
 		break;
 	}
 	main_close(&sysopt);
+#ifdef	CFG_WIN32RT
+	ezwinfont_close();
+#endif
 	smm_destroy();
 	return todo;
 }
@@ -875,6 +882,9 @@ static int signal_handler(int sig)
 	CDB_WARN(("Signal %d\n", sig));
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
+#ifdef	CFG_WIN32RT
+	ezwinfont_close();
+#endif
 	smm_destroy();
 	return sig;
 }
