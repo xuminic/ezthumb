@@ -18,11 +18,11 @@ LIBS	+= $(POSTLIB)
 
 if	XAM_MSWIN
 bin_PROGRAMS	= ezthumb 
-ezthumb_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+ezthumb_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c ezwinfont.c
 ezthumb_LDADD	= main_con.o ezthumb_icon.o
 if	XAM_GUI
 BUILT_SOURCES 	= $(PREFLIB)
-WIN_OBJS	= main_win.o ezthumb.o id_lookup.o ezutil.o \
+WIN_OBJS	= main_win.o ezthumb.o id_lookup.o ezutil.o ezwinfont.o \
 		  ezgui.o ezthumb_icon.o
 endif
 else
@@ -43,7 +43,7 @@ EXTRA_DIST = aclocal.m4 config.h.in configure configure.ac config.guess \
 	     ezgui.c  ezgui.h  ezicon.h  ezqiz  ezthumb.1  ezthumb.c \
 	     ezthumb.desktop ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
 	     ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
-	     id_lookup.c id_lookup.h main.c  
+	     id_lookup.c id_lookup.h main.c ezwinfont.c
 
 var:
 	@echo CFLAGS = $(CFLAGS)
