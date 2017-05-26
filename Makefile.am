@@ -82,9 +82,9 @@ ezthumb_win: $(WIN_OBJS)
 
 if	XAM_MSWIN
 clean-local:
-	-test -e "ezthumb_win$(EXEEXT)" && rm -f ezthumb_win$(EXEEXT)
-	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
-	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
+	test -e "ezthumb_win$(EXEEXT)" || rm -f ezthumb_win$(EXEEXT)
+	test -e "$(distdir)-setup.exe" || rm -f $(distdir)-setup.exe
+	test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
 endif
 
 libiup:
@@ -103,13 +103,11 @@ release: $(RELEASE)
 
 if	XAM_MSWIN
 all-local:
-	if test -d "$(distdir)-win32-bin"; then \
-	  rm -rf "$(distdir)-win32-bin"; \
-	fi; \
-	mkdir "$(distdir)-win32-bin"; \
-	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"; \
-	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"; \
-	cp -a ezthumb*.exe ezqiz "$(distdir)-win32-bin"; \
+	test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
+	mkdir "$(distdir)-win32-bin"
+	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"
+	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"
+	cp -a ezthumb*.exe ezqiz "$(distdir)-win32-bin"
 	cp -a COPYING ChangeLog Readme.txt TODO "$(distdir)-win32-bin"
 endif
 

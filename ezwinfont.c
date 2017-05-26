@@ -74,7 +74,8 @@
 
 /* re-use the debug convention in libcsoup */
 //#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_DEBUG)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_DEBUG)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_MODULE)
 #include "libcsoup_debug.h"
 
 
@@ -161,6 +162,7 @@ static	struct	{
 static	int	winfont_idx = 0;
 
 
+static int ezwinfont_add_regface(TCHAR *regface, char *ftpath, int ftstyle);
 static int ezwinfont_add_fontface(char *ftpath, int style);
 static char *ezwinfont_face_alloc(FT_SfntName *aname);
 static int ezwinfont_style_from_face(TCHAR *ftface);
@@ -177,7 +179,7 @@ int ezwinfont_open(void)
 	DWORD		fflen, fclen;
 	LONG		rc;
 	char		*ftpath;
-	int		i, ftstyle;
+	int		i, wpend, ftstyle;
 
 	osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	if (!GetVersionEx(&osinfo)) {
@@ -198,6 +200,7 @@ int ezwinfont_open(void)
 	}
 
 	wcsncat(wpbuf, TEXT("\\Fonts\\"), MAX_PATH);
+	wpend = wcslen(wpbuf);
 	for (i = 0; ; i++) {
 		fclen = sizeof(ftface) - 1;
 		fflen = sizeof(ftfile) - 1;
@@ -212,9 +215,8 @@ int ezwinfont_open(void)
 			/* it's already the full path */
 			ftpath = smm_wcstombs_alloc(ftfile);
 		} else {
-			wcsncpy(ftface, wpbuf, MAX_PATH);
-			wcsncat(ftface, ftfile, MAX_PATH);
-			ftpath = smm_wcstombs_alloc(ftface);
+			wcsncpy(&wpbuf[wpend], ftfile, MAX_PATH - wpend - 1);
+			ftpath = smm_wcstombs_alloc(wpbuf);
 		}
 		//CDB_DEBUG(("Read: %s\n", ftpath));
 
@@ -231,10 +233,13 @@ int ezwinfont_open(void)
 		if (ezwinfont_add_fontface(ftpath, ftstyle) < 0) {
 			/* free the memory if it was failed to add up */
 			smm_free(ftpath);
+		} else {
+			ezwinfont_add_regface(ftface, ftpath, ftstyle);
 		}
 	}
 
 	RegCloseKey(hkey);
+	CDB_DEBUG(("%d FONT LOADED\n", winfont_idx));
 	return winfont_idx;
 }
 
@@ -271,9 +276,9 @@ char *ezwinfont_faceoff(char *fontface)
 		style |= EZFONT_STYLE_ITALIC;
 	}
 
-	if (*fontface == '@') {	/* skip the vertical flag */
-		fontface++;
-	}
+	//if (*fontface == '@') {	/* skip the vertical flag */
+	//	fontface++;
+	//}
 	csc_strlcpy(buf, fontface, sizeof(buf));
 	if ((fontface = strchr(buf, ':')) != NULL) {       
 		*fontface = 0;
@@ -307,6 +312,40 @@ char *ezwinfont_faceoff(char *fontface)
 	return winfont_list[can_idx].font_path;
 }
 
+/* The font face came from the registry like
+ *   "Gulim & GulimChe & Dotum & DotumChe (TrueType)" 
+ * should be seperated to these fontfaces:
+ *   "Gulim", "GulimChe", "Dotum" and "DotumChe"  
+ * so all of above could be searched by face name. */
+static int ezwinfont_add_regface(TCHAR *regface, char *ftpath, int ftstyle)
+{
+	char	*s, *token, *ftface = smm_wcstombs_alloc(regface);
+	
+
+	if ((s = strchr(ftface, '(')) != NULL) {
+		*s = 0;		/* remove the tailing "(TrueType)" */
+	}
+
+	s = ftface;
+	while ((s = csc_cuttoken(s, &token, "&")) != NULL) {
+		if (winfont_idx >= MAX_FONT_LOOKUP) {
+			break;
+		}
+
+		/* it's just a link to the font path */
+		winfont_list[winfont_idx].font_path = ftpath; 
+		winfont_list[winfont_idx].font_face = 
+			csc_strcpy_alloc(token, 0);
+		winfont_list[winfont_idx].style = ftstyle;
+		if (winfont_list[winfont_idx].font_face) {
+			winfont_idx++;
+			CDB_MODL(("FTFACE:: Added %s\n", token));
+		}
+	}
+	smm_free(ftface);
+	return 0;
+}
+
 static int ezwinfont_add_fontface(char *ftpath, int ftstyle)
 {
 	FT_Library	library;
@@ -326,7 +365,7 @@ static int ezwinfont_add_fontface(char *ftpath, int ftstyle)
 		return -3;
 	}
 
-	CDB_DEBUG(("FTPATH: %s [%d]\n", ftpath, ftstyle));
+	CDB_MODL(("FTPATH: %s [%d]\n", ftpath, ftstyle));
 
 	/* store the allocated string of the font path */
 	winfont_list[winfont_idx].font_path = ftpath;
@@ -395,7 +434,7 @@ static char *ezwinfont_face_alloc(FT_SfntName *aname)
 		mp = ez_convert(iconv_table[i].codename, 
 				(char*) aname->string, aname->string_len);
 
-		CDB_DEBUG(("FTFACE:: %2d %2d %2d %s\n", strlen(mp),
+		CDB_MODL(("FTFACE:: %2d %2d %2d %s\n", strlen(mp),
 				aname->platform_id, aname->encoding_id, mp));
 
 		return csc_strcpy_alloc(mp, 0);

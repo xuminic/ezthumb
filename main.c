@@ -330,9 +330,11 @@ int main(int argc, char **argv)
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
 #ifdef	CFG_WIN32RT
-	i = ezwinfont_open();
-	CDB_DEBUG(("%d FONT LOADED\n", i));
-	ezwinfont_testing(NULL);
+#ifdef	CFG_GUI_ON
+	smm_codepage_set(CP_UTF8);
+#endif
+	ezwinfont_open();
+	//ezwinfont_testing(NULL);
 #endif
 
 #ifndef	CFG_GUI_OFF
@@ -944,6 +946,10 @@ static int debug_online(int argc, char **argv)
 			printf("%s\n", s);
 			smm_free(s);
 		}
+#ifdef	CFG_WIN32RT
+	} else if (!strcmp(*argv, "winfont")) {
+		ezwinfont_testing(NULL);
+#endif
 	} else if (!strcmp(*argv, "config")) {
 		kcb = csc_cfg_open(SMM_CFGROOT_CURRENT, 
 				NULL, "ezthumb_sample.rc", CSC_CFG_RWC);

@@ -65,8 +65,8 @@
 #include "id_lookup.h"
 
 /* re-use the debug convention in libcsoup */
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
 #include "libcsoup_debug.h"
 
 #include "gdfontt.h"
