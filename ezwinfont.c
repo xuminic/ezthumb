@@ -74,8 +74,8 @@
 
 /* re-use the debug convention in libcsoup */
 //#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_DEBUG)
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_MODULE)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_DEBUG)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_MODULE)
 #include "libcsoup_debug.h"
 
 
@@ -199,6 +199,10 @@ int ezwinfont_open(void)
 		return -2;
 	}
 
+	/* the font face and fond path are stored in the lookup table
+	 * in utf-8, which came from utf-16be */
+	smm_codepage_set(CP_UTF8);
+
 	wcsncat(wpbuf, TEXT("\\Fonts\\"), MAX_PATH);
 	wpend = wcslen(wpbuf);
 	for (i = 0; ; i++) {
@@ -240,6 +244,10 @@ int ezwinfont_open(void)
 
 	RegCloseKey(hkey);
 	CDB_DEBUG(("%d FONT LOADED\n", winfont_idx));
+
+	/* reset the current codepage to ACP so this function can be used
+	 * in both the command line and the IUP GUI */
+	smm_codepage_reset();
 	return winfont_idx;
 }
 
@@ -276,9 +284,9 @@ char *ezwinfont_faceoff(char *fontface)
 		style |= EZFONT_STYLE_ITALIC;
 	}
 
-	//if (*fontface == '@') {	/* skip the vertical flag */
-	//	fontface++;
-	//}
+	if (*fontface == '@') {	/* skip the vertical flag */
+		fontface++;
+	}
 	csc_strlcpy(buf, fontface, sizeof(buf));
 	if ((fontface = strchr(buf, ':')) != NULL) {       
 		*fontface = 0;
@@ -311,6 +319,27 @@ char *ezwinfont_faceoff(char *fontface)
 	}
 	return winfont_list[can_idx].font_path;
 }
+
+char *ezwinfont_acp2utf8_alloc(char *acp)
+{
+	TCHAR	*buf;
+	int	len;
+
+	len = MultiByteToWideChar(GetACP(), 0, acp, -1, NULL, 0);
+	if ((len > 0) && (buf = smm_alloc((len + 1) * sizeof(TCHAR)))) {
+		MultiByteToWideChar(GetACP(), 0, acp, -1, buf, len);
+
+		len = WideCharToMultiByte(CP_UTF8,
+				0, buf, -1, NULL, 0, NULL, NULL);
+		if ((len > 0) && (acp = smm_alloc(len + 1))) {
+			WideCharToMultiByte(CP_UTF8,
+					0, buf, -1, acp, len, NULL, NULL);
+		}
+		smm_free(buf);
+	}
+	return acp;
+}
+
 
 /* The font face came from the registry like
  *   "Gulim & GulimChe & Dotum & DotumChe (TrueType)" 
@@ -576,11 +605,14 @@ static int CALLBACK ezwinfont_callback(const LOGFONT *pk_Font,
 	return 1;
 }
 
+/* Note that the font face is supposed to be utf-8 */
 int ezwinfont_testing(char *fontface)
 {
 	LOGFONT	lf;
 	HDC	hdc;
 	TCHAR	*s;
+
+	smm_codepage_set(CP_UTF8);
 
 	memset(&lf, 0, sizeof(lf));
 	lf.lfCharSet = DEFAULT_CHARSET;
@@ -595,6 +627,8 @@ int ezwinfont_testing(char *fontface)
 	hdc = CreateCompatibleDC(NULL);
 	EnumFontFamiliesEx(hdc, &lf, ezwinfont_callback, 0, 0);
 	DeleteDC(hdc);
+
+	smm_codepage_reset();
 	return 0;
 }
 

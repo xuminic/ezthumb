@@ -330,9 +330,6 @@ int main(int argc, char **argv)
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
 #ifdef	CFG_WIN32RT
-#ifdef	CFG_GUI_ON
-	smm_codepage_set(CP_UTF8);
-#endif
 	ezwinfont_open();
 	//ezwinfont_testing(NULL);
 #endif
@@ -701,11 +698,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case CMD_F_ONT:
-			if (opt->mi_font) {
-				smm_free(opt->mi_font);
-			}
-			opt->mi_font = opt->ins_font = 
-					meta_make_fontdir(optarg);
+			opt->mi_font = opt->ins_font = optarg;
 			break;
 		case CMD_F_ONTSZ:	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
@@ -948,7 +941,7 @@ static int debug_online(int argc, char **argv)
 		}
 #ifdef	CFG_WIN32RT
 	} else if (!strcmp(*argv, "winfont")) {
-		ezwinfont_testing(NULL);
+		ezwinfont_testing(sysopt.mi_font);
 #endif
 	} else if (!strcmp(*argv, "config")) {
 		kcb = csc_cfg_open(SMM_CFGROOT_CURRENT, 

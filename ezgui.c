@@ -275,9 +275,13 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	gui->sysopt = ezopt;
 	sprintf(gui->inst_id, "EZTHUMB_%p", gui);
 
-	/* load configure from file, or create the file */
+	/* load configure from file, or create the file.
+	 * 20170527 Note it's GUI mode so the conent of configure
+	 * are stored in utf-8  */
+	smm_codepage_set(CP_UTF8);
 	gui->config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
 			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
+	smm_codepage_reset();
 	if (gui->config) {
 		csc_cfg_status(gui->config, NULL);
 		ezopt_load_config(ezopt, gui->config);
@@ -315,6 +319,9 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	sview = (SView *) IupGetAttribute(gui->list_view, EZOBJ_SVIEW);
 	if ((fnum > 0) && sview) {
 		for (i = 0; i < fnum; i++) {
+#ifdef	CFG_WIN32RT
+			flist[i] = ezwinfont_acp2utf8_alloc(flist[i]);
+#endif
 			ezgui_sview_file_append(sview, flist[i]);
 			ezgui_show_progress(gui, i, fnum);
 		}
@@ -336,6 +343,10 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	/* I set NULL to 'EZOBJ_MAIN' as a flag to notify all events the main
 	 * loop is closed. Having all event unhooked may be a better way */
 	IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, NULL);
+
+#ifdef	CFG_WIN32RT
+	for (i = 0; i < fnum; smm_free(flist[i++]));
+#endif
 	return 0;
 }
 
@@ -374,7 +385,8 @@ static int ezgui_timer_monitor(Ihandle *ih)
 		gui->dir_ppp_flag = 0;
 	}
 	if (gui->font_ppp_flag) {
-		i = lookup_index_string(uir_choose_font, 0, CFG_PIC_FONT_SYSTEM);
+		i = lookup_index_string(uir_choose_font, 
+				0, CFG_PIC_FONT_SYSTEM);
 		IupSetInt(gui->font_list, "VALUE", i + 1);
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
 		gui->font_ppp_flag = 0;
@@ -2598,11 +2610,11 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
 
 	/* 20160115 content in 'text' is not stable */
-	smm_codepage_set(65001);
+	//smm_codepage_set(65001);
 	fname = csc_strcpy_alloc(text, 0);
 	ezthumb(fname, gui->sysopt);
 	smm_free(fname);
-	smm_codepage_reset();
+	//smm_codepage_reset();
 
 	gui->sysopt->pre_seek = 0;
 	gui->sysopt->pre_br   = 0;
@@ -2875,14 +2887,14 @@ static int ezgui_sview_file_append(SView *sview, char *fname)
 	 * converted the file name to UTF-8 so the Windows version 
 	 * could not find the file. 
 	 * There's no such problem in linux.*/
-	smm_codepage_set(65001);
+	//smm_codepage_set(65001);
 	if (ezinfo(fname, sview->gui->sysopt, &vobj) != EZ_ERR_NONE) {
-		smm_codepage_reset();
+		//smm_codepage_reset();
 		/* FIXME: disaster control */
 		IupSetInt(sview->filename, "REMOVEITEM", lnext);
 		return EZ_ERR_FORMAT;
 	}
-	smm_codepage_reset();
+	//smm_codepage_reset();
 
 	meta_filesize(vobj.filesize, buf);
 	IupSetStrAttributeId(sview->filesize,   "", lnext, buf);
