@@ -278,7 +278,7 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	/* load configure from file, or create the file.
 	 * 20170527 Note it's GUI mode so the conent of configure
 	 * are stored in utf-8  */
-	smm_codepage_set(CP_UTF8);
+	smm_codepage_set(65001);
 	gui->config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
 			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
 	smm_codepage_reset();
@@ -311,7 +311,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	 * the libiup has been set to UTF-8.
 	 * Note that the ezthumb console is still stay in CP_ACP so it
 	 * can display through the Windows console */
-	smm_codepage_set(CP_UTF8);
+	smm_codepage_set(65001);
 
 	ezgui_create_window(gui);
 
@@ -2334,7 +2334,7 @@ static void *ezbar_main(void *vobj)
 	IupSetAttribute(NULL, "UTF8MODE", "YES");
 	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
 
-	smm_codepage_set(CP_UTF8);
+	smm_codepage_set(65001);
 
 	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
 	if (!IupGetGlobal("SINGLEINSTANCE")) {
