@@ -324,6 +324,9 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 #endif
 			ezgui_sview_file_append(sview, flist[i]);
 			ezgui_show_progress(gui, i, fnum);
+			/* highlight the RUN button when the list is not empty */
+			ezgui_sview_active_update(sview, 
+				EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
 		}
 		ezgui_show_progress(gui, i, fnum);
 	}

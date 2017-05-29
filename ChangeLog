@@ -1,7 +1,9 @@
 20170529:
 	* ezgui.c: added some codes to verify the inputs of text controls.
-	* ezgui.c: fixed a bug which freeze the progress bar in i-frame
+	* ezthumb.c: fixed a bug which freeze the progress bar in i-frame
 	dumping mode.
+	* ezgui.c: fixed a bug which failed to hightlight the "RUN" button
+	when media files were loaded from the command line.
 
 20170529:
 	* ezwinfont.c: added to support the TTF fonts in Windows.
