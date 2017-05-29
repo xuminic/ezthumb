@@ -1,3 +1,13 @@
+20170529:
+	* ezwinfont.c: added to support the TTF fonts in Windows.
+	The libgd uses fontconfig to translate the font faces to the font
+	files. In Windows however there's no fontconfig available so libgd
+	could not find the proper font files. Unfortunately there's also no
+	out-of-box APIs to directly translate the font faces to the font files
+	in Windows. My approach is to enumerate all registered font faces and
+	to compare them with all registered true type fonts. It's still
+	imperfect but around 95% fonts could be matched.
+	
 20170520:
 	* configure: adjusted the link sequence so libiup would be ahead of
 	any gtk/X11 libraries.

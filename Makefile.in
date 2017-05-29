@@ -82,7 +82,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__ezthumb_SOURCES_DIST = main.c ezthumb.c ezthumb.h id_lookup.c \
-	id_lookup.h ezutil.c ezgui.c ezgui.h ezicon.h
+	id_lookup.h ezutil.c ezgui.c ezgui.h ezicon.h ezwinfont.c
 @XAM_GUI_FALSE@@XAM_MSWIN_FALSE@am_ezthumb_OBJECTS = main.$(OBJEXT) \
 @XAM_GUI_FALSE@@XAM_MSWIN_FALSE@	ezthumb.$(OBJEXT) \
 @XAM_GUI_FALSE@@XAM_MSWIN_FALSE@	id_lookup.$(OBJEXT) \
@@ -93,7 +93,8 @@ am__ezthumb_SOURCES_DIST = main.c ezthumb.c ezthumb.h id_lookup.c \
 @XAM_GUI_TRUE@@XAM_MSWIN_FALSE@	ezutil.$(OBJEXT) \
 @XAM_GUI_TRUE@@XAM_MSWIN_FALSE@	id_lookup.$(OBJEXT)
 @XAM_MSWIN_TRUE@am_ezthumb_OBJECTS = ezthumb.$(OBJEXT) \
-@XAM_MSWIN_TRUE@	id_lookup.$(OBJEXT) ezutil.$(OBJEXT)
+@XAM_MSWIN_TRUE@	id_lookup.$(OBJEXT) ezutil.$(OBJEXT) \
+@XAM_MSWIN_TRUE@	ezwinfont.$(OBJEXT)
 ezthumb_OBJECTS = $(am_ezthumb_OBJECTS)
 @XAM_MSWIN_TRUE@ezthumb_DEPENDENCIES = main_con.o ezthumb_icon.o
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -291,11 +292,11 @@ SUBDIRS = .
 @XAM_GUI_TRUE@@XAM_MSWIN_FALSE@ezthumb_SOURCES = main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h \
 @XAM_GUI_TRUE@@XAM_MSWIN_FALSE@		  ezutil.c id_lookup.c id_lookup.h
 
-@XAM_MSWIN_TRUE@ezthumb_SOURCES = ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+@XAM_MSWIN_TRUE@ezthumb_SOURCES = ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c ezwinfont.c
 @XAM_MSWIN_TRUE@ezthumb_LDADD = main_con.o ezthumb_icon.o
 @XAM_GUI_TRUE@@XAM_MSWIN_TRUE@BUILT_SOURCES = $(PREFLIB)
 @XAM_MSWIN_FALSE@BUILT_SOURCES = $(PREFLIB)
-@XAM_GUI_TRUE@@XAM_MSWIN_TRUE@WIN_OBJS = main_win.o ezthumb.o id_lookup.o ezutil.o \
+@XAM_GUI_TRUE@@XAM_MSWIN_TRUE@WIN_OBJS = main_win.o ezthumb.o id_lookup.o ezutil.o ezwinfont.o \
 @XAM_GUI_TRUE@@XAM_MSWIN_TRUE@		  ezgui.o ezthumb_icon.o
 
 
@@ -306,7 +307,7 @@ EXTRA_DIST = aclocal.m4 config.h.in configure configure.ac config.guess \
 	     ezgui.c  ezgui.h  ezicon.h  ezqiz  ezthumb.1  ezthumb.c \
 	     ezthumb.desktop ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
 	     ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
-	     id_lookup.c id_lookup.h main.c  
+	     id_lookup.c id_lookup.h main.c ezwinfont.c
 
 all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive

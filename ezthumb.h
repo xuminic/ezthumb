@@ -686,5 +686,14 @@ char *meta_make_fontdir(char *s);
 /* main.c */
 int para_transparent(EZOPT *opt, int flag);
 
+#ifdef	CFG_WIN32RT
+/* ezwinfont.c */
+int ezwinfont_open(void);
+int ezwinfont_close(void);
+char *ezwinfont_faceoff(char *fontface);
+char *ezwinfont_acp2utf8_alloc(char *acp);
+int ezwinfont_testing(char *fontface);
+#endif
+
 #endif	/* _EZTHUMB_H_ */
 

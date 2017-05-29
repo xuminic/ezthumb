@@ -91,8 +91,12 @@ case "$host_os" in
 	    -I./libmingw/ffmpeg/include"
     LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
-    SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 -DNONDLL"
-    POSTLIB="-mconsole"
+
+    # -DNONDLL is for static linking the libgd
+    # -DLIBICONV_STATIC is for static linking the libiconv
+    SYSDEFS="-DUNICODE -D_UNICODE -DCFG_WIN32RT -DWINVER=0x500 \
+	    -DNONDLL -DLIBICONV_STATIC"
+    POSTLIB="-mconsole -lgdi32"
     RELEASE="extclean dist-bzip2 installer-win"
     AC_CHECK_LIB([iconv], [libiconv_open], [],
       [AC_MSG_ERROR([libiconv not found.])])

@@ -18,11 +18,11 @@ LIBS	= $(POSTLIB) $(CURRLIB)
 
 if	XAM_MSWIN
 bin_PROGRAMS	= ezthumb 
-ezthumb_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+ezthumb_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c ezwinfont.c
 ezthumb_LDADD	= main_con.o ezthumb_icon.o
 if	XAM_GUI
 BUILT_SOURCES 	= $(PREFLIB)
-WIN_OBJS	= main_win.o ezthumb.o id_lookup.o ezutil.o \
+WIN_OBJS	= main_win.o ezthumb.o id_lookup.o ezutil.o ezwinfont.o \
 		  ezgui.o ezthumb_icon.o
 endif
 else
@@ -43,7 +43,7 @@ EXTRA_DIST = aclocal.m4 config.h.in configure configure.ac config.guess \
 	     ezgui.c  ezgui.h  ezicon.h  ezqiz  ezthumb.1  ezthumb.c \
 	     ezthumb.desktop ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
 	     ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
-	     id_lookup.c id_lookup.h main.c  
+	     id_lookup.c id_lookup.h main.c ezwinfont.c
 
 var:
 	@echo CFLAGS = $(CFLAGS)
@@ -82,9 +82,9 @@ ezthumb_win: $(WIN_OBJS)
 
 if	XAM_MSWIN
 clean-local:
-	-test -e "ezthumb_win$(EXEEXT)" && rm -f ezthumb_win$(EXEEXT)
-	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
-	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
+	test -e "ezthumb_win$(EXEEXT)" || rm -f ezthumb_win$(EXEEXT)
+	test -e "$(distdir)-setup.exe" || rm -f $(distdir)-setup.exe
+	test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
 endif
 
 libiup:
@@ -103,13 +103,11 @@ release: $(RELEASE)
 
 if	XAM_MSWIN
 all-local:
-	if test -d "$(distdir)-win32-bin"; then \
-	  rm -rf "$(distdir)-win32-bin"; \
-	fi; \
-	mkdir "$(distdir)-win32-bin"; \
-	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"; \
-	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"; \
-	cp -a ezthumb*.exe ezqiz "$(distdir)-win32-bin"; \
+	test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
+	mkdir "$(distdir)-win32-bin"
+	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"
+	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"
+	cp -a ezthumb*.exe ezqiz "$(distdir)-win32-bin"
 	cp -a COPYING ChangeLog Readme.txt TODO "$(distdir)-win32-bin"
 endif
 

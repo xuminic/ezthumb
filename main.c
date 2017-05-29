@@ -68,7 +68,8 @@
 #endif
 
 /* re-use the debug convention in libcsoup */
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CLI, SLOG_LVL_DEBUG)
 #include "libcsoup_debug.h"
 
 
@@ -316,18 +317,21 @@ int main(int argc, char **argv)
 	int	i, todo;
 
 	smm_init();			/* initialize the libsmm */
-#if	defined(DEBUG) && defined(CFG_WIN32_API) && defined(CFG_GUI_ON)
+#if	defined(DEBUG) && defined(CFG_WIN32RT) && defined(CFG_GUI_ON)
 	dbgc = slog_csoup_open(NULL, "win32.log");
 #else
 	dbgc = slog_csoup_open(NULL, NULL);
 #endif
 	slog_translate_setup(dbgc, SLOG_TRANSL_MODUL,
 			ezdebug_trans_module);
-	CDB_INFO(("CodePage: %d\n", smm_sys_cp));
 
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
+#ifdef	CFG_WIN32RT
+	ezwinfont_open();
+	//ezwinfont_testing(NULL);
+#endif
 
 #ifndef	CFG_GUI_OFF
 	if (command_line_parser(argc, argv, NULL) == CMD_G_UI) {
@@ -337,6 +341,7 @@ int main(int argc, char **argv)
 #endif
 	todo = command_line_parser(argc, argv, &sysopt);
 	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
+	CDB_DEBUG(("CodePage: %d\n", smm_sys_cp));
 	
 	/* review the command option structure to make sure there is no
 	 * controdicted options */
@@ -449,6 +454,9 @@ int main(int argc, char **argv)
 		break;
 	}
 	main_close(&sysopt);
+#ifdef	CFG_WIN32RT
+	ezwinfont_close();
+#endif
 	smm_destroy();
 	return todo;
 }
@@ -688,11 +696,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			}
 			break;
 		case CMD_F_ONT:
-			if (opt->mi_font) {
-				smm_free(opt->mi_font);
-			}
-			opt->mi_font = opt->ins_font = 
-					meta_make_fontdir(optarg);
+			opt->mi_font = opt->ins_font = optarg;
 			break;
 		case CMD_F_ONTSZ:	/* MI:TM */
 			if (para_get_fontsize(opt, optarg) != EZ_ERR_NONE) {
@@ -872,6 +876,9 @@ static int signal_handler(int sig)
 	CDB_WARN(("Signal %d\n", sig));
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
+#ifdef	CFG_WIN32RT
+	ezwinfont_close();
+#endif
 	smm_destroy();
 	return sig;
 }
@@ -930,6 +937,10 @@ static int debug_online(int argc, char **argv)
 			printf("%s\n", s);
 			smm_free(s);
 		}
+#ifdef	CFG_WIN32RT
+	} else if (!strcmp(*argv, "winfont")) {
+		ezwinfont_testing(sysopt.mi_font);
+#endif
 	} else if (!strcmp(*argv, "config")) {
 		kcb = csc_cfg_open(SMM_CFGROOT_CURRENT, 
 				NULL, "ezthumb_sample.rc", CSC_CFG_RWC);

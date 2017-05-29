@@ -225,7 +225,7 @@ static int ezgui_sview_event_multi_select(Ihandle *ih, char *value);
 static int ezgui_sview_event_moused(Ihandle *ih, 
 		int button, int pressed, int x, int y, char *status);
 static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status);
-#if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+#ifdef	CFG_WIN32RT
 static int ezgui_sview_event_ctrl_a(Ihandle *ih, int c);
 #endif
 static int ezgui_sview_add(SView *sview);
@@ -275,9 +275,13 @@ EZGUI *ezgui_init(EZOPT *ezopt, int *argcs, char ***argvs)
 	gui->sysopt = ezopt;
 	sprintf(gui->inst_id, "EZTHUMB_%p", gui);
 
-	/* load configure from file, or create the file */
+	/* load configure from file, or create the file.
+	 * 20170527 Note it's GUI mode so the conent of configure
+	 * are stored in utf-8  */
+	smm_codepage_set(65001);
 	gui->config = csc_cfg_open(SMM_CFGROOT_DESKTOP,
 			"ezthumb", "ezthumb.conf", CSC_CFG_RWC);
+	smm_codepage_reset();
 	if (gui->config) {
 		csc_cfg_status(gui->config, NULL);
 		ezopt_load_config(ezopt, gui->config);
@@ -292,21 +296,32 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	Ihandle *timer;
 	int	i;
 
-	ezgui_create_window(gui);
-
 	/* 20160727 enable utf-8 mode for Windows.
 	 * One case had been found that default setting can only accept utf-16
 	 * in Windows, though utf-8 filename can be normally displayed in 
 	 * File Explorer. Enabling the following attributions will let 
 	 * IupFileDlg() return utf-8 filenames */
+	/* 20170523 These two lines must be ahead of ezgui_create_window(),
+	 * otherwise the font face entry would display cranky garbages */
 	/* Note that these two lines must be kept in this sequence */
 	IupSetAttribute(NULL, "UTF8MODE", "YES");
 	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
+
+	/* 20170524 Enforce the libcsoup into the UTF-8 mode because
+	 * the libiup has been set to UTF-8.
+	 * Note that the ezthumb console is still stay in CP_ACP so it
+	 * can display through the Windows console */
+	smm_codepage_set(65001);
+
+	ezgui_create_window(gui);
 
 	/* filling the work area with file names from command line */
 	sview = (SView *) IupGetAttribute(gui->list_view, EZOBJ_SVIEW);
 	if ((fnum > 0) && sview) {
 		for (i = 0; i < fnum; i++) {
+#ifdef	CFG_WIN32RT
+			flist[i] = ezwinfont_acp2utf8_alloc(flist[i]);
+#endif
 			ezgui_sview_file_append(sview, flist[i]);
 			ezgui_show_progress(gui, i, fnum);
 		}
@@ -328,6 +343,10 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	/* I set NULL to 'EZOBJ_MAIN' as a flag to notify all events the main
 	 * loop is closed. Having all event unhooked may be a better way */
 	IupSetAttribute(gui->dlg_main, EZOBJ_MAIN, NULL);
+
+#ifdef	CFG_WIN32RT
+	for (i = 0; i < fnum; smm_free(flist[i++]));
+#endif
 	return 0;
 }
 
@@ -366,7 +385,8 @@ static int ezgui_timer_monitor(Ihandle *ih)
 		gui->dir_ppp_flag = 0;
 	}
 	if (gui->font_ppp_flag) {
-		i = lookup_index_string(uir_choose_font, 0, CFG_PIC_FONT_SYSTEM);
+		i = lookup_index_string(uir_choose_font, 
+				0, CFG_PIC_FONT_SYSTEM);
 		IupSetInt(gui->font_list, "VALUE", i + 1);
 		IupSetAttribute(gui->font_face, "VISIBLE", "NO");
 		gui->font_ppp_flag = 0;
@@ -1642,6 +1662,7 @@ static int ezgui_setup_font_reset(EZGUI *gui)
 	return 0;
 }
 
+
 static int ezgui_setup_font_update(EZGUI *gui)
 {
 	gui->font_idx = xui_list_get_idx(gui->font_list);
@@ -2316,6 +2337,8 @@ static void *ezbar_main(void *vobj)
 	IupSetAttribute(NULL, "UTF8MODE", "YES");
 	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
 
+	smm_codepage_set(65001);
+
 	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
 	if (!IupGetGlobal("SINGLEINSTANCE")) {
 		IupClose();
@@ -2397,7 +2420,8 @@ static Ihandle *ezgui_sview_create(EZGUI *gui, int dblck)
 		IupSetCallback(sview->filename, "DBLCLICK_CB", 
 				(Icallback) ezgui_sview_event_run);
 	}
-#if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+
+#ifdef	CFG_WIN32RT
 	/* 20160812: In Windows the list control doesn't support Ctrl-A to
 	 * select all items so I put a workaround here */
 	IupSetCallback(sview->filename, "K_cA",
@@ -2589,11 +2613,11 @@ static int ezgui_sview_event_run(Ihandle *ih, int item, char *text)
 	gui->sysopt->pre_dura = (EZTIME) strtoll(++attr, NULL, 0);
 
 	/* 20160115 content in 'text' is not stable */
-	smm_codepage_set(65001);
+	//smm_codepage_set(65001);
 	fname = csc_strcpy_alloc(text, 0);
 	ezthumb(fname, gui->sysopt);
 	smm_free(fname);
-	smm_codepage_reset();
+	//smm_codepage_reset();
 
 	gui->sysopt->pre_seek = 0;
 	gui->sysopt->pre_br   = 0;
@@ -2697,7 +2721,7 @@ static int ezgui_sview_event_motion(Ihandle *ih, int x, int y, char *status)
 	return IUP_DEFAULT;
 }
 
-#if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+#ifdef	CFG_WIN32RT
 static int ezgui_sview_event_ctrl_a(Ihandle *ih, int c)
 {
 	SView	*sview;
@@ -2866,14 +2890,14 @@ static int ezgui_sview_file_append(SView *sview, char *fname)
 	 * converted the file name to UTF-8 so the Windows version 
 	 * could not find the file. 
 	 * There's no such problem in linux.*/
-	smm_codepage_set(65001);
+	//smm_codepage_set(65001);
 	if (ezinfo(fname, sview->gui->sysopt, &vobj) != EZ_ERR_NONE) {
-		smm_codepage_reset();
+		//smm_codepage_reset();
 		/* FIXME: disaster control */
 		IupSetInt(sview->filename, "REMOVEITEM", lnext);
 		return EZ_ERR_FORMAT;
 	}
-	smm_codepage_reset();
+	//smm_codepage_reset();
 
 	meta_filesize(vobj.filesize, buf);
 	IupSetStrAttributeId(sview->filesize,   "", lnext, buf);

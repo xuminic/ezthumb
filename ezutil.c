@@ -65,8 +65,7 @@
 #include "ezthumb.h"
 
 /* re-use the debug convention in libcsoup */
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_DEBUG)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
 #include "libcsoup_debug.h"
 
 
@@ -695,16 +694,13 @@ int meta_export_color(EZBYTE *color, char *buf, int blen)
 	return len;
 }
 
-extern char *GetFontFile(char *fontface);
-
 char *meta_make_fontdir(char *s)
 {
-	char	tmp[256];
-
 	/* review whether the fontconfig pattern like "times:bold:italic"
 	 * was specified. The fontconfig pattern could be used directly.
 	 * Otherwise a full path like "/usr/local/share/ttf/Times.ttf" */
-	if (!csc_cmp_file_extname(s,"ttf") || !csc_cmp_file_extname(s,"ttc")) {
+	if (!csc_cmp_file_extname(s, "ttf") || 
+			!csc_cmp_file_extname(s, "ttc")) {
 		return smm_fontpath(s, NULL);
 	}
 
@@ -721,131 +717,11 @@ char *meta_make_fontdir(char *s)
 
 	/* FontConfig is not available then convert the font face to
 	 * the full path of font file */
-	csc_strlcpy(tmp, s, sizeof(tmp));
-	if ((s = strchr(tmp, ':')) != NULL) {
-		*s = 0;
+#ifdef	CFG_WIN32RT
+	if ((s = ezwinfont_faceoff(s)) != NULL) {
+		return csc_strcpy_alloc(s, 0);
 	}
-#ifdef	HAVE_MULTILINE_LABEL	/* just borrowed it */
-	return GetFontFile(tmp);
-#else
-	return NULL;
 #endif
+	return NULL;	/* default font */
 }
-
-#ifdef	HAVE_MULTILINE_LABEL	/* just borrowed it */
-
-#include <windows.h>
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_SFNT_NAMES_H 
-
-#include "libcsoup.h"
-
-static	TCHAR	*font_subkey[2] = {
-	TEXT("Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts"),
-	TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Fonts")
-};
-
-/* http://stackoverflow.com/questions/4577784/get-a-font-filename-based-on-font-name-and-style-bold-italic */
-int font_attirb(char *fontpath)
-{
-	FT_Library    library;
-	FT_Face       face;
-	FT_SfntName   aname;
-	char	tmp[1024];
-	int	i, n;
-
-	FT_Init_FreeType( &library );
-	if (!strchr(fontpath, '/') && !strchr(fontpath, '\\')) {
-		strcpy(tmp, "C:\\WINDOWS\\Fonts\\");
-		strcat(tmp, fontpath);
-		FT_New_Face(library, tmp, 0, &face );
-	} else {
-		FT_New_Face(library, fontpath, 0, &face );
-	}
-
-	n = FT_Get_Sfnt_Name_Count(face);
-	for (i = 0; i < n; i++) {
-		if (FT_Get_Sfnt_Name(face, i, &aname)) {
-			continue;
-		}
-		CDB_DEBUG(("FTNAME::platform_id: %d\n", aname.platform_id));
-		CDB_DEBUG(("FTNAME::encoding_id: %d\n", aname.encoding_id));
-		CDB_DEBUG(("FTNAME::language_id: %d\n", aname.language_id));
-		CDB_DEBUG(("FTNAME::name_id:     %d\n", aname.name_id));
-		CDB_DEBUG(("FTNAME::string_len:  %d\n", aname.string_len));
-		memset(tmp, 0, sizeof(tmp));
-		memcpy(tmp, aname.string, aname.string_len);
-		CDB_DEBUG(("FTNAME::string:      %s\n", tmp));
-	}
-
-	FT_Done_Face    ( face );
-	FT_Done_FreeType( library );
-	return 0;
-}
-
-char *GetFontFile(char *fontface)
-{
-	OSVERSIONINFO	osinfo;
-	HKEY		hkey;
-	TCHAR		*subkey, reg_name[2 * MAX_PATH];
-	char		*ftname, reg_data[2 * MAX_PATH];
-	DWORD		namelen, datalen;
-	int		i, fclen;
-
-	osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	if (!GetVersionEx(&osinfo)) {
-		return NULL;
-	}
-
-	if (osinfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
-		subkey = font_subkey[1];
-	} else {
-		subkey = font_subkey[0];
-	}
-
-	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, subkey, 0, KEY_ALL_ACCESS, 
-				&hkey) != ERROR_SUCCESS) {
-		return NULL;
-	}
-
-	fclen = strlen(fontface);
-	for (i = 0; ; i++) {
-		namelen = sizeof(reg_name) - 1;
-		datalen = sizeof(reg_data) - 1;
-		if (RegEnumValue(hkey, i, reg_name, &namelen, NULL, NULL, 
-				(LPBYTE)reg_data, &datalen) != ERROR_SUCCESS) {
-			break;
-		}
-		if ((ftname = smm_wcstombs_alloc(reg_name)) == NULL) {
-			break;
-		}
-		CDB_DEBUG(("Font enum: %s\n", ftname));
-		{
-			char	*s = smm_wcstombs_alloc(reg_data);
-
-			/*if (!csc_cmp_file_extname(s,"ttf") || 
-					!csc_cmp_file_extname(s,"ttc")) {
-				font_attirb(s);
-			}*/
-			if (!strcasecmp(s, "simhei.ttf")) {
-				font_attirb(s);
-			}
-			smm_free(s);
-		}
-
-		if (!strncasecmp(fontface, ftname, fclen)) {
-			smm_free(ftname);
-			RegCloseKey(hkey);
-			return smm_wcstombs_alloc(reg_data);
-		}
-		smm_free(ftname);
-	}
-
-	RegCloseKey(hkey);
-	return NULL;
-}
-
-
-#endif	/* HAVE_MULTILINE_LABEL */
 

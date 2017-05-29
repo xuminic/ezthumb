@@ -65,8 +65,8 @@
 #include "id_lookup.h"
 
 /* re-use the debug convention in libcsoup */
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
 #include "libcsoup_debug.h"
 
 #include "gdfontt.h"
@@ -527,12 +527,32 @@ int ezopt_store_config(EZOPT *ezopt, void *config)
 	return 0;
 }
 
-void ezopt_review(EZOPT *ezopt)
+void ezopt_review(EZOPT *opt)
 {
 	/* foolproof the right transparent setting */
-	if (EZ_IMG_FMT_GET(ezopt->img_format) == EZ_IMG_FMT_JPEG) {
-		para_transparent(ezopt, 0);
+	if (EZ_IMG_FMT_GET(opt->img_format) == EZ_IMG_FMT_JPEG) {
+		para_transparent(opt, 0);
 	}
+
+	/* make the font parameter dynamically allocated and 
+	 * if it's Windows, convert to utf-8 */
+#ifdef	CFG_WIN32RT
+	if (opt->mi_font) {
+		char	*s = ezwinfont_acp2utf8_alloc(opt->mi_font);
+		if (s == NULL) {
+			opt->mi_font = NULL;
+		} else {
+			opt->mi_font = meta_make_fontdir(s);
+			smm_free(s);
+		}
+	}
+#else
+	if (opt->mi_font) {
+		opt->mi_font = meta_make_fontdir(opt->mi_font);
+	}
+#endif
+	opt->ins_font = opt->mi_font;
+
 
 	/* synchronize the full scan and twopass option */
 	/* 20120723 this could be confusing. When using '-p 2pass' option, 
