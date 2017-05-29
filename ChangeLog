@@ -1,4 +1,9 @@
 20170529:
+	* ezgui.c: added some codes to verify the inputs of text controls.
+	* ezgui.c: fixed a bug which freeze the progress bar in i-frame
+	dumping mode.
+
+20170529:
 	* ezwinfont.c: added to support the TTF fonts in Windows.
 	The libgd uses fontconfig to translate the font faces to the font
 	files. In Windows however there's no fontconfig available so libgd

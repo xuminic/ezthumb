@@ -148,9 +148,8 @@ static int ezgui_page_setup_reset(EZGUI *gui);
 static Ihandle *ezgui_setup_grid_create(EZGUI *gui);
 static Ihandle *ezgui_setup_grid_groupbox(Ihandle *gridbox);
 static int ezgui_setup_grid_reset(Ihandle *gridbox);
-//static int ezgui_setup_grid_read_index(Ihandle *gridbox);
-//static int ezgui_setup_grid_write_index(Ihandle *gridbox, int idx);
 static int ezgui_setup_grid_update(Ihandle *gridbox, char *status);
+static int ezgui_setup_grid_check(Ihandle *gridbox);
 static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s);
 static int ezgui_setup_grid_entry_event(Ihandle *ih);
 
@@ -240,7 +239,8 @@ static Ihandle *xui_label(char *label, char *size, char *font);
 static Ihandle *xui_text(Ihandle **xlst, char *label);
 static Ihandle *xui_list_setting(Ihandle **xlst, char *label);
 static int xui_list_get_idx(Ihandle *ih);
-static int xui_text_get_number(Ihandle *ih);
+static int xui_text_get_number(Ihandle *ih, int *output, 
+		int v_from, int v_to, int v_hit);
 static int xui_get_size(Ihandle *ih, char *attr, int *height);
 static Ihandle *xui_text_setting(Ihandle **xtxt, char *label, char *ext);
 static Ihandle *xui_text_single_grid(char *label, 
@@ -1025,14 +1025,18 @@ static int ezgui_setup_grid_update(Ihandle *gridbox, char *status)
 		ezopt_profile_enable(opt, EZ_PROF_LENGTH);
 		break;
 	case 1:
-		opt->grid_col = xui_text_get_number(grid->entry_col_grid);
-		opt->grid_row = xui_text_get_number(grid->entry_row);
+		xui_text_get_number(grid->entry_col_grid, 
+				&opt->grid_col, 0, INT_MAX, 0);
+		xui_text_get_number(grid->entry_row, 
+				&opt->grid_row, 0, INT_MAX, 0);
 		sprintf(tmp, "Grid:%dx%d ", opt->grid_col, opt->grid_row);
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 		break;
 	case 2:
-		opt->grid_col = xui_text_get_number(grid->entry_col_step);
-		opt->tm_step  = xui_text_get_number(grid->entry_step);
+		xui_text_get_number(grid->entry_col_step,
+				&opt->grid_col, 1, INT_MAX, 0);
+		xui_text_get_number(grid->entry_step,
+				&opt->tm_step, 1, INT_MAX, 0);
 		sprintf(tmp, "Column:%d Step:%d(s) ", 
 				opt->grid_col, opt->tm_step);
 		opt->tm_step *= 1000;
@@ -1040,14 +1044,16 @@ static int ezgui_setup_grid_update(Ihandle *gridbox, char *status)
 		break;
 	case 3:
 		opt->grid_col = 0;
-		opt->grid_row = xui_text_get_number(grid->entry_dss_amnt);
+		xui_text_get_number(grid->entry_dss_amnt,
+				&opt->grid_row, 1, INT_MAX, 0);
 		sprintf(tmp, "Total %d snaps ", opt->grid_row);
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 		break;
 	case 4:
 		opt->grid_col = 0;
 		opt->grid_row = 0;
-		opt->tm_step  = xui_text_get_number(grid->entry_dss_step);
+		xui_text_get_number(grid->entry_dss_step,
+				&opt->tm_step, 1, INT_MAX, 0);
 		sprintf(tmp, "Snap every %d(s) ", opt->tm_step);
 		opt->tm_step *= 1000;
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
@@ -1080,6 +1086,7 @@ static int ezgui_setup_grid_check(Ihandle *gridbox)
 {
 	SetGrid	*grid;
 	EZOPT	*opt;
+	int	rc = 0;
 
 	grid = (SetGrid *) IupGetAttribute(gridbox, EZOBJ_GRID_PROFILE);
 	if (grid == NULL) {
@@ -1093,33 +1100,27 @@ static int ezgui_setup_grid_check(Ihandle *gridbox)
 	opt = grid->ezgui->sysopt;
 	switch (grid->grid_idx) {
 	case 1:
-		if (opt->grid_col != xui_text_get_number(grid->entry_col_grid)) {
-			return 1;
-		}
-		if (opt->grid_row != xui_text_get_number(grid->entry_row)) {
-			return 1;
-		}
+		rc += xui_text_get_number(grid->entry_col_grid, 
+				NULL, 0, INT_MAX, opt->grid_col);
+		rc += xui_text_get_number(grid->entry_row, 
+				NULL, 0, INT_MAX, opt->grid_row);
 		break;
 	case 2:
-		if (opt->grid_col != xui_text_get_number(grid->entry_col_step)) {
-			return 1;
-		}
-		if (opt->tm_step  != xui_text_get_number(grid->entry_step) * 1000) {
-			return 1;
-		}
+		rc += xui_text_get_number(grid->entry_col_step, 
+				NULL, 1, INT_MAX, opt->grid_col);
+		rc += xui_text_get_number(grid->entry_step, 
+				NULL, 1, INT_MAX, opt->tm_step / 1000);
 		break;
 	case 3:
-		if (opt->grid_row != xui_text_get_number(grid->entry_dss_amnt)) {
-			return 1;
-		}
+		rc += xui_text_get_number(grid->entry_dss_amnt, 
+				NULL, 1, INT_MAX, opt->grid_row);
 		break;
 	case 4:
-		if (opt->tm_step != xui_text_get_number(grid->entry_dss_step) * 1000) {
-			return 1;
-		}
+		rc += xui_text_get_number(grid->entry_dss_step, 
+				NULL, 1, INT_MAX, opt->tm_step / 1000);
 		break;
 	}
-	return 0;
+	return rc;
 }
 
 static int ezgui_setup_grid_event(Ihandle *ih, char *text, int i, int s)
@@ -1269,19 +1270,23 @@ static int ezgui_setup_zoom_update(Ihandle *zoombox, char *status)
 		ezopt_profile_enable(opt, EZ_PROF_WIDTH);
 		break;
 	case 1:
-		opt->tn_facto  = xui_text_get_number(zoom->entry_zoom_ratio);
+		xui_text_get_number(zoom->entry_zoom_ratio,
+				&opt->tn_facto, 1, INT_MAX, 0);
 		sprintf(tmp, "Zoom to %d%% ", opt->tn_facto);
 		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
 		break;
 	case 2:
-		opt->tn_width  = xui_text_get_number(zoom->entry_zoom_wid);
-		opt->tn_height = xui_text_get_number(zoom->entry_zoom_hei);
+		xui_text_get_number(zoom->entry_zoom_wid,
+				&opt->tn_width, 1, INT_MAX, 0);
+		xui_text_get_number(zoom->entry_zoom_hei,
+				&opt->tn_height, 1, INT_MAX, 0);
 		sprintf(tmp, "Zoom to %dx%d ", 
 				opt->tn_width, opt->tn_height);
 		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
 		break;
 	case 3:
-		opt->canvas_width = xui_text_get_number(zoom->entry_width);
+		xui_text_get_number(zoom->entry_width,
+				&opt->canvas_width, 1, INT_MAX, 0);
 		sprintf(tmp, "Canvas Width %d ", opt->canvas_width);
 		ezopt_profile_disable(opt, EZ_PROF_WIDTH);
 		break;
@@ -1308,6 +1313,7 @@ static int ezgui_setup_zoom_check(Ihandle *zoombox)
 {
 	SetZoom	*zoom;
 	EZOPT	*opt;
+	int	rc = 0;
 
 	zoom = (SetZoom *) IupGetAttribute(zoombox, EZOBJ_ZOOM_PROFILE);
 	if (zoom == NULL) {
@@ -1321,25 +1327,21 @@ static int ezgui_setup_zoom_check(Ihandle *zoombox)
 	opt = zoom->ezgui->sysopt;
 	switch (zoom->zoom_idx) {
 	case 1:
-		if (opt->tn_facto != xui_text_get_number(zoom->entry_zoom_ratio)) {
-			return 1;
-		}
+		rc += xui_text_get_number(zoom->entry_zoom_ratio, 
+				NULL, 0, 65535, opt->tn_facto);
 		break;
 	case 2:
-		if (opt->tn_width != xui_text_get_number(zoom->entry_zoom_wid)) {
-			return 1;
-		}
-		if (opt->tn_height != xui_text_get_number(zoom->entry_zoom_hei)) {
-			return 1;
-		}
+		rc += xui_text_get_number(zoom->entry_zoom_wid, 
+				NULL, 1,  65535, opt->tn_width);
+		rc += xui_text_get_number(zoom->entry_zoom_hei, 
+				NULL, 1,  65535, opt->tn_height);
 		break;
 	case 3:
-		if (opt->canvas_width != xui_text_get_number(zoom->entry_width)) {
-			return 1;
-		}
+		rc += xui_text_get_number(zoom->entry_width, 
+				NULL, 1,  65535, opt->canvas_width);
 		break;
 	}
-	return 0;
+	return rc;
 }
 	
 static int ezgui_setup_zoom_event(Ihandle *ih, char *text, int i, int s)
@@ -2020,12 +2022,12 @@ static int ezgui_setup_format_update(EZGUI *gui)
 	csc_cfg_write(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_FILE_FORMAT, uir_format[gui->fmt_idx].s);
 
-	gui->tmp_jpg_qf = (int) strtol(
-			IupGetAttribute(gui->fmt_jpg_qf, "VALUE"), NULL, 10);
+	xui_text_get_number(gui->fmt_jpg_qf, &gui->tmp_jpg_qf, 1, 100, 1);
 	csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_JPG_QUALITY, gui->tmp_jpg_qf);
-	gui->tmp_gifa_fr = (int) strtol(
-			IupGetAttribute(gui->fmt_gif_fr, "VALUE"), NULL, 10);
+
+	xui_text_get_number(gui->fmt_gif_fr, 
+			&gui->tmp_gifa_fr, 1, INT_MAX, 0);
 	csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
 			CFG_KEY_GIF_FRATE, gui->tmp_gifa_fr);
 
@@ -2056,23 +2058,21 @@ static int ezgui_setup_format_update(EZGUI *gui)
 
 static int ezgui_setup_format_check(EZGUI *gui)
 {
-	char	*val;
 	int	rc;
 
 	if (gui->fmt_idx != xui_list_get_idx(gui->fmt_list)) {
 		return 1;
 	}
 
-	val = IupGetAttribute(gui->fmt_jpg_qf, "VALUE");
-	if (gui->tmp_jpg_qf != (int) strtol(val, NULL, 10)) {
-		return 1;
+	rc = xui_text_get_number(gui->fmt_jpg_qf, NULL, 
+			1, 100, gui->tmp_jpg_qf);
+	rc += xui_text_get_number(gui->fmt_gif_fr, NULL,
+			1, INT_MAX, gui->tmp_gifa_fr);
+	if (rc) {
+		return rc;
 	}
-	val = IupGetAttribute(gui->fmt_gif_fr, "VALUE");
-	if (gui->tmp_gifa_fr != (int) strtol(val, NULL, 10)) {
-		return 1;
-	}
-	val = IupGetAttribute(gui->fmt_transp, "VALUE");
-	if (!strcmp(val, "ON")) {
+
+	if (!strcmp(IupGetAttribute(gui->fmt_transp, "VALUE"), "ON")) {
 		rc = para_transparent(gui->sysopt, -1) ? 0 : 1;
 	} else {
 		rc = para_transparent(gui->sysopt, -1) ? 1 : 0;
@@ -3050,9 +3050,28 @@ static int xui_list_get_idx(Ihandle *ih)
 	return val - 1;
 }
 
-static int xui_text_get_number(Ihandle *ih)
+static int xui_text_get_number(Ihandle *ih, int *output, int v_from, int v_to, int v_hit)
 {
-	return (int) strtol(IupGetAttribute(ih, "VALUE"), NULL, 0);
+	char	*val, *end;
+	int	rc;
+
+	val = IupGetAttribute(ih, "VALUE");
+	if (val) {
+		rc = (int) strtol(val, &end, 0);
+		if ((*val == 0) || (*end != 0)) {
+			return 0;	/* no value or faulty value */
+		}
+		if ((rc < v_from) || (rc > v_to)) {
+			return 0;	/* value out of the range */
+		}
+		if (output) {
+			*output = rc;
+		}
+		if (rc != v_hit) {
+			return 1;
+		}
+	}
+	return 0;	/* no value */
 }
 
 static int xui_get_size(Ihandle *ih, char *attr, int *height)
