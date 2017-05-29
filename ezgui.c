@@ -1029,9 +1029,9 @@ static int ezgui_setup_grid_update(Ihandle *gridbox, char *status)
 		break;
 	case 1:
 		xui_text_get_number(grid->entry_col_grid, 
-				&opt->grid_col, 0, INT_MAX, 0);
+				&opt->grid_col, 1, INT_MAX, 0);
 		xui_text_get_number(grid->entry_row, 
-				&opt->grid_row, 0, INT_MAX, 0);
+				&opt->grid_row, 1, INT_MAX, 0);
 		sprintf(tmp, "Grid:%dx%d ", opt->grid_col, opt->grid_row);
 		ezopt_profile_disable(opt, EZ_PROF_LENGTH);
 		break;
@@ -1104,9 +1104,9 @@ static int ezgui_setup_grid_check(Ihandle *gridbox)
 	switch (grid->grid_idx) {
 	case 1:
 		rc += xui_text_get_number(grid->entry_col_grid, 
-				NULL, 0, INT_MAX, opt->grid_col);
+				NULL, 1, INT_MAX, opt->grid_col);
 		rc += xui_text_get_number(grid->entry_row, 
-				NULL, 0, INT_MAX, opt->grid_row);
+				NULL, 1, INT_MAX, opt->grid_row);
 		break;
 	case 2:
 		rc += xui_text_get_number(grid->entry_col_step, 
