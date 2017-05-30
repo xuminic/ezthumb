@@ -441,7 +441,7 @@ static void ez_dump(char *prompt, void *mem, int mlen)
 	for (mp = mem, len = mlen; len > 0; mp += goc, len -= goc) {
 		goc = len > 16 ? 16 : len;
 		csc_memdump_line(mp, goc, EZDUMP_FLAG, buf, sizeof(buf));
-		CDB_DEBUG(("%s: %s\n", prompt, buf));
+		CDB_SHOW(("%s: %s\n", prompt, buf));
 	}
 }
 

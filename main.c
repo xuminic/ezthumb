@@ -917,20 +917,20 @@ static int debug_online(int argc, char **argv)
 	}
 
 	if (!strcmp(*argv, "credits")) {
-		puts(credits);
+		CDB_SHOW(("%s", credits));
 	} else if (!strcmp(*argv, "pro-test")) {	
 		/* test the profile (@length, +width) */
 		runtime_profile_test(&sysopt, argv[1]);
 	} else if (!strcmp(*argv, "pro-export")) {
 		s = ezopt_profile_export_alloc(&sysopt);
 		if (s) {
-			printf("%s\n", s);
+			CDB_SHOW(("%s\n", s));
 			smm_free(s);
 		}
 	} else if (!strcmp(*argv, "filter")) {
 		s = csc_extname_filter_export_alloc(sysopt.accept);
 		if (s) {
-			printf("%s\n", s);
+			CDB_SHOW(("%s\n", s));
 			smm_free(s);
 		}
 	} else if (!strcmp(*argv, "ttf")) {
@@ -948,7 +948,7 @@ static int debug_online(int argc, char **argv)
 			int	items;
 			ezopt_store_config(&sysopt, kcb);
 			s = csc_cfg_status(kcb, &items);
-			printf("Read %d configures: %s\n", items, s);
+			CDB_SHOW(("Read %d configures: %s\n", items, s));
 			csc_cfg_close(kcb);
 		}
 	}
@@ -1089,7 +1089,7 @@ static int para_get_time_point(char *s)
 	argcs = csc_ziptoken(tmp, argvs, sizeof(argvs)/sizeof(char*), ":");
 	switch (argcs) {
 	case 0:	/* 20110301: in case of wrong input */
-		printf("Incorrect time format. Try HH:MM:SS or NN%%.\n");
+		CDB_SHOW(("Incorrect time format. Try HH:MM:SS or NN%%.\n"));
 		break;
 	case 1:
 		val = strtol(argvs[0], NULL, 0);
@@ -1357,17 +1357,17 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 		case '@':
 			val = (int)strtol(cmd + 1, 0, 10);
 			print_profile_shots(opt, val);
-			printf("\n");
+			CDB_SHOW(("\n"));
 			return 0;
 		case '+':
 			val = (int)strtol(cmd + 1, 0, 10);
 			print_profile_width(opt, val);
-			printf("\n");
+			CDB_SHOW(("\n"));
 			return 0;
 		}
 	}
 
-	printf("Reference of Video Length:\n");
+	CDB_SHOW(("Reference of Video Length:\n"));
 	for (i = 0; i < 18; i++) {
 		if (i < 10) {
 			val = (i+1)*10;
@@ -1379,7 +1379,7 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 	}
 	linefeed_count(i, 3, "", "\n\n");
 
-	printf("Reference of Width:\n");
+	CDB_SHOW(("Reference of Width:\n"));
 	for (i = 0; i < (int)(sizeof(stdres)/sizeof(int)); i++) {
 		print_profile_width(opt, stdres[i]);
 		linefeed_count(i, 3, "\n", "    ");
@@ -1391,9 +1391,9 @@ static int runtime_profile_test(EZOPT *opt, char *cmd)
 static void linefeed_count(int n, int mod, char *con, char *coff)
 {
 	if ((n % mod) == (mod - 1)) {
-		printf("%s", con);
+		CDB_SHOW(("%s", con));
 	} else {
-		printf("%s", coff);
+		CDB_SHOW(("%s", coff));
 	}
 }
 
@@ -1406,8 +1406,8 @@ static void print_profile_shots(EZOPT *opt, int min)
 	if (fac > 0) {
 		ezopt_profile_sampled(opt, 640, fac, &wid, &hei);
 	}
-	printf("[%4d]=[%4d %4d %3d %4d]", min, wid, hei, fac, 
-			wid * hei > 0 ? min * 60 / (wid * hei) : 0);
+	CDB_SHOW(("[%4d]=[%4d %4d %3d %4d]", min, wid, hei, fac, 
+			wid * hei > 0 ? min * 60 / (wid * hei) : 0));
 }
 
 static void print_profile_width(EZOPT *opt, int vidw)
@@ -1416,7 +1416,7 @@ static void print_profile_width(EZOPT *opt, int vidw)
 
 	wid = hei = fac = 0;
 	can = ezopt_profile_zooming(opt, vidw, &wid, &hei, &fac);
-	printf("[%4d]=[%4d %4d %3d %4d]", vidw, wid, hei, fac, can);
+	CDB_SHOW(("[%4d]=[%4d %4d %3d %4d]", vidw, wid, hei, fac, can));
 }
 
 static int load_default_config(EZOPT *opt)
