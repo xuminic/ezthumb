@@ -345,9 +345,9 @@ int ezopt_load_config(EZOPT *ezopt, void *config)
 	s = csc_cfg_copy(config, NULL, CFG_KEY_TRANSPARENCY, 0);
 	if (s != NULL) {
 		if (!strcasecmp(s, "yes")) {
-			para_transparent(ezopt, 1);
+			meta_transparent_option(ezopt, EZOP_TRANSPARENT);
 		} else {
-			para_transparent(ezopt, 0);
+			meta_transparent_option(ezopt, 0);
 		}
 		smm_free(s);
 	}
@@ -531,7 +531,7 @@ void ezopt_review(EZOPT *opt)
 {
 	/* foolproof the right transparent setting */
 	if (EZ_IMG_FMT_GET(opt->img_format) == EZ_IMG_FMT_JPEG) {
-		para_transparent(opt, 0);
+		meta_transparent_option(opt, 0);
 	}
 
 	/* make the font parameter dynamically allocated and 

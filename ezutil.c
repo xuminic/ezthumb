@@ -723,3 +723,29 @@ char *meta_make_fontdir(char *s)
 	return NULL;	/* default font */
 }
 
+static	EZBYTE	alpha_store = 0x80;
+
+/* 20170530 Using this function instead of direct accessing the 'flag' field
+ * so the alpha channel data would be consistent. 
+ * flag: EZOP_TRANSPARENT: set transparent
+ *       0: set opaque
+ *       < 0: read the transparent status 
+ */
+int meta_transparent_option(EZOPT *opt, int flag)
+{
+	if (flag == EZOP_TRANSPARENT) {		/* set transparent */
+		if ((opt->flags & EZOP_TRANSPARENT) == 0) {
+			opt->flags |= EZOP_TRANSPARENT;
+			alpha_store = opt->canvas_color[3];
+			opt->canvas_color[3] = 0;
+		}
+	}
+	if (flag == 0) {	/* set opaque */
+		if (opt->flags & EZOP_TRANSPARENT) {
+			opt->flags &= ~EZOP_TRANSPARENT;
+			opt->canvas_color[3] = alpha_store;
+		}
+	}
+	return (opt->flags & EZOP_TRANSPARENT);
+}
+

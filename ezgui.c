@@ -1932,10 +1932,10 @@ static Ihandle *ezgui_setup_format_create(EZGUI *gui)
 
 	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY);
 	if (s && !strcmp(s, "ON")) {
-		para_transparent(gui->sysopt, 1);
+		meta_transparent_option(gui->sysopt, EZOP_TRANSPARENT);
 		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
 	} else {
-		para_transparent(gui->sysopt, 0);
+		meta_transparent_option(gui->sysopt, 0);
 		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
 	}
 
@@ -2006,7 +2006,7 @@ static int ezgui_setup_format_reset(EZGUI *gui)
 	IupSetInt(gui->fmt_gif_fr, "VALUE", gui->tmp_gifa_fr);
 	IupSetInt(gui->fmt_jpg_qf, "VALUE", gui->tmp_jpg_qf);
 
-	if (para_transparent(gui->sysopt, -1)) {
+	if (meta_transparent_option(gui->sysopt, -1)) {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "ON");
 	} else {
 		IupSetAttribute(gui->fmt_transp, "VALUE", "OFF");
@@ -2048,9 +2048,9 @@ static int ezgui_setup_format_update(EZGUI *gui)
 	
 	val = IupGetAttribute(gui->fmt_transp, "VALUE");
 	if (!strcmp(val, "ON")) {
-		para_transparent(gui->sysopt, 1);
+		meta_transparent_option(gui->sysopt, EZOP_TRANSPARENT);
 	} else {
-		para_transparent(gui->sysopt, 0);
+		meta_transparent_option(gui->sysopt, 0);
 	}
 	csc_cfg_write(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY, val);
 	
@@ -2076,9 +2076,9 @@ static int ezgui_setup_format_check(EZGUI *gui)
 	}
 
 	if (!strcmp(IupGetAttribute(gui->fmt_transp, "VALUE"), "ON")) {
-		rc = para_transparent(gui->sysopt, -1) ? 0 : 1;
+		rc = meta_transparent_option(gui->sysopt, -1) ? 0 : 1;
 	} else {
-		rc = para_transparent(gui->sysopt, -1) ? 1 : 0;
+		rc = meta_transparent_option(gui->sysopt, -1) ? 1 : 0;
 	}
 	return rc;
 }

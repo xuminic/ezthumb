@@ -682,9 +682,7 @@ char *meta_image_abbre(int fmt);
 int meta_make_color(char *s, EZBYTE *color);
 int meta_export_color(EZBYTE *color, char *buf, int blen);
 char *meta_make_fontdir(char *s);
-
-/* main.c */
-int para_transparent(EZOPT *opt, int flag);
+int meta_transparent_option(EZOPT *opt, int flag);
 
 /* ezttf.c */
 int ezttf_open(void);
