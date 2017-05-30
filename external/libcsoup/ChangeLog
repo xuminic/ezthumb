@@ -1,3 +1,7 @@
+20170530: 0.9.8
+	* smm_fontpath.c: fixed a bug in Windows that failed to search the
+	font directory.
+
 20170511: 0.9.7
 	* libcsoup.h: removed the (-1<<4) macro to avoid the warning come from
 	-Wshift-negative-value in gcc 6.3.1.

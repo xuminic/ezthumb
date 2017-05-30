@@ -25,8 +25,8 @@
 #include <string.h>
 
 #include "libcsoup.h"
-//#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
-#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_MODULE)
+#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_ERROR)
+//#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_MODULE)
 #include "libcsoup_debug.h"
 
 struct	FTINF	{
@@ -154,7 +154,7 @@ static int findfont(void *option, char *path, int type, void *info)
 	(void)info;		/* stop the gcc warning */
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		//CDB_SHOW(("Entering %s:\n", path));
+		CDB_MODL(("Entering %s:\n", path));
 		break;
 	case SMM_MSG_PATH_EXEC:
 #ifdef	CFG_WIN32_API
@@ -170,14 +170,14 @@ static int findfont(void *option, char *path, int type, void *info)
 		}
 		strcat(ftinfo->ftname, SMM_DEF_DELIM);
 		strcat(ftinfo->ftname, path);
-		//CDB_SHOW(("Found %s\n", ftinfo->ftname));
+		CDB_MODL(("Found %s\n", ftinfo->ftname));
 		return SMM_NTF_PATH_EOP;
 
 	case SMM_MSG_PATH_BREAK:
-		//CDB_SHOW(("Failed to process %s\n", path));
+		CDB_MODL(("Failed to process %s\n", path));
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		//CDB_SHOW(("Leaving %s\n", path));
+		CDB_MODL(("Leaving %s\n", path));
 		break;
 	}
 	return SMM_NTF_PATH_NONE;

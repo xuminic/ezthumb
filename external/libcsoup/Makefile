@@ -29,7 +29,7 @@ TARGET	= libcsoup.a
 
 .PHONY: all clean cli soup slog smm main doc
 	
-all: $(TARGET)
+all: main
 
 main: $(TARGET)
 	make -C main all

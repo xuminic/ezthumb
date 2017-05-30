@@ -1,5 +1,5 @@
 gd-2.0.35
 iup-3.21
-libcsoup-0.9.3
+libcsoup-0.9.8
 http://commons.wikimedia.org/wiki/File:SMirC-thumbsup.svg
 
