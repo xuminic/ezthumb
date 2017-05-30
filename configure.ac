@@ -42,7 +42,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([ezthumb], [3.6.3], [xuming@users.sourceforge.net])
+AC_INIT([ezthumb], [3.6.4], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])

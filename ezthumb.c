@@ -538,7 +538,7 @@ void ezopt_review(EZOPT *opt)
 	 * if it's Windows, convert to utf-8 */
 #ifdef	CFG_WIN32RT
 	if (opt->mi_font) {
-		char	*s = ezwinfont_acp2utf8_alloc(opt->mi_font);
+		char	*s = ezttf_acp2utf8_alloc(opt->mi_font);
 		if (s == NULL) {
 			opt->mi_font = NULL;
 		} else {

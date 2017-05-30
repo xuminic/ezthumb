@@ -328,10 +328,10 @@ int main(int argc, char **argv)
 	ezopt_init(&sysopt, sysprof[0]);	/* the default setting */
 	load_default_config(&sysopt);	/* load configures from files */
 	env_init(&sysopt);		/* load configures from environment */
-#ifdef	CFG_WIN32RT
-	ezwinfont_open();
-	//ezwinfont_testing(NULL);
-#endif
+
+	if (gdFTUseFontConfig(1) == 0) {	/* fontconfig not available */
+		ezttf_open();
+	}
 
 #ifndef	CFG_GUI_OFF
 	if (command_line_parser(argc, argv, NULL) == CMD_G_UI) {
@@ -343,10 +343,6 @@ int main(int argc, char **argv)
 	CDB_DEBUG(("Todo: %c(%d) ARG=%d/%d\n", todo, todo, optind, argc));
 	CDB_DEBUG(("CodePage: %d\n", smm_sys_cp));
 	
-	/* review the command option structure to make sure there is no
-	 * controdicted options */
-	ezopt_review(&sysopt);
-
 	smm_signal_break(signal_handler);
 
 	avcodec_register_all();
@@ -454,9 +450,7 @@ int main(int argc, char **argv)
 		break;
 	}
 	main_close(&sysopt);
-#ifdef	CFG_WIN32RT
-	ezwinfont_close();
-#endif
+	ezttf_close();	/* closing is safe */
 	smm_destroy();
 	return todo;
 }
@@ -862,6 +856,10 @@ break_parse:
 			((opt->flags & EZOP_RECURSIVE) == 0)) {
 		todo = CMD_G_UI;
 	}
+	/* review the command option structure to make sure there is no
+	 * controdicted options */
+	ezopt_review(opt);
+
 	if (dummy) {
 		main_close(dummy);
 		smm_free(dummy);
@@ -876,9 +874,7 @@ static int signal_handler(int sig)
 	CDB_WARN(("Signal %d\n", sig));
 	sig = ezthumb_break(&sysopt);
 	main_close(&sysopt);
-#ifdef	CFG_WIN32RT
-	ezwinfont_close();
-#endif
+	ezttf_close();	/* closing is safe */
 	smm_destroy();
 	return sig;
 }
@@ -937,10 +933,14 @@ static int debug_online(int argc, char **argv)
 			printf("%s\n", s);
 			smm_free(s);
 		}
-#ifdef	CFG_WIN32RT
-	} else if (!strcmp(*argv, "winfont")) {
-		ezwinfont_testing(sysopt.mi_font);
-#endif
+	} else if (!strcmp(*argv, "ttf")) {
+		if (gdFTUseFontConfig(1) == 0) {
+			ezttf_testing(sysopt.mi_font);
+		} else {
+			ezttf_open();
+			ezttf_testing(sysopt.mi_font);
+			ezttf_close();
+		}
 	} else if (!strcmp(*argv, "config")) {
 		kcb = csc_cfg_open(SMM_CFGROOT_CURRENT, 
 				NULL, "ezthumb_sample.rc", CSC_CFG_RWC);

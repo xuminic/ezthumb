@@ -18,20 +18,21 @@ LIBS	= $(POSTLIB) $(CURRLIB)
 
 if	XAM_MSWIN
 bin_PROGRAMS	= ezthumb 
-ezthumb_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c ezwinfont.c
+ezthumb_SOURCES	= ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c ezttf.c
 ezthumb_LDADD	= main_con.o ezthumb_icon.o
 if	XAM_GUI
 BUILT_SOURCES 	= $(PREFLIB)
-WIN_OBJS	= main_win.o ezthumb.o id_lookup.o ezutil.o ezwinfont.o \
+WIN_OBJS	= main_win.o ezthumb.o id_lookup.o ezutil.o ezttf.o \
 		  ezgui.o ezthumb_icon.o
 endif
 else
 bin_PROGRAMS	= ezthumb
 if	XAM_GUI
 ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h ezgui.c ezgui.h ezicon.h \
-		  ezutil.c id_lookup.c id_lookup.h
+		  ezutil.c ezttf.c id_lookup.c id_lookup.h
 else
-ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c
+ezthumb_SOURCES	= main.c ezthumb.c ezthumb.h id_lookup.c id_lookup.h ezutil.c \
+		  ezttf.c
 endif
 BUILT_SOURCES 	= $(PREFLIB)
 endif
@@ -43,7 +44,7 @@ EXTRA_DIST = aclocal.m4 config.h.in configure configure.ac config.guess \
 	     ezgui.c  ezgui.h  ezicon.h  ezqiz  ezthumb.1  ezthumb.c \
 	     ezthumb.desktop ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
 	     ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
-	     id_lookup.c id_lookup.h main.c ezwinfont.c
+	     id_lookup.c id_lookup.h main.c ezttf.c
 
 var:
 	@echo CFLAGS = $(CFLAGS)

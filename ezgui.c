@@ -320,7 +320,7 @@ int ezgui_run(EZGUI *gui, char *flist[], int fnum)
 	if ((fnum > 0) && sview) {
 		for (i = 0; i < fnum; i++) {
 #ifdef	CFG_WIN32RT
-			flist[i] = ezwinfont_acp2utf8_alloc(flist[i]);
+			flist[i] = ezttf_acp2utf8_alloc(flist[i]);
 #endif
 			ezgui_sview_file_append(sview, flist[i]);
 			ezgui_show_progress(gui, i, fnum);
