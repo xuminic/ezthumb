@@ -935,10 +935,18 @@ static int debug_online(int argc, char **argv)
 		}
 	} else if (!strcmp(*argv, "ttf")) {
 		if (gdFTUseFontConfig(1) == 0) {
-			ezttf_testing(sysopt.mi_font);
+			ezttf_major_testing(sysopt.mi_font);
 		} else {
 			ezttf_open();
-			ezttf_testing(sysopt.mi_font);
+			ezttf_major_testing(sysopt.mi_font);
+			ezttf_close();
+		}
+	} else if (!strcmp(*argv, "ttf2")) {
+		if (gdFTUseFontConfig(1) == 0) {
+			ezttf_general_testing(sysopt.mi_font);
+		} else {
+			ezttf_open();
+			ezttf_general_testing(sysopt.mi_font);
 			ezttf_close();
 		}
 	} else if (!strcmp(*argv, "config")) {

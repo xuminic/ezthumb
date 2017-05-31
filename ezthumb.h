@@ -689,7 +689,8 @@ int ezttf_open(void);
 int ezttf_close(void);
 char *ezttf_faceoff(char *fontface);
 char *ezttf_acp2utf8_alloc(char *acp);
-int ezttf_testing(char *fontface);
+int ezttf_general_testing(char *fontface);
+int ezttf_major_testing(char *fontface);
 
 #endif	/* _EZTHUMB_H_ */
 

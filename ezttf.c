@@ -237,6 +237,25 @@ char *ezttf_faceoff(char *fontface)
 	return ttf_lut[can_idx].font_path;
 }
 
+int ezttf_general_testing(char *fontface)
+{
+	char	*ftname;
+	int	i;
+
+	if (fontface) {
+		ftname = ezttf_faceoff(fontface);
+		CDB_SHOW(("%s: %s\n", fontface, ftname));
+	} else {
+		/* FIXME: should call a function in main.c to enumerate
+		 * all font faces */
+		for (i = 0; i < ttf_idx; i++) {
+			CDB_SHOW(("%s: %s [%d]\n", ttf_lut[i].font_face, 
+				ttf_lut[i].font_path, ttf_lut[i].style));
+		}
+	}
+	return 0;
+}
+
 static int ezttf_add_fontface(char *ftpath, int ftstyle)
 {
 	FT_Library	library;
@@ -634,7 +653,7 @@ static int CALLBACK ezttf_callback(const LOGFONT *pk_Font,
 }
 
 /* Note that the font face is supposed to be utf-8 */
-int ezttf_testing(char *fontface)
+int ezttf_major_testing(char *fontface)
 {
 	LOGFONT	lf;
 	HDC	hdc;
@@ -686,23 +705,9 @@ char *ezttf_acp2utf8_alloc(char *acp)
 	return csc_strcpy_alloc(acp, 0);
 }
 
-int ezttf_testing(char *fontface)
+int ezttf_major_testing(char *fontface)
 {
-	char	*ftname;
-	int	i;
-
-	if (fontface) {
-		ftname = ezttf_faceoff(fontface);
-		CDB_SHOW(("%s: %s\n", fontface, ftname));
-	} else {
-		/* FIXME: should call a function in main.c to enumerate
-		 * all font faces */
-		for (i = 0; i < ttf_idx; i++) {
-			CDB_SHOW(("%s: %s [%d]\n", ttf_lut[i].font_face, 
-				ttf_lut[i].font_path, ttf_lut[i].style));
-		}
-	}
-	return 0;
+	return ezttf_general_testing(fontface);
 }
 
 static int findfont(void *option, char *path, int type, void *info)

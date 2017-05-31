@@ -910,9 +910,15 @@ ezthumb_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
 @XAM_MSWIN_TRUE@clean-local:
-@XAM_MSWIN_TRUE@	test -e "ezthumb_win$(EXEEXT)" || rm -f ezthumb_win$(EXEEXT)
-@XAM_MSWIN_TRUE@	test -e "$(distdir)-setup.exe" || rm -f $(distdir)-setup.exe
-@XAM_MSWIN_TRUE@	test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
+@XAM_MSWIN_TRUE@	if test -f "ezthumb_win$(EXEEXT)"; then \
+@XAM_MSWIN_TRUE@		rm -f ezthumb_win$(EXEEXT); \
+@XAM_MSWIN_TRUE@	fi; \
+@XAM_MSWIN_TRUE@	if test -f "$(distdir)-setup.exe"; then \
+@XAM_MSWIN_TRUE@		rm -f $(distdir)-setup.exe; \
+@XAM_MSWIN_TRUE@	fi; \
+@XAM_MSWIN_TRUE@	if test -d "$(distdir)-win32-bin"; then \
+@XAM_MSWIN_TRUE@		rm -rf "$(distdir)-win32-bin"; \
+@XAM_MSWIN_TRUE@	fi
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all
@@ -929,7 +935,9 @@ libcsoup-clean:
 release: $(RELEASE)
 
 @XAM_MSWIN_TRUE@all-local:
-@XAM_MSWIN_TRUE@	test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
+@XAM_MSWIN_TRUE@	if test -d "$(distdir)-win32-bin"; then \
+@XAM_MSWIN_TRUE@		rm -rf "$(distdir)-win32-bin"; \
+@XAM_MSWIN_TRUE@	fi
 @XAM_MSWIN_TRUE@	mkdir "$(distdir)-win32-bin"
 @XAM_MSWIN_TRUE@	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"
 @XAM_MSWIN_TRUE@	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"
