@@ -13,6 +13,21 @@ curve profiles.
 
 Release Notes
 =============
+Version 3.6.4:
+*) Fixed the bug which freeze the progress bar in i-frame dumping mode.
+*) Fixed the bug in configure file to the correct linking sequence.
+*) Fixed the bug which failed to hightlight the "RUN" button when media files 
+   were loaded from the command line.
+*) Improved the user input by verifying the content in the text controls.
+*) Added the support of TrueType fonts in Windows.
+   Note that the libgd uses fontconfig to translate the font faces to the font
+   files. In Windows however there's no fontconfig available so libgd could not
+   find the proper font files. Unfortunately there's also no out-of-box APIs to
+   directly translate the font faces to the font files in Windows. My approach 
+   is to enumerate all registered font faces and to compare them with all 
+   registered true type fonts. It's still imperfect but around 95% fonts would 
+   be matched.
+
 Version 3.6.3 quick release:
 *) Fixed the bug which failed to save the transparent screenshots in GUI.
 *) Fixed the linking sequence issue between libiup and libX11.
