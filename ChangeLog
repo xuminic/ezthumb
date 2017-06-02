@@ -1,4 +1,8 @@
 20170602: 3.6.5
+	* ezgui.c: The progress bar dialog will inherit the configuration from
+	the ezthumb GUI dialog.
+
+20170602:
 	* ezgui.c: Fixed a bug that Chinese characters were failed to pass to 
 	the progress bar dialog.
 	* ezthumb.nsi: Workarounded the imcomplete context menu in Windows.

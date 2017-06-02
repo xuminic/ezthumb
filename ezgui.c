@@ -2337,33 +2337,98 @@ static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
 static void *ezbar_main(void *vobj)
 {
 	EZGUI	*gui;
+	char	*s;
+	int	i;
 
-	IupOpen(NULL, NULL);
-	IupImageLibOpen();
-
-	/* Note that these two lines must be kept in this sequence */
-	IupSetAttribute(NULL, "UTF8MODE", "YES");
-	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
-
-	/* 20170602 Do not set codepage to UTF-8 because the ezbar control
-	 * is called by ezthumb, which is of native codepage, not calling to
-	 * ezthumb. As a consequence, any content dispatching to IUP should
-	 * be converted to UTF-8 by ezttf_acp2utf8_alloc() */
-	//smm_codepage_set(65001);
-
-	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
-	if (!IupGetGlobal("SINGLEINSTANCE")) {
-		IupClose();
+	if ((gui = ezgui_init(vobj, NULL, NULL)) == NULL) {
 		return NULL;
 	}
 
-	if ((gui = smm_alloc(sizeof(EZGUI))) == NULL) {
-		IupClose();
-		return NULL;
+	/* loading configuration */
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_GRID);
+	if (s) {
+		if (lookup_index_string(uir_grid, 0, s) == 0) {
+			ezopt_profile_enable(gui->sysopt, EZ_PROF_LENGTH);
+			CDB_DEBUG(("EZBAR: Grid using profile\n"));
+		} else {
+			ezopt_profile_disable(gui->sysopt, EZ_PROF_LENGTH);
+			CDB_DEBUG(("EZBAR: Grid=%dx%d\n", 
+				gui->sysopt->grid_col,gui->sysopt->grid_row));
+		}
 	}
 
-	/* initialize GUI structure with parameters from command line */
-	gui->sysopt = vobj;
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_ZOOM);
+	if (s) {
+		if (lookup_index_string(uir_zoom, 0, s) == 0) {
+			ezopt_profile_enable(gui->sysopt, EZ_PROF_WIDTH);
+			CDB_DEBUG(("EZBAR: Zoom using profile\n"));
+		} else {
+			ezopt_profile_disable(gui->sysopt, EZ_PROF_WIDTH);
+			CDB_DEBUG(("EZBAR: Zoom=%dx%dx%d\n", 
+				gui->sysopt->tn_width, gui->sysopt->tn_height,
+				gui->sysopt->tn_facto));
+		}
+	}
+
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_OUTPUT_METHOD);
+	if (s) {
+		i = lookup_index_string(uir_outdir, 0, s);
+		if (!strcmp(uir_outdir[i].s, CFG_PIC_ODIR_PATH)) {
+			gui->sysopt->pathout = csc_cfg_copy(gui->config,
+				EZGUI_MAINKEY, CFG_KEY_OUTPUT_PATH, 0);
+		}
+		CDB_DEBUG(("EZBAR: OutPath=%s\n", gui->sysopt->pathout));
+	}
+
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FONT_FACE);
+	if (s) {
+		gui->sysopt->mi_font = gui->sysopt->ins_font =
+			xui_make_fc_fontface(s, &gui->sysopt->mi_size);
+		CDB_DEBUG(("EZBAR: Font=%s [%d]\n", gui->sysopt->mi_font,
+					gui->sysopt->mi_size));
+	}
+
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_SUFFIX);
+	if (s) {
+		csc_strlcpy(gui->sysopt->suffix, s,
+				sizeof(gui->sysopt->suffix));
+		CDB_DEBUG(("EZBAR: Suffix=%s\n", gui->sysopt->suffix));
+	}
+
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_FILE_FORMAT);
+	if (s) {
+		gui->sysopt->img_format = meta_image_format(s);
+	}
+	s = csc_cfg_read(gui->config, EZGUI_MAINKEY, CFG_KEY_TRANSPARENCY);
+	switch (EZ_IMG_FMT_GET(gui->sysopt->img_format)) {
+	case EZ_IMG_FMT_GIFA:
+		gui->tmp_gifa_fr = 1000;
+		csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_GIF_FRATE, &gui->tmp_gifa_fr);
+		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_gifa_fr);
+		if (s && !strcmp(s, "ON")) {
+			meta_transparent_option(gui->sysopt,EZOP_TRANSPARENT);
+		} else {
+			meta_transparent_option(gui->sysopt, 0);
+		}
+		break;
+	case EZ_IMG_FMT_GIF:
+	case EZ_IMG_FMT_PNG:
+		if (s && !strcmp(s, "ON")) {
+			meta_transparent_option(gui->sysopt,EZOP_TRANSPARENT);
+		} else {
+			meta_transparent_option(gui->sysopt, 0);
+		}
+		break;
+	case EZ_IMG_FMT_JPEG:
+		gui->tmp_jpg_qf  = 85;
+		csc_cfg_read_int(gui->config, EZGUI_MAINKEY, 
+				CFG_KEY_JPG_QUALITY, &gui->tmp_jpg_qf);
+		EZ_IMG_PARAM_SET(gui->sysopt->img_format, gui->tmp_jpg_qf);
+		break;
+	}
+	CDB_DEBUG(("EZBAR: Format 0x%08x [%x]\n", gui->sysopt->img_format,
+				gui->sysopt->flags & EZOP_TRANSPARENT));
 
 	/* create window and widgets */
 	gui->dlg_main = IupProgressDlg();

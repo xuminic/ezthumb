@@ -13,6 +13,11 @@ curve profiles.
 
 Release Notes
 =============
+Version 3.6.5:
+*) The progress bar dialog will inherit the configuration from the ezthumb GUI dialog.
+*) Fixed a bug that Chinese characters were failed to pass to the progress bar dialog.
+*) Workarounded the imcomplete context menu in Windows by associates ezthumb to the OpenWithList.
+
 Version 3.6.4:
 *) Fixed the bug which freeze the progress bar in i-frame dumping mode.
 *) Fixed the bug in configure file to the correct linking sequence.
@@ -132,6 +137,7 @@ $ sudo yum install ffmpeg-devel gd-devel gtk2-devel
 
 then
 
+$ ./configure
 $ make
 
 *) CentOS 4 or similar version Fedora/RHEL
@@ -141,10 +147,8 @@ the GUI interface. What's more, ezthumb could not generate GIF animation
 thumbnails because the old version of libgd.
 
 $ sudo yum install ffmpeg-devel gd-devel
-$ export SYSGUI=CFG_GUI_OFF
 
-then
-
+$ ./configure --with-gui=no
 $ make
 
 
@@ -154,14 +158,13 @@ The ezthumb has been shipped with a library bundle in which all necessary
 libraries are included. You don't need to download anything to build ezthumb.
 Just go to the ezthumb directory in MinGW console and type:
 
-make
+$ ./configure
+$ make
 
 it will build two execute files, ezthumb.exe for command line and the GUI
-frontend ezthumb_win.exe. You may need to use
+frontend EzthumbWin.exe. You will find the execute files and required DLLs
+under the folder "ezthumb-X.X.X-win32-bin"
 
-make install_win
-
-to collect all required DLL files into one directory for easy releasing.
 If you have Nullsoft Installer (NSIS) installed, you may use
 
 make release
@@ -174,20 +177,18 @@ to generate an install file.
 Credits
 =======
 
-FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:
-http://ffmpeg.zeranoe.com/builds/
-Of cause you can find source codes of FFMPEG at
+FFmpeg Win32 builds were shared by:
 https://www.ffmpeg.org/
 
 Following Libraries were grabbed from GnuWin:
 http://sourceforge.net/projects/gnuwin32/files/
 
-gd-2.0.33-1
-jpeg-6b-4
-libiconv-1.9.2-1
-libpng-1.2.37
-zlib-1.2.3
-freetype-2.3.5-1
+freetype-2.6.3
+gd-2.0.35
+jpeg-6b
+libpng-1.5.13
+zlib-1.2.8
+libiconv-1.9.2.1
 
 The icon SMirC-thumbsup.svg is a public domain under GNU Free Documentation 
 License. 
