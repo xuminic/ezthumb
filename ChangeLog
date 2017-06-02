@@ -1,4 +1,12 @@
-20170529:
+20170602: 3.6.5
+	* ezgui.c: Fixed a bug that Chinese characters were failed to pass to 
+	the progress bar dialog.
+	* ezthumb.nsi: Workarounded the imcomplete context menu in Windows.
+	Note that the issue was caused by not all video format were associated
+	in HKCR\SystemFileAssociations\video, such as .mkv, .mp4, etc. 
+	The workaround is by adding ezthumb to the OpenWithList. 
+
+20170529: 3.6.4
 	* ezgui.c: added some codes to verify the inputs of text controls.
 	* ezthumb.c: fixed a bug which freeze the progress bar in i-frame
 	dumping mode.

@@ -78,13 +78,13 @@ main_win.o : main.c
 ezthumb_icon.o: ezthumb_icon.rc
 	$(WINDRES) $< -o $@
 
-ezthumb_win: $(WIN_OBJS)
+EzthumbWin: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
 if	XAM_MSWIN
 clean-local:
-	if test -f "ezthumb_win$(EXEEXT)"; then \
-		rm -f ezthumb_win$(EXEEXT); \
+	if test -f "EzthumbWin$(EXEEXT)"; then \
+		rm -f EzthumbWin$(EXEEXT); \
 	fi; \
 	if test -f "$(distdir)-setup.exe"; then \
 		rm -f $(distdir)-setup.exe; \
@@ -166,8 +166,8 @@ showdll:
 		echo "[ezthumb.exe]:"; \
 		objdump -p ezthumb.exe | grep 'DLL Name:'; \
 	fi
-	@if [ -f ezthumb_win.exe ]; then \
-		echo "[ezthumb_win.exe]:"; \
-		objdump -p ezthumb_win.exe | grep 'DLL Name:'; \
+	@if [ -f EzthumbWin.exe ]; then \
+		echo "[EzthumbWin.exe]:"; \
+		objdump -p EzthumbWin.exe | grep 'DLL Name:'; \
 	fi
 

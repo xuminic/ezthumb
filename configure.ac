@@ -17,9 +17,9 @@
 #    should be "-g -DDEBUG=6 -O0" in compiling
 # In MinGW, the installer should be created also:
 # *) configure --with-gui=no && make release
-#    should build the command line tool ezthumb.exe only, no ezthumb_win.exe
+#    should build the command line tool ezthumb.exe only, no EzthumbWin.exe
 # *) configure --with-gui=gtk2 && make release
-#    other options are same, which build both ezthumb.exe and ezthumb_win.exe
+#    other options are same, which build both ezthumb.exe and EzthumbWin.exe
 # In a clean Debian box
 # *) configure --with-gui=yes && make
 #    should issue a warning and build a command line version
@@ -80,7 +80,7 @@ case "$host_os" in
     SYSTOOL=mingw
     AS_CASE([$with_gui], [no|No|NO], [SYSGUI=CFG_GUI_OFF], [
       SYSGUI=CFG_GUI_ON
-      PREFLIB=ezthumb_win])
+      PREFLIB=EzthumbWin])
     # Checks for WIN32 programs.
     AC_CHECK_PROG([WINDRES], [windres], [windres],
       [AC_MSG_ERROR([windres not found.])])

@@ -663,6 +663,7 @@ int ezinfo(char *filename, EZOPT *ezopt, EZVID *vout);
 int ezthumb_break(EZOPT *ezopt);
 int eznotify(EZOPT *ezopt, int event, long param, long opt, void *block);
 int ezopt_store_config(EZOPT *ezopt, void *config);
+char *video_media_in_buffer(EZVID *vidx, char *buf, int blen);
 
 /* ezutil.c */
 int ezopt_profile_setup(EZOPT *opt, char *s);

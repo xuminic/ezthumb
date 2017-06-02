@@ -74,15 +74,25 @@ Section "Start Menu Shortcuts"
 
   CreateDirectory "$SMPROGRAMS\Ezthumb"
   CreateShortCut "$SMPROGRAMS\Ezthumb\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-  CreateShortCut "$SMPROGRAMS\Ezthumb\ezthumb.lnk" "$INSTDIR\ezthumb_win.exe" "" "$INSTDIR\ezthumb_win.exe" 0
+  CreateShortCut "$SMPROGRAMS\Ezthumb\ezthumb.lnk" "$INSTDIR\EzthumbWin.exe" "" "$INSTDIR\EzthumbWin.exe" 0
   
 SectionEnd
 
 ; http://nsis.sourceforge.net/Windows_7_Cascading_Context_Menu
 ; https://github.com/NSIS-Dev/Windows-7-Context-Menu/blob/master/installer.nsi
 ; http://stackoverflow.com/questions/370114/how-can-i-add-a-context-menu-to-the-windows-explorer-for-a-java-application
+; https://www.howtogeek.com/107965/how-to-add-any-application-shortcut-to-windows-explorers-context-menu/
+; https://msdn.microsoft.com/en-us/library/bb166549.aspx
 Section "Add to Context Menu"
-  WriteRegStr HKCR "SystemFileAssociations\video\shell\Ezthumbnailer\command" "" "$INSTDIR\ezthumb_win.exe --gui-progress $\"%1$\""
+  WriteRegStr HKCR "Applications\Ezthumb.exe" "" "Ezthumb"
+  WriteRegStr HKCR "Applications\Ezthumb.exe\shell\open\command" "" "$INSTDIR\EzthumbWin.exe --gui-progress $\"%1$\""
+
+  WriteRegStr HKCR "SystemFileAssociations\video\OpenWithList\Ezthumb.exe" "" ""
+  WriteRegStr HKCR "SystemFileAssociations\video\shell\Run Ezthumb\command" "" "$INSTDIR\EzthumbWin.exe --gui-progress $\"%1$\""
+
+  ; Prepared for the folder operation --  not now
+  ; WriteRegStr HKCR "Directory\shell\Run Ezthumb\command" "" "$INSTDIR\EzthumbWin.exe --gui-progress $\"%1$\""
+  ; WriteRegStr HKCR "Directory\Background\shell\Run Ezthumb\command" "" "$INSTDIR\EzthumbWin.exe --gui-progress $\"%1$\""
 SectionEnd
 
 ;--------------------------------
@@ -96,7 +106,12 @@ Section "Uninstall"
   DeleteRegKey HKLM SOFTWARE\Ezthumb
   DeleteRegKey HKCU SOFTWARE\ezthumb
 
-  DeleteRegKey HKCR "SystemFileAssociations\video\shell\Ezthumbnailer"
+  ; delete the context menu
+  DeleteRegKey HKCR "SystemFileAssociations\video\OpenWithList\Ezthumb.exe"
+  DeleteRegKey HKCR "SystemFileAssociations\video\shell\Run Ezthumb"
+  DeleteRegKey HKCR "Directory\shell\Run Ezthumb"
+  DeleteRegKey HKCR "Directory\Background\shell\Run Ezthumb"
+  DeleteRegKey HKCR "Applications\Ezthumb.exe"
 
   ; Remove files and uninstaller
   Delete $INSTDIR\*.*

@@ -2280,13 +2280,12 @@ int ezbar_init(EZOPT *ezopt)
 	return 0;
 }
 
-extern char *video_media_in_buffer(EZVID *vidx, char *buf, int blen);
-
 static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
 {
 	EZVID	*vidx = block;
 	EZOPT   *ezopt = vobj;
 	EZGUI   *gui = ezopt->gui;
+	char	*tmp;
 	static	char	desc_buf[1024];
 
 	switch (event) {
@@ -2301,11 +2300,17 @@ static int ezbar_event(void *vobj, int event, long param, long opt, void *block)
 	case EN_OPEN_BEGIN:
 		snprintf(desc_buf, sizeof(desc_buf)-1, 
 				"Opening %s ...", vidx->filename);
+		tmp = ezttf_acp2utf8_alloc(desc_buf);
+		csc_strlcpy(desc_buf, tmp, sizeof(desc_buf));
+		smm_free(tmp);
 		IupSetAttribute(gui->dlg_main, "DESCRIPTION", desc_buf);
-		//smm_sleep(1,0);
+		//smm_sleep(2,0);
 		break;
 	case EN_MEDIA_OPEN:
 		video_media_in_buffer(vidx, desc_buf, sizeof(desc_buf)-1);
+		tmp = ezttf_acp2utf8_alloc(desc_buf);
+		csc_strlcpy(desc_buf, tmp, sizeof(desc_buf));
+		smm_free(tmp);
 		IupSetAttribute(gui->dlg_main, "DESCRIPTION", desc_buf);
 		//smm_sleep(1,0);
 		break;
@@ -2340,7 +2345,11 @@ static void *ezbar_main(void *vobj)
 	IupSetAttribute(NULL, "UTF8MODE", "YES");
 	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
 
-	smm_codepage_set(65001);
+	/* 20170602 Do not set codepage to UTF-8 because the ezbar control
+	 * is called by ezthumb, which is of native codepage, not calling to
+	 * ezthumb. As a consequence, any content dispatching to IUP should
+	 * be converted to UTF-8 by ezttf_acp2utf8_alloc() */
+	//smm_codepage_set(65001);
 
 	IupSetGlobal("SINGLEINSTANCE", "ezthumb");
 	if (!IupGetGlobal("SINGLEINSTANCE")) {
