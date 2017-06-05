@@ -64,6 +64,10 @@
 #include "ezthumb.h"
 #include "id_lookup.h"
 
+#ifdef	HAVE_LIBAVUTIL_IMGUTILS_H
+#include <libavutil/imgutils.h>
+#endif
+
 /* re-use the debug convention in libcsoup */
 //#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_WARNING)
 #define CSOUP_DEBUG_LOCAL     SLOG_CWORD(EZTHUMB_MOD_CORE, SLOG_LVL_PROGRAM)
@@ -75,6 +79,11 @@
 #include "gdfontl.h"
 #include "gdfontg.h"
 
+#ifdef	HAVE_AVS_CODECPAR
+#define	CODECP		codecpar
+#else
+#define	CODECP		codec
+#endif
 
 static int video_snapping(EZVID *vidx, EZIMG *image);
 static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image);
@@ -96,6 +105,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos);
 static int video_keyframe_credit(EZVID *vidx, int64_t dts);
 static int video_dts_ruler(EZVID *vidx, int64_t cdts, int64_t ndts);
 static int64_t video_load_packet(EZVID *vidx, AVPacket *packet);
+static void video_free_packet(AVPacket *packet);
 static int video_media_on_canvas(EZVID *vidx, EZIMG *image);
 static EZTIME video_duration(EZVID *vidx);
 static EZTIME video_duration_quickscan(EZVID *vidx);
@@ -179,10 +189,10 @@ static int dump_media_brief(EZVID *vidx);
 static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx);
 static int dump_format_context(AVFormatContext *format);
 static int dump_stream_common(AVStream *stream, int sidx);
-static int dump_video_context(AVCodecContext *codec);
-static int dump_audio_context(AVCodecContext *codec);
-static int dump_subtitle_context(AVCodecContext *codec);
-static int dump_other_context(AVCodecContext *codec);
+static int dump_video_context(AVStream *stream);
+static int dump_audio_context(AVStream *stream);
+static int dump_subtitle_context(AVStream *stream);
+static int dump_other_context(AVStream *stream);
 static int dump_packet(AVPacket *p);
 static int dump_frame(EZFRM *ezfrm, int got_pic);
 static int dump_frame_packet(EZVID *vidx, int sn, EZFRM *ezfrm);
@@ -823,12 +833,12 @@ static int video_snapshot_keyframes(EZVID *vidx, EZIMG *image)
 			if (vidx->ses_flags & EZOP_DECODE_OTF) {
 				video_decode_next(vidx, &packet);
 			} else {
-				av_free_packet(&packet);
+				video_free_packet(&packet);
 			}
 			continue;
 		}
 		if (dtms > image->time_from + image->time_during) {
-			av_free_packet(&packet);
+			video_free_packet(&packet);
 			break;
 		}
 
@@ -1071,7 +1081,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 				VSTLOG("[KF]", refdts[i], dts_snap, dts);
 				break;
 			}
-			av_free_packet(&packet);
+			video_free_packet(&packet);
 			if (dts > dts_snap) {
 				refdts[i] = lastkey;
 				VSTLOG("[KF]", refdts[i], dts_snap, dts);
@@ -1105,7 +1115,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 				video_decode_next(vidx, &packet);
 				video_frame_update(vidx);
 			} else {
-				av_free_packet(&packet);
+				video_free_packet(&packet);
 			}
 		}
 
@@ -1253,7 +1263,6 @@ static EZVID *video_allocate(EZOPT *ezopt, char *filename, int *errcode)
 	 * unwanted files. For example, in guidev branch, the ezthumb.o
 	 * was treated as a 3 seconds long MP3 file. Thus I set another
 	 * filter to check the media's resolution. */
-	//if (!vidx->vstream->codec->width || !vidx->vstream->codec->height) {
 	if (!vidx->codecx->width || !vidx->codecx->height) {
 		uperror(errcode, EZ_ERR_FILE);
 		eznotify(vidx->sysopt, EZ_ERR_VIDEOSTREAM, 1, 0, filename);
@@ -1447,14 +1456,22 @@ static int video_open(EZVID *vidx)
 	}
 
 	vidx->vstream = vidx->formatx->streams[vidx->vsidx];
+	vidx->vstream->discard = AVDISCARD_ALL;
+
+	/* open the codec */
+#ifdef	HAVE_AVCODEC_ALLOC_CONTEXT3
+	codec = avcodec_find_decoder(vidx->vstream->codecpar->codec_id);
+	vidx->codecx = avcodec_alloc_context3(codec);
+	avcodec_parameters_to_context(vidx->codecx, vidx->vstream->codecpar);
+	av_codec_set_pkt_timebase(vidx->codecx, vidx->vstream->time_base);
+	vidx->codecx->framerate = vidx->vstream->avg_frame_rate;
+#else
 	vidx->codecx  = vidx->vstream->codec;
+	codec = avcodec_find_decoder(vidx->codecx->codec_id);
+#endif
 	/* discard frames; AVDISCARD_NONKEY,AVDISCARD_BIDIR */
 	//vidx->codecx->skip_frame = AVDISCARD_NONREF | AVDISCARD_BIDIR;
 	//vidx->codecx->hurry_up = 1; /* fast decoding mode */
-
-	/* open the codec */
-	vidx->vstream->discard = AVDISCARD_ALL;
-	codec = avcodec_find_decoder(vidx->codecx->codec_id);
 #ifdef	HAVE_AVCODEC_OPEN2
 	if (avcodec_open2(vidx->codecx, codec, NULL) < 0) {
 #elif	defined(HAVE_AVCODEC_OPEN)
@@ -1494,7 +1511,11 @@ static int video_close(EZVID *vidx)
 {
 	vidx->vstream = NULL;
 	if (vidx->codecx) {
+#ifdef	HAVE_AVCODEC_ALLOC_CONTEXT3
+		avcodec_free_context(&vidx->codecx);
+#else
 		avcodec_close(vidx->codecx);
+#endif
 		vidx->codecx = NULL;
 	}
 	if (vidx->formatx) {
@@ -1626,7 +1647,7 @@ static int video_find_main_stream(EZVID *vidx)
 	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		stream->discard = AVDISCARD_ALL;
-		switch (stream->codec->codec_type) {
+		switch (stream->CODECP->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:
 			eznotify(vidx->sysopt, EN_TYPE_VIDEO, i, 0, stream);
 			vidx->ezstream++;
@@ -1650,7 +1671,7 @@ static int video_find_main_stream(EZVID *vidx)
 	n = vidx->sysopt->vs_user;
 	if ((n >= 0) && (n < (int)vidx->formatx->nb_streams)) {
 		stream = vidx->formatx->streams[n];
-		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+		if (stream->CODECP->codec_type == AVMEDIA_TYPE_VIDEO) {
 			return n;
 		}
 	}
@@ -1662,7 +1683,7 @@ static int video_find_main_stream(EZVID *vidx)
 	n = -1;
 	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
-		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+		if (stream->CODECP->codec_type == AVMEDIA_TYPE_VIDEO) {
 			if (wanted_stream < stream->codec_info_nb_frames) {
 				n = i;
 				wanted_stream = stream->codec_info_nb_frames;
@@ -1681,7 +1702,7 @@ static int64_t video_keyframe_next(EZVID *vidx, AVPacket *packet)
 	while ((dts = video_load_packet(vidx, packet)) >= 0) {
 		lastdts = dts;
 		if (packet->flags != AV_PKT_FLAG_KEY) {
-			av_free_packet(packet);
+			video_free_packet(packet);
 			continue;
 		}
 		break;
@@ -1703,7 +1724,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 
 	while ((dts = video_load_packet(vidx, packet)) >= 0) {
 		if (packet->flags != AV_PKT_FLAG_KEY) {
-			av_free_packet(packet);
+			video_free_packet(packet);
 			continue;
 		}
 
@@ -1721,7 +1742,7 @@ static int64_t video_keyframe_to(EZVID *vidx, AVPacket *packet, int64_t pos)
 			video_decode_next(vidx, packet);
 			video_frame_update(vidx);
 		} else {
-			av_free_packet(packet);
+			video_free_packet(packet);
 		}
 	}
 	return dts;
@@ -1803,11 +1824,11 @@ static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 
 	while (av_read_frame(vidx->formatx, packet) >= 0) {
 		if (packet->stream_index != vidx->vsidx) {
-			av_free_packet(packet);
+			video_free_packet(packet);
 			continue;
 		}
 		if ((dts = video_packet_timestamp(packet)) < 0) {
-			av_free_packet(packet);
+			video_free_packet(packet);
 			continue;
 		}
 
@@ -1820,6 +1841,14 @@ static int64_t video_load_packet(EZVID *vidx, AVPacket *packet)
 	return -1;
 }
 
+static void video_free_packet(AVPacket *packet)
+{
+#ifdef	HAVE_AV_PACKET_UNREF
+	av_packet_unref(packet);
+#else
+	av_free_packet(packet);
+#endif
+}
 
 /* This function is used to print the media information to the specified
  * area in the canvas */
@@ -1885,9 +1914,9 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
 		sprintf(buffer, "%s: ", 
-			id_lookup_codec_type(stream->codec->codec_type));
+			id_lookup_codec_type(stream->CODECP->codec_type));
 		/* seems higher version doesn't support CODEC_TYPE_xxx */
-		switch (stream->codec->codec_type) {
+		switch (stream->CODECP->codec_type) {
 #ifdef	CODEC_TYPE_UNKNOWN
 		case  CODEC_TYPE_VIDEO:
 #else
@@ -1941,7 +1970,7 @@ char *video_media_in_buffer(EZVID *vidx, char *buf, int blen)
 
 	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
 		stream = vidx->formatx->streams[i];
-		if (stream->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+		if (stream->CODECP->codec_type == AVMEDIA_TYPE_VIDEO) {
 			video_media_video(stream, buf + strlen(buf));
 			break;
 		}
@@ -2109,7 +2138,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 		CDB_PROG(("video_duration_quickscan: seek %lld get %lld\n", 
 				base + rdts, now));
 		if (now > 0) {
-			av_free_packet(&packet);
+			video_free_packet(&packet);
 			if (now <= recent) {
 				break;
 			}
@@ -2124,7 +2153,7 @@ static EZTIME video_duration_quickscan(EZVID *vidx)
 	 * read back one or more packets */
 	while (video_load_packet(vidx, &packet) > 0) {
 		recent = packet.dts;
-		av_free_packet(&packet);
+		video_free_packet(&packet);
 		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, vidx);
 	}
 	if ((recent -= vidx->dts_offset) <= 0) {
@@ -2163,7 +2192,7 @@ static int video_seek_challenge(EZVID *vidx)
 	while ((cur_dts = video_keyframe_next(vidx, &packet)) >= 0) {
 		dts_first = cur_dts;
 		pos_first = packet.pos;
-		av_free_packet(&packet);
+		video_free_packet(&packet);
 		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 		if ((dts_first > dts_target) && (vidx->keycount > 10)) {
 			break;
@@ -2196,7 +2225,7 @@ static int video_seek_challenge(EZVID *vidx)
 		while ((cur_dts = video_keyframe_next(vidx, &packet)) >= 0) {
 			dts_first = cur_dts;
 			pos_first = packet.pos;
-			av_free_packet(&packet);
+			video_free_packet(&packet);
 			eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, NULL);
 			if (dts_first > dts_target) {
 				break;
@@ -2269,7 +2298,7 @@ static int video_seek_challenge(EZVID *vidx)
 		}
 		dts_second = cur_dts;
 		pos_second = packet.pos;
-		av_free_packet(&packet);
+		video_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
 		CDB_PROG(("video_seek_challenge: forward seeking "
@@ -2325,7 +2354,7 @@ static int video_seek_challenge(EZVID *vidx)
 		if ((cur_dts = video_load_packet(vidx, &packet)) < 0) {
 			break;
 		}
-		av_free_packet(&packet);
+		video_free_packet(&packet);
 		
 		error = abs((int)((cur_dts - next_dts) * 1000 / dts_span));
 		CDB_PROG(("video_seek_challenge: backward seeking "
@@ -2360,7 +2389,7 @@ static int64_t video_statistics(EZVID *vidx)
 			i = vidx->formatx->nb_streams;
 		}
 		if (i >= EZ_ST_MAX_REC) {
-			av_free_packet(&packet);
+			video_free_packet(&packet);
 			continue;
 		}
 		imax = i > imax ? i : imax;
@@ -2383,7 +2412,7 @@ static int64_t video_statistics(EZVID *vidx)
 			}
 			mestat[i].dts_last = packet.dts;
 		}
-		av_free_packet(&packet);
+		video_free_packet(&packet);
 		eznotify(vidx->sysopt, EN_OPEN_GOING, 0, 0, vidx);
 	}
 	myntf.varg1 = mestat;
@@ -2618,14 +2647,24 @@ static EZFRM *video_frame_alloc(int pixfmt, int width, int height)
 	if (width && height) {
 		/* allocate the memory buffer for holding the pixel array of
 		 * RGB frame */
+#ifdef	HAVE_AV_IMAGE_GET_BUFFER_SIZE
+		fbsize = av_image_get_buffer_size(pixfmt, width, height, 1);
+#else
 		fbsize = avpicture_get_size(pixfmt, width, height);
+#endif
 		if ((ezfrm->rf_buffer = av_malloc(fbsize)) == NULL) {
 			video_frame_free(&ezfrm);
 			return NULL;
 		}
 		/* link the RGB frame and the RBG pixel buffer */
+#ifdef	HAVE_AV_IMAGE_FILL_ARRAYS
+		av_image_fill_arrays(ezfrm->frame->data, 
+				ezfrm->frame->linesize,
+				ezfrm->rf_buffer, pixfmt, width, height, 1);
+#else
 		avpicture_fill((AVPicture *) ezfrm->frame, ezfrm->rf_buffer,
 				pixfmt, width, height);
+#endif
 	}
 	
 	/* 20120723 Initialize the rf_dts to -1 to avoid the 
@@ -2680,9 +2719,17 @@ static int video_frame_update(EZVID *vidx)
 		return 0;
 	}
 	
+#ifdef	HAVE_AV_IMAGE_COPY
+	av_image_copy(vidx->picframe->frame->data, 
+			vidx->picframe->frame->linesize, 
+			(const uint8_t **) vidx->vidframe->frame->data,
+			vidx->vidframe->frame->linesize,
+			vidx->codecx->pix_fmt, vidx->width, vidx->height);
+#else
 	av_picture_copy((AVPicture *) vidx->picframe->frame, 
 			(AVPicture *) vidx->vidframe->frame, 
 			vidx->codecx->pix_fmt, vidx->width, vidx->height);
+#endif
 	vidx->picframe->frame->pict_type = vidx->vidframe->frame->pict_type;
 	
 	vidx->picframe->rf_pts  = vidx->vidframe->rf_pts;
@@ -2797,8 +2844,13 @@ static int video_frame_save_raw(EZVID *vidx, EZFRM *ezfrm)
 		dtms += vidx->dur_off;	/* aligning the binding clips */
 	}
 	
+#ifdef	HAVE_AV_IMAGE_GET_BUFFER_SIZE
+	fbsize = av_image_get_buffer_size(ezfrm->pixfmt, 
+			ezfrm->width, ezfrm->height, 1);
+#else
 	fbsize = avpicture_get_size(ezfrm->pixfmt, 
 			ezfrm->width, ezfrm->height);
+#endif
 	sprintf(fname, "framedump_%09lld.raw", (long long) dtms);
 	if ((fout = smm_fopen(fname, "wb")) != NULL) {
 		fwrite(ezfrm->frame->data[0], 1, fbsize, fout);
@@ -2835,8 +2887,13 @@ static int video_frame_save_rgb(EZVID *vidx, EZFRM *ezfrm)
 			vidx->capframe->frame->data, 
 			vidx->capframe->frame->linesize);
 
+#ifdef	HAVE_AV_IMAGE_GET_BUFFER_SIZE
+	fbsize = av_image_get_buffer_size(vidx->capframe->pixfmt, 
+			vidx->capframe->width, vidx->capframe->height, 1);
+#else
 	fbsize = avpicture_get_size(vidx->capframe->pixfmt, 
 			vidx->capframe->width, vidx->capframe->height);
+#endif
 	sprintf(fname, "framedump_%09lld.rgb", (long long) dtms);
 	if ((fout = smm_fopen(fname, "wb")) != NULL) {
 		fwrite(vidx->capframe->frame->data[0], 1, fbsize, fout);
@@ -2850,7 +2907,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 {
 	int64_t	tmp;
 	EZFRM	*ezfrm = vidx->vidframe;
-	int	got_pict = 1;
+	int	got_pict = 0;
 
 	ezfrm->rf_pos  = packet->pos;
 	ezfrm->rf_size = 0;
@@ -2865,12 +2922,19 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 		 * a frame should keep up with the received packets */
 		ezfrm->rf_dts = video_packet_timestamp(packet);
 
+#ifdef	HAVE_AVCODEC_RECEIVE_FRAME
+		avcodec_send_packet(vidx->codecx, packet);
+		if (avcodec_receive_frame(vidx->codecx, ezfrm->frame) >= 0) {
+			got_pict = 1;
+		}
+#else
 		avcodec_decode_video2(vidx->codecx, 
 				ezfrm->frame, &got_pict, packet);
+#endif
 		
 		ezfrm->context = packet;
 		eznotify(vidx->sysopt, EN_FRAME_DONE, 0, got_pict, ezfrm);
-		av_free_packet(packet);
+		video_free_packet(packet);
 
 		/* 20150108: If a I-Frame has been successfully decoded,
 		 * the following frames can be stored in the dual frame
@@ -2880,6 +2944,8 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 			/* the reference PTS from the decoder */ 
 #if	defined(HAVE_AVFRAME_BEST_ETS)
 			ezfrm->rf_pts = ezfrm->frame->best_effort_timestamp;
+#elif	defined(HAVE_AVFRAME_PTS)
+			ezfrm->rf_pts = ezfrm->frame->pts;
 #elif	defined(HAVE_AVFRAME_PKT_PTS)
 			ezfrm->rf_pts = ezfrm->frame->pkt_pts;
 #else
@@ -2991,7 +3057,7 @@ static int64_t video_decode_safe(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 			video_decode_next(vidx, packet);
 			video_frame_update(vidx);
 		} else {
-			av_free_packet(packet);
+			video_free_packet(packet);
 		}
 	} while (video_keyframe_next(vidx, packet) >= 0);
 	return dts;
@@ -3030,7 +3096,7 @@ static int64_t video_decode_to(EZVID *vidx, AVPacket *packet, int64_t dtsto)
 		}
 
 		eznotify(vidx->sysopt, EN_FRAME_EXCEPTION, 0, 0, vidx->frame);
-		av_free_packet(packet);
+		video_free_packet(packet);
 	}
 	return -1;
 }
@@ -3081,20 +3147,20 @@ static int video_display_ar(AVStream *stream, AVRational *dar)
 
 	sar = &stream->sample_aspect_ratio;
 	if (!sar->num || !sar->den) {
-		sar = &stream->codec->sample_aspect_ratio;
+		sar = &stream->CODECP->sample_aspect_ratio;
 	}
 	if (dar == NULL) {
 		dar = &tmp;
 	}
 
 	/* convert the sample aspect ratio to display aspect ratio */
-	av_reduce(&dar->num, &dar->den, stream->codec->width * sar->num,
-			stream->codec->height * sar->den, 1024 * 1024);
+	av_reduce(&dar->num, &dar->den, stream->CODECP->width * sar->num,
+			stream->CODECP->height * sar->den, 1024 * 1024);
 
 	/* calculate the display video height by DAR correction */
-	ar_height = stream->codec->height;
+	ar_height = stream->CODECP->height;
 	if (dar->num && dar->den) {
-		ar_height = stream->codec->width * dar->den / dar->num;
+		ar_height = stream->CODECP->width * dar->den / dar->num;
 	}
 	CDB_PROG(("video_display_ar: SAR=%d:%d DAR=%d:%d Height=%d\n", 
 			sar->num, sar->den, dar->num, dar->den, ar_height));
@@ -3107,7 +3173,7 @@ static char *video_media_video(AVStream *stream, char *buffer)
 	AVRational	dar;
 	char	tmp[128];
 
-	xcodec = avcodec_find_decoder(stream->codec->codec_id);
+	xcodec = avcodec_find_decoder(stream->CODECP->codec_id);
 	if (xcodec == NULL) {
 		strcat(buffer, "Unknown Codec");
 	} else {
@@ -3115,7 +3181,7 @@ static char *video_media_video(AVStream *stream, char *buffer)
 	}
 
 	sprintf(tmp, " (Resolution: %dx%d) ", 
-			stream->codec->width, stream->codec->height);
+			stream->CODECP->width, stream->CODECP->height);
 	strcat(buffer, tmp);
 
 	video_display_ar(stream, &dar);
@@ -3131,13 +3197,15 @@ static char *video_media_video(AVStream *stream, char *buffer)
 #else	/* you are probably using libav instead of ffmpeg */
 	dar = stream->avg_frame_rate;
 #endif
+#ifndef	HAVE_AVS_CODECPAR
 	strcat(buffer, id_lookup_pix_fmt(stream->codec->pix_fmt));
+#endif
 	sprintf(tmp, "  %.3f FPS ", (float) dar.num / (float) dar.den);
 	strcat(buffer, tmp);
 
-	if (stream->codec->bit_rate) {
+	if (stream->CODECP->bit_rate) {
 		sprintf(tmp, "%.3f kbps", 
-				(float)stream->codec->bit_rate / 1000.0);
+				(float)stream->CODECP->bit_rate / 1000.0);
 		strcat(buffer, tmp);
 	}
 	return buffer;
@@ -3148,22 +3216,28 @@ static char *video_media_audio(AVStream *stream, char *buffer)
 	AVCodec	*xcodec;
 	char	tmp[128];
 
-	xcodec = avcodec_find_decoder(stream->codec->codec_id);
+	xcodec = avcodec_find_decoder(stream->CODECP->codec_id);
 	if (xcodec == NULL) {
 		strcat(buffer, "Unknown Codec");
 	} else {
 		strcat(buffer, xcodec->long_name);
 	}
 
+#ifdef	HAVE_AVS_CODECPAR
+	sprintf(tmp, ": %s %d-CH  %dHz ", video_stream_language(stream),
+			stream->CODECP->channels, 
+			stream->CODECP->sample_rate);
+#else
 	sprintf(tmp, ": %s %d-CH  %s %dHz ", video_stream_language(stream),
-			stream->codec->channels, 
+			stream->CODECP->channels, 
 			id_lookup_sample_format(stream->codec->sample_fmt),
-			stream->codec->sample_rate);
+			stream->CODECP->sample_rate);
+#endif
 	strcat(buffer, tmp);
 
-	if (stream->codec->bit_rate) {
+	if (stream->CODECP->bit_rate) {
 		sprintf(tmp, "%.3f kbps", 
-				(float)stream->codec->bit_rate / 1000.0);
+				(float)stream->CODECP->bit_rate / 1000.0);
 		strcat(buffer, tmp);
 	}
 	return buffer;
@@ -4606,7 +4680,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_INFO) {
 			stream = block;
 			dump_stream_common(stream, param);
-			dump_video_context(stream->codec);
+			dump_video_context(stream);
 			dump_metadata(stream->metadata);
 		}
 		break;
@@ -4614,7 +4688,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_INFO) {
 			stream = block;
 			dump_stream_common(stream, param);
-			dump_audio_context(stream->codec);
+			dump_audio_context(stream);
 			dump_metadata(stream->metadata);
 		}
 		break;
@@ -4622,7 +4696,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_INFO) {
 			stream = block;
 			dump_stream_common(stream, param);
-			dump_subtitle_context(stream->codec);
+			dump_subtitle_context(stream);
 			dump_metadata(stream->metadata);
 		}
 		break;
@@ -4630,7 +4704,7 @@ static int ezdefault(EZOPT *ezopt, int event,
 		if (EZOP_DEBUG(ezopt->flags) >= SLOG_LVL_INFO) {
 			stream = block;
 			dump_stream_common(stream, param);
-			dump_other_context(stream->codec);
+			dump_other_context(stream);
 			dump_metadata(stream->metadata);
 		}
 		break;
@@ -4687,18 +4761,19 @@ static int ezdefault(EZOPT *ezopt, int event,
 
 static int dump_media_brief(EZVID *vidx)
 {
-	AVCodecContext	*codecx;
+	AVStream	*stream;
 	char	tmp[16];
 	int	i, sec;
 
 	for (i = 0; i < (int)vidx->formatx->nb_streams; i++) {
-		codecx = vidx->formatx->streams[i]->codec;
-		if (codecx->codec_type == AVMEDIA_TYPE_VIDEO) {
+		stream = vidx->formatx->streams[i];
+		if (stream->CODECP->codec_type == AVMEDIA_TYPE_VIDEO) {
 			/* Fixed: the video information should use the actual
 			 * duration of the clip */
 			//sec = (int)(vidx->formatx->duration / AV_TIME_BASE);
 			sec = vidx->duration / 1000;
-			sprintf(tmp, "%dx%d", codecx->width, codecx->height);
+			sprintf(tmp, "%dx%d", stream->CODECP->width, 
+					stream->CODECP->height);
 			CDB_SHOW(("%2d:%02d:%02d %10s [%d]: %s\n",
 					sec / 3600,
 					(sec % 3600) / 60, 
@@ -4722,7 +4797,7 @@ static int dump_media_statistic(struct MeStat *mestat, int n, EZVID *vidx)
 			continue;
 		}
 		
-		switch(vidx->formatx->streams[i]->codec->codec_type) {
+		switch(vidx->formatx->streams[i]->CODECP->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:
 			CDB_SHOW(("VIDEO  "));
 			break;
@@ -4788,11 +4863,11 @@ static int dump_stream_common(AVStream *stream, int sidx)
 #else	/* you are probably using libav instead of ffmpeg */
 	rf_rate = stream->avg_frame_rate;
 #endif
-	xcodec = avcodec_find_decoder(stream->codec->codec_id);
+	xcodec = avcodec_find_decoder(stream->CODECP->codec_id);
 	CDB_SHOW(("Stream #%d:%d: %s; Codec ID: %s; '%s' %s\n", 
 			sidx, stream->id,
-			id_lookup_codec_type(stream->codec->codec_type),
-			id_lookup_codec(stream->codec->codec_id),
+			id_lookup_codec_type(stream->CODECP->codec_type),
+			id_lookup_codec(stream->CODECP->codec_id),
 			xcodec ? xcodec->name : "Unknown",
 			xcodec ? xcodec->long_name : "Unknown"));
 	CDB_SHOW(("  Start Time  : %" PRId64 "; Duration: %" PRId64 
@@ -4806,45 +4881,79 @@ static int dump_stream_common(AVStream *stream, int sidx)
 	return 0;
 }
 
-static int dump_video_context(AVCodecContext *codec)
+static int dump_video_context(AVStream *stream)
 {
+#ifdef	HAVE_AVS_CODECPAR
+	CDB_SHOW(("  Video Codec : %dx%d; Time Base: %d/%d; "
+				"BR=%d; AR: %d/%d\n",
+			stream->CODECP->width, stream->CODECP->height,
+			stream->time_base.num, 
+			stream->time_base.den,
+			stream->CODECP->bit_rate, 
+			stream->CODECP->sample_aspect_ratio.num,
+			stream->CODECP->sample_aspect_ratio.den));
+#else
 	CDB_SHOW(("  Video Codec : %s; %dx%d+%d; Time Base: %d/%d; "
 				"BR=%d BF=%d; AR: %d/%d\n",
-			id_lookup_pix_fmt(codec->pix_fmt),
-			codec->width, codec->height, 
-			codec->frame_number, 
-			codec->time_base.num, codec->time_base.den,
-			codec->bit_rate, 
-			codec->has_b_frames,
-			codec->sample_aspect_ratio.num,
-			codec->sample_aspect_ratio.den));
+			id_lookup_pix_fmt(stream->codec->pix_fmt),
+			stream->CODECP->width, stream->CODECP->height,
+			stream->codec->frame_number, 
+			stream->codec->time_base.num,
+			stream->codec->time_base.den,
+			stream->CODECP->bit_rate, 
+			stream->codec->has_b_frames,
+			stream->CODECP->sample_aspect_ratio.num,
+			stream->CODECP->sample_aspect_ratio.den));
+#endif
 	return 0;
 }
 
-static int dump_audio_context(AVCodecContext *codec)
+static int dump_audio_context(AVStream *stream)
 {
+#ifdef	HAVE_AVS_CODECPAR
+	CDB_SHOW(("  Audio Codec : %s; Time Base: %d/%d; "
+				"CH=%d SR=%d BR=%d\n",
+			id_lookup_codec(stream->CODECP->codec_id),
+			stream->time_base.num, 
+			stream->time_base.den,
+			stream->CODECP->channels, 
+			stream->CODECP->sample_rate,
+			stream->CODECP->bit_rate));
+#else
 	CDB_SHOW(("  Audio Codec : %s; Time Base: %d/%d; "
 				"CH=%d SR=%d %s BR=%d\n",
-			id_lookup_codec(codec->codec_id),
-			codec->time_base.num, codec->time_base.den,
-			codec->channels, codec->sample_rate,
-			id_lookup_sample_format(codec->sample_fmt),
-			codec->bit_rate));
+			id_lookup_codec(stream->CODECP->codec_id),
+			stream->codec->time_base.num,
+			stream->codec->time_base.den,
+			stream->CODECP->channels, 
+			stream->CODECP->sample_rate,
+			id_lookup_sample_format(stream->codec->sample_fmt),
+			stream->CODECP->bit_rate));
+#endif
 	return 0;
 }
 
-static int dump_subtitle_context(AVCodecContext *codec)
+static int dump_subtitle_context(AVStream *stream)
 {
+#ifdef	HAVE_AVS_CODECPAR
 	CDB_SHOW(("  Subtitles   : %s; Time Base: %d/%d; BR=%d\n",
-			id_lookup_codec(codec->codec_id),
-			codec->time_base.num, codec->time_base.den,
-			codec->bit_rate));
+			id_lookup_codec(stream->CODECP->codec_id),
+			stream->time_base.num, 
+			stream->time_base.den,
+			stream->CODECP->bit_rate));
+#else
+	CDB_SHOW(("  Subtitles   : %s; Time Base: %d/%d; BR=%d\n",
+			id_lookup_codec(stream->CODECP->codec_id),
+			stream->codec->time_base.num,
+			stream->codec->time_base.den,
+			stream->CODECP->bit_rate));
+#endif
 	return 0;
 }
 
-static int dump_other_context(AVCodecContext *codec)
+static int dump_other_context(AVStream *stream)
 {
-	(void) codec;		/* stop the gcc warning */
+	(void) stream;		/* stop the gcc warning */
 	return 0;
 }
 

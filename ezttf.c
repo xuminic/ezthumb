@@ -189,7 +189,7 @@ int ezttf_close(void)
 char *ezttf_faceoff(char *fontface)
 {
 	char	buf[256];
-	int	i, value, style, can_val, can_idx = -1;
+	int	i, value, style, can_val = 0, can_idx = -1;
 	
 	//CDB_DEBUG(("FACEOFF: %s\n", fontface));
 	
