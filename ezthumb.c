@@ -1443,6 +1443,7 @@ static int video_open(EZVID *vidx)
 #ifdef	HAVE_AVCODEC_ALLOC_CONTEXT3
 	codec = avcodec_find_decoder(vidx->vstream->codecpar->codec_id);
 	vidx->codecx = avcodec_alloc_context3(codec);
+	avcodec_parameters_to_context(vidx->codecx, vidx->vstream->codecpar);
 	av_codec_set_pkt_timebase(vidx->codecx, vidx->vstream->time_base);
 	vidx->codecx->framerate = vidx->vstream->avg_frame_rate;
 #else
@@ -1491,8 +1492,8 @@ static int video_close(EZVID *vidx)
 {
 	vidx->vstream = NULL;
 	if (vidx->codecx) {
-#ifdef	HAVE_AVCODEC_ALLOC_CONTEXT
-		avcodec_free_context(vidx->codecx);
+#ifdef	HAVE_AVCODEC_ALLOC_CONTEXT3
+		avcodec_free_context(&vidx->codecx);
 #else
 		avcodec_close(vidx->codecx);
 #endif
