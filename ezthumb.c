@@ -1459,7 +1459,7 @@ static int video_open(EZVID *vidx)
 	vidx->vstream->discard = AVDISCARD_ALL;
 
 	/* open the codec */
-#ifdef	HAVE_AVCODEC_ALLOC_CONTEXT3
+#ifdef	HAVE_AVS_CODECPAR
 	codec = avcodec_find_decoder(vidx->vstream->codecpar->codec_id);
 	vidx->codecx = avcodec_alloc_context3(codec);
 	avcodec_parameters_to_context(vidx->codecx, vidx->vstream->codecpar);
@@ -1511,7 +1511,7 @@ static int video_close(EZVID *vidx)
 {
 	vidx->vstream = NULL;
 	if (vidx->codecx) {
-#ifdef	HAVE_AVCODEC_ALLOC_CONTEXT3
+#ifdef	HAVE_AVS_CODECPAR
 		avcodec_free_context(&vidx->codecx);
 #else
 		avcodec_close(vidx->codecx);

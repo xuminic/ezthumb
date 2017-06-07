@@ -116,7 +116,7 @@ all-local:
 	mkdir "$(distdir)-win32-bin"
 	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"
 	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"
-	cp -a ezthumb*.exe ezqiz "$(distdir)-win32-bin"
+	cp -a EzthumbWin.exe ezthumb.exe ezqiz "$(distdir)-win32-bin"
 	cp -a COPYING ChangeLog Readme.txt TODO "$(distdir)-win32-bin"
 endif
 

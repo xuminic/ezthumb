@@ -46,7 +46,8 @@ Section "Ezthumb (required)"
   SetOutPath $INSTDIR
   
   ; Put file there
-  File "ezthumb*.exe"
+  File "ezthumb.exe"
+  File "EzthumbWin.exe"
   File "ezthumb.1"
   File "ezthumb.pdf"
   File "ezthumb.ico"
