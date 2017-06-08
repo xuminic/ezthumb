@@ -39,8 +39,9 @@
     <li><a name="toc-mjpega_005fdump_005fheader" href="#mjpega_005fdump_005fheader">2.7 mjpega_dump_header</a></li>
     <li><a name="toc-movsub" href="#movsub">2.8 movsub</a></li>
     <li><a name="toc-mp3_005fheader_005fdecompress" href="#mp3_005fheader_005fdecompress">2.9 mp3_header_decompress</a></li>
-    <li><a name="toc-noise" href="#noise">2.10 noise</a></li>
-    <li><a name="toc-remove_005fextra" href="#remove_005fextra">2.11 remove_extra</a></li>
+    <li><a name="toc-mpeg4_005funpack_005fbframes" href="#mpeg4_005funpack_005fbframes">2.10 mpeg4_unpack_bframes</a></li>
+    <li><a name="toc-noise" href="#noise">2.11 noise</a></li>
+    <li><a name="toc-remove_005fextra" href="#remove_005fextra">2.12 remove_extra</a></li>
   </ul></li>
   <li><a name="toc-See-Also" href="#See-Also">3 See Also</a></li>
   <li><a name="toc-Authors" href="#Authors">4 Authors</a></li>
@@ -211,8 +212,29 @@ ffmpeg -i frame_%d.jpg -c:v copy rotated.avi
 <a name="mp3_005fheader_005fdecompress"></a>
 <h3 class="section">2.9 mp3_header_decompress<span class="pull-right"><a class="anchor hidden-xs" href="#mp3_005fheader_005fdecompress" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-mp3_005fheader_005fdecompress" aria-hidden="true">TOC</a></span></h3>
 
+<a name="mpeg4_005funpack_005fbframes"></a>
+<h3 class="section">2.10 mpeg4_unpack_bframes<span class="pull-right"><a class="anchor hidden-xs" href="#mpeg4_005funpack_005fbframes" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-mpeg4_005funpack_005fbframes" aria-hidden="true">TOC</a></span></h3>
+
+<p>Unpack DivX-style packed B-frames.
+</p>
+<p>DivX-style packed B-frames are not valid MPEG-4 and were only a
+workaround for the broken Video for Windows subsystem.
+They use more space, can cause minor AV sync issues, require more
+CPU power to decode (unless the player has some decoded picture queue
+to compensate the 2,0,2,0 frame per packet style) and cause
+trouble if copied into a standard container like mp4 or mpeg-ps/ts,
+because MPEG-4 decoders may not be able to decode them, since they are
+not valid MPEG-4.
+</p>
+<p>For example to fix an AVI file containing an MPEG-4 stream with
+DivX-style packed B-frames using <code>ffmpeg</code>, you can use the command:
+</p>
+<div class="example">
+<pre class="example">ffmpeg -i INPUT.avi -codec copy -bsf:v mpeg4_unpack_bframes OUTPUT.avi
+</pre></div>
+
 <a name="noise"></a>
-<h3 class="section">2.10 noise<span class="pull-right"><a class="anchor hidden-xs" href="#noise" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-noise" aria-hidden="true">TOC</a></span></h3>
+<h3 class="section">2.11 noise<span class="pull-right"><a class="anchor hidden-xs" href="#noise" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-noise" aria-hidden="true">TOC</a></span></h3>
 
 <p>Damages the contents of packets without damaging the container. Can be
 used for fuzzing or testing error resilience/concealment.
@@ -229,7 +251,7 @@ every byte is modified.
 <p>applies the modification to every byte.
 </p>
 <a name="remove_005fextra"></a>
-<h3 class="section">2.11 remove_extra<span class="pull-right"><a class="anchor hidden-xs" href="#remove_005fextra" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-remove_005fextra" aria-hidden="true">TOC</a></span></h3>
+<h3 class="section">2.12 remove_extra<span class="pull-right"><a class="anchor hidden-xs" href="#remove_005fextra" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-remove_005fextra" aria-hidden="true">TOC</a></span></h3>
 
 
 <a name="See-Also"></a>

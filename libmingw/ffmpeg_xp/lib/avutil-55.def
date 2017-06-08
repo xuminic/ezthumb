@@ -233,11 +233,7 @@ EXPORTS
     av_hmac_init
     av_hmac_update
     av_hwdevice_ctx_alloc
-    av_hwdevice_ctx_create
     av_hwdevice_ctx_init
-    av_hwdevice_get_hwframe_constraints
-    av_hwdevice_hwconfig_alloc
-    av_hwframe_constraints_free
     av_hwframe_ctx_alloc
     av_hwframe_ctx_init
     av_hwframe_get_buffer
@@ -265,7 +261,6 @@ EXPORTS
     av_log2_i
     av_log_default_callback
     av_log_format_line
-    av_log_format_line2
     av_log_get_flags
     av_log_get_level
     av_log_set_callback
@@ -403,8 +398,6 @@ EXPORTS
     av_small_strptime
     av_stereo3d_alloc
     av_stereo3d_create_side_data
-    av_stereo3d_from_name
-    av_stereo3d_type_name
     av_strcasecmp
     av_strdup
     av_strerror
@@ -478,7 +471,6 @@ EXPORTS
     avpriv_scalarproduct_float_c
     avpriv_set_systematic_pal2
     avpriv_solve_lls
-    avpriv_tempfile
     avpriv_vga16_font DATA
     avutil_configuration
     avutil_license

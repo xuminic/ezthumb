@@ -134,8 +134,10 @@ or <code>-codec: copy</code> would copy all the streams without reencoding.
 thread count for the second stream to 4.
 </p></dd>
 <dt><samp><var>stream_type</var>[:<var>stream_index</var>]</samp></dt>
-<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo; for subtitle,
-&rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. If <var>stream_index</var> is given, then it matches
+<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; or &rsquo;V&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo;
+for subtitle, &rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. &rsquo;v&rsquo; matches all video
+streams, &rsquo;V&rsquo; only matches video streams which are not attached pictures, video
+thumbnails or cover arts.  If <var>stream_index</var> is given, then it matches
 stream number <var>stream_index</var> of this type. Otherwise, it matches all
 streams of this type.
 </p></dd>
@@ -151,6 +153,10 @@ program.
 <dd><p>Matches streams with the metadata tag <var>key</var> having the specified value. If
 <var>value</var> is not given, matches streams that contain the given tag with any
 value.
+</p></dd>
+<dt><samp>u</samp></dt>
+<dd><p>Matches streams with usable configuration, the codec must be defined and the
+essential information such as video dimension or audio sample rate must be present.
 </p>
 <p>Note that in <code>ffmpeg</code>, matching by metadata will only work properly for
 input files.
@@ -321,6 +327,7 @@ warnings and errors. This is the default value.
 <dt>&lsquo;<samp>debug, 48</samp>&rsquo;</dt>
 <dd><p>Show everything, including debugging information.
 </p></dd>
+<dt>&lsquo;<samp>trace, 56</samp>&rsquo;</dt>
 </dl>
 
 <p>By default the program logs to stderr, if coloring is supported by the
@@ -400,10 +407,14 @@ ffmpeg -cpuflags 0 ...
 <dt>&lsquo;<samp>sse4.1</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>sse4.2</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>avx</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>avx2</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>xop</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>fma3</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>fma4</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>3dnow</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>3dnowext</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>bmi1</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>bmi2</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>cmov</samp>&rsquo;</dt>
 </dl>
 </dd>
@@ -414,6 +425,14 @@ ffmpeg -cpuflags 0 ...
 <dt>&lsquo;<samp>armv6t2</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>vfp</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>vfpv3</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>neon</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>setend</samp>&rsquo;</dt>
+</dl>
+</dd>
+<dt>&lsquo;<samp>AArch64</samp>&rsquo;</dt>
+<dd><dl compact="compact">
+<dt>&lsquo;<samp>armv8</samp>&rsquo;</dt>
+<dt>&lsquo;<samp>vfp</samp>&rsquo;</dt>
 <dt>&lsquo;<samp>neon</samp>&rsquo;</dt>
 </dl>
 </dd>
@@ -946,18 +965,18 @@ writer).
 <p>It can assume one of the following values:
 </p><dl compact="compact">
 <dt><samp>c</samp></dt>
-<dd><p>Perform C-like escaping. Strings containing a newline (&rsquo;\n&rsquo;), carriage
-return (&rsquo;\r&rsquo;), a tab (&rsquo;\t&rsquo;), a form feed (&rsquo;\f&rsquo;), the escaping
-character (&rsquo;\&rsquo;) or the item separator character <var>SEP</var> are escaped using C-like fashioned
-escaping, so that a newline is converted to the sequence &quot;\n&quot;, a
-carriage return to &quot;\r&quot;, &rsquo;\&rsquo; to &quot;\\&quot; and the separator <var>SEP</var> is
-converted to &quot;\<var>SEP</var>&quot;.
+<dd><p>Perform C-like escaping. Strings containing a newline (&lsquo;<samp>\n</samp>&rsquo;), carriage
+return (&lsquo;<samp>\r</samp>&rsquo;), a tab (&lsquo;<samp>\t</samp>&rsquo;), a form feed (&lsquo;<samp>\f</samp>&rsquo;), the escaping
+character (&lsquo;<samp>\</samp>&rsquo;) or the item separator character <var>SEP</var> are escaped
+using C-like fashioned escaping, so that a newline is converted to the
+sequence &lsquo;<samp>\n</samp>&rsquo;, a carriage return to &lsquo;<samp>\r</samp>&rsquo;, &lsquo;<samp>\</samp>&rsquo; to &lsquo;<samp>\\</samp>&rsquo; and
+the separator <var>SEP</var> is converted to &lsquo;<samp>\<var>SEP</var></samp>&rsquo;.
 </p>
 </dd>
 <dt><samp>csv</samp></dt>
 <dd><p>Perform CSV-like escaping, as described in RFC4180.  Strings
-containing a newline (&rsquo;\n&rsquo;), a carriage return (&rsquo;\r&rsquo;), a double quote
-(&rsquo;&quot;&rsquo;), or <var>SEP</var> are enclosed in double-quotes.
+containing a newline (&lsquo;<samp>\n</samp>&rsquo;), a carriage return (&lsquo;<samp>\r</samp>&rsquo;), a double quote
+(&lsquo;<samp>&quot;</samp>&rsquo;), or <var>SEP</var> are enclosed in double-quotes.
 </p>
 </dd>
 <dt><samp>none</samp></dt>
@@ -990,7 +1009,7 @@ alphanumeric character or an underscore (see <var>sep_char</var> option).
 <dd><p>Separator character used to separate the chapter, the section name, IDs and
 potential tags in the printed field key.
 </p>
-<p>Default value is &rsquo;.&rsquo;.
+<p>Default value is &lsquo;<samp>.</samp>&rsquo;.
 </p>
 </dd>
 <dt><samp>hierarchical, h</samp></dt>
@@ -1013,16 +1032,17 @@ chapter. A value of 0 will disable this behavior.
 </p>
 <ul>
 <li> all key and values are UTF-8
-</li><li> &rsquo;.&rsquo; is the subgroup separator
-</li><li> newline, &rsquo;\t&rsquo;, &rsquo;\f&rsquo;, &rsquo;\b&rsquo; and the following characters are escaped
-</li><li> &rsquo;\&rsquo; is the escape character
-</li><li> &rsquo;#&rsquo; is the comment indicator
-</li><li> &rsquo;=&rsquo; is the key/value separator
-</li><li> &rsquo;:&rsquo; is not used but usually parsed as key/value separator
+</li><li> &lsquo;<samp>.</samp>&rsquo; is the subgroup separator
+</li><li> newline, &lsquo;<samp>\t</samp>&rsquo;, &lsquo;<samp>\f</samp>&rsquo;, &lsquo;<samp>\b</samp>&rsquo; and the following characters are
+escaped
+</li><li> &lsquo;<samp>\</samp>&rsquo; is the escape character
+</li><li> &lsquo;<samp>#</samp>&rsquo; is the comment indicator
+</li><li> &lsquo;<samp>=</samp>&rsquo; is the key/value separator
+</li><li> &lsquo;<samp>:</samp>&rsquo; is not used but usually parsed as key/value separator
 </li></ul>
 
 <p>This writer accepts options as a list of <var>key</var>=<var>value</var> pairs,
-separated by &quot;:&quot;.
+separated by &lsquo;<samp>:</samp>&rsquo;.
 </p>
 <p>The description of the accepted options follows.
 </p>

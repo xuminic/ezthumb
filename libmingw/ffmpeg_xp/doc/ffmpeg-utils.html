@@ -73,15 +73,15 @@ libraries and tools.
 explicitly specified. The following rules are applied:
 </p>
 <ul>
-<li> <code>'</code> and <code>\</code> are special characters (respectively used for
+<li> &lsquo;<samp>'</samp>&rsquo; and &lsquo;<samp>\</samp>&rsquo; are special characters (respectively used for
 quoting and escaping). In addition to them, there might be other
 special characters depending on the specific syntax where the escaping
 and quoting are employed.
 
-</li><li> A special character is escaped by prefixing it with a &rsquo;\&rsquo;.
+</li><li> A special character is escaped by prefixing it with a &lsquo;<samp>\</samp>&rsquo;.
 
-</li><li> All characters enclosed between &rdquo; are included literally in the
-parsed string. The quote character <code>'</code> itself cannot be quoted,
+</li><li> All characters enclosed between &lsquo;<samp>''</samp>&rsquo; are included literally in the
+parsed string. The quote character &lsquo;<samp>'</samp>&rsquo; itself cannot be quoted,
 so you may need to close the quote and escape it.
 
 </li><li> Leading and trailing whitespaces, unless escaped or quoted, are
@@ -125,7 +125,7 @@ when quoting it:
 <pre class="example">' The string '\'string\'' is a string '
 </pre></div>
 
-</li><li> To include a literal <code>\</code> you can use either escaping or quoting:
+</li><li> To include a literal &lsquo;<samp>\</samp>&rsquo; you can use either escaping or quoting:
 <div class="example">
 <pre class="example">'c:\foo' can be written as c:\\foo
 </pre></div>
@@ -344,6 +344,18 @@ maximum of 2 digits. The <var>m</var> at the end expresses decimal value for
 </p></dd>
 <dt>&lsquo;<samp>qhd</samp>&rsquo;</dt>
 <dd><p>960x540
+</p></dd>
+<dt>&lsquo;<samp>2kdci</samp>&rsquo;</dt>
+<dd><p>2048x1080
+</p></dd>
+<dt>&lsquo;<samp>4kdci</samp>&rsquo;</dt>
+<dd><p>4096x2160
+</p></dd>
+<dt>&lsquo;<samp>uhd2160</samp>&rsquo;</dt>
+<dd><p>3840x2160
+</p></dd>
+<dt>&lsquo;<samp>uhd4320</samp>&rsquo;</dt>
+<dd><p>7680x4320
 </p></dd>
 </dl>
 
@@ -1170,7 +1182,7 @@ result of <var>y</var>, otherwise the evaluation result of <var>z</var>.
 </p>
 </dd>
 <dt><samp>ld(var)</samp></dt>
-<dd><p>Allow to load the value of the internal variable with number
+<dd><p>Load the value of the internal variable with number
 <var>var</var>, which was previously stored with st(<var>var</var>, <var>expr</var>).
 The function returns the loaded value.
 </p>
@@ -1254,7 +1266,7 @@ corresponding input value will be returned.
 </p>
 </dd>
 <dt><samp>st(var, expr)</samp></dt>
-<dd><p>Allow to store the value of the expression <var>expr</var> in an internal
+<dd><p>Store the value of the expression <var>expr</var> in an internal
 variable. <var>var</var> specifies the number of the variable where to
 store the value, and it is a value ranging from 0 to 9. The function
 returns the value stored in the internal variable.

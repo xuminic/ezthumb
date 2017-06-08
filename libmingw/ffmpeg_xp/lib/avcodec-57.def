@@ -9,14 +9,6 @@ EXPORTS
     av_bitstream_filter_filter
     av_bitstream_filter_init
     av_bitstream_filter_next
-    av_bsf_alloc
-    av_bsf_free
-    av_bsf_get_by_name
-    av_bsf_get_class
-    av_bsf_init
-    av_bsf_next
-    av_bsf_receive_packet
-    av_bsf_send_packet
     av_codec_ffversion DATA
     av_codec_get_chroma_intra_matrix
     av_codec_get_codec_descriptor
@@ -53,7 +45,6 @@ EXPORTS
     av_fft_permute
     av_free_packet
     av_get_audio_frame_duration
-    av_get_audio_frame_duration2
     av_get_bits_per_sample
     av_get_codec_tag_string
     av_get_exact_bits_per_sample
@@ -64,8 +55,6 @@ EXPORTS
     av_imdct_calc
     av_imdct_half
     av_init_packet
-    av_jni_get_java_vm
-    av_jni_set_java_vm
     av_lockmgr_register
     av_log_ask_for_sample
     av_log_missing_feature
@@ -165,19 +154,10 @@ EXPORTS
     avcodec_is_open
     avcodec_license
     avcodec_open2
-    avcodec_parameters_alloc
-    avcodec_parameters_copy
-    avcodec_parameters_free
-    avcodec_parameters_from_context
-    avcodec_parameters_to_context
     avcodec_pix_fmt_to_codec_tag
     avcodec_profile_name
-    avcodec_receive_frame
-    avcodec_receive_packet
     avcodec_register
     avcodec_register_all
-    avcodec_send_frame
-    avcodec_send_packet
     avcodec_set_dimensions
     avcodec_string
     avcodec_version
@@ -193,7 +173,6 @@ EXPORTS
     avpriv_ac3_parse_header
     avpriv_align_put_bits
     avpriv_bprint_to_extradata
-    avpriv_codec_get_cap_skip_frame_fill_param
     avpriv_copy_bits
     avpriv_copy_pce_data
     avpriv_dca_convert_bitstream
