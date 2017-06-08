@@ -1,0 +1,32 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+
+# In this Project
+ezthumb
+*.avi
+*.wmv
+*.jpg
+*.gif
+config.log
+config.status
+stamp-h1
+external/libcsoup/main/main_define.h
