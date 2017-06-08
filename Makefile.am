@@ -86,11 +86,11 @@ clean-local:
 	if test -f "EzthumbWin$(EXEEXT)"; then \
 		rm -f EzthumbWin$(EXEEXT); \
 	fi; \
-	if test -f "$(distdir)-setup.exe"; then \
-		rm -f $(distdir)-setup.exe; \
+	if test -f "$(distdir)-$(WIN32BR)-setup.exe"; then \
+		rm -f $(distdir)-$(WIN32BR)-setup.exe; \
 	fi; \
-	if test -d "$(distdir)-win32-bin"; then \
-		rm -rf "$(distdir)-win32-bin"; \
+	if test -d "$(distdir)-$(WIN32BR)-bin"; then \
+		rm -rf "$(distdir)-$(WIN32BR)-bin"; \
 	fi
 endif
 
@@ -110,14 +110,14 @@ release: $(RELEASE)
 
 if	XAM_MSWIN
 all-local:
-	if test -d "$(distdir)-win32-bin"; then \
-		rm -rf "$(distdir)-win32-bin"; \
+	if test -d "$(distdir)-$(WIN32BR)-bin"; then \
+		rm -rf "$(distdir)-$(WIN32BR)-bin"; \
 	fi
-	mkdir "$(distdir)-win32-bin"
-	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-win32-bin"
-	cp -a ./libmingw/ffmpeg/bin/*.dll "$(distdir)-win32-bin"
-	cp -a EzthumbWin.exe ezthumb.exe ezqiz "$(distdir)-win32-bin"
-	cp -a COPYING ChangeLog Readme.txt TODO "$(distdir)-win32-bin"
+	mkdir "$(distdir)-$(WIN32BR)-bin"
+	cp -a ezthumb.1 ezthumb.pdf ezthumb.ico "$(distdir)-$(WIN32BR)-bin"
+	cp -a $(WINFFMPEG)/bin/*.dll "$(distdir)-$(WIN32BR)-bin"
+	cp -a EzthumbWin.exe ezthumb.exe ezqiz "$(distdir)-$(WIN32BR)-bin"
+	cp -a COPYING ChangeLog Readme.txt TODO "$(distdir)-$(WIN32BR)-bin"
 endif
 
 gnome-install: install
@@ -137,6 +137,7 @@ gnome-uninstall: uninstall
 
 installer-win: all
 	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.txt
+	@echo "!define $(WIN32BR)" >> nsis_version.txt
 	$(NSIS) ezthumb.nsi
 	@$(RM) nsis_version.txt 
 

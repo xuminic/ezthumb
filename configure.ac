@@ -68,12 +68,16 @@ AC_ARG_WITH([gui],
   AS_HELP_STRING([--with-gui], 
       [Build with the Graphic User Interface [yes] (no|gtk|gtk2|gtk3)]))
 
-AC_ARG_WITH([simple-label], 
-  AS_HELP_STRING([--with-simple-label], 
-      [Using simple display of the media information [yes] ]))
-AS_IF([test "$with_simple_label" = no],
-  [AC_DEFINE(HAVE_MULTILINE_LABEL, 1, 
-    [Define 1 if you need multiple lines of media information. ])])
+AC_ARG_WITH([winxp], 
+  AS_HELP_STRING([--with-winxp], 
+      [Make a build for running on 32-bit Windows XP [yes] ]))
+AS_IF([test "$with_winxpl" = no], [
+  WIN32BR=win7
+  WINFFMPEG="./libmingw/ffmpeg"
+], [
+  WIN32BR=winxp
+  WINFFMPEG="./libmingw/ffmpeg_xp"
+])
 
 case "$host_os" in
   cygwin | mingw*)
@@ -88,8 +92,8 @@ case "$host_os" in
      [AC_MSG_WARN([NSIS package not installed. \
       You may not be able to create the installer executables.])])
     CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/iup/include \
-	    -I./libmingw/ffmpeg/include"
-    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/ffmpeg/lib -L./libmingw/iup"
+	    -I$WINFFMPEG/include"
+    LDFLAGS="$LDFLAGS -L./libmingw/lib -L$WINFFMPEG/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
 
     # -DNONDLL is for static linking the libgd
@@ -274,6 +278,8 @@ AC_SUBST(PREFLIB)
 AC_SUBST(POSTLIB)
 AC_SUBST(CURRLIB)
 AC_SUBST(RELEASE)
+AC_SUBST(WIN32BR)
+AC_SUBST(WINFFMPEG)
 
 # This is for Win32 GUI porting only
 WIN32GUI="$LIBS -liup -liupimglib -liconv -mwindows -lkernel32 -luser32 \
