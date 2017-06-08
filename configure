@@ -4081,7 +4081,7 @@ if test "${with_winxp+set}" = set; then :
   withval=$with_winxp;
 fi
 
-if test "$with_winxpl" = no; then :
+if test "$with_winxp" = no; then :
 
   WIN32BR=win7
   WINFFMPEG="./libmingw/ffmpeg"

@@ -71,7 +71,7 @@ AC_ARG_WITH([gui],
 AC_ARG_WITH([winxp], 
   AS_HELP_STRING([--with-winxp], 
       [Make a build for running on 32-bit Windows XP [yes] ]))
-AS_IF([test "$with_winxpl" = no], [
+AS_IF([test "$with_winxp" = no], [
   WIN32BR=win7
   WINFFMPEG="./libmingw/ffmpeg"
 ], [

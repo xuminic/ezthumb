@@ -136,7 +136,7 @@ gnome-uninstall: uninstall
 	gtk-update-icon-cache -f /usr/share/icons/hicolor
 
 installer-win: all
-	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.txt
+	@echo "OutFile \"$(distdir)-$(WIN32BR)-setup.exe\"" > nsis_version.txt
 	@echo "!define $(WIN32BR)" >> nsis_version.txt
 	$(NSIS) ezthumb.nsi
 	@$(RM) nsis_version.txt 
