@@ -1,3 +1,9 @@
+20170608: 3.6.6
+	* ezthumb.c: Fixed the bug which failed to use ffmpeg 3.x new API
+	properly.
+	* configure.ac: Fixed a bug which failed to install the new named
+	EzthumbWin.exe.
+
 20170602: 3.6.5
 	* ezgui.c: The progress bar dialog will inherit the configuration from
 	the ezthumb GUI dialog.

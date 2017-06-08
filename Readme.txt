@@ -13,6 +13,10 @@ curve profiles.
 
 Release Notes
 =============
+Version 3.6.6:
+*) Support new API in FFMPEG 3.x
+*) Fixed a bug which failed to install EzthumbWin.exe.
+
 Version 3.6.5:
 *) The progress bar dialog will inherit the configuration from the ezthumb GUI dialog.
 *) Fixed a bug that Chinese characters were failed to pass to the progress bar dialog.
@@ -177,7 +181,9 @@ to generate an install file.
 Credits
 =======
 
-FFmpeg Win32 builds were shared by:
+FFmpeg Win32 shared build by Kyle Schwarz from Zeranoe's:
+http://ffmpeg.zeranoe.com/builds/
+You may find source codes of FFMPEG at
 https://www.ffmpeg.org/
 
 Following Libraries were grabbed from GnuWin:
