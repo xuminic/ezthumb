@@ -1,3 +1,9 @@
+20170609: 0.9.10
+	* csc_url_decode.c: supported URL decoding.
+
+20170609: 0.9.9
+	* csc_gettoken.c: hardened for avoiding the buffer overflow.
+
 20170530: 0.9.8
 	* smm_fontpath.c: fixed a bug in Windows that failed to search the
 	font directory.

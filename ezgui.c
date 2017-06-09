@@ -2706,6 +2706,7 @@ static int ezgui_sview_event_dropfiles(Ihandle *ih,
 		const char* filename, int num, int x, int y)
 {
 	SView	*sview;
+	char	*tmp;
 
 	(void)num; (void)x; (void)y;
 
@@ -2715,7 +2716,19 @@ static int ezgui_sview_event_dropfiles(Ihandle *ih,
 
 	CDB_DEBUG(("EVT_Dropfiles: fname=%s number=%d %dx%d\n",
 				filename, num, x, y));
-	ezgui_sview_file_append(sview, (char*) filename);
+
+	if ((tmp = csc_strcpy_alloc(filename, 0)) == NULL) {
+		CDB_ERROR(("EVT_Dropfiles: low memory.\n"));
+		return IUP_DEFAULT;
+	}
+
+#ifdef	CFG_WIN32RT
+	ezgui_sview_file_append(sview, tmp);
+#else
+	csc_url_decode(tmp, strlen(filename)+1, (char*) filename);
+	ezgui_sview_file_append(sview, tmp);
+#endif
+	smm_free(tmp);
 	/* highlight the RUN button when the list is not empty */
 	ezgui_sview_active_update(sview, 
 			EZGUI_SVIEW_ACTIVE_CONTENT, sview->svnum);
