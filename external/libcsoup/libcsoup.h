@@ -32,7 +32,7 @@
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
 #define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	8		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	9		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -431,7 +431,7 @@ int csc_ziptoken(char *sour, char **idx, int ids, char *delim);
 char **csc_ziptoken_copy(char *sour, char *delim, int *ids);
 int csc_isdelim(char *delim, int ch);
 char *csc_cuttoken(char *sour, char **token, char *delim);
-char *csc_gettoken(char *sour, char *buffer, char *delim);
+char *csc_gettoken(char *sour, char *buffer, int blen, char *delim);
 
 /* see csc_cmp_file_extname.c */
 int csc_cmp_file_extname(char *fname, char *ext);

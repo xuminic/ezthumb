@@ -6,4 +6,4 @@ libpng-1.5.13
 zlib-1.2.8
 curl-7.28.1
 libiconv-1.9.2.1
-ffmpeg-git-41bf67d-win32
+ffmpeg: see libmingw/ffmpeg/README.txt

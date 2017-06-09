@@ -3266,21 +3266,36 @@ static char *xui_make_filters(char *slist)
 {
 	char	*flt, token[32];
 	int	n;
+#ifndef	CFG_WIN32RT
+	int	i;
+#endif
 
 	/* Assuming the worst case of the short list is like "a;b;c;d",
-	 * it will then be expanded to "*.a;*.b;*.c;*.d". The biggest length 
-	 * is N + (N/2+1) * 2 */
+	 * it will then be expanded to "*.a;*.A;*.b;*.B;*.c;*.C;*.d;*.D". 
+	 * The biggest length is N + (N/2+1) * 2 */
+#ifdef	CFG_WIN32RT
 	if ((flt = smm_alloc(strlen(slist) * 2 + 64)) == NULL) {
+#else
+	if ((flt = smm_alloc(strlen(slist) * 4 + 64)) == NULL) {
+#endif
 		return NULL;
 	}
 
 	strcpy(flt, "Video Files|");
 	n = strlen(flt);
-	while ((slist = csc_gettoken(slist, token, ",;:")) != NULL) {
+	while ((slist = csc_gettoken(slist, token, sizeof(token), ",;:")) 
+			!= NULL) {
 		n += sprintf(flt + n, "*.%s;", token);
+#ifndef	CFG_WIN32RT
+		for (i = 0; i < (int)strlen(token); i++) {
+			token[i] = toupper(token[i]);
+		}
+		n += sprintf(flt + n, "*.%s;", token);
+#endif
 	}
 	flt[strlen(flt)-1] = 0;		/* cut out the tailing ';' */
 	strcat(flt, "|All Files|*.*|");
+	puts(flt);
 	return flt;
 }
 

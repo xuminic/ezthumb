@@ -1,3 +1,8 @@
+20170609:
+	* libcsoup: updated to 0.9.9 to harden the csc_gettoken().
+	* ezthumb.h: added more video extension names as the video filter.
+	* ezgui.c: xui_make_filters() expand uppercase extension for gtk.
+
 20170608: 3.6.6
 	* ezthumb.c: Fixed the bug which failed to use ffmpeg 3.x new API
 	properly.

@@ -25,14 +25,16 @@
 
 extern int csc_isdelim(char *delim, int ch);
 
-char *csc_gettoken(char *sour, char *buffer, char *delim)
+char *csc_gettoken(char *sour, char *buffer, int blen, char *delim)
 {
 	if (*sour == 0) {	/* end of process */
 		return NULL;
 	}
 
-	while (*sour && !csc_isdelim(delim, *sour)) {
+	blen--;		/* leave a space for asc0 */
+	while (*sour && blen && !csc_isdelim(delim, *sour)) {
 		*buffer++ = *sour++;
+		blen--;
 	}
 	*buffer++ = 0;
 

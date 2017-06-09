@@ -8,5 +8,4 @@ Icon=ezthumb
 Type=Application
 Terminal=false
 Categories=Graphics;Video;GTK;
-MimeType= video/quicktime;video/x-quicktime;video/vnd.rn-realvideo;video/x-ms-asf-plugin;video/x-msvideo;video/msvideo;video/x-ms-asf;video/x-ms-wm;video/x-ms-wmv;video/x-ms-wmp;video/x-ms-wvx;video/mpeg;video/x-mpeg;video/x-mpeg2;video/mp4;video/3gpp;video/fli;video/x-fli;video/x-flv;video/vnd.vivo;video/x-matroska;video/matroska;video/x-mng;video/webm;video/x-webm;video/mp2t;video/vnd.mpegurl;video/x-ogm+ogg;
-
+MimeType=video/x-ms-asf;video/x-ms-asf-plugin;video/avi;video/x-msvideo;video/msvideo;video/x-ms-wm;video/x-ms-wmv;video/x-ms-wmp;video/x-ms-wvx;video/quicktime;video/x-quicktime;video/vnd.rn-realvideo;video/mpeg;video/x-mpeg;video/x-mpeg2;video/mp4;video/3gpp;video/fli;video/x-fli;video/x-flv;video/vnd.vivo;video/x-matroska;video/matroska;video/x-mng;video/webm;video/x-webm;video/mp2t;video/vnd.mpegurl;video/x-ogm+ogg;video/avs-video;
