@@ -127,6 +127,12 @@ static	struct	idtbl	uir_choose_font[] = {
 	{ 0,	NULL }
 };
 
+
+/* 20170614 The IUP window would slightly resize itself when mapping.
+ * Using this flag to avoid saving its size in the first resize event */
+static	int	ezgui_resize_flag = 0;
+
+
 static int ezgui_timer_monitor(Ihandle *ih);
 static int ezgui_create_window(EZGUI *gui);
 static int ezgui_event_window_resize(Ihandle *ih, int width, int height);
@@ -446,6 +452,7 @@ static int ezgui_create_window(EZGUI *gui)
 	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, ezicon_pixbuf));
 	gui->dlg_main = IupDialog(tabox);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Ezthumb");
+	IupSetAttribute(gui->dlg_main, "SHRINK", "YES");
 
 	/* 20170514 The dialog has a different background color setting
 	 * to the tab control, so align the dialog to the tab:
@@ -524,14 +531,15 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	}
 
 	/* 20160115 setting "RASTERSIZE" again gain the ability of shrink */
-	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
+	//IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 	gui->win_width = xui_get_size(ih, "RASTERSIZE", &gui->win_height);
 
 	CDB_MODL(("EVT_RESIZE: C:%dx%d W:%dx%d P:%s\n", width, height,
 			gui->win_width, gui->win_height, 
 			IupGetAttribute(gui->dlg_main, "SCREENPOSITION")));
 
-	if (gui->win_state != IUP_MAXIMIZE) {
+	/* 20170614 skip saving the size config in the first resize event */
+	if ((gui->win_state != IUP_MAXIMIZE) && ezgui_resize_flag) {
 		csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
 				CFG_KEY_WIN_WIDTH, gui->win_width);
 		csc_cfg_write_int(gui->config, EZGUI_MAINKEY,
@@ -541,6 +549,7 @@ static int ezgui_event_window_resize(Ihandle *ih, int width, int height)
 	/* 20151223 retrieve the client size of scrollbox instead */
 	width = xui_get_size(gui->list_sbox, "CLIENTSIZE", &height);
 	ezgui_sview_resize(gui->list_view, width, height);
+	ezgui_resize_flag = 1;
 	return IUP_DEFAULT;
 }
 

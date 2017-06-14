@@ -1,3 +1,7 @@
+20170614:
+	* ezgui.c: fixed the shrinking window issue by skipping the first
+	resize event when saving the current window's size.
+
 20170609:
 	* ezgui.c: fixed the bug which failed to drag & drop files with spaces
 	inside the names.
