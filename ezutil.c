@@ -570,19 +570,35 @@ static EZPROF *ezopt_profile_insert(EZPROF *root, EZPROF *leaf)
  * Data transform Functions
  ****************************************************************************/
 
-char *meta_filesize(int64_t size, char *buffer)
+char *meta_filesize(int unit, int64_t size, char *buffer)
 {
 	static	char	tmp[32];
 
 	if (buffer == NULL) {
 		buffer = tmp;
 	}
-	if (size < (int64_t)(1ULL << 20)) {
+	switch (unit) {
+	case 'b':
+		sprintf(buffer, "%llu Bytes", (unsigned long long) size);
+		break;
+	case 'k':
 		sprintf(buffer, "%.2f KB", size / 1024.0);
-	} else if (size < (int64_t)(1ULL << 30)) {
+		break;
+	case 'm':
 		sprintf(buffer, "%.2f MB", size / 1048576.0);
-	} else {
-		sprintf(buffer, "%.2f GB", size / 1073741824.0); 
+		break;
+	case 'g':
+		sprintf(buffer, "%.2f GB", size / 1073741824.0);
+		break;
+	default:	/* auto */
+		if (size < (int64_t)(1ULL << 20)) {
+			sprintf(buffer, "%.2f KB", size / 1024.0);
+		} else if (size < (int64_t)(1ULL << 30)) {
+			sprintf(buffer, "%.2f MB", size / 1048576.0);
+		} else {
+			sprintf(buffer, "%.2f GB", size / 1073741824.0); 
+		}
+		break;
 	}
 	return buffer;
 }

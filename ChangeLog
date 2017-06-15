@@ -1,3 +1,6 @@
+20170615:
+	* main.c: added the --size-unit option for user's preferred units.
+
 20170614:
 	* ezgui.c: fixed the shrinking window issue by skipping the first
 	resize event when saving the current window's size.

@@ -94,6 +94,7 @@
 #define CMD_OVERRIDE	16
 #define CMD_POS_BG	17
 #define CMD_PROGRESS	18
+#define CMD_SIZEUNIT	19
 #define CMD_TIME_FROM	20
 #define CMD_TIME_END	21
 #define CMD_TRANSPRT	22
@@ -211,6 +212,8 @@ static	struct	cliopt	clist[] = {
 	{ CMD_POS_BG, "pos-bg",
 		1, "the position of the background image (mc)" },
 	{ 0,  NULL, -1, "lt,lc,lb,mt,mc,mb,rt,rc,rb,tt and st,ex,ey,sx,sy" },
+	{ CMD_SIZEUNIT, "size-unit",
+		1, "the unit of the video size by byte,kb,mb,gb (auto)" },
 	{ CMD_TIME_FROM, "time-from",
 		1, "the time in video where begins shooting (HH:MM:SS/NN%)" },
 	{ CMD_TIME_END, "time-end", 
@@ -653,6 +656,19 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 			if (isdigit(*optarg)) {
 				opt->r_flags = SMM_PATH_DEPTH(opt->r_flags,
 						strtol(optarg, NULL, 0));
+			}
+			break;
+		case CMD_SIZEUNIT:
+			if (!strcmp(optarg, "byte")) {
+				opt->size_unit = 'b';
+			} else if (!strcmp(optarg, "kb")) {
+				opt->size_unit = 'k';
+			} else if (!strcmp(optarg, "mb")) {
+				opt->size_unit = 'm';
+			} else if (!strcmp(optarg, "gb")) {
+				opt->size_unit = 'g';
+			} else {
+				opt->size_unit = 'a';
 			}
 			break;
 		case CMD_FILTER:

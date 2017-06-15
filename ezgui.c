@@ -2998,7 +2998,7 @@ static int ezgui_sview_file_append(SView *sview, char *fname)
 	}
 	//smm_codepage_reset();
 
-	meta_filesize(vobj.filesize, buf);
+	meta_filesize(vobj.sysopt->size_unit, vobj.filesize, buf);
 	IupSetStrAttributeId(sview->filesize,   "", lnext, buf);
 	meta_timestamp(vobj.duration, 0, buf);
 	IupSetStrAttributeId(sview->medialen,   "", lnext, buf);

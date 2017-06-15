@@ -1893,10 +1893,11 @@ static int video_media_on_canvas(EZVID *vidx, EZIMG *image)
 
 	strcat(buffer, " (");
 	if (vidx->dur_all) {	/* binding mode */
-		strcat(buffer, meta_filesize(vidx->bind_size, tmp));
+		meta_filesize(vidx->sysopt->size_unit, vidx->bind_size, tmp);
 	} else {
-		strcat(buffer, meta_filesize(vidx->filesize, tmp));
+		meta_filesize(vidx->sysopt->size_unit, vidx->filesize, tmp);
 	}
+	strcat(buffer, tmp);
 	strcat(buffer, ")  ");
 
 	/*i = vidx->formatx->bit_rate;

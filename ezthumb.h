@@ -443,6 +443,8 @@ typedef	struct	{
 	int	pre_seek;	/* preset seek flag */
 	int	pre_br;		/* preset bitrate */
 
+	int	size_unit;	/* 'a','b','k','m','g' */
+
 	int	vs_user;	/* specify the stream index */
 	int	key_ripno;	/* specify the number when ripping keyframes*/
 	char	*pathout;	/* output path */
@@ -678,7 +680,7 @@ int ezopt_profile_stat(EZOPT *ezopt);
 int ezopt_profile_sampling(EZOPT *ezopt, int vidsec, int *col, int *row);
 int ezopt_profile_sampled(EZOPT *ezopt, int vw, int bs, int *col, int *row);
 int ezopt_profile_zooming(EZOPT *ezopt, int vw, int *wid, int *hei, int *ra);
-char *meta_filesize(int64_t size, char *buffer);
+char *meta_filesize(int unit, int64_t size, char *buffer);
 char *meta_timestamp(EZTIME ms, int enms, char *buffer);
 int meta_image_format(char *input);
 char *meta_image_abbre(int fmt);
