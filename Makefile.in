@@ -382,7 +382,7 @@ SUBDIRS = .
 # This list of files for source release
 EXTRA_DIST = aclocal.m4 config.h.in configure configure.ac config.guess \
 	     config.sub Makefile.am Makefile.in missing install-sh m4 \
-	     COPYING ChangeLog Readme.txt TODO external libmingw \
+	     COPYING ChangeLog Readme.txt TODO external libmingw release.sh \
 	     ezgui.c  ezgui.h  ezicon.h  ezqiz  ezthumb.1  ezthumb.c \
 	     ezthumb.desktop ezthumb.h  ezthumb.ico  ezthumb_icon.rc \
 	     ezthumb.lsm  ezthumb.nsi  ezthumb.pdf ezutil.c \
