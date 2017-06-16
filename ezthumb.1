@@ -152,7 +152,7 @@ into GUI mode. All file names in the command line will be loaded into
 the list view.
 
 .TP
-.BR " \-\-gui\-progress"
+.BR "\-\-gui\-progress"
 Launch a progress dialog in the command line mode if the
 .B ezthumb
 was compiled with GUI enabled. This option could be useful while integrating
@@ -339,7 +339,7 @@ would take shots at both I-Frame and P-Frame.
 It is slow but accurate in time stamps. Sometimes the picture might be blurred. 
 
 .TP
-.BR " \-\-background \fIfilename\fP"
+.BR "\-\-background \fIfilename\fP"
 Load a background picture into the thumbnail canvas. It supports
 .B JPG
 and
@@ -365,7 +365,7 @@ This option is usually turned on to boost the compatibility.
 However it seems safe to turn it off with new version FFMPEG
 
 .TP
-.BR " \-\-depth \fIlevels\fP"
+.BR "\-\-depth \fIlevels\fP"
 Descend at most 
 .I levels
 (a non-negative integer) levels of directories below the command line
@@ -374,13 +374,13 @@ arguments.
 means unlimited.
 
 .TP
-.BR " \-\-edge \fIvalue\fP"
+.BR "\-\-edge \fIvalue\fP"
 Define the thickness of the frame edge around each screenshots.
 The thickness is defined by pixel size.
 The default value is 0 which means these's no frame edge.
 
 .TP
-.BR " \-\-filter \fIfilter_string\fP"
+.BR "\-\-filter \fIfilter_string\fP"
 Specify the string of file extension name as a target file filter. For example,
 avi,flv,mkv,mov,mp4,mpg etc.
 The filter string is quite useful in 
@@ -482,6 +482,20 @@ See
 for the details.
 
 .TP
+.BR "\-\-size\-unit \fIauto|byte|kb|mb|gb\fP"
+Set up the unit of the video size in the output information.
+The unit can be 
+.I byte,
+.I kb
+in kilobyte,
+.I mb
+in megabyte,
+.I gb
+in gigabyte, or
+.I auto
+for the most natural reading format.
+
+.TP
 .BR "\-\-time\-from \fIstarting_time\fP"
 Specify a time stamp from where the 
 .B ezthumb
@@ -512,7 +526,7 @@ and
 options are still applicable with this option.
 
 .TP
-.BR " \-\-transparent"
+.BR "\-\-transparent"
 Require to generate the transparent background which could be useful for the 
 webpages. Note that only
 .B PNG
@@ -521,7 +535,7 @@ and
 support the transparent background.
 
 .TP
-.BR " \-\-factory\-reset"
+.BR "\-\-factory\-reset"
 Remove the configure file or the registry contents to recover the default
 settings.
 

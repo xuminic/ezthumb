@@ -1,4 +1,4 @@
-20170615:
+20170615: 3.6.7
 	* main.c: added the --size-unit option for user's preferred units.
 
 20170614:

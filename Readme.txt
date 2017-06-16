@@ -4,15 +4,33 @@ What is it
 
 Ezthumb is used to create thumbnails for video files. It uses the FFMPEG 
 library as its engine so it almost supports any video formats. 
-Normally the screenshots would be gridded into a single canvas picture or 
-compose a single GIF animation file.  But it can also save frames separately.
-The output format could be JPG, PNG, GIF or GIF animation, where PNG and GIF 
-supports the transparent background. Supported batch processing with logarithm
-curve profiles.
 
+Features
+========
+*) Supports almost any video formats:
+   3gp,3g2,asf,asx,avi,avs,divx,flv,f4v,f4p,f4a,f4b,m1v,m2v,m4p,m4v,mjpg,mkv,
+   mov,movie,mp2,mp4,mpa,mpe,mpeg,mpg,mpv,mv,ogv,ogg,qt,rm,rmvb,rv,ts,viv,
+   vivo,vob,webm,wmv,yuv
+*) Ouput JPG, PNG or GIF format.
+*) Support transparent PNG or GIF.
+*) Support Animated GIF.
+*) Support all thumbnails in one canvas, or individual thumbnails.
+*) Support batch processing in command line.
+*) Support both command line tool and a lightweight GUI application.
+*) Cross platform design support Linux/Windows XP/Windows 7 (Win32 API).
+*) Using IUP portable UI library to gain the native GUI feeling.
+*) Written in C and FFMPEG, as well as libav, API.
 
 Release Notes
 =============
+Version 3.6.7:
+*) Separated the Win32 build to Windows XP, with 'rogerdpack' FFMPEG build 3.1.2, 
+   and Windows 7, with 'Zeranoe' FFMPEG build 3.3.1 and higher.
+*) Added more video extension names to the video filter.
+*) Added the --size-unit option to customize the preferred units.
+*) Fixed the bug which failed to drag & drop files with spaces inside the names (GTK).
+*) Fixed the shrinking window issue.
+
 Version 3.6.6:
 *) Support new API in FFMPEG 3.x
 *) Fixed a bug which failed to install EzthumbWin.exe.
@@ -122,18 +140,18 @@ Version 2.0.0:
 Install
 =======
 
-Ezthumb requires the following packages:
+Ezthumb requires the following packages in *nix:
 
 ffmpeg
 gd
-gtk2 (in X-window)
 freetype
 libpng
 libjpeg
 bzip2
+gtk (in X-window)
 
 Most systems have already installed those libraries so normally you only need
-to install the development files of ffmpeg/gd/gtk2.
+to install the development files of ffmpeg/gd/gtk.
 
 *) CentOS 5/6/7 or similar version Fedora/RHEL
 
@@ -160,20 +178,30 @@ $ make
 
 The ezthumb has been shipped with a library bundle in which all necessary 
 libraries are included. You don't need to download anything to build ezthumb.
-Just go to the ezthumb directory in MinGW console and type:
+In Windows 7 and higher, just go to the ezthumb directory in MinGW console and type:
 
 $ ./configure
 $ make
 
+In Windows XP/Vista, however:
+
+$ ./configure --with-winxp
+$ make
+
 it will build two execute files, ezthumb.exe for command line and the GUI
 frontend EzthumbWin.exe. You will find the execute files and required DLLs
-under the folder "ezthumb-X.X.X-win32-bin"
+under the folder "ezthumb-X.X.X-win7-bin" or "ezthumb-X.X.X-winxp-bin"
+
+Note that the FFMPEG has stopped supporting Windows XP. Therefore ezthumb
+have to release two packages: the Windows XP release will probably stick on
+the 'rogerdpack' build 3.1.2; the Windows 7 release will keep sync-ing with
+the recent FFMPEGs.
 
 If you have Nullsoft Installer (NSIS) installed, you may use
 
-make release
+./release.sh
 
-to generate an install file.
+to generate two installer files each for Windows XP and Windows 7.
 
 
 
