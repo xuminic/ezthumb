@@ -107,6 +107,10 @@ libcsoup-clean:
 	make -C ./external/libcsoup clean
 
 release: $(RELEASE)
+	tar jxf $(distdir).tar.bz2
+	rm -rf $(distdir)/libmingw
+	tar cjf $(distdir)-src.tar.bz2 $(distdir)
+	rm -rf $(distdir)
 
 if	XAM_MSWIN
 all-local:

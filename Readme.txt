@@ -140,6 +140,14 @@ Version 2.0.0:
 Install
 =======
 
+Ezthumb includes following releases:
+
+ezthumb-X.Y.Z.tar.bz2             - the full release include source codes and 
+                                    pre-compiled Win32 binaries
+ezthumb-X.Y.Z-src.tar.bz2         - the light release include source codes only
+ezthumb-X.Y.Z-win7-setup.exe      - the installer program for Window 7 and higher
+ezthumb-X.Y.Z-winxp-setup.exe     - the installer program for Window XP and vista
+
 Ezthumb requires the following packages in *nix:
 
 ffmpeg

@@ -3317,7 +3317,6 @@ static char *xui_make_filters(char *slist)
 	}
 	flt[strlen(flt)-1] = 0;		/* cut out the tailing ';' */
 	strcat(flt, "|All Files|*.*|");
-	puts(flt);
 	return flt;
 }
 

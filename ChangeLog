@@ -1,3 +1,9 @@
+20170620:
+	* Makefile.am: added a "light" release to deliver a much smaller
+	package for Linux platform, which removed the pre-compiled Win32
+	binaries.
+	* ezgui.c: removed the annoying debug print in xui_make_filters().
+
 20170615: 3.6.7
 	* main.c: added the --size-unit option for user's preferred units.
 
