@@ -1047,7 +1047,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 	AVPacket	packet;
 	int64_t		*refdts;
 	int64_t		dts, dts_snap, lastkey;
-	int		i, scnt = 0;
+	int		i, sflag, scnt = 0;
 
 	/* find the first key frame */
 	if ((lastkey = video_keyframe_next(vidx, &packet)) < 0) {
@@ -1091,6 +1091,14 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		}
 	}
 
+	/* check if the video clip is in lack of seperate key frames */
+	sflag = 0;
+	for (i = image->taken + 1; i < image->shots; i++) {
+		if (refdts[i] == refdts[i - 1]) {
+			sflag++;
+		}
+	}
+
 	/* rewind the video and begin the second round scan */
 	video_seeking(vidx, 0);
 	dts = -1;
@@ -1106,8 +1114,10 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 				break;
 			}
 			if (dts >= refdts[image->taken]) {
-				//dts = video_decode_next(vidx, &packet);
-				dts = video_decode_valided(vidx, &packet, dts_snap);
+				/* 20170624 The reference key frame of 2-pass
+				 * is accurate so there is no need to decode
+				 * to the next valided key frame. */
+				dts = video_decode_to(vidx, &packet, dts_snap);
 				break;
 			}
 			/* discard the current packet */
@@ -1122,7 +1132,7 @@ static int video_snapshot_twopass(EZVID *vidx, EZIMG *image)
 		if ((dts < 0) || (dts >= dts_snap)) {
 			/* EOF or overreaded */
 			VSTLOG("[OR]", refdts[image->taken], dts_snap, dts);
-		} else if (GETACCUR(vidx->ses_flags)) {
+		} else if (GETACCUR(vidx->ses_flags) || sflag) {
 			dts = video_decode_load(vidx, &packet, dts_snap);
 			VSTLOG("[AR]", refdts[image->taken], dts_snap, dts);
 		} else {
@@ -2960,6 +2970,7 @@ static int64_t video_decode_next(EZVID *vidx, AVPacket *packet)
 			if (ezfrm->frame->key_frame) {
 				ezfrm->keyflag = 1;
 			}
+			//printf("video_decode_next: %lld %d\n", ezfrm->rf_dts, ezfrm->keyflag);
 			return ezfrm->rf_dts;	/* succeeded */
 		}
 	} while (video_load_packet(vidx, packet) >= 0);
@@ -3017,6 +3028,8 @@ static int64_t video_decode_valided(EZVID *vidx,
 			return vidx->picframe->rf_dts;
 		}
 		
+		video_frame_update(vidx);
+
 		/* 20150219: using video_load_packet() instead of 
 		   video_keyframe_next() because in dodge encoded files
 		   (middle.avi) every frame can be decoded i-frame */

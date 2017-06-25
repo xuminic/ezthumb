@@ -1,3 +1,10 @@
+20170625:
+	* ezthumb.c: replaced the video_decode_valided() to video_decode_to()
+	in the two-pass mode in case of running out of key frames in very 
+	short video clips. 
+	* Improved: if received a repetitive key frame list, which means the
+	video clip is very short, enforce the accurate mode by default.
+
 20170620:
 	* Makefile.am: added a "light" release to deliver a much smaller
 	package for Linux platform, which removed the pre-compiled Win32
