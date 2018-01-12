@@ -108,7 +108,7 @@ case "$host_os" in
   *)
     SYSTOOL=unix
     CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup/include \
-	    -I/usr/include/ffmpeg"
+	    -I/usr/include/ffmpeg -I/usr/include/freetype2"
     LDFLAGS="$LDFLAGS -L./external/libcsoup"
     AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [])
     if test "x$PKGCONFIG" = x; then
@@ -204,7 +204,7 @@ CURRLIB="$LIBS"
 AC_CHECK_HEADERS([sys/time.h],,,[AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([libavcodec/avcodec.h libavformat/avformat.h \
     libswscale/swscale.h libavutil/avutil.h libavutil/mathematics.h \
-    libavutil/imgutils.h])
+    libavutil/imgutils.h  ft2build.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT64_T

@@ -105,6 +105,9 @@
 /* Define to 1 if you have the `dump_format' function. */
 #undef HAVE_DUMP_FORMAT
 
+/* Define to 1 if you have the <ft2build.h> header file. */
+#undef HAVE_FT2BUILD_H
+
 /* Define to 1 if you have the `gdImageGifAnimBegin' function. */
 #undef HAVE_GDIMAGEGIFANIMBEGIN
 
