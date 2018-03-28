@@ -2514,12 +2514,14 @@ static int video_snap_update(EZVID *vidx, EZIMG *image, int64_t dts)
 	 * metamorphose to human readable form */
 	dtms = ezfrm->rf_pts - vidx->dts_offset;
 	dtms = video_dts_to_ms(vidx, dtms > 0 ? dtms : 0);
+	/* 20180328 if the video is longer than 4 times of image shots, 
+	 * ezthumb doesn't display the millisecond in timestamp */
 	if (vidx->dur_all == 0) {
-		meta_timestamp(dtms, 1, timestamp);
+		meta_timestamp(dtms, (vidx->duration / 4000 < image->shots), timestamp);
 	} else {		/* binding mode */
 		dtms += vidx->dur_off;	/* aligning the binding clips */
 		timestamp[0] = '(';
-		meta_timestamp(dtms, 1, timestamp + 1);
+		meta_timestamp(dtms, (vidx->dur_all / 4000 < image->shots), timestamp + 1);
 		strcat(timestamp, ")");
 	}
 
