@@ -4406,7 +4406,7 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
  ****************************************************************************/
 static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 {
-	char	tmp[128], *inbuf = NULL;
+	char	tmp[264], *inbuf = NULL;
 	int	i, rc = 0;
 
 	/* special case for testing purpose

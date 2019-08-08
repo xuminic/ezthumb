@@ -234,7 +234,7 @@ ezthumb " VERSION ", to generate the thumbnails from video files.\n\n\
 Copyright (C) 2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
-There is NO WARRANTY, to the extent permitted by law.\n\n";
+There is NO WARRANTY, to the extent permitted by law.\n";
 
 const	char	*description = "\
 A video thumbnail generator based on FFMPEG library.\n\
@@ -359,7 +359,7 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_EOP;
 		break;
 	case CMD_VERSION:	/* version */
-		printf(version);
+		puts(version);
 		version_ffmpeg();
 		todo = EZ_ERR_EOP;
 		break;
