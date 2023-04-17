@@ -18,6 +18,9 @@
 /* Define to 1 if you have the `avcodec_receive_frame' function. */
 #undef HAVE_AVCODEC_RECEIVE_FRAME
 
+/* Define to 1 if you have the `avcodec_register_all' function. */
+#undef HAVE_AVCODEC_REGISTER_ALL
+
 /* Define 1 if you have file_size in the AVFormatContext structure. */
 #undef HAVE_AVFORMATCONTEXT_FILE_SIZE
 
@@ -47,6 +50,9 @@
 
 /* Define to 1 if you have the `av_close_input_file' function. */
 #undef HAVE_AV_CLOSE_INPUT_FILE
+
+/* Define to 1 if you have the `av_codec_set_pkt_timebase' function. */
+#undef HAVE_AV_CODEC_SET_PKT_TIMEBASE
 
 /* Define to 1 if you have the `av_dict_get' function. */
 #undef HAVE_AV_DICT_GET
@@ -98,6 +104,9 @@
 
 /* Define 1 if you have the AVPixelFormat in the pixfmt.h. */
 #undef HAVE_AV_PIXEL_FORMAT
+
+/* Define to 1 if you have the `av_register_all' function. */
+#undef HAVE_AV_REGISTER_ALL
 
 /* Define to 1 if you have the `av_stream_get_r_frame_rate' function. */
 #undef HAVE_AV_STREAM_GET_R_FRAME_RATE

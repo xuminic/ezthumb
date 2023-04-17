@@ -30,9 +30,9 @@
 #include <limits.h>
 
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
-#define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
-#define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	10		/* 0-4095 */
+#define LIBCSOUP_VER_MAJOR	1		/* 0-255 */
+#define LIBCSOUP_VER_MINOR	1		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	2		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -44,7 +44,10 @@ typedef	struct	_CSCLNK	CSCLNK;
  * Command line process functions
  *****************************************************************************/
 
-#define CSC_CLI_UNCMD	(('U'<<24)|('C'<<16)|('M'<<8)|'D')
+#define CSC_CLI_UNCMD		(('U'<<24)|('C'<<16)|('M'<<8)|'D')
+#define CSC_CLI_MASK		0xf
+#define CSC_CLI_PARAM(c)	((c)->param & CSC_CLI_MASK)
+#define CSC_CLI_SHOW(c,m)	((m) ? (c)->param & (m) : ((c)->param <= CSC_CLI_MASK))
 
 /*!
  * The option list of Command line interface.
@@ -53,13 +56,19 @@ struct	cliopt	{
 	int	opt_char;	///Short form of option characters.
 	char	*opt_long;	///Long form of option strings.
 
-	/*! param 
-	 *  How many arguments are required.
-	 *  - 0: No argument required.
-	 *  - 1: One argument required.
-	 *  - 2: Optional argument.  */
+	/*! param
+	 *  0-0xf: how many arguments are required.
+	 *  CSC Extension       getopt()
+	 *    0                   0        No argument required.
+	 *    1                   1        One string argument required.
+	 *    2                   2        Optional string argument.
+	 *    3                   1        One number required
+	 *    4                   2        Optional number argument
+	 *    15                 n/a       display comments only   
+	 *  0xfffffff0: bitmask of hidden options (CSC Extension)
+	 */
 	int	param;
-	char	*comment;	///A description about thi option
+	char	*comment;	///A description about this option
 };
 
 /*!
@@ -78,9 +87,9 @@ extern "C"
 #endif
 int csc_cli_make_list(struct cliopt *optbl, char *list, int len);
 int csc_cli_make_table(struct cliopt *optbl, struct option *oplst, int len);
-int csc_cli_print(struct cliopt *optbl, int (*show)(char *));
+int csc_cli_print(struct cliopt *optbl, int mask, int (*show)(char *));
 
-void *csc_cli_getopt_open(struct cliopt *optbl);
+void *csc_cli_getopt_open(struct cliopt *optbl, int *pt_optind);
 int csc_cli_getopt_close(void *clibuf);
 int csc_cli_getopt(int argc, char * const argv[], void *clibuf);
 
@@ -172,7 +181,9 @@ slog(int control_word, char *fmt, ...);
 
 #define SLOG_OPT_TMSTAMP	1
 #define SLOG_OPT_MODULE		2
-#define SLOG_OPT_ALL		3
+#define SLOG_OPT_ALL		(SLOG_OPT_TMSTAMP | SLOG_OPT_MODULE)
+#define SLOG_OPT_SPLIT		4	/* the log file will be splitted by size or by date */
+#define SLOG_OPT_ONCE		8	/* append-and-close mode so logs can be shared */
 
 #define SLOG_TRANSL_MODUL	0
 #define SLOG_TRANSL_DATE	1
@@ -188,8 +199,12 @@ typedef	struct	{
 	int	option;
 
 	/* log into the file */
-	char	*filename;
-	FILE	*logd;
+	char	*filename;	/* log file without the split extension */
+	int	fileday;	/* day number for splitting by date */
+	FILE	*logd;		/* only meaningful for nonsplit mode */
+	size_t	splitlen;	/* file limitation by size, if 0, split by date */
+	int	splitnum;	/* maximum splitted logs, if 0, unlimited */
+
 	/* log into the standard output, stdout or stderr */
 	FILE	*stdio;
 
@@ -216,6 +231,7 @@ extern "C"
 SMMDBG *slog_initialize(void *mem, int cword);
 int slog_shutdown(SMMDBG *dbgc);
 int slog_bind_file(SMMDBG *dbgc, char *fname);
+int slog_bind_split_file(SMMDBG *dbgc, char *fname, size_t flen, int fnum);
 int slog_bind_stdio(SMMDBG *dbgc, FILE *ioptr);
 int slog_translate_setup(SMMDBG *dbgc, int which, F_PREFIX func);
 int slog_translate_remove(SMMDBG *dbgc, int which, F_PREFIX func);
@@ -407,6 +423,115 @@ int csc_cfg_hex_to_binary(char *src, char *buf, int blen);
 } // __cplusplus defined.
 #endif
 
+/*****************************************************************************
+ * See csc_pack_hex.c: a simple way to pack files to C array in hex.
+ * Definitions and functions for the simple packing hex array.
+ ****************************************************************************/
+typedef int	(*F_PKHEX)(void *frame, char *fname, void *data, long dlen);
+
+struct	phex_idx	{
+	char		*fname;
+	void		*data;
+	long		dlen;
+};
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+void *csc_pack_hex_verify(void *pachex, long *flen, long *fnsize);
+void *csc_pack_hex_find_next(void *pachex);
+void csc_pack_hex_list(void *pachex, F_PKHEX lsfunc);
+void *csc_pack_hex_load(void *pachex, char *path, long *size);
+void *csc_pack_hex_index(void *pachex);
+#ifdef __cplusplus
+} // __cplusplus defined.
+#endif
+
+/*****************************************************************************
+ * The dynamic memory allocation management based on:
+ * csc_bmem.c: mapping by the bitmap.
+ * csc_dmem.c: the doubly linked list. 
+ * csc_tmem.c: the single linked list with minimum memory cost.
+ * Definitions and functions for the memory management.
+ ****************************************************************************/
+/* Bit 0-1: memory allocation strategy. */
+#define CSC_MEM_FIRST_FIT	0
+#define CSC_MEM_BEST_FIT	1
+#define CSC_MEM_WORST_FIT	2
+#define CSC_MEM_FITMASK		3
+
+/* Bit 2-3: general settings */
+#define CSC_MEM_CLEAN		4	/* fill allocated memory with 0 */
+#define CSC_MEM_ZERO		8	/* allow allocating empty memory */
+
+/* Bit 4-7: page size for bitmap management and guarding area.
+ * 0=32; 1=64; 2=128; 3=256; ...; 11=65536; 
+ * Currently it only supports up to 11 so the padding size can be limited to 
+ * 16bit in the bitmap management method */
+#define CSC_MEM_PAGE(n)		(32<<((((n)>>4)&0xf)%12))
+
+/* Bit 8-11: number of pages for the guarding area.
+ * The guarding area is used to debug the memory violation by buffering 
+ * both ends. It includes the front guard and back guard, located before and 
+ * after the allocated memory.  0=no guardings 1-15=number of pages */
+#define CSC_MEM_GUARD(n)	(((n)>>8)&0xf)
+
+/* Set up the page unit and the guarding pages. 
+ * The size of guarding page is multiplied by pages size in Bit 4-7. 
+ * For example: Bit8-11=3 Bit4-7=2, so both the frond and the back guarding 
+ * area is 3*128=384 bytes */
+#define CSC_MEM_SETPG(page,guard)	((((page)&15)<<4) | (((guard)&15)<<8))
+#define CSC_MEM_GETPG(n)		(CSC_MEM_PAGE(n) * CSC_MEM_GUARD(n))
+
+/* The default memory setting: 
+ * First Fit, fill 0 when allocation, not allow empty allocation, no guarding area */
+#define CSC_MEM_DEFAULT		(CSC_MEM_FIRST_FIT | CSC_MEM_CLEAN)
+
+#define CSC_MEM_MAGIC_BITMAP	0xAC
+#define CSC_MEM_MAGIC_DLINK	0xA6
+#define CSC_MEM_MAGIC_TINY	0xA5
+
+#define CSC_MERR_LOWMEM		-1
+#define CSC_MERR_INIT		-2
+#define CSC_MERR_BROKEN		-3
+#define CSC_MERR_RANGE		-4
+#define CSC_MERR_TYPE		-5
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* see csc_tmem.c */
+void *csc_tmem_init(void *heap, size_t len, int flags);
+void *csc_tmem_alloc(void *heap, size_t n);
+int csc_tmem_free(void *heap, void *mem);
+void *csc_tmem_scan(void *heap, int (*used)(void*), int (*loose)(void*));
+size_t csc_tmem_attrib(void *heap, void *mem, int *state);
+void *csc_tmem_front_guard(void *heap, void *mem, int *xsize);
+void *csc_tmem_back_guard(void *heap, void *mem, int *xsize);
+
+/* see csc_dmem.c */
+void *csc_dmem_init(void *heap, size_t len, int flags);
+void *csc_dmem_alloc(void *heap, size_t n);
+int csc_dmem_free(void *heap, void *mem);
+void *csc_dmem_scan(void *heap, int (*used)(void*), int (*loose)(void*));
+size_t csc_dmem_attrib(void *heap, void *mem, int *state);
+void *csc_dmem_front_guard(void *heap, void *mem, int *xsize);
+void *csc_dmem_back_guard(void *heap, void *mem, int *xsize);
+
+/* see csc_bmem.c */
+void *csc_bmem_init(void *heap, size_t len, int flags);
+void *csc_bmem_alloc(void *heap, size_t n);
+int csc_bmem_free(void *heap, void *mem);
+void *csc_bmem_scan(void *heap, int (*used)(void*), int (*loose)(void*));
+size_t csc_bmem_attrib(void *heap, void *mem, int *state);
+void *csc_bmem_front_guard(void *heap, void *mem, int *xsize);
+void *csc_bmem_back_guard(void *heap, void *mem, int *xsize);
+
+#ifdef __cplusplus
+} // __cplusplus defined.
+#endif
 
 /*****************************************************************************
  * Miscellaneous Functions.
@@ -459,15 +584,15 @@ char *csc_path_basename(char *path, char *buffer, int blen);
 char *csc_path_path(char *path, char *buffer, int blen);
 int csc_strinsert(char *buf, int len, char *ip, int del, char *s);
 
-/* csc_url_decode.c */
+/* see csc_url_decode.c */
 int csc_url_decode(char *dst, int dlen, char *src);
 char *csc_url_decode_alloc(char *src);
 
 /* see csc_crc*.c */
 unsigned short csc_crc16_byte(unsigned short crc, char data);
 unsigned short csc_crc16(unsigned short crc, void *buf, size_t len);
-unsigned long csc_crc32_byte(unsigned long crc, char data);
-unsigned long csc_crc32(unsigned long crc, void  *buf, size_t len);
+unsigned csc_crc32_byte(unsigned crc, char data);
+unsigned csc_crc32(unsigned crc, void  *buf, size_t len);
 unsigned char csc_crc8_byte(unsigned char crc, char data);
 unsigned char csc_crc8(unsigned char crc, void *buf, size_t len);
 unsigned short csc_crc_ccitt_byte(unsigned short crc, char data);
@@ -478,8 +603,10 @@ char *csc_iso639_lang_to_iso(char *lang);
 char *csc_iso639_lang_to_short(char *lang);
 char *csc_iso639_iso_to_lang(char *iso);
 
+/* see csc_file_load.c and csc_file_store.c */
 long csc_file_store(char *path, int ovrd, char *src, long len);
 char *csc_file_load(char *path, char *buf, long *len);
+
 #ifdef __cplusplus
 } // __cplusplus defined.
 #endif
@@ -489,6 +616,10 @@ char *csc_file_load(char *path, char *buf, long *len);
 /****************************************************************************
  * System Masquerade Module
  ****************************************************************************/
+#ifdef __CYGWIN__
+#define CFG_WIN32_API	// mingw through cygwin
+#endif
+
 #if	(!defined(CFG_WIN32_API) && !defined(CFG_UNIX_API))
 /* automatically decide using UNIX or Win32 API */
 #if	(defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))

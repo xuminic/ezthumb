@@ -2,7 +2,8 @@
 CFLAGS	+= -I..
 
 #SRCS	:= $(shell echo *.c)
-SRCS	:= csc_cdll.c		\
+SRCS	:= csc_bmem.c		\
+	   csc_cdll.c		\
 	   csc_cmp_file_extargs.c \
 	   csc_cmp_file_extlist.c \
 	   csc_cmp_file_extname.c \
@@ -12,9 +13,11 @@ SRCS	:= csc_cdll.c		\
 	   csc_crc32.c		\
 	   csc_crc8.c		\
 	   csc_cuttoken.c	\
+	   csc_dmem.c		\
 	   csc_extname_filter.c \
 	   csc_file_load.c	\
 	   csc_file_store.c	\
+	   csc_pack_hex.c	\
 	   csc_path_basename.c	\
 	   csc_path_path.c	\
 	   csc_fixtoken.c	\
@@ -33,6 +36,7 @@ SRCS	:= csc_cdll.c		\
 	   csc_strinsert.c	\
 	   csc_strlcat.c	\
 	   csc_strlcpy.c	\
+	   csc_tmem.c		\
 	   csc_url_decode.c	\
 	   csc_ziptoken.c
 

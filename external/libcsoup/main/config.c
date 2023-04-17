@@ -94,12 +94,12 @@ static int config_open_rdonly(void)
 
 	if ((root = csc_cfg_open(SMM_CFGROOT_CURRENT, TESTPATH, TESTINPUT, 
 			CSC_CFG_READ)) == NULL) {
-		CDB_SHOW(("can't open\n"));
+		cslog("can't open\n");
 		return -1;
 	}
 	csc_cfg_dump(root);
 	if (csc_cfg_save(root) == SMM_ERR_NONE) {
-		CDB_SHOW(("FATAL: should be read only\n"));
+		cslog("FATAL: should be read only\n");
 		csc_cfg_free(root);
 		return -2;
 	}
@@ -123,7 +123,7 @@ key=value\n\
 
 	if ((cfg = csc_cfg_open(SMM_CFGROOT_MEMPOOL, config, 
 					NULL, CSC_CFG_READ)) == NULL) {
-		CDB_SHOW(("Weird\n"));
+		cslog("Weird\n");
 		return -1;
 	}
 	
@@ -161,43 +161,43 @@ static int config_key_test(void)
 
 	if ((root = csc_cfg_open(SMM_CFGROOT_CURRENT, TESTPATH, TESTINPUT, 
 					CSC_CFG_RWC)) == NULL) {
-		CDB_SHOW(("Weird!\n"));
+		cslog("Weird!\n");
 		return -1;
 	}
 	for (i = 0; rdlist[i][0] || rdlist[i][1]; i++) {
-		CDB_SHOW(("READ %s: %s = %s\n", rdlist[i][0], rdlist[i][1],
-			csc_cfg_read(root, rdlist[i][0], rdlist[i][1])));
+		cslog("READ %s: %s = %s\n", rdlist[i][0], rdlist[i][1],
+			csc_cfg_read(root, rdlist[i][0], rdlist[i][1]));
 	}
 
 	if ((val = csc_cfg_read_first(root, NULL, &key)) != NULL) {
-		CDB_SHOW(("READ NULL: %s = %s\n", key, val));
+		cslog("READ NULL: %s = %s\n", key, val);
 		while ((val = csc_cfg_read_next(root, &key)) != NULL) {
-			CDB_SHOW(("READ NULL: %s = %s\n", key, val));
+			cslog("READ NULL: %s = %s\n", key, val);
 		}
 	}
 
 	if ((val = csc_cfg_read_first(root, "what", &key)) != NULL) {
-		CDB_SHOW(("READ [what]: %s = %s\n", key, val));
+		cslog("READ [what]: %s = %s\n", key, val);
 		while ((val = csc_cfg_read_next(root, &key)) != NULL) {
-			CDB_SHOW(("READ [what]: %s = %s\n", key, val));
+			cslog("READ [what]: %s = %s\n", key, val);
 		}
 	}
 
 	/* read an integer */
 	csc_cfg_read_long(root, rdlist[2][0], rdlist[2][1], &lv);
-	CDB_SHOW(("READLONG %s: %s = %ld\n", rdlist[2][0], rdlist[2][1], lv));
+	cslog("READLONG %s: %s = %ld\n", rdlist[2][0], rdlist[2][1], lv);
 
 	/* write a new main key */
 	strcpy(mkey, mytimestamp(0));
 	sprintf(nkey, "timestamp");
 	csc_cfg_write(root, mkey, nkey, mytimestamp(1));
-	CDB_SHOW(("WRITENEW %s: %s = %s\n", mkey, nkey, 
-			csc_cfg_read(root, mkey, nkey)));
+	cslog("WRITENEW %s: %s = %s\n", mkey, nkey, 
+			csc_cfg_read(root, mkey, nkey));
 
 	/* write to the root key */
 	csc_cfg_write(root, NULL, nkey, mytimestamp(1));
-	CDB_SHOW(("WRITEROOT: %s = %s\n", nkey, 
-				csc_cfg_read(root, NULL, nkey)));
+	cslog("WRITEROOT: %s = %s\n", nkey, 
+				csc_cfg_read(root, NULL, nkey));
 
 	/* write something longer than orignal */
 	val = csc_cfg_copy(root, rdlist[4][0], rdlist[4][1], 64);
@@ -207,8 +207,8 @@ static int config_key_test(void)
 		strcat(val, ":appendix");
 	}
 	csc_cfg_write(root, rdlist[4][0], rdlist[4][1], val);
-	CDB_SHOW(("WRITEEXT %s: %s = %s\n", rdlist[4][0], rdlist[4][1],
-			csc_cfg_read(root, rdlist[4][0], rdlist[4][1])));
+	cslog("WRITEEXT %s: %s = %s\n", rdlist[4][0], rdlist[4][1],
+			csc_cfg_read(root, rdlist[4][0], rdlist[4][1]));
 	free(val);
 
 	/* write something shorter than orignal */
@@ -222,30 +222,30 @@ static int config_key_test(void)
 			}
 		}
 		csc_cfg_write(root, rdlist[6][0], rdlist[6][1], val);
-		CDB_SHOW(("WRITECUT %s: %s = %s\n", rdlist[6][0], rdlist[6][1],
-			csc_cfg_read(root, rdlist[6][0], rdlist[6][1])));
+		cslog("WRITECUT %s: %s = %s\n", rdlist[6][0], rdlist[6][1],
+			csc_cfg_read(root, rdlist[6][0], rdlist[6][1]));
 		free(val);
 	}
 
 	csc_cfg_write_bin(root, "what", "Binary", root, 48);
 	val = csc_cfg_copy_bin(root, "what", "Binary", &n);
-	CDB_SHOW(("BINARY %s: %s = (%d) ", "what", "Binary", n));
+	cslog("BINARY %s: %s = (%d) ", "what", "Binary", n);
 	if (val) {
 		for (i = 0; i < n; i++) {
-			CDB_SHOW(("%02x ", (unsigned char)val[i]));
+			cslog("%02x ", (unsigned char)val[i]);
 		}
 		free(val);
 	}
-	CDB_SHOW(("\n"));
+	cslog("\n");
 
-	CDB_SHOW(("\n\n"));
+	cslog("\n\n");
 	csc_cfg_dump(root);
 	csc_cfg_delete_key(root, NULL, "timestamp");
 	csc_cfg_delete_key(root, "hello", "window_state");
 	csc_cfg_delete_block(root, "main_define.h");
-	CDB_SHOW(("DELETE: timestamp, hello/window_state, [main_define.h]\n"));
+	cslog("DELETE: timestamp, hello/window_state, [main_define.h]\n");
 	csc_cfg_dump(root);
-	CDB_SHOW(("%x\n", csc_cfg_close(root)));
+	cslog("%x\n", csc_cfg_close(root));
 	return 0;
 }
 
@@ -269,15 +269,15 @@ int config_block_test(char *fname)
 	
 	kbuf = csc_cfg_copy_block(root, fname, &klen);
 	if (klen != (int)flen) {
-		CDB_SHOW(("BLOCK [%s]: %d != %ld\n", fname, klen, flen));
+		cslog("BLOCK [%s]: %d != %ld\n", fname, klen, flen);
 	} else if (memcmp(fbuf, kbuf, klen)) {
 		for (i = 0; i < klen; i++) {
 			if (fbuf[i] != kbuf[i]) {
 				break;
 			}
 		}
-		CDB_SHOW(("BLOCK [%s]: %d at %x %x\n", 
-					fname, i, fbuf[i], kbuf[i]));
+		cslog("BLOCK [%s]: %d at %x %x\n", 
+					fname, i, fbuf[i], kbuf[i]);
 	}
 	csc_cfg_close(root);
 	
@@ -293,7 +293,7 @@ int config_registry_test(char *syspath, char *path, char *fname)
 	char	*buf, *p;
 	int	sysp, len;
 
-	//CDB_SHOW(("config_registry_test: %s %s %s\n", syspath, path, fname));
+	//cslog("config_registry_test: %s %s %s\n", syspath, path, fname);
 	if (!strcmp(syspath, "DESKTOP")) {
 		sysp = SMM_CFGROOT_DESKTOP;
 	} else if (!strcmp(syspath, "USER")) {
@@ -303,23 +303,23 @@ int config_registry_test(char *syspath, char *path, char *fname)
 	} else if (!strcmp(syspath, "CURRENT")) {
 		sysp = SMM_CFGROOT_CURRENT;
 	} else {
-		CDB_SHOW(("Unknown system path - %s\n", syspath));
+		cslog("Unknown system path - %s\n", syspath);
 		return -1;
 	}
 		
 	/* open HKEY_CURRENT_USER\\SOFTWARE\\7-Zip */
 	if ((root = csc_cfg_open(sysp, path, fname, CSC_CFG_READ)) == NULL) {
-		CDB_SHOW(("Can't open\n"));
+		cslog("Can't open\n");
 		return -1;
 	}
 
 	len = smm_config_path(sysp, path, fname, NULL, 0);
 	if ((buf = smm_alloc(len)) != NULL) {
 		smm_config_path(sysp, path, fname, buf, len);
-		CDB_SHOW(("# File System Path: %s\n", buf));
+		cslog("# File System Path: %s\n", buf);
 		buf += strlen(buf) + 1;
 		p  = buf + strlen(buf) + 1;
-		CDB_SHOW(("# Registry Path:    %s\\%s\n", p, buf));
+		cslog("# Registry Path:    %s\\%s\n", p, buf);
 		smm_free(buf);
 	}
 	
@@ -333,7 +333,7 @@ int config_registry_write(char *syspath)
 	KEYCB	*root;
 	int	sysp;
 
-	//CDB_SHOW(("config_registry_write: %s\n", syspath));
+	//cslog("config_registry_write: %s\n", syspath);
 	if (!strcmp(syspath, "DESKTOP")) {
 		sysp = SMM_CFGROOT_DESKTOP;
 	} else if (!strcmp(syspath, "USER")) {
@@ -343,13 +343,13 @@ int config_registry_write(char *syspath)
 	} else if (!strcmp(syspath, "CURRENT")) {
 		sysp = SMM_CFGROOT_CURRENT;
 	} else {
-		CDB_SHOW(("Unknown system path - %s\n", syspath));
+		cslog("Unknown system path - %s\n", syspath);
 		return -1;
 	}
 	
 	if ((root = csc_cfg_open(SMM_CFGROOT_MEMPOOL, testconf,
 					NULL, CSC_CFG_READ)) == NULL) {
-		CDB_SHOW(("Weird\n"));
+		cslog("Weird\n");
 		return -1;
 	}
 	//csc_cfg_dump(root);
@@ -394,7 +394,7 @@ int config_main(void *rtime, int argc, char **argv)
 	char	*sdir = NULL;
 
 	if (argc < 2) {
-		csc_cli_print(clist, NULL);
+		csc_cli_print(clist, 0, NULL);
 		return 0;
 	}
 	if ((rtime = csc_cli_qopt_open(argc, argv)) == NULL) {
@@ -403,7 +403,7 @@ int config_main(void *rtime, int argc, char **argv)
 	while ((c = csc_cli_qopt(rtime, clist)) >= 0) {
 		switch (c) {
 		case 'h':
-			csc_cli_print(clist, NULL);
+			csc_cli_print(clist, 0, NULL);
 			break;
 		case 'o':
 			config_open_rdonly();
@@ -416,8 +416,8 @@ int config_main(void *rtime, int argc, char **argv)
 			} else if (c + 1 < argc) {
 				config_registry_test(sdir, argv[c+1], argv[c]);
 			} else {
-				CDB_SHOW(("%c: DESKTOP/USER/SYSTEM/CURRENT "
-							"KEY ...\n"));
+				cslog("%c: DESKTOP/USER/SYSTEM/CURRENT "
+							"KEY ...\n");
 			}
 			break;
 		case 'R':
@@ -438,11 +438,11 @@ int config_main(void *rtime, int argc, char **argv)
 			break;
 		default:
 			if (csc_cli_qopt_optopt(rtime) == ':') {
-				CDB_SHOW(("%c: missing argument\n", c));
+				cslog("%c: missing argument\n", c);
 			} else {
-				CDB_SHOW(("%c: unknown option\n", c));
+				cslog("%c: unknown option\n", c);
 			}
-			csc_cli_print(clist, NULL);
+			csc_cli_print(clist, 0, NULL);
 			break;
 		}
 	}

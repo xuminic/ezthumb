@@ -28,15 +28,12 @@ static int slog_csoup_trans_date(int cw, char *buf, int blen);
 static int slog_csoup_trans_module(int cw, char *buf, int blen);
 
 SMMDBG	csoup_debug_control = {
-	SLOG_MAGIC,			/* the magic word */
-	SLOG_MODUL_ALL(SLOG_LVL_AUTO),	/* control word in host */
-	SLOG_OPT_ALL,			/* option */
-	NULL, NULL,			/* file name and FILEP */
-	(void*) -1,			/* standard i/o */
-	{ slog_csoup_trans_module },
-	{ slog_csoup_trans_date },
-	NULL, NULL,			/* socket extension */
-	NULL, NULL, NULL		/* mutex setting */
+	.magic = SLOG_MAGIC,			/* the magic word */
+	.cword = SLOG_MODUL_ALL(SLOG_LVL_AUTO),	/* control word in host */
+	.option = SLOG_OPT_ALL,			/* option */
+	.stdio = (void*) -1,			/* standard i/o */
+	.trans_module = { slog_csoup_trans_module },
+	.trans_date = { slog_csoup_trans_date }
 };
 
 
@@ -72,7 +69,7 @@ int slog_csoup_puts(int setcw, int cw, char *buf)
 	return rc;
 }
 
-/** better use this as an example becuase it's not thread safe */
+/** better use this as an example because it's not thread safe */
 char *slog_csoup_format(char *fmt, ...)
 {
 	char	logbuf[SLOG_BUFFER];
@@ -82,6 +79,42 @@ char *slog_csoup_format(char *fmt, ...)
 	SMM_VSNPRINT(logbuf, sizeof(logbuf), fmt, ap);
 	va_end(ap);
 	return csc_strcpy_alloc(logbuf, 0);
+}
+
+int cslog(char *fmt, ...)
+{
+	char	logbuf[SLOG_BUFFER];
+	va_list ap;
+
+	va_start(ap, fmt);
+	SMM_VSNPRINT(logbuf, sizeof(logbuf), fmt, ap);
+	va_end(ap);
+	return slog_output(&csoup_debug_control, SLOG_FLUSH, logbuf);
+}
+
+int cclog(int cond, char *fmt, ...)
+{
+	char	logbuf[SLOG_BUFFER];
+	va_list ap;
+
+	switch (cond) {
+	case 0:	
+		strcpy(logbuf, "*** ");
+		break;
+	case -1:
+		strcpy(logbuf, "+++ ");
+		break;
+	case -2:
+		strcpy(logbuf, "$$$ ");
+		break;
+	default:
+		strcpy(logbuf, "--- ");
+		break;
+	}
+	va_start(ap, fmt);
+	SMM_VSNPRINT(logbuf+4, sizeof(logbuf)-4, fmt, ap);
+	va_end(ap);
+	return slog_output(&csoup_debug_control, SLOG_FLUSH, logbuf);
 }
 
 static int slog_csoup_trans_date(int cw, char *buf, int blen)

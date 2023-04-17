@@ -46,9 +46,16 @@ int csc_cli_make_table(struct cliopt *optbl, struct option *oplst, int len)
 		if (rc & CLI_LONG) {
 			if (oplst && (i < (len - 1))) {
 				oplst[i].name    = optbl->opt_long;
-				oplst[i].has_arg = optbl->param;
 				oplst[i].flag    = NULL;
 				oplst[i].val     = optbl->opt_char;
+
+				if ((CSC_CLI_PARAM(optbl) == 1) || (CSC_CLI_PARAM(optbl) == 3)) {
+					oplst[i].has_arg = 1;
+				} else if ((CSC_CLI_PARAM(optbl) == 2) || (CSC_CLI_PARAM(optbl) == 4)) {
+					oplst[i].has_arg = 2;
+				} else {
+					oplst[i].has_arg = CSC_CLI_PARAM(optbl);
+				}
 			}
 			i++;
 		}

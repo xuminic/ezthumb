@@ -19,7 +19,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +45,14 @@ int smm_mkdir(char *path)
 		return smm_errno_update(SMM_ERR_NONE);
 	}
 	return smm_errno_update(SMM_ERR_MKDIR);
+}
+
+int alt_isalpha(int ch)
+{
+	if (((ch >= 'A') && (ch <= 'Z')) || ((ch >= 'a') && (ch <= 'z'))) {
+		return 1;
+	}
+	return 0;
 }
 #endif
 
@@ -110,7 +117,7 @@ int smm_mkpath(char *path)
 	for (p = pco; *p && csc_isdelim(SMM_PATH_DELIM ".", *p); p++);
 #else	/* CFG_WIN32_API */
 	for (p = pco; *p && csc_isdelim(SMM_PATH_DELIM "?.", *p); p++);
-	if (isalpha(*p) && (p[1] == ':')) {
+	if (alt_isalpha(*p) && (p[1] == ':')) {
 		p += 2;
 	}
 	for ( ; *p && csc_isdelim(SMM_PATH_DELIM ".", *p); p++);

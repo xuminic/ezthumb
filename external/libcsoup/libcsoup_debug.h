@@ -41,6 +41,8 @@ SMMDBG *slog_csoup_open(FILE *stdio, char *fname);
 int slog_csoup_close(void);
 int slog_csoup_puts(int setcw, int cw, char *buf);
 char *slog_csoup_format(char *fmt, ...);
+int cslog(char *fmt, ...);
+int cclog(int cond, char *fmt, ...);
 
 
 #ifndef  DEBUG

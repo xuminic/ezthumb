@@ -1,3 +1,51 @@
+20221210: 0.12.2
+	* csc_cli: fixed a bug and updated its function
+	* CRC32: fixed its return type
+
+20200122: 0.12.0
+	* csc_bmem.c: bitmap memory management updated and tested.
+	* csc_dmem.c: doubly linked memory management supports guarding area.
+	* csc_tmem.c: all three memory management implemented a unified
+	framework.
+
+20191104:
+	* Makefile: added CFG_UNIT_TEST for integrating unit tests.
+	* libcsoup.h: added more controls to tmem.
+	* libcsoup_debug.h: added cslog() and cclog() to replace CDB_SHOW
+	* slog_csoup.c: added cslog() and cclog() to replace CDB_SHOW
+	* csc_tmem.c: many updates.
+
+20181126: 0.11.0
+	Fixed the problem that binary incompatible of libcsoup between
+	Cygwin gcc and MinGW gcc and vice verse. The root problem was though
+	these build system were source code compatible, some macros rely on
+	some global variables, which may have different symbols. For examples:
+	stdout, errno, ctype "functions", etc
+	* Makefile: optimism adjust to O1 to avoid strcat being optimized to
+	stpcpy, which is not portable between newlibs.
+	* cli/csc_cli_getopt.c: csc_cli_getopt_open() definition changes
+	optind is not portable between newlibs.
+	* slog/slog_core.c: removed all stdout because it's not portable
+	between newlibs.
+	* smm/smm_config.c: removed all stdout and errno because
+	they are not portable between newlibs.
+	* smm/smm_mkdir.c: isalpha() is not portable between newlibs.
+	* cli/csc_cli_private.c: isalnum() is not portable between newlibs.
+	* soup/csc_config.c: isxdigit() is not portable between newlibs.
+	* main: adjusted according to function definition changes
+
+20181126: 0.10.1
+	* packhex: removed to main/
+	* csc_tmem.c: make it better to use.
+	* Makefile: optimizm adjust to -O1 to avoid strcat being optimized to
+	stpcpy, which confused between newlibs.
+
+20181121: 0.10.0
+	* csc_tmem.c: added a tiny memory pool management functions.
+
+20170815: 0.9.11
+	* csc_pack_hex.c: supported packing a group of files in one C array.
+
 20170609: 0.9.10
 	* csc_url_decode.c: supported URL decoding.
 

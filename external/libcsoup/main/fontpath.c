@@ -34,16 +34,16 @@ int fontpath_main(void *rtime, int argc, char **argv)
 
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "-h") || !strcmp(*argv, "--help")) {
-			CDB_SHOW(("fontpath [font_name]\n"));
+			cslog("fontpath [font_name]\n");
 			return 0;
 		} else {
-			CDB_SHOW(("Unknown option. [%s]\n", *argv));
+			cslog("Unknown option. [%s]\n", *argv);
 			return -1;
 		}
 	}
 	if (argc > 0) {
 		fdir = smm_fontpath(*argv, argv+1);
-		CDB_SHOW(("%s\n", fdir));
+		cslog("%s\n", fdir);
 		free(fdir);
 	}
 	return 0;

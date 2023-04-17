@@ -32,7 +32,7 @@
 
 static int do_signal_break(int sig)
 {
-	CDB_SHOW(("Signal %d received\n", sig));
+	cslog("Signal %d received\n", sig);
 	return sig;
 }
 
@@ -44,12 +44,12 @@ static int do_smm_chdir(char *path)
 	rc = smm_chdir(path);
 	
 	cwd = smm_cwd_alloc(0);
-	CDB_SHOW(("Enter: %s\n", cwd));
+	cslog("Enter: %s\n", cwd);
 	free(cwd);
 
-	CDB_SHOW(("Press any key to continue ... "));
+	cslog("Press any key to continue ... ");
 	getchar();
-	CDB_SHOW(("(%d)\n", rc));
+	cslog("(%d)\n", rc);
 	return 0;
 }
 
@@ -89,7 +89,7 @@ key   =   v alue  #  hello\n\
 ";
 	KEYCB	*kbuf;
 
-	CDB_SHOW(("\n[SMMCONFIG] Default Path Test:\n")); 
+	cslog("\n[SMMCONFIG] Default Path Test:\n"); 
 	for (i = 0; i < (int)(sizeof(syspath)/sizeof(int)); i++) {
 		root = smm_config_open(syspath[i], TEST_PATH, 
 				TEST_FILE, 0xdeadbeef);
@@ -98,30 +98,30 @@ key   =   v alue  #  hello\n\
 			smm_config_close(root);
 		}
 	}
-	CDB_SHOW(("\n[SMMCONFIG] Open memory for read:\n"));
+	cslog("\n[SMMCONFIG] Open memory for read:\n");
 	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
 	if (root) {
 		smm_config_dump(root);
 		smm_config_close(root);
 	}
-	CDB_SHOW(("\n[SMMCONFIG] Open memory for read/write:\n"));
+	cslog("\n[SMMCONFIG] Open memory for read/write:\n");
 	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, 
 			NULL, sizeof(config));
 	if (root) {
 		smm_config_dump(root);
 		smm_config_close(root);
 	}
-	CDB_SHOW(("\n[SMMCONFIG] Open memory for R/W/C:\n"));
+	cslog("\n[SMMCONFIG] Open memory for R/W/C:\n");
 	/* the CSC_CFG_RWC will be ignored because 'path' is NULL */
 	root = smm_config_open(SMM_CFGROOT_MEMPOOL, NULL, NULL, CSC_CFG_RWC);
 	if (root) {
 		smm_config_dump(root);
 		smm_config_close(root);
 	}
-	CDB_SHOW(("\n[SMMCONFIG] Dump memory configure:\n"));
+	cslog("\n[SMMCONFIG] Dump memory configure:\n");
 	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
 	while ((kbuf = smm_config_read_alloc(root)) != NULL) {
-		//CDB_SHOW(("READ: %s", kbuf->pool));
+		//cslog("READ: %s", kbuf->pool);
 		if (CFGF_TYPE_GET(kbuf->flags) == CFGF_TYPE_UNKWN) {
 			csc_cfg_kcb_fillup(kbuf);
 		}
@@ -130,8 +130,8 @@ key   =   v alue  #  hello\n\
 	}
 	smm_config_close(root);
 
-	CDB_SHOW(("\n[SMMCONFIG] Save memory configure to memory and [%s]\n",
-			TEST_FILE));
+	cslog("\n[SMMCONFIG] Save memory configure to memory and [%s]\n",
+			TEST_FILE);
 	root = smm_config_open(SMM_CFGROOT_MEMPOOL, config, NULL, 0);
 	save = smm_config_open(SMM_CFGROOT_MEMPOOL, sbuf, NULL, sizeof(sbuf));
 	sfd = smm_config_open(SMM_CFGROOT_CURRENT, NULL, 
@@ -147,20 +147,20 @@ key   =   v alue  #  hello\n\
 	smm_config_close(sfd);
 	smm_config_close(save);
 	smm_config_close(root);
-	CDB_SHOW(("\n[SMMCONFIG] In Memory (overflowed):\n%s\n", sbuf));
+	cslog("\n[SMMCONFIG] In Memory (overflowed):\n%s\n", sbuf);
 
-	CDB_SHOW(("\n[SMMCONFIG] Dump/Copy/Append %s in "
-			"HKEY_CURRENT_USER\\SOFTWARE\\ or .config\n", path));
+	cslog("\n[SMMCONFIG] Dump/Copy/Append %s in "
+			"HKEY_CURRENT_USER\\SOFTWARE\\ or .config\n", path);
 	/* open HKEY_CURRENT_USER\\SOFTWARE\\7-Zip */
 	root = smm_config_open(SMM_CFGROOT_DESKTOP, NULL, path, CSC_CFG_READ);
 	if (root == NULL) {
-		CDB_SHOW(("[SMMCONFIG] Can not find %s\n", path));
+		cslog("[SMMCONFIG] Can not find %s\n", path);
 		return -1;
 	}
 	sprintf(sbuf, "%s.copy", path);
 	save = smm_config_open(SMM_CFGROOT_DESKTOP, NULL, sbuf, CSC_CFG_RWC);
 	if (save == NULL) {
-		CDB_SHOW(("[SMMCONFIG] Failed to create %s\n", sbuf));
+		cslog("[SMMCONFIG] Failed to create %s\n", sbuf);
 		smm_config_close(root);
 		return -2;
 	}
@@ -199,7 +199,7 @@ static int do_smm_config_dump(char *path)
 
 	root = smm_config_open(syspath[sysidx], NULL, path, CSC_CFG_READ);
 	if (root == NULL) {
-		CDB_SHOW(("[SMMCONFIG] Can not find %s\n", path));
+		cslog("[SMMCONFIG] Can not find %s\n", path);
 		return -1;
 	}
 	output = smm_config_open(SMM_CFGROOT_MEMPOOL, NULL, NULL, 0);
@@ -245,11 +245,11 @@ static int do_smm_mkpath(char *path)
 
 	plist[0] = path;
 	for (i = 0; plist[i]; i++) {
-		CDB_SHOW(("MKDIR: %s\n", plist[i]));
+		cslog("MKDIR: %s\n", plist[i]);
 		if (smm_mkpath(plist[i]) != SMM_ERR_NONE) {
-			CDB_SHOW(("Boo!\n"));
+			cslog("Boo!\n");
 		} else if (smm_fstat(plist[i]) != SMM_FSTAT_DIR) {
-			CDB_SHOW(("FAILED!\n"));
+			cslog("FAILED!\n");
 		}
 	}
 	return 0;
@@ -261,25 +261,25 @@ static int do_push_dir(char *path)
 	int	rc;
 
 	cwd = smm_cwd_alloc(0);
-	CDB_SHOW(("Current: %s\n", cwd));
+	cslog("Current: %s\n", cwd);
 	free(cwd);
 
 	cid = smm_cwd_push();
 	
 	rc = smm_chdir(path);
 	cwd = smm_cwd_alloc(0);
-	CDB_SHOW(("Enter: %s\n", cwd));
+	cslog("Enter: %s\n", cwd);
 	free(cwd);
 
 	smm_cwd_pop(cid);
 	
 	cwd = smm_cwd_alloc(0);
-	CDB_SHOW(("Return: %s\n", cwd));
+	cslog("Return: %s\n", cwd);
 	free(cwd);
 
-	CDB_SHOW(("Press any key to continue ... "));
+	cslog("Press any key to continue ... ");
 	getchar();
-	CDB_SHOW(("(%d)\n", rc));
+	cslog("(%d)\n", rc);
 	return 0;
 }
 
@@ -290,19 +290,19 @@ static int do_stat_file(char *path)
 	rc = smm_fstat(path);
 	switch (rc) {
 	case SMM_FSTAT_REGULAR:
-		CDB_SHOW(("%s: regular\n", path));
+		cslog("%s: regular\n", path);
 		break;
 	case SMM_FSTAT_DIR:
-		CDB_SHOW(("%s: directory\n", path));
+		cslog("%s: directory\n", path);
 		break;
 	case SMM_FSTAT_LINK:
-		CDB_SHOW(("%s: link\n", path));
+		cslog("%s: link\n", path);
 		break;
 	case SMM_FSTAT_DEVICE:
-		CDB_SHOW(("%s: device\n", path));
+		cslog("%s: device\n", path);
 		break;
 	}
-	CDB_SHOW(("(%d)\n", rc));
+	cslog("(%d)\n", rc);
 	return 0;
 }
 
@@ -314,18 +314,18 @@ static int pathtrek_cb(void *option, char *path, int type, void *info)
 	(void) option;		/* stop the compiler warning */
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		CDB_SHOW(("Enter %s\n", path));
+		cslog("Enter %s\n", path);
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		CDB_SHOW(("Leave %s (%d:%d)\n", path, 
-				sdir->stat_dirs, sdir->stat_files));
+		cslog("Leave %s (%d:%d)\n", path, 
+				sdir->stat_dirs, sdir->stat_files);
 		break;
 	case SMM_MSG_PATH_STAT:
-		CDB_SHOW(("Finish (%d:%d)\n", 
-					sdir->stat_dirs, sdir->stat_files));
+		cslog("Finish (%d:%d)\n", 
+					sdir->stat_dirs, sdir->stat_files);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		CDB_SHOW(("Processing %s\n", path));
+		cslog("Processing %s\n", path);
 		break;
 	}
 	return 0;
@@ -336,7 +336,7 @@ static int do_path_trek(char *path, int flags)
 	int	rc;
 
 	rc = smm_pathtrek(path, flags, pathtrek_cb, NULL);
-	CDB_SHOW(("(%d)\n", rc));
+	cslog("(%d)\n", rc);
 	return 0;
 }
 
@@ -375,7 +375,7 @@ int smm_main(void *rtime, int argc, char **argv)
 	/* stop the compiler complaining */
 	(void) rtime;
 
-	if ((rtbuf = csc_cli_getopt_open(clist)) == NULL) {
+	if ((rtbuf = csc_cli_getopt_open(clist, &optind)) == NULL) {
 		return -1;
 	}
 
@@ -385,10 +385,10 @@ int smm_main(void *rtime, int argc, char **argv)
 	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
 		switch (c) {
 		case 1:
-			csc_cli_print(clist, NULL);
+			csc_cli_print(clist, 0, NULL);
 			goto quick_quit;
 		case 2:
-			CDB_SHOW(("%s\n", version));
+			cslog("%s\n", version);
 			goto quick_quit;
 		case 3:
 			d_flags &= ~SMM_PATH_DIR_MASK;
@@ -425,10 +425,10 @@ int smm_main(void *rtime, int argc, char **argv)
 			break;
 		case 'U':
 			smm_userpath(buf, sizeof(buf));
-			CDB_SHOW(("User Path: %s\n", buf));
+			cslog("User Path: %s\n", buf);
 			break;
 		default:
-			CDB_SHOW(("Unknown option. [%c]\n", c));
+			cslog("Unknown option. [%c]\n", c);
 			goto quick_quit;
 		}
 	}

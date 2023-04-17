@@ -45,7 +45,7 @@ struct	clirun	{
    \remark  Must use csc_cli_getopt_close() to close it.       
    \remark  The getopt() and getopt_long() will be reset after this call.
 */
-void *csc_cli_getopt_open(struct cliopt *optbl)
+void *csc_cli_getopt_open(struct cliopt *optbl, int *pt_optind)
 {
 	struct	clirun	*rtbuf;
 	int	n, rc;
@@ -60,7 +60,9 @@ void *csc_cli_getopt_open(struct cliopt *optbl)
 	}
 
 	/* reset the getopt() function */
-	optind = 1;
+	if (pt_optind) {
+		*pt_optind = 1;
+	}
 	return rtbuf;
 }
 

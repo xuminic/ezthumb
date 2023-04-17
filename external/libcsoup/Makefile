@@ -1,6 +1,6 @@
 
 export	CC	= gcc
-export	AR	= ar
+export	AR	= ar crs
 export	CP	= cp
 export	RM	= rm -f
 
@@ -12,10 +12,10 @@ MANDIR	= /usr/local/man/man1
 
 # Options: CFG_WIN32_API, CFG_UNIX_API CFG_SLOG_SOCKET
 SYSAPI	= 
-DEBUG	= -g -DDEBUG -DCFG_CDLL_SAFE
+DEBUG	= -DDEBUG -DCFG_CDLL_SAFE -DCFG_UNIT_TEST
 DEFINES = -DUNICODE -D_UNICODE -D_FILE_OFFSET_BITS=64 $(SLOG_SOCKET)
 
-export	CFLAGS	= -Wall -Wextra -O3 $(DEBUG) $(DEFINES) $(SYSAPI) 
+export	CFLAGS	= -Wall -O3 $(DEBUG) $(DEFINES) $(SYSAPI)
 
 ifndef	RELCS
 RELCS	= libcsoup-$(shell version.sh)
@@ -36,7 +36,7 @@ main: $(TARGET)
 
 $(TARGET) : cli slog smm soup
 	$(RM) $(TARGET)
-	$(AR) crus $(TARGET) cli/*.o slog/*.o smm/*.o soup/*.o 
+	$(AR) $(TARGET) cli/*.o slog/*.o smm/*.o soup/*.o 
 
 cli:
 	make -C cli all
@@ -62,19 +62,15 @@ clean:
 	make -C slog clean
 	make -C smm clean
 	make -C soup clean
-	$(RM) $(TARGET)
+	$(RM) $(TARGET) packhex
 
 release:
 	if [ -d $(RELCS) ]; then $(RM) -r $(RELCS); fi
 	-mkdir $(RELCS) $(RELCS)/doc
 	$(CP) ChangeLog Makefile *.h *.sh $(RELCS)
-	$(CP) -a cli main slog smm soup snippet $(RELCS)
+	$(CP) -a cli main slog smm soup $(RELCS)
 	$(CP) doc/Doxyfile $(RELCS)/doc
 	make -C $(RELCS) clean
 	$(RM) $(RELCS).tar.gz
 	tar czf $(RELCS).tar.gz $(RELCS)
-
-export: release
-	$(RM) $(RELCS).tar.gz
-	cp -au $(RELCS)/* ../ezthumb/external/libcsoup
 

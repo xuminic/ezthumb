@@ -29,8 +29,6 @@
 #include "libcsoup_debug.h"
 #include "csc_cli_private.h"
 
-#define CLI_FIXED_ARGS		"ARGS"
-#define CLI_OPT_ARGS		"[ARGS]"
 
 /* The display can be combination of followings
  * ([FF]=Front padding, [BB]=Back padding):
@@ -52,12 +50,16 @@
  */
 
 /* calculate the longest options before comments */
-static int csc_cli_find_longest(struct cliopt *optbl)
+static int csc_cli_find_longest(struct cliopt *optbl, int mask)
 {
 	int	rc, type, clen, optlong = 0;
 
 	type = csc_cli_table_type(optbl);
 	while ((rc = csc_cli_type(optbl)) != CLI_EOL) {
+		if (!CSC_CLI_SHOW(optbl, mask)) {
+			optbl++;
+			continue;
+		}
 		clen = CLI_FRONT_PADDING;
 		switch (rc) {
 		case CLI_SHORT:
@@ -73,10 +75,10 @@ static int csc_cli_find_longest(struct cliopt *optbl)
 			clen += 5 + strlen(optbl->opt_long);
 			break;
 		}
-		if (optbl->param == 1) {
-			clen += sizeof(CLI_FIXED_ARGS) + 1;
-		} else if (optbl->param > 1) {
-			clen += sizeof(CLI_OPT_ARGS) + 1;
+		if ((CSC_CLI_PARAM(optbl) == 1) || (CSC_CLI_PARAM(optbl) == 3)) {
+			clen += 5;	/* sizeof(" ARGS") */
+		} else if ((CSC_CLI_PARAM(optbl) == 2) || (CSC_CLI_PARAM(optbl) == 4)) {
+			clen += 7;	/* sizeof(" [ARGS]") */
 		}
 		if (optbl->comment && (*optbl->comment == '*')) {
 			clen = 0;
@@ -132,12 +134,19 @@ static int csc_cli_format(struct cliopt *optbl, int type, int optlen,
 		break;
 	}
 	
-	if (optbl->param == 1) {
-		strcat(buf, " ");
-		strcat(buf, CLI_FIXED_ARGS);
-	} else if (optbl->param > 1) {
-		strcat(buf, " ");
-		strcat(buf, CLI_OPT_ARGS);
+	switch (CSC_CLI_PARAM(optbl)) {
+	case 1:
+		strcat(buf, " ARGS");
+		break;
+	case 2:
+		strcat(buf, " [ARGS]");
+		break;
+	case 3:
+		strcat(buf, " NUMS");
+		break;
+	case 4:
+		strcat(buf, " [NUMS]");
+		break;
 	}
 	csc_strfill(buf, optlen, ' ');
 
@@ -145,14 +154,18 @@ format_end:
 	return strlen(buf);
 }	
 
-int csc_cli_print(struct cliopt *optbl, int (*show)(char *))
+int csc_cli_print(struct cliopt *optbl, int mask, int (*show)(char *))
 {
 	char	sbuf[256];
 	int	optlen, type, pflag;
 
-	optlen = csc_cli_find_longest(optbl);
+	optlen = csc_cli_find_longest(optbl, mask);
 	type = csc_cli_table_type(optbl);
 	while (csc_cli_type(optbl) != CLI_EOL) {
+		if (!CSC_CLI_SHOW(optbl, mask)) {
+			optbl++;
+			continue;
+		}
 		pflag = 0;
 		if (csc_cli_format(optbl, type, optlen, 
 					sbuf, sizeof(sbuf) - 1)) {

@@ -25,6 +25,11 @@
 #include "libcsoup.h"
 
 #ifdef  CFG_WIN32_API
+#ifdef  __CYGWIN__
+/* no idea why my cygwin can not find _wfopen() */
+extern FILE *_wfopen(const wchar_t *filename, const wchar_t *mode);
+#endif
+
 FILE *smm_fopen(char *path, char *mode)
 {
 	TCHAR   *wpath, *wmode;

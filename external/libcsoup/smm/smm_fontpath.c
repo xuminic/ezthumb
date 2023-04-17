@@ -29,6 +29,10 @@
 //#define CSOUP_DEBUG_LOCAL     SLOG_CWORD(CSOUP_MOD_CONFIG, SLOG_LVL_MODULE)
 #include "libcsoup_debug.h"
 
+#ifdef	__CYGWIN__
+#include <wchar.h>
+#endif
+
 struct	FTINF	{
 	char	*ftpath;
 	char	*ftname;	/* output */

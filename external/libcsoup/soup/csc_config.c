@@ -53,7 +53,6 @@
 */
 
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -812,16 +811,25 @@ int csc_cfg_binary_to_hex(char *src, int slen, char *buf, int blen)
 	return slen * 2;	/* return the length of the hex string */
 }
 
+int alt_isxdigit(int ch)
+{
+	if (((ch >= 'A') && (ch <= 'F')) || ((ch >= 'a') && (ch <= 'f')) ||
+			((ch >= '0') && (ch <= '9'))) {
+		return 1;
+	}
+	return 0;
+}
+
 int csc_cfg_hex_to_binary(char *src, char *buf, int blen)
 {
 	char	temp[4];
 	int	amnt = 0;
 
 	while (*src) {
-		if (isxdigit(*src)) {
+		if (alt_isxdigit(*src)) {
 			temp[0] = *src++;
 		}
-		if (isxdigit(*src)) {
+		if (alt_isxdigit(*src)) {
 			temp[1] = *src++;
 		} else {
 			break;
@@ -865,9 +873,19 @@ static KEYCB *csc_cfg_root_alloc(int sysdir, char *path,
 	rext = (struct KEYROOT *) root->pool;
 	rext->sysdir = sysdir;
 	rext->dkcb   = root;
+	/* GCC 10 over reacting:
+	 * csc_config.c:878:3: warning: ‘strcpy’ offset 96 from the object at ‘kp’ 
+	 * is out of the bounds of referenced subobject ‘pool’ with type ‘char[1]’ 
+	 * at offset 96 [-Warray-bounds]
+	 * 878 |   strcpy(root->key, path);
+	 *     |   ^~~~~~~~~~~~~~~~~~~~~~~
+	 * The extensive ‘char[1]’ is a common practise in embedded programming */
 	if (path) {
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Warray-bounds"
 		root->key = rext->pool;
 		strcpy(root->key, path);
+		#pragma GCC diagnostic pop
 	}
 	if (filename) {
 		root->value = rext->pool;

@@ -171,14 +171,14 @@ int csc_cli_qopt(void *ropt, struct cliopt *optbl)
 			}
 		} else if (rc == CLI_LONG) {
 			if ((opt[0] == '-') && (opt[1] == '-') &&
-					!strcmp(opt+2, optbl->opt_long)) {
+					!strncmp(opt+2, optbl->opt_long, strlen(optbl->opt_long))) {
 				break;
 			}
 		} else if (rc == CLI_BOTH) {
 			if (opt[1] == optbl->opt_char) {
 				break;
 			} else if ((opt[0] == '-') && (opt[1] == '-') && 
-					!strcmp(opt+1, optbl->opt_long)) {
+					!strncmp(opt+2, optbl->opt_long, strlen(optbl->opt_long))) {
 				break;
 			}
 		}
@@ -199,9 +199,10 @@ int csc_cli_qopt(void *ropt, struct cliopt *optbl)
 	rtbuf->optind++;
 	rtbuf->argv++;
 	rtbuf->optarg = NULL;
+	if ((CSC_CLI_PARAM(optbl) == 1) || (CSC_CLI_PARAM(optbl) == 3)) { 
+		/* one argument required */
+		opt = *rtbuf->argv;
 
-	opt = *rtbuf->argv;
-	if (optbl->param == 1) {	/* one argument required */
 		if (rtbuf->optind >= rtbuf->argc) {
 			rtbuf->optopt = ':';
 			return '?';	/* end of scan by lost argument */
@@ -212,11 +213,17 @@ int csc_cli_qopt(void *ropt, struct cliopt *optbl)
 		}
 		rtbuf->optarg = *rtbuf->argv++;
 		rtbuf->optind++;
-	} else if (optbl->param > 1) {	/* one optional argument required */
-		if ((rtbuf->optind < rtbuf->argc) && 
-				(*opt != '-') && (*opt != '+')) {
-			rtbuf->optarg = *rtbuf->argv++;;
-			rtbuf->optind++;
+	} else if ((CSC_CLI_PARAM(optbl) == 2) || (CSC_CLI_PARAM(optbl) == 4)) {
+		/* one optional argument required */
+		if (opt[1] != '-') {	/* short form */
+			if (opt[2]) {
+				rtbuf->optarg = &opt[2];
+			}
+		} else {	/* long form */
+			opt += strlen(optbl->opt_long) + 2;
+			if (*opt == '=') {
+				rtbuf->optarg = ++opt;
+			}
 		}
 	}
 	return optbl->opt_char;

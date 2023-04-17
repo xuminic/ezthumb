@@ -20,29 +20,38 @@
 */
 
 
-#include <ctype.h>
 #include <stdio.h>
 
 #include "libcsoup.h"
 #include "csc_cli_private.h"
 
+int alt_isalnum(int ch)
+{
+	if ((ch == '_') || 
+			((ch >= 'A') && (ch <= 'Z')) ||
+			((ch >= 'a') && (ch <= 'z')) ||
+			((ch >= '0') && (ch <= '9'))) {
+		return 1;
+	}
+	return 0;
+}
 
 int csc_cli_type(struct cliopt *optbl)
 {
 	int	rc = 0;
 
 	if (optbl->opt_long && *optbl->opt_long) {
-		if (isalnum(optbl->opt_char)) {
+		if (alt_isalnum(optbl->opt_char)) {
 			rc = CLI_BOTH;		/* 'o', "option", 0, NULL */
 		} else {
 			rc = CLI_LONG;		/* 1, "option", 0, NULL */
 		}
-	} else if (isalnum(optbl->opt_char)) {
+	} else if (alt_isalnum(optbl->opt_char)) {
 		rc = CLI_SHORT;			/* 'o', NULL, 0, NULL */
 	} else if (optbl->comment == NULL) {
 		rc = CLI_EOL;			/* 0, NULL, 0, NULL */
-	} else if (optbl->param == -1) {
-		rc = CLI_EXTLINE;		/* 0, NULL, -1, "Half line" */
+	} else if (optbl->param == 15) {
+		rc = CLI_EXTLINE;		/* 0, NULL, 15, "Half line" */
 	} else {
 		rc = CLI_COMMENT;		/* 0, NULL, 0, "Full line" */
 	}

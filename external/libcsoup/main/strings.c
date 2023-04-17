@@ -38,21 +38,21 @@ int strings_strbody(void)
 	char	*p;
 	int	i, rc;
 
-	CDB_SHOW(("csc_strcmp_param() testing:\n"));
+	cslog("csc_strcmp_param() testing:\n");
 	for (i = 0; i < (int)(sizeof(testcase)/sizeof(struct dicts)); i++) {
-		CDB_SHOW(("Comparing {%s} and {%s} ... ", testcase[i].dest, testcase[i].sour)); 
+		cslog("Comparing {%s} and {%s} ... ", testcase[i].dest, testcase[i].sour); 
 		rc = csc_strcmp_param(testcase[i].dest, testcase[i].sour);
-		CDB_SHOW(("%d\n", rc));
+		cslog("%d\n", rc);
 	}
-	CDB_SHOW(("\ncsc_strbody() testing:\n"));
+	cslog("\ncsc_strbody() testing:\n");
 	for (i = 0; i < (int)(sizeof(testcase)/sizeof(struct dicts)); i++) {
 		if (testcase[i].dest) {
 			p = csc_strbody(testcase[i].dest, &rc);
-			CDB_SHOW(("Picking from {%s} ... %s (%d)\n", testcase[i].dest, p, rc));
+			cslog("Picking from {%s} ... %s (%d)\n", testcase[i].dest, p, rc);
 		}
 		if (testcase[i].sour) {
 			p = csc_strbody(testcase[i].sour, &rc);
-			CDB_SHOW(("Picking from {%s} ... %s (%d)\n", testcase[i].sour, p, rc));
+			cslog("Picking from {%s} ... %s (%d)\n", testcase[i].sour, p, rc);
 		}
 	}				
 
@@ -70,15 +70,15 @@ static int strings_strbival(void)
 	};
 	int	i, v1, v2;
 
-	CDB_SHOW(("\ncsc_strbival_int() testing: xX+*\n"));
+	cslog("\ncsc_strbival_int() testing: xX+*\n");
 	for (i = 0; testcase[i]; i++) {
 		v1 = csc_strbival_int(testcase[i], "xX+*", &v2);
-		CDB_SHOW(("[%s]:  %d %d\n", testcase[i], v1, v2));
+		cslog("[%s]:  %d %d\n", testcase[i], v1, v2);
 	}
-	CDB_SHOW(("csc_strbival_int() testing:\n"));
+	cslog("csc_strbival_int() testing:\n");
 	for (i = 0; testcase[i]; i++) {
 		v1 = csc_strbival_int(testcase[i], NULL, &v2);
-		CDB_SHOW(("[%s]:  %d %d\n", testcase[i], v1, v2));
+		cslog("[%s]:  %d %d\n", testcase[i], v1, v2);
 	}
 
 	return 0;
@@ -90,50 +90,50 @@ static int strings_strinsert(void)
 	char	buf[24];
 	int	rc;
 
-	CDB_SHOW(("\nFrom [Alpha AXP of DEC] to [Alpha RISC of DEC]: "));
+	cslog("\nFrom [Alpha AXP of DEC] to [Alpha RISC of DEC]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), &buf[6], 3, "RISC");
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to [RISCAlpha AXP of DEC]: "));
+	cslog("From [Alpha AXP of DEC] to [RISCAlpha AXP of DEC]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), NULL, 0, "RISC");
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha AXP of DECCISC]: "));
+	cslog("From [Alpha AXP of DEC] to [Alpha AXP of DECCISC]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), buf+sizeof(buf), 0, "CISC");
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha RISCCISAXP of DEC]: "));
+	cslog("From [Alpha AXP of DEC] to [Alpha RISCCISAXP of DEC]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), &buf[6], 0, "RISCCIS");
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to buffer overflow: "));
+	cslog("From [Alpha AXP of DEC] to buffer overflow: ");
 	strcpy(buf, STRINSERTSMPL);
 	rc = csc_strinsert(buf, sizeof(buf), &buf[6], 0, "RISCCISC");
-	CDB_SHOW(("%s [%d]\n", buf, rc));
+	cslog("%s [%d]\n", buf, rc);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha AXP _AXP of DEC]: "));
+	cslog("From [Alpha AXP of DEC] to [Alpha AXP _AXP of DEC]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), buf+10, -4, "_");
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to out of boundry: "));
+	cslog("From [Alpha AXP of DEC] to out of boundry: ");
 	strcpy(buf, STRINSERTSMPL);
 	rc = csc_strinsert(buf, sizeof(buf), &buf[3], -4, "_");
-	CDB_SHOW(("%s [%d]\n", buf, rc));
+	cslog("%s [%d]\n", buf, rc);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha is gone]: "));
+	cslog("From [Alpha AXP of DEC] to [Alpha is gone]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), buf+6, 100, "is gone");
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
-	CDB_SHOW(("From [Alpha AXP of DEC] to [Alpha of DEC]: "));
+	cslog("From [Alpha AXP of DEC] to [Alpha of DEC]: ");
 	strcpy(buf, STRINSERTSMPL);
 	csc_strinsert(buf, sizeof(buf), buf+6, 4, NULL);
-	CDB_SHOW(("%s\n", buf));
+	cslog("%s\n", buf);
 
 	return 0;
 }

@@ -1473,7 +1473,9 @@ static int video_open(EZVID *vidx)
 	codec = avcodec_find_decoder(vidx->vstream->codecpar->codec_id);
 	vidx->codecx = avcodec_alloc_context3(codec);
 	avcodec_parameters_to_context(vidx->codecx, vidx->vstream->codecpar);
+#ifdef	HAVE_AV_CODEC_SET_PKT_TIMEBASE
 	av_codec_set_pkt_timebase(vidx->codecx, vidx->vstream->time_base);
+#endif
 	vidx->codecx->framerate = vidx->vstream->avg_frame_rate;
 #else
 	vidx->codecx  = vidx->vstream->codec;
@@ -4422,7 +4424,7 @@ static int image_copy(gdImage *dst, gdImage *src, int x, int y,
  ****************************************************************************/
 static int ezopt_thumb_name(EZOPT *ezopt, char *buf, char *fname, int idx)
 {
-	char	tmp[128], *inbuf = NULL;
+	char	tmp[288], *inbuf = NULL;
 	int	i, rc = 0;
 
 	/* special case for testing purpose

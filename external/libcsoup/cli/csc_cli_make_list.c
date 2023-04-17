@@ -52,10 +52,10 @@ int csc_cli_make_list(struct cliopt *optbl, char *list, int len)
 	for (i = 0; (rc = csc_cli_type(optbl)) != CLI_EOL; optbl++) {
 		if (rc & CLI_SHORT) {
 			store_char(list, i++, len, optbl->opt_char);
-			if (optbl->param > 0) {
+			if (CSC_CLI_PARAM(optbl) > 0) {
 				store_char(list, i++, len, ':');
 			}
-			if (optbl->param > 1) {
+			if ((CSC_CLI_PARAM(optbl) == 2) || (CSC_CLI_PARAM(optbl) == 4)) {
 				store_char(list, i++, len, ':');
 			}
 		}

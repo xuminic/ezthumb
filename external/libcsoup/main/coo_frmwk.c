@@ -238,7 +238,7 @@ int coo_class_dump(CCLASS *class)
 	int	i, n;
 
 	if (COO_MTYPE_GET(class->repo.type) == COO_MTYPE_LINK) {
-		CDB_SHOW(("%s: %d attributes  ", class->cname, class->total));
+		cslog("%s: %d attributes  ", class->cname, class->total);
 	} else {
 		unit = class->repo.d_point;
 		for (i = n = 0; i < class->total; i++, unit++) {
@@ -246,7 +246,7 @@ int coo_class_dump(CCLASS *class)
 				n++;
 			}
 		}
-		CDB_SHOW(("%s: %d/%d attributes  ", class->cname, n, class->total));
+		cslog("%s: %d/%d attributes  ", class->cname, n, class->total);
 	}
 	coo_class_dump_munit(&class->repo);
 
@@ -442,7 +442,7 @@ static int coo_class_dump_munit(MUnit *unit)
 		i += sprintf(buf + i, "ERROR::::\n");
 		break;
 	}
-	CDB_SHOW((buf));
+	cslog(buf);
 	return 0;
 }
 
@@ -502,30 +502,30 @@ static int coo_test_for_block(void)
 
 
 	/* attribution inside the class structure */
-	CDB_SHOW(("Create Instance with 8 attributions.\n"));
+	cslog("Create Instance with 8 attributions.\n");
 	class = coo_class_new(NULL, 8);
-	CDB_SHOW(("Testing: limitation of attributes ... "));
+	cslog("Testing: limitation of attributes ... ");
 	for (i = 0; i < 40; i++) {
 		tmp = coo_class_write(class, i, COO_DTYPE_I32, &i, 0);
 		if (tmp != 0) {
-			CDB_SHOW(("%d written\n", i));
+			cslog("%d written\n", i);
 			break;
 		}
 	}
 	coo_class_dump(class);
-	CDB_SHOW(("Testing: deleting all attributes ... "));
+	cslog("Testing: deleting all attributes ... ");
 	for (i = 30; i >= 0; i--) {
 		tmp = coo_class_delete(class, i);
 		if (tmp == 0) {
-			CDB_SHOW(("O"));
+			cslog("O");
 		} else {
-			CDB_SHOW(("X"));
+			cslog("X");
 		}
 	}
-	CDB_SHOW(("\n"));
+	cslog("\n");
 	coo_class_dump(class);
 		
-	CDB_SHOW(("Testing: read and write functions ... "));
+	cslog("Testing: read and write functions ... ");
 	coo_class_write(class, Attrib_03, COO_DTYPE_STRING|COO_MTYPE_PREDEF,
 			con_string, 0);
 	coo_class_write(class, Attrib_04, COO_DTYPE_STRING|COO_MTYPE_ALLOC,
@@ -536,18 +536,18 @@ static int coo_test_for_block(void)
 	coo_class_dump(class);
 	
 	coo_class_read(class, Attrib_03, (void*) &rbuf);
-	CDB_SHOW(("write and read constant string at %p: %s\n", rbuf, rbuf));
+	cslog("write and read constant string at %p: %s\n", rbuf, rbuf);
 	coo_class_read(class, Attrib_04, (void*) &rbuf);
-	CDB_SHOW(("write and read allocated string at %p: %s\n", rbuf, rbuf));
+	cslog("write and read allocated string at %p: %s\n", rbuf, rbuf);
 	coo_class_read(class, Attrib_05, (void*) &myfunc);
-	CDB_SHOW(("write and read function pointer at %p: ", myfunc));
+	cslog("write and read function pointer at %p: ", myfunc);
 	(*myfunc)(&class->repo);
 
-	CDB_SHOW(("write to a different type: "));
+	cslog("write to a different type: ");
 	coo_class_write(class, Attrib_04, COO_DTYPE_I32, &i, 0);
 	unit = coo_class_block_find(class, Attrib_04);
 	coo_class_dump_munit(unit);
-	CDB_SHOW(("write to the same type:    "));
+	cslog("write to the same type:    ");
 	coo_class_write(class, Attrib_04, COO_DTYPE_STRING|COO_MTYPE_ALLOC,
 			con_string2, 0);
 	coo_class_dump_munit(unit);
@@ -563,7 +563,7 @@ static int coo_test_for_link(void)
 	char	*con_string = "Hello world!";
 
 	/* attribution stored in standalone link list */
-	CDB_SHOW(("Create Instance with dynamic linked attributions\n"));
+	cslog("Create Instance with dynamic linked attributions\n");
 	class = coo_class_new("linkage", 0);
 
 	for (i = 0; i < 8; i++) {

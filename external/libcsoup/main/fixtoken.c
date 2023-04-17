@@ -71,9 +71,9 @@ static int fixtoken_run(void)
 {
 	char	buf[256];
 
-	CDB_SHOW(("Press Ctrl-D or 'quit' command to quit.\n"));
+	cslog("Press Ctrl-D or 'quit' command to quit.\n");
 	while (1) {
-		CDB_SHOW(("IN> "));
+		cslog("IN> ");
 		if (fgets(buf, 256, stdin) == NULL) {
 			break;
 		}
@@ -98,12 +98,12 @@ int fixtoken_main(void *rtime, int argc, char **argv)
 
 	while (--argc && (**++argv == '-')) {
 		if (!strcmp(*argv, "-h") || !strcmp(*argv, "--help")) {
-			CDB_SHOW(("fixtoken [--help] [--runtime]\n"));
+			cslog("fixtoken [--help] [--runtime]\n");
 			return 0;
 		} else if (!strcmp(*argv, "--runtime")) {
 			return fixtoken_run();
 		} else {
-			CDB_SHOW(("Unknown option. [%s]\n", *argv));
+			cslog("Unknown option. [%s]\n", *argv);
 			return -1;
 		}
 	}

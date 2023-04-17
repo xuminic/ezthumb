@@ -348,8 +348,12 @@ int main(int argc, char **argv)
 	
 	smm_signal_break(signal_handler);
 
+#ifdef	HAVE_AVCODEC_REGISTER_ALL
 	avcodec_register_all();
+#endif
+#ifdef	HAVE_AV_REGISTER_ALL
 	av_register_all();
+#endif
 
 	switch (todo) {
 	case CMD_ERROR:
@@ -357,7 +361,7 @@ int main(int argc, char **argv)
 		todo = EZ_ERR_PARAM;
 		break;
 	case CMD_HELP:		/* help */
-		//csc_cli_print(clist, NULL);
+		//csc_cli_print(clist, 0, NULL);
 		debug_online(argc - optind, argv + optind);
 		todo = EZ_ERR_EOP;
 		break;
@@ -397,7 +401,7 @@ int main(int argc, char **argv)
 		break;
 	case CMD_B_IND:
 		if (argc - optind < 1) {
-			csc_cli_print(clist, NULL);
+			csc_cli_print(clist, 0, NULL);
 			todo = EZ_ERR_EOP;
 			break;
 		}
@@ -417,7 +421,7 @@ int main(int argc, char **argv)
 	case CMD_G_UI:
 		todo = EZ_ERR_EOP;
 		if (sysopt.gui == NULL) {
-			csc_cli_print(clist, NULL);
+			csc_cli_print(clist, 0, NULL);
 		}
 #ifndef	CFG_GUI_OFF
 		else {
@@ -471,7 +475,7 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 	char	*p, tmp[64];
 	int	c, todo, prof_grid, prof_size;
 
-	if ((rtbuf = csc_cli_getopt_open(clist)) == NULL) {
+	if ((rtbuf = csc_cli_getopt_open(clist, &optind)) == NULL) {
 		return CMD_ERROR;
 	}
 
@@ -483,7 +487,6 @@ static int command_line_parser(int argc, char **argv, EZOPT *opt)
 		}
 	}
 
-	optind = 0;	/* reset the optind */
 	todo = CMD_UNSET;		/* UNSET yet */
 	prof_grid = prof_size = 1;	/* enable the profile */
 	while ((c = csc_cli_getopt(argc, argv, rtbuf)) > 0) {
@@ -928,7 +931,7 @@ static int debug_online(int argc, char **argv)
 	char	*s;
 
 	if (argc <= 0) {
-		csc_cli_print(clist, NULL);
+		csc_cli_print(clist, 0, NULL);
 		return 0;
 	}
 

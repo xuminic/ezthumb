@@ -1,11 +1,14 @@
 
 CC      = gcc
 AR      = ar
+#CC      = i686-w64-mingw32-gcc
+#AR      = i686-w64-mingw32-ar
+
 CP      = cp
 RM      = rm -f
 
 ifndef	CFLAGS
-CFLAGS	= -Wall -Wextra -DDEBUG -DCFG_CDLL_SAFE
+CFLAGS	= -Wall -Wextra -O3 -DDEBUG -DCFG_CDLL_SAFE -DCFG_UNIT_TEST
 endif
 CFLAGS	+= -I.. -I.
 
@@ -14,7 +17,7 @@ EXLIBS	= -lpthread
 endif
 
 SRCS	= main.c fixtoken.c memdump.c slog.c crc.c fontpath.c config.c \
-	  csc_cdll.c csc_cli.c smm.c strings.c
+	  csc_cdll.c csc_cli.c smm.c strings.c packhex.c dummy.c mem.c
 
 TARGET	= csoup
 
@@ -22,7 +25,7 @@ TARGET	= csoup
 .PHONY: all clean
 all: $(TARGET)
 
-$(TARGET): $(SRCS) main_define.h
+csoup: $(SRCS) main_define.h packhex.h libcsoup
 	$(CC) $(CFLAGS) -L.. -o $@ $(SRCS) -lcsoup $(EXLIBS)
 
 main_define.h: mkclicmd
@@ -31,6 +34,15 @@ main_define.h: mkclicmd
 
 mkclicmd: mkclicmd.c
 	$(CC) $(CFLAGS) -L.. -o $@ $< -lcsoup
+
+packhex.h: packhex
+	packhex -i packed_hex *.c > $@
+
+packhex: ../soup/csc_pack_hex.c
+	$(CC) $(CFLAGS) -L.. -DEXECUTABLE -o $@ $< -lcsoup
+
+libcsoup:
+	(cd ..; make libcsoup.a)
 
 universal_crc: universal_crc.c
 	$(CC) $(CFLAGS) -o $@ $<
@@ -41,7 +53,8 @@ crc: universal_crc
 	universal_crc -a tab -b 8 -p 0x7 > crc8.c
 
 clean:
-	$(RM) $(TARGET) main_define.h universal_crc mkclicmd
+	$(RM) $(TARGET) main_define.h packhex.h universal_crc mkclicmd packhex
+	$(RM) $(TARGET).exe universal_crc.exe mkclicmd.exe packhex.exe
 
 
 

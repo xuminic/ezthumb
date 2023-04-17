@@ -96,16 +96,15 @@ int slog_main(void *rtime, int argc, char **argv)
 	/* stop the compiler complaining */
 	(void) rtime; (void) argc; (void) argv;
 
-	CDB_SHOW(("Testing slog can be used without control block\n"));
+	cslog("Testing slog can be used without control block\n");
 	slogs(NULL, SLOG_LVL_ERROR, "OK: Error\n");
 	slogs(NULL, SLOG_LVL_FUNC, "OK: Func\n");
 
-	CDB_SHOW(("Testing slog can NOT be used with uninitialized "
-				"control block\n"));
+	cslog("Testing slog can NOT be used with uninitialized control block\n");
 	slogs(&localdbgc, SLOG_LVL_ERROR, "FAILED\n");
 
 	tstdbg = slog_initialize(&localdbgc, SLOG_MODUL_ALL(SLOG_LVL_DEBUG));
-	CDB_SHOW(("Testing slog by a control block (%x)\n", tstdbg->cword));
+	cslog("Testing slog by a control block (%x)\n", tstdbg->cword);
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, i, "%d/%d: debug level test\n", 
 				i, SLOG_LVL_DEBUG);
@@ -113,7 +112,7 @@ int slog_main(void *rtime, int argc, char **argv)
 
 	tstdbg->cword = SLOG_LEVEL_GET(tstdbg->cword) | CSOUP_MOD_SLOG | 
 		CSOUP_MOD_CLI | CSOUP_MOD_CONFIG;
-	CDB_SHOW(("Testing slog by module (%x)\n", tstdbg->cword));
+	cslog("Testing slog by module (%x)\n", tstdbg->cword);
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, SLOG_MODUL_ENUM(i) | i,
 				"%d/%x: debug level test\n", i, 
@@ -121,20 +120,20 @@ int slog_main(void *rtime, int argc, char **argv)
 	}
 
 	tstdbg->cword = SLOG_LEVEL_SET(tstdbg->cword, SLOG_LVL_FUNC);
-	CDB_SHOW(("Raising the debug level (%x)\n", tstdbg->cword));
+	cslog("Raising the debug level (%x)\n", tstdbg->cword);
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i), 
 				"%d: debug level test\n", i);
 	}
 	
-	CDB_SHOW(("Binding logfile\n"));
+	cslog("Binding logfile\n");
 	slog_bind_file(tstdbg, "logfile");
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i), 
 				"%d: debug level test\n", i);
 	}
 
-	CDB_SHOW(("UnBind the stdout\n"));
+	cslog("UnBind the stdout\n");
 	slog_bind_stdio(tstdbg, NULL);
 	tstdbg->cword = SLOG_LEVEL_SET(tstdbg->cword, SLOG_LVL_DEBUG);
 	for (i = 0; i < 8; i++) {
@@ -142,21 +141,21 @@ int slog_main(void *rtime, int argc, char **argv)
 				"%d: debug level test\n", i);
 	}
 
-	CDB_SHOW(("Unbind the logfile\n"));
+	cslog("Unbind the logfile\n");
 	slog_bind_file(tstdbg, NULL);
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i),
 				"%d: debug level test\n", i);
 	}
 	
-	CDB_SHOW(("Bind to stderr\n"));
+	cslog("Bind to stderr\n");
 	slog_bind_stdio(tstdbg, stderr);
 	for (i = 0; i < 8; i++) {
 		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i),
 				"%d: debug level test\n", i);
 	}
 
-	CDB_SHOW(("Internal test %d\n", CSOUP_DEBUG_LOCAL));
+	cslog("Internal test %d\n", CSOUP_DEBUG_LOCAL);
 	CDB_ERROR(("Internal: ERROR\n"));
 	CDB_WARN(("Internal: Warning\n"));
 	CDB_INFO(("Internal: INFO\n"));
@@ -173,9 +172,11 @@ int slog_main(void *rtime, int argc, char **argv)
 	CDB_MODL(("Internal: MODule\n"));
 	CDB_FUNC(("Internal: function\n"));
 
+	cclog(1, "Test harness for PASS\n");
+	cclog(0, "Test harness for FAIL\n");
 
 #ifdef	CFG_SLOG_SOCKET
-	CDB_SHOW(("Socket test: connecting to 6666\n"));
+	cslog("Socket test: connecting to 6666\n");
 	slog_bind_tcp(tstdbg, 6666);
 	while (1) {
 		for (i = 0; i < 8; i++) {
@@ -187,6 +188,27 @@ int slog_main(void *rtime, int argc, char **argv)
 #endif
 
 	slog_translate_test(tstdbg);
+
+	cslog("Binding split logfile (by size)\n");
+	/* split by size of 128 bytes, atmost 5 logs */
+	/* test: touch logfile.0 logfile.1 logfile.2 logfile.3 logfile.4 logfile.5 logfile.6
+	 */
+        slog_bind_split_file(tstdbg, "logfile", 128, 5);
+	for (i = 0; i < 8; i++) {
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i), 
+				"%d: debug level test\n", i);
+	}
+
+	cslog("Binding split logfile (by date)\n");
+	/* split by days, atmost 5 logs */
+	/* test: touch logfile.44956 logfile.44955 logfile.44954 logfile.44953 logfile.44952 logfile.44951
+	 */
+        slog_bind_split_file(tstdbg, "logfile", 0, 5);
+	for (i = 0; i < 8; i++) {
+		slogf(tstdbg, SLOG_CWORD(CSOUP_MOD_SLOG, i), 
+				"%d: debug level test\n", i);
+	}
+
 	slog_shutdown(tstdbg);
 	return 0;
 }

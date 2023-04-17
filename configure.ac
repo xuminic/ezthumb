@@ -42,7 +42,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([ezthumb], [3.6.8], [xuming@users.sourceforge.net])
+AC_INIT([ezthumb], [3.6.9], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -60,9 +60,9 @@ AC_ARG_ENABLE([debug-build],
   AS_HELP_STRING([--enable-debug-build], 
       [Enable the debug output (yes,no,0-7)]))
 AS_CASE([$enable_debug_build],
-  [yes|Yes|YES], [CFLAGS="-Wall -Wextra -g -DDEBUG=3 -O0"],
-  [1|2|3|4|5|6|7], [CFLAGS="-Wall -Wextra -g -DDEBUG=$enable_debug_build -O0"],
-  [CFLAGS="-Wall -Wextra -O4"])
+  [yes|Yes|YES], [CFLAGS="-Wall -Wextra -Wno-cast-function-type -g -DDEBUG=3 -O0"],
+  [1|2|3|4|5|6|7], [CFLAGS="-Wall -Wextra -Wno-cast-function-type -g -DDEBUG=$enable_debug_build -O0"],
+  [CFLAGS="-Wall -Wextra -Wno-cast-function-type -O3"])
 
 AC_ARG_WITH([gui], 
   AS_HELP_STRING([--with-gui], 
@@ -260,6 +260,7 @@ AC_CHECK_FUNCS([memset strcasecmp strchr strrchr strstr strtol \
     avcodec_alloc_frame av_dict_get av_metadata_get av_dump_format \
     av_stream_get_r_frame_rate av_get_media_type_string avcodec_descriptor_get \
     av_get_picture_type_char av_get_pix_fmt_name av_get_sample_fmt_name \
+    avcodec_register_all av_register_all av_codec_set_pkt_timebase \
     dump_format gdImageGifAnimBegin])
 AC_CHECK_FUNCS([av_packet_unref av_image_get_buffer_size av_image_fill_arrays \
     av_image_copy avcodec_receive_frame avcodec_alloc_context3])
