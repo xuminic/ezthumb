@@ -33,7 +33,7 @@ static void motTimerProc(XtPointer client_data, XtIntervalId *id)
     return;
 
   ih->serial = -1;
-  /* we have to restart the timer everytime */
+  /* we have to restart the timer every time */
   iupdrvTimerRun(ih);
 
   cb = IupGetCallback(ih, "ACTION_CB");

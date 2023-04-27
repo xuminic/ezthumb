@@ -18,17 +18,13 @@
 #include "iup_assert.h" 
 
  
-void IupRefreshChildren(Ihandle* ih)
+IUP_API void IupRefreshChildren(Ihandle* ih)
 {
   int shrink;
   Ihandle *dialog, *child;
 
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
-    return;
-
-  /* must be mapped */
-  if (!ih->handle)
     return;
 
   /* must have children */
@@ -70,7 +66,7 @@ void IupRefreshChildren(Ihandle* ih)
   }
 }
 
-void IupRefresh(Ihandle* ih)
+IUP_API void IupRefresh(Ihandle* ih)
 {
   Ihandle* dialog;
 
@@ -88,7 +84,7 @@ void IupRefresh(Ihandle* ih)
   }
 }
 
-void IupUpdate(Ihandle* ih)
+IUP_API void IupUpdate(Ihandle* ih)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -108,7 +104,7 @@ static void iLayoutDisplayUpdateChildren(Ihandle *ih)
   }
 }
 
-void IupUpdateChildren(Ihandle* ih)
+IUP_API void IupUpdateChildren(Ihandle* ih)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -129,7 +125,7 @@ static void iLayoutDisplayRedrawChildren(Ihandle *ih)
   }
 }
 
-void IupRedraw(Ihandle* ih, int children)
+IUP_API void IupRedraw(Ihandle* ih, int children)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -142,7 +138,7 @@ void IupRedraw(Ihandle* ih, int children)
     iLayoutDisplayRedrawChildren(ih);
 }
 
-void iupLayoutUpdate(Ihandle* ih)
+IUP_SDK_API void iupLayoutUpdate(Ihandle* ih)
 {
   Ihandle* child;
 
@@ -192,7 +188,7 @@ void iupLayoutCompute(Ihandle* ih)
   iupBaseSetPosition(ih, 0, 0);
 }
 
-void iupLayoutApplyMinMaxSize(Ihandle* ih, int *w, int *h)
+IUP_SDK_API void iupLayoutApplyMinMaxSize(Ihandle* ih, int *w, int *h)
 {
   if (ih->flags & IUP_MINSIZE)
   {

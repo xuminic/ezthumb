@@ -47,7 +47,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src;..\src\gtk;..\include;d:\lng\gtk3\include\atk-1.0;d:\lng\gtk3\include\cairo;d:\lng\gtk3\include\glib-2.0;d:\lng\gtk3\include\gtk-3.0;d:\lng\gtk3\include\pango-1.0;d:\lng\gtk3\include\gdk-pixbuf-2.0;d:\lng\gtk3\lib\glib-2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\src\gtk;..\include;\lng\gtk3\include\atk-1.0;\lng\gtk3\include\cairo;\lng\gtk3\include\glib-2.0;\lng\gtk3\include\gtk-3.0;\lng\gtk3\include\pango-1.0;\lng\gtk3\include\gdk-pixbuf-2.0;\lng\gtk3\lib\glib-2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;GTK_DISABLE_DEPRECATED;GDK_DISABLE_DEPRECATED;GSEAL_ENABLE;DEBUG;inline=;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -68,7 +68,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src;..\src\gtk;..\include;d:\lng\gtk3_x64\include\atk-1.0;d:\lng\gtk3_x64\include\cairo;d:\lng\gtk3_x64\include\glib-2.0;d:\lng\gtk3_x64\include\gtk-3.0;d:\lng\gtk3_x64\include\pango-1.0;d:\lng\gtk3_x64\include\gdk-pixbuf-2.0;d:\lng\gtk3_x64\lib\glib-2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\src\gtk;..\include;\lng\gtk3_x64\include\atk-1.0;\lng\gtk3_x64\include\cairo;\lng\gtk3_x64\include\glib-2.0;\lng\gtk3_x64\include\gtk-3.0;\lng\gtk3_x64\include\pango-1.0;\lng\gtk3_x64\include\gdk-pixbuf-2.0;\lng\gtk3_x64\lib\glib-2.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;GTK_DISABLE_DEPRECATED;GDK_DISABLE_DEPRECATED;GSEAL_ENABLE;DEBUG;inline=;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -90,11 +90,14 @@
     <ClCompile Include="..\src\gtk\iupgtk_calendar.c" />
     <ClCompile Include="..\src\gtk\iupgtk_common.c" />
     <ClCompile Include="..\src\gtk\iupgtk_dragdrop.c" />
-    <ClCompile Include="..\src\gtk\iupgtk_draw.c">
+    <ClCompile Include="..\src\gtk\iupgtk_draw_gdk.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\src\gtk\iupgtk_draw_cairo.c" />
+    <ClCompile Include="..\src\gtk\iupgtk_draw_cairo.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\gtk\iupgtk_focus.c" />
     <ClCompile Include="..\src\gtk\iupgtk_font.c" />
     <ClCompile Include="..\src\gtk\iupgtk_globalattrib.c" />
@@ -102,6 +105,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\gtk\iupgtk_info.c" />
     <ClCompile Include="..\src\gtk\iupgtk_key.c" />
     <ClCompile Include="..\src\gtk\iupgtk_loop.c" />
     <ClCompile Include="..\src\gtk\iupgtk_open.c" />
@@ -110,7 +114,6 @@
     <ClCompile Include="..\src\gtk\iupgtk_button.c" />
     <ClCompile Include="..\src\gtk\iupgtk_canvas.c" />
     <ClCompile Include="..\src\gtk\iupgtk_clipboard.c" />
-    <ClCompile Include="..\src\gtk\iupgtk_colordlg.c" />
     <ClCompile Include="..\src\gtk\iupgtk_dialog.c" />
     <ClCompile Include="..\src\gtk\iupgtk_filedlg.c" />
     <ClCompile Include="..\src\gtk\iupgtk_fontdlg.c" />
@@ -140,12 +143,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\mot\iupx11_info.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\gtk\iupgtk_drv.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\src\iupgtk.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

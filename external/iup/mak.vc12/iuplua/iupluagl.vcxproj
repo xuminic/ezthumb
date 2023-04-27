@@ -101,6 +101,8 @@
     <None Include="..\..\srclua5\ctrl\glbackgroundbox.lua" />
     <None Include="..\..\srclua5\ctrl\iupluagl.def" />
     <None Include="..\..\srclua5\ctrl\glcanvas.lua" />
+    <None Include="..\..\srclua5\lh\glbackgroundbox.lh" />
+    <None Include="..\..\srclua5\lh\glcanvas.lh" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\iupluagl.h" />

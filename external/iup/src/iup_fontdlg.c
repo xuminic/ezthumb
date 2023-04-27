@@ -20,7 +20,7 @@
 #include "iup_register.h"
 
 
-Ihandle* IupFontDlg(void)
+IUP_API Ihandle* IupFontDlg(void)
 {
   return IupCreate("fontdlg");
 }
@@ -30,6 +30,7 @@ Iclass* iupFontDlgNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("dialog"));
 
   ic->name = "fontdlg";
+  ic->cons = "FontDlg";
   ic->nativetype = IUP_TYPEDIALOG;
   ic->is_interactive = 1;
 

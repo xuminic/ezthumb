@@ -8,10 +8,13 @@
 #include <stdlib.h>
 #include <string.h>  
 
+#include <windows.h>
+
 #include "iup.h"
 
 #include "iup_object.h"
 #include "iup_table.h" 
+#include "iupcbs.h" 
 
 #include "iupwin_handle.h"  
 
@@ -31,12 +34,32 @@ Ihandle* iupwinHandleGet(InativeHandle* handle)
 
 void iupwinHandleAdd(Ihandle *ih, InativeHandle* handle)
 {
+  IFvs cb;
+
   iupTableSet(winhandle_table, (char*)handle, ih, IUPTABLE_POINTER);
+
+  cb = (IFvs)IupGetFunction("HANDLEADD_CB");
+  if (cb)
+  {
+    char name[1024];
+    GetClassNameA((HWND)handle, name, 1024);
+    cb(handle, name);
+  }
 }
 
 void iupwinHandleRemove(InativeHandle* handle)
 {
+  IFvs cb;
+
   iupTableRemove(winhandle_table, (char*)handle);
+
+  cb = (IFvs)IupGetFunction("HANDLEREMOVE_CB");
+  if (cb)
+  {
+    char name[1024];
+    GetClassNameA((HWND)handle, name, 1024);
+    cb(handle, name);
+  }
 }
 
 void iupwinHandleInit(void)

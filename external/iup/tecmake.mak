@@ -6,7 +6,7 @@
 
 #---------------------------------#
 # Tecmake Version
-VERSION = 4.15
+VERSION = 4.21
 
 
 #---------------------------------#
@@ -69,8 +69,11 @@ ifndef TEC_UNAME
   ifeq ($(TEC_SYSARCH), amd64)
     TEC_SYSARCH:=x64
   endif
-  ifeq ($(TEC_SYSARCH), armv7l)
+  ifneq ($(findstring armv, $(TEC_SYSARCH)), )
     TEC_SYSARCH:=arm
+  endif
+  ifneq ($(findstring aarch64, $(TEC_SYSARCH)), )
+    TEC_SYSARCH:=arm64
   endif
   
   # Compose
@@ -117,9 +120,13 @@ ifndef TEC_UNAME
       TEC_UNAME:=$(TEC_UNAME)_ia64
     endif
     
-    # arm Linux (Raspberry Pi)
+    # arm Linux
     ifeq ($(TEC_SYSARCH), arm)
       TEC_UNAME:=$(TEC_UNAME)_arm
+    endif    
+    ifeq ($(TEC_SYSARCH), arm64)
+      BUILD_64=Yes
+      TEC_UNAME:=$(TEC_UNAME)_arm64
     endif    
     
     # Linux Distribution
@@ -127,7 +134,7 @@ ifndef TEC_UNAME
     TEC_DISTVERSION=$(shell lsb_release -rs|cut -f1 -d.)
     TEC_DIST:=$(TEC_DISTNAME)$(TEC_DISTVERSION)
     
-    # arm Linux (Raspberry Pi)
+    # arm Linux (Raspberry Pi) -- NOT GOOD must be improved
     ifeq ($(TEC_SYSARCH), arm)
 	    # Raspbian GNU/Linux 7 (wheezy)
       TEC_DISTNAME=Raspbian
@@ -236,6 +243,11 @@ ifeq ($(TEC_SYSARCH), ia64)
   TEC_WORDSIZE = TEC_64
 endif
 
+ifeq ($(TEC_SYSARCH), arm64)
+  TEC_BYTEORDER = TEC_LITTLEENDIAN
+  TEC_WORDSIZE = TEC_64
+endif
+
 
 #---------------------------------#
 # Compilation Flags
@@ -285,6 +297,9 @@ endif
 
 ifdef GTK_DEFAULT
   ifndef USE_GTK2
+    ifneq ($(findstring Linux5, $(TEC_UNAME)), )
+      USE_GTK3 = Yes
+    endif
     ifneq ($(findstring Linux4, $(TEC_UNAME)), )
       USE_GTK3 = Yes
     endif
@@ -311,6 +326,13 @@ RANLIB   := $(TEC_TOOLCHAIN)ranlib
 AR       := $(TEC_TOOLCHAIN)ar
 DEBUGGER := $(TEC_TOOLCHAIN)gdb
 RCC      := $(TEC_TOOLCHAIN)windres
+
+ifdef USE_EMSCRIPTEN
+CC       := $(TEC_TOOLCHAIN)emcc
+CPPC     := $(TEC_TOOLCHAIN)em++
+RANLIB   := $(TEC_TOOLCHAIN)emranlib
+AR       := $(TEC_TOOLCHAIN)emar
+endif
 
 # Remote build script
 REMOTE  = $(TECMAKE_HOME)/remote
@@ -449,6 +471,9 @@ endif
 ifdef USE_LUA53
   LIBLUA_SFX := 53
 endif
+ifdef USE_LUA54
+  LIBLUA_SFX := 54
+endif
 
 ifdef USE_OLDLIBLUA
   TEC_UNAME_LIBLUA_DIR ?= $(TEC_UNAME_LIB_DIR)
@@ -462,8 +487,7 @@ ifdef LUAMOD_DIR
 endif
 
 OBJDIR := $(OBJROOT)/$(TEC_UNAME_DIR)
-#TARGETDIR := $(TARGETROOT)/$(TEC_UNAME_DIR)
-TARGETDIR := $(TARGETROOT)
+TARGETDIR := $(TARGETROOT)/$(TEC_UNAME_DIR)
 
 # Change linker if any C++ source
 ifndef LINKER
@@ -588,6 +612,11 @@ else
   endif
 endif
 
+ifdef USE_CPP11
+  CPPFLAGS += -std=c++11
+  DEPFLAGS += -std=c++11
+endif
+
 ifeq "$(TEC_SYSNAME)" "Haiku"
   STDFLAGS += -Wno-multichar
   LIBS += be textencoding tracker
@@ -597,10 +626,14 @@ ifneq ($(findstring Linux, $(TEC_UNAME)), )
   UNIX_LINUX = Yes
   ifdef BUILD_64
     ifeq ($(TEC_SYSARCH), ia64)
-      STDFLAGS += -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+      STDFLAGS += -fPIC
       X11_LIB := /usr/X11R6/lib
+    # arm64 config - AIR
+    else ifeq ($(TEC_SYSARCH), arm64)
+      STDFLAGS += -fPIC
+      X11_LIB := /usr/lib/aarch64-linux-gnu/
     else
-      STDFLAGS += -m64 -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+      STDFLAGS += -m64 -fPIC
       X11_LIB := /usr/X11R6/lib64
     endif
   else
@@ -618,10 +651,10 @@ ifneq ($(findstring CentOS, $(TEC_UNAME)), )
   UNIX_LINUX = Yes
   ifdef BUILD_64
     ifeq ($(TEC_SYSARCH), ia64)
-      STDFLAGS += -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+      STDFLAGS += -fPIC
       X11_LIB := /usr/X11R6/lib
     else
-      STDFLAGS += -m64 -fPIC -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast
+      STDFLAGS += -m64 -fPIC
       X11_LIB := /usr/X11R6/lib64
     endif
   else
@@ -768,6 +801,7 @@ ifneq ($(findstring FreeBSD, $(TEC_UNAME)), )
   endif
 endif
 
+
 #---------------------------------#
 # Allows an extra configuration file.
 ifdef EXTRA_CONFIG
@@ -786,7 +820,9 @@ LUA   ?= $(TECTOOLS_HOME)/lua
 LUA51 ?= $(TECTOOLS_HOME)/lua5.1
 LUA52 ?= $(TECTOOLS_HOME)/lua52
 LUA53 ?= $(TECTOOLS_HOME)/lua53
+LUA54 ?= $(TECTOOLS_HOME)/lua54
 FTGL  ?= $(TECTOOLS_HOME)/ftgl
+PDFLIB ?= $(TECTOOLS_HOME)/pdflib7
 # Freetype and zlib in Linux we use from the system
 
 
@@ -825,7 +861,7 @@ ifdef USE_LUA50
 endif
 
 ifdef USE_LUA51
-  LUA_SFX := 5.1
+  LUA_SFX ?= 5.1
   LIBLUA_SFX := 51
   override USE_LUA = Yes
   LUA := $(LUA51)
@@ -845,6 +881,17 @@ ifdef USE_LUA53
   LIBLUA_SFX := 53
   override USE_LUA = Yes
   LUA := $(LUA53)
+  NO_LUALIB := Yes
+  ifneq ($(findstring CentOS5, $(TEC_DIST)), )
+    DEFINES += LUA_C89_NUMBERS
+  endif
+endif
+
+ifdef USE_LUA54
+  LUA_SFX := 54
+  LIBLUA_SFX := 54
+  override USE_LUA = Yes
+  LUA := $(LUA54)
   NO_LUALIB := Yes
   ifneq ($(findstring CentOS5, $(TEC_DIST)), )
     DEFINES += LUA_C89_NUMBERS
@@ -1160,6 +1207,9 @@ ifdef USE_CD
   ifneq ($(findstring Linux4, $(TEC_UNAME)), )
     LIBS += fontconfig
   endif
+  ifneq ($(findstring Linux5, $(TEC_UNAME)), )
+    LIBS += fontconfig
+  endif
   ifneq ($(findstring cygw, $(TEC_UNAME)), )
     LIBS += fontconfig
   endif
@@ -1195,18 +1245,22 @@ ifdef USE_IM
 endif
 
 ifdef LINK_WEBKIT
-  ifneq ($(findstring Linux4, $(TEC_UNAME)), )
-    LIBS += webkitgtk-3.0
+  ifneq ($(findstring Linux5, $(TEC_UNAME)), )
+    LIBS += webkit2gtk-4.0 gio-2.0
   else 
-    ifneq ($(findstring Linux3, $(TEC_UNAME)), )
-      ifneq ($(findstring Linux31, $(TEC_UNAME)), )
-        LIBS += webkitgtk-3.0
+    ifneq ($(findstring Linux4, $(TEC_UNAME)), )
+      LIBS += webkit2gtk-4.0 gio-2.0
+    else 
+      ifneq ($(findstring Linux3, $(TEC_UNAME)), )
+        ifdef USE_GTK3
+          LIBS += webkitgtk-3.0
+        else
+          LIBS += webkitgtk-1.0
+        endif
       else
-        LIBS += webkitgtk-1.0
+        LIBS += webkit-1.0
       endif
-    else
-      LIBS += webkit-1.0
-    endif
+    endif 
   endif
 endif
 
@@ -1244,6 +1298,20 @@ ifdef LINK_FREETYPE
   endif
   
   LIBS += freetype
+endif
+
+ifdef LINK_PDFLIB
+  PDFLIB_LIB ?= $(PDFLIB)/lib/$(TEC_UNAME)
+  ifdef USE_STATIC
+    SLIB += $(PDFLIB_LIB)/libpdflib.a
+    
+    ifndef NO_ZLIB
+      LINK_ZLIB = Yes
+    endif
+  else
+    LIBS += pdflib
+    LDIR += $(PDFLIB_LIB)
+  endif
 endif
 
 ifdef USE_ZLIB
@@ -1292,6 +1360,16 @@ ifdef USE_MOTIF
   endif
 endif
 
+ifdef USE_EMSCRIPTEN
+  EMSCRIPTEN = emscripten
+  #EMSCRIPTEN = src/emscripten
+  EMFLAGS += --js-library $(EMSCRIPTEN)/iupemscripten_common.js 
+             --js-library $(EMSCRIPTEN)/iupemscripten_dialog.js 
+             --js-library $(EMSCRIPTEN)/iupemscripten_button.js
+  STDFLAGS += $(EMFLAGS)
+  STDLDFLAGS += $(EMFLAGS)
+endif
+
 ifdef USE_GTK
   ifdef USE_GTK3
     GTKSFX:=3
@@ -1301,8 +1379,8 @@ ifdef USE_GTK
   
   ifdef USE_PKGCONFIG
     # get compile/link flags via pkg-config
-    PKGINCS += $(shell pkg-config --cflags gtk+-$(GTKSFX).0 gdk-$(GTKSFX).0)
-    PKGLIBS += $(shell pkg-config --libs gtk+-$(GTKSFX).0 gdk-$(GTKSFX).0)
+    PKGINCS += $(shell pkg-config --cflags gtk+-$(GTKSFX).0 gdk-$(GTKSFX).0 gtk+-unix-print-$(GTKSFX).0)
+    PKGLIBS += $(shell pkg-config --libs gtk+-$(GTKSFX).0 gdk-$(GTKSFX).0 gtk+-unix-print-$(GTKSFX).0)
     GTK_BASE := $(shell pkg-config --variable=prefix gtk+-$(GTKSFX).0)
     GTK := $(GTK_BASE)    
   else
@@ -1354,6 +1432,7 @@ ifdef USE_GTK
     
     STDINCS += $(GTK)/include/atk-1.0 $(GTK)/include/gtk-$(GTKSFX).0 $(GTK)/include/gdk-pixbuf-2.0 
     STDINCS += $(GTK)/include/cairo $(GTK)/include/pango-1.0 $(GTK)/include/glib-2.0
+    STDINCS += $(GTK)/include/harfbuzz
 
     ifeq ($(TEC_SYSARCH), x64)
       STDINCS += $(GTK)/lib64/glib-2.0/include 
@@ -1397,6 +1476,9 @@ ifdef USE_GTK
     
     ifneq ($(findstring FreeBSD, $(TEC_UNAME)), )
       STDINCS += /lib/X11R6/include/gtk-2.0
+    endif
+    ifneq ($(findstring Linux5, $(TEC_UNAME)), )
+      STDINCS += /usr/include/harfbuzz
     endif
   endif
 endif
@@ -1582,8 +1664,7 @@ system-check:
 # Dynamic Library Build
 
 .PHONY: dynamic-lib
-#dynamic-lib: $(TARGETDIR)/$(TARGETDLIBNAME)
-dynamic-lib:
+dynamic-lib: $(TARGETDIR)/$(TARGETDLIBNAME)
 
 $(TARGETDIR)/$(TARGETDLIBNAME) : $(LUAS) $(OBJS) $(EXTRADEPS)
 	@echo ''; echo Tecmake: linking $(@F) ...
@@ -1649,7 +1730,7 @@ $(SRELEASE): $(MAKENAME)
 # Directories Creation
 
 .PHONY: directories
-directories: $(OBJDIR) $(TARGETDIR) $(EXTRADIR) $(LOHDIR) $(LHDIR)
+directories: $(OBJDIR) $(TARGETDIR) $(EXTRADIR) $(LOHDIR) $(LHDIR) $(DEPENDDIR)
 
 $(OBJDIR) $(TARGETDIR):
 	if [ ! -d $@ ] ; then mkdir -p $@ ; fi
@@ -1673,6 +1754,13 @@ ifdef LHDIR
 	  if [ ! -d $@ ] ; then mkdir -p $@ ; fi
 else
   $(LHDIR): ;
+endif
+
+ifdef DEPENDDIR
+  $(DEPENDDIR):
+	  if [ ! -d $@ ] ; then mkdir -p $@ ; fi
+else
+  $(DEPENDDIR): ;
 endif
 
 
@@ -1733,13 +1821,13 @@ endif
 .PHONY: depend
 depend: $(DEPEND)
 
-$(DEPEND): $(MAKENAME)
+$(DEPEND): $(MAKENAME) $(DEPENDDIR)
   ifdef SRC
 	  @echo "" > $(DEPEND)
 	  @which $(CPPC) 2> /dev/null 1>&2 ;\
 	  if [ $$? -eq 0 ]; then \
 	    echo "Tecmake: Building Dependencies ... [ $(DEPEND) ] (can be slow)" ;\
-	    $(CPPC) $(DEPINCS) $(DEFINES) $(STDDEFS) -MM $(SOURCES) | \
+	    $(CPPC) $(DEPFLAGS) $(DEPINCS) $(STDINCS) $(PKGINCS) $(DEFINES) $(STDDEFS) -MM $(SOURCES) | \
 	    sed -e '1,$$s/^\([^ ]\)/$$(OBJDIR)\/\1/' > $(DEPEND) ;\
 	  else \
 	    echo "" ;\

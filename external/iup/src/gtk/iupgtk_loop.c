@@ -6,12 +6,15 @@
 
 #include <stdio.h>    
 #include <string.h>    
+#include <stdlib.h>
 
 #include <gtk/gtk.h>
 
 #include "iup.h"
 #include "iupcbs.h"
+#include "iup_loop.h"
 
+#include "iup_str.h"
 
 /* local variables */
 static IFidle gtk_idle_cb = NULL;
@@ -41,7 +44,7 @@ static gboolean gtkIdleFunc(gpointer data)
   return FALSE; /* removes the idle */
 }
 
-void iupdrvSetIdleFunction(Icallback f)
+IUP_SDK_API void iupdrvSetIdleFunction(Icallback f)
 {
   if (gtk_idle_cb)
     g_source_remove(gtk_idle_id);
@@ -52,38 +55,53 @@ void iupdrvSetIdleFunction(Icallback f)
     gtk_idle_id = g_idle_add(gtkIdleFunc, NULL);
 }
 
-void IupExitLoop(void)
+IUP_API void IupExitLoop(void)
 {
-  if (gtk_main_iteration_do(FALSE)==FALSE)
-    gtk_main_quit();
+  char* exit_loop = IupGetGlobal("EXITLOOP");
+  if (gtk_main_level() > 1 || !exit_loop || iupStrBoolean(exit_loop))
+  {
+    if (gtk_main_iteration_do(FALSE) == FALSE)
+      gtk_main_quit();
+  }
 }
 
-int IupMainLoopLevel(void)
+IUP_API int IupMainLoopLevel(void)
 {
   return gtk_main_level();
 }
 
-int IupMainLoop(void)
+IUP_API int IupMainLoop(void)
 {
+  static int has_done_entry = 0;
+  if (has_done_entry == 0)
+  {
+    has_done_entry = 1;
+    iupLoopCallEntryCb();
+  }
+
   gtk_main();
+
+  if (gtk_main_level() == 0)
+    iupLoopCallExitCb();
+
   return IUP_NOERROR;
 }
 
-int IupLoopStepWait(void)
+IUP_API int IupLoopStepWait(void)
 {
   if (gtk_main_iteration_do(TRUE))
     return IUP_CLOSE;
   return IUP_DEFAULT;
 }
 
-int IupLoopStep(void)
+IUP_API int IupLoopStep(void)
 {
   if (gtk_main_iteration_do(FALSE))
     return IUP_CLOSE;
   return IUP_DEFAULT;
 }
 
-void IupFlush(void)
+IUP_API void IupFlush(void)
 {
   int count = 0;
 
@@ -107,4 +125,36 @@ void IupFlush(void)
 
   if (old_gtk_idle_cb)
     iupdrvSetIdleFunction((Icallback)old_gtk_idle_cb);
+}
+
+
+typedef struct {
+  Ihandle* ih;
+  char* s;
+  int i;
+  double d;
+  char* p;
+} gtkPostMessageUserData;
+
+static gint gtkPostMessageCallback(void *cb_data)
+{
+  gtkPostMessageUserData* user_data = (gtkPostMessageUserData*)cb_data;
+  Ihandle* ih = user_data->ih;
+  IFnsidv cb = (IFnsidv)IupGetCallback(ih, "POSTMESSAGE_CB");
+  if (cb)
+    cb(ih, user_data->s, user_data->i, user_data->d, user_data->p);
+  if (user_data->s) free(user_data->s);
+  free(user_data);
+  return FALSE; /* call only once */
+}
+
+IUP_API void IupPostMessage(Ihandle* ih, const char* s, int i, double d, void* p)
+{
+  gtkPostMessageUserData* user_data = (gtkPostMessageUserData*)malloc(sizeof(gtkPostMessageUserData));
+  user_data->ih = ih;
+  user_data->s = iupStrDup(s);
+  user_data->i = i;
+  user_data->d = d;
+  user_data->p = p;
+  g_idle_add(gtkPostMessageCallback, user_data);
 }

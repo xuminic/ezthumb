@@ -28,6 +28,7 @@
 #include "iup_array.h"
 #include "iup_assert.h"
 #include "iup_drvdraw.h"
+#include "iup_draw.h"
 #include "iup_childtree.h"
 
 #include "iupwin_drv.h"
@@ -284,6 +285,13 @@ static int winTabsGetPageWindowPos(Ihandle* ih, HWND tab_container)
   return -1;
 }
 
+int iupdrvTabsExtraMargin(void)
+{
+  if (iupwin_comctl32ver6 && iupwinIsWin10OrNew())
+    return 2;
+  return 0;
+}
+
 int iupdrvTabsExtraDecor(Ihandle* ih)
 {
   (void)ih;
@@ -335,11 +343,11 @@ int iupdrvTabsGetCurrentTab(Ihandle* ih)
 static int winTabsGetImageIndex(Ihandle* ih, const char* name)
 {
   HIMAGELIST image_list;
-  int count, i, bpp, ret;
+  int count, i, ret;
   int width, height;
   Iarray* bmp_array;
-  HBITMAP *bmp_array_data, hMask=NULL;
-  HBITMAP bmp = iupImageGetImage(name, ih, 0);
+  HBITMAP *bmp_array_data;
+  HBITMAP bmp = iupImageGetImage(name, ih, 0, NULL);
   if (!bmp)
     return -1;
 
@@ -355,15 +363,13 @@ static int winTabsGetImageIndex(Ihandle* ih, const char* name)
   bmp_array_data = iupArrayGetData(bmp_array);
 
   /* must use this info, since image can be a driver image loaded from resources */
-  iupdrvImageGetInfo(bmp, &width, &height, &bpp);
+  iupdrvImageGetInfo(bmp, &width, &height, NULL);
 
   image_list = (HIMAGELIST)SendMessage(ih->handle, TCM_GETIMAGELIST, 0, 0);
   if (!image_list)
   {
-    UINT flags = ILC_COLOR32 | (bpp == 8 ? ILC_MASK : 0);
-
     /* create the image list if does not exist */
-    image_list = ImageList_Create(width, height, flags, 0, 50);
+    image_list = ImageList_Create(width, height, ILC_COLOR32, 0, 50);
     SendMessage(ih->handle, TCM_SETIMAGELIST, 0, (LPARAM)image_list);
   }
 
@@ -376,22 +382,30 @@ static int winTabsGetImageIndex(Ihandle* ih, const char* name)
       return i;
   }
 
-  if (bpp == 8)
-  {
-    Ihandle* image = IupGetHandle(name);
-    if (image)
-    {
-      iupAttribSet(image, "_IUPIMG_NO_INVERT", "1");
-      hMask = iupdrvImageCreateMask(image);
-      iupAttribSet(image, "_IUPIMG_NO_INVERT", NULL);
-    }
-  }
-
   bmp_array_data = iupArrayInc(bmp_array);
   bmp_array_data[i] = bmp;
-  ret = ImageList_Add(image_list, bmp, hMask);  /* the bmp is duplicated at the list */
-  DeleteObject(hMask);
+  ret = ImageList_Add(image_list, bmp, NULL);  /* the bmp is duplicated at the list */
   return ret;
+}
+
+static void winTabGetPageWindowRect(Ihandle* ih, RECT *rect)
+{
+  /* Calculate the display rectangle, assuming the
+     tab control is the size of the client area. */
+#if 0
+  GetClientRect(ih->handle, rect);
+  SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)rect);
+#else
+  {
+    int x, y, w, h;
+    IupGetIntInt(ih, "CLIENTOFFSET", &x, &y);
+    IupGetIntInt(ih, "CLIENTSIZE", &w, &h);
+    rect->left = x;
+    rect->right = x + w;
+    rect->top = y;
+    rect->bottom = y + h;
+  }
+#endif
 }
 
 static void winTabSetPageWindowPos(HWND tab_container, RECT *rect)
@@ -436,14 +450,18 @@ static LRESULT CALLBACK winTabsPageWndProc(HWND hWnd, UINT msg, WPARAM wp, LPARA
   {
   case WM_ERASEBKGND:
     {
-      RECT rect;
-      HDC hDC = (HDC)wp;
       Ihandle* ih = iupwinHandleGet(hWnd);
-      GetClientRect(ih->handle, &rect); 
-      winTabsDrawPageBackground(ih, hDC, &rect);
+      if (iupObjectCheck(ih)) /* should always be ok */
+      {
+        RECT rect;
+        HDC hDC = (HDC)wp;
+        GetClientRect(ih->handle, &rect);
+        winTabsDrawPageBackground(ih, hDC, &rect);
 
-      /* return non zero value */
-      return 1;
+        /* return non zero value */
+        return 1;
+      }
+      break;
     }
   case WM_COMMAND:
   case WM_CTLCOLORSCROLLBAR:
@@ -481,7 +499,7 @@ static void winTabsInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_con
 {
   TCITEM tie;
   char *tabtitle, *tabimage;
-  int old_rowcount, old_num_tabs, p;
+  int old_rowcount = 0, old_num_tabs, p;
   RECT rect;
 
   tabtitle = iupAttribGet(child, "TABTITLE");
@@ -502,7 +520,9 @@ static void winTabsInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_con
     tabtitle = "     ";
 
   old_num_tabs = (int)SendMessage(ih->handle, TCM_GETITEMCOUNT, 0, 0);
-  old_rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
+
+  if (ih->data->is_multiline)
+    old_rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
 
   tie.mask = TCIF_PARAM;
 
@@ -527,20 +547,17 @@ static void winTabsInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_con
   tie.lParam = (LPARAM)tab_container;
   SendMessage(ih->handle, TCM_INSERTITEM, p, (LPARAM)&tie);
 
-  /* Calculate the display rectangle, assuming the
-  tab control is the size of the client area. */
-  GetClientRect(ih->handle, &rect);
-  SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)&rect);
-
+  winTabGetPageWindowRect(ih, &rect);
   winTabSetPageWindowPos(tab_container, &rect);
 
   if (ih->data->is_multiline)
   {
-    if (ih->data->type == ITABS_LEFT || ih->data->type == ITABS_RIGHT)
+    int rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
+    if (rowcount != old_rowcount)
     {
-      int rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
-      if (rowcount != old_rowcount)
-        winTabsPlacePageWindows(ih, &rect);
+      winTabsPlacePageWindows(ih, &rect);
+
+      IupRefreshChildren(ih);
     }
 
     iupdrvRedrawNow(ih);
@@ -560,10 +577,29 @@ static void winTabsInsertItem(Ihandle* ih, Ihandle* child, int pos, HWND tab_con
 
 static void winTabsDeleteItem(Ihandle* ih, int p, HWND tab_container)
 {
+  int old_rowcount = 0;
+  if (ih->data->is_multiline)
+    old_rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
+
   /* Make sure tab container is hidden */
   ShowWindow(tab_container, SW_HIDE);
 
   SendMessage(ih->handle, TCM_DELETEITEM, p, 0);
+
+  if (ih->data->is_multiline)
+  {
+    int rowcount = (int)SendMessage(ih->handle, TCM_GETROWCOUNT, 0, 0);
+    if (rowcount != old_rowcount)
+    {
+      RECT rect;
+      winTabGetPageWindowRect(ih, &rect);
+      winTabsPlacePageWindows(ih, &rect);
+
+      IupRefreshChildren(ih);
+    }
+
+    iupdrvRedrawNow(ih);
+  }
 
 #if PRINT_VISIBLE_ARRAY
   winTabsPrintVisibleArray(ih);
@@ -904,9 +940,7 @@ static int winTabsMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
     WNDPROC oldProc = (WNDPROC)IupGetCallback(ih, "_IUPWIN_OLDWNDPROC_CB");
     CallWindowProc(oldProc, ih->handle, msg, wp, lp);
 
-    SetRect(&rect, 0, 0, LOWORD(lp), HIWORD(lp));
-    SendMessage(ih->handle, TCM_ADJUSTRECT, FALSE, (LPARAM)&rect);
-
+    winTabGetPageWindowRect(ih, &rect);
     winTabsPlacePageWindows(ih, &rect);
 
     *result = 0;
@@ -1073,7 +1107,7 @@ static void winTabsDrawRotateText(HDC hDC, char* text, int x, int y, HFONT hFont
 
 static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, COLORREF fgcolor)
 {
-  HBITMAP hBitmapClose, hCloseMask = NULL;
+  HBITMAP hBitmapClose;
   HFONT hFont = (HFONT)iupwinGetHFontAttrib(ih);
 	TCHAR title[256] = TEXT("");
 	TCITEM tci;
@@ -1106,9 +1140,9 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
   /* Create the close button image */
   high_p = iupAttribGetInt(ih, "_IUPTABS_CLOSEHIGH");
   if (high_p == p)
-    hBitmapClose = iupImageGetImage("IMGCLOSEHIGH", ih, 0);
+    hBitmapClose = iupImageGetImage("IMGCLOSEHIGH", ih, 0, NULL);
   else
-    hBitmapClose = iupImageGetImage("IMGCLOSE", ih, 0);
+    hBitmapClose = iupImageGetImage("IMGCLOSE", ih, 0, NULL);
   if (!hBitmapClose)
   {
     if (str && str != value) free(str);
@@ -1116,8 +1150,6 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
   }
 
   iupdrvImageGetInfo(hBitmapClose, NULL, NULL, &bpp);
-  if (bpp == 8)
-    hCloseMask = iupdrvImageCreateMask(IupGetHandle("IMGCLOSE"));
 
   /* Draw image tab, title tab and close image */
   if (ih->data->type == ITABS_BOTTOM || ih->data->type == ITABS_TOP)
@@ -1189,10 +1221,7 @@ static void winTabsDrawTab(Ihandle* ih, HDC hDC, int p, int width, int height, C
     y++;
   }
 
-  iupwinDrawBitmap(hDC, hBitmapClose, hCloseMask, x, y, ITABS_CLOSE_SIZE, ITABS_CLOSE_SIZE, bpp);
-
-  if (hCloseMask)
-    DeleteObject(hCloseMask);
+  iupwinDrawBitmap(hDC, hBitmapClose, x, y, ITABS_CLOSE_SIZE, ITABS_CLOSE_SIZE, ITABS_CLOSE_SIZE, ITABS_CLOSE_SIZE, bpp);
 
   if (str && str != value) free(str);
 }
@@ -1205,6 +1234,8 @@ static void winTabsDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
   int x, y, width, height, p;
   COLORREF fgcolor;
   COLORREF bgcolor;
+
+  /* called only when SHOWCLOSE=Yes */
 
   /* If there are no tab items, skip this message */
   if (drawitem->itemID == -1)
@@ -1238,7 +1269,7 @@ static void winTabsDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
 
   /* If the item has the focus, draw the focus rectangle */
   if (drawitem->itemState & ODS_FOCUS)
-    iupdrvPaintFocusRect(ih, hDC, 0, 0, width, height);
+    iupwinDrawFocusRect(hDC, 0, 0, width, height);
 
   iupwinDrawDestroyBitmapDC(&bmpDC);
 }
@@ -1367,8 +1398,18 @@ static int winTabsMapMethod(Ihandle* ih)
   if (ih->firstchild)
   {
     Ihandle* child;
+    Ihandle* current_child = (Ihandle*)iupAttribGet(ih, "_IUPTABS_VALUE_HANDLE");
+
     for (child = ih->firstchild; child; child = child->brother)
       winTabsChildAddedMethod(ih, child);
+
+    if (current_child)
+    {
+      IupSetAttribute(ih, "VALUE_HANDLE", (char*)current_child);
+
+      /* current value is now given by the native system */
+      iupAttribSet(ih, "_IUPTABS_VALUE_HANDLE", NULL);
+    }
   }
 
   return IUP_NOERROR;
@@ -1414,6 +1455,14 @@ static void winTabsRegisterClass(void)
   RegisterClass(&wndclass);
 }
 
+static void winTabsRelease(Iclass* ic)
+{
+  (void)ic;
+
+  if (iupwinClassExist(TEXT("IupTabsPage")))
+    UnregisterClass(TEXT("IupTabsPage"), iupwin_hinstance);
+}
+
 void iupdrvTabsInitClass(Iclass* ic)
 {
   if (!iupwinClassExist(TEXT("IupTabsPage")))
@@ -1424,6 +1473,7 @@ void iupdrvTabsInitClass(Iclass* ic)
   ic->UnMap = winTabsUnMapMethod;
   ic->ChildAdded     = winTabsChildAddedMethod;
   ic->ChildRemoved   = winTabsChildRemovedMethod;
+  ic->Release = winTabsRelease;
 
   /* Driver Dependent Attribute functions */
 
@@ -1451,4 +1501,6 @@ void iupdrvTabsInitClass(Iclass* ic)
   /* Default node images */
   if (!IupGetHandle("IMGCLOSE"))
     winTabsInitializeCloseImage();
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

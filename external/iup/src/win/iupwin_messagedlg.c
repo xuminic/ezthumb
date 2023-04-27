@@ -31,6 +31,15 @@ static void CALLBACK winMessageDlgHelpCallback(HELPINFO* HelpInfo)
   }
 }
 
+static char* winMessageDlgGetAutoModalAttrib(Ihandle* ih)
+{
+  InativeHandle* parent = iupDialogGetNativeParent(ih);
+  int automodal = 1;
+  if (parent)
+    automodal = 0;
+  return iupStrReturnBoolean(automodal);
+}
+
 static int winMessageDlgPopup(Ihandle* ih, int x, int y)
 {
   InativeHandle* parent = iupDialogGetNativeParent(ih);
@@ -109,6 +118,8 @@ static int winMessageDlgPopup(Ihandle* ih, int x, int y)
 void iupdrvMessageDlgInitClass(Iclass* ic)
 {
   ic->DlgPopup = winMessageDlgPopup;
+
+  iupClassRegisterAttribute(ic, "AUTOMODAL", winMessageDlgGetAutoModalAttrib, NULL, IUPAF_SAMEASSYSTEM, "1", IUPAF_NOT_MAPPED|IUPAF_READONLY|IUPAF_NO_INHERIT);
 }
 
 /* 

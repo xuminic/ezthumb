@@ -39,7 +39,7 @@ static GtkWidget* gtk_button_get_image(GtkButton *button)
 }
 #endif
 
-void iupdrvButtonAddBorders(int *x, int *y)
+void iupdrvButtonAddBorders(Ihandle* ih, int *x, int *y)
 {
   /* LAYOUT_DECORATION_ESTIMATE */
 #ifdef WIN32
@@ -51,6 +51,7 @@ void iupdrvButtonAddBorders(int *x, int *y)
   int border_size = 2*5+1; /* borders are not symmetric */
 #endif
 #endif
+  (void)ih;  
   (*x) += border_size;
   (*y) += border_size;
 }
@@ -119,15 +120,15 @@ static int gtkButtonSetAlignmentAttrib(Ihandle* ih, const char* value)
     xalign = 1.0f;
     alignment = PANGO_ALIGN_RIGHT;
   }
-  else if (iupStrEqualNoCase(value1, "ACENTER"))
-  {
-    xalign = 0.5f;
-    alignment = PANGO_ALIGN_CENTER;
-  }
-  else /* "ALEFT" */
+  else if (iupStrEqualNoCase(value1, "ALEFT"))
   {
     xalign = 0;
     alignment = PANGO_ALIGN_LEFT;
+  }
+  else /* ACENTER (default) */
+  {
+    xalign = 0.5f;
+    alignment = PANGO_ALIGN_CENTER;
   }
 
   if (iupStrEqualNoCase(value2, "ABOTTOM"))
@@ -156,14 +157,14 @@ static int gtkButtonSetAlignmentAttrib(Ihandle* ih, const char* value)
 
 static int gtkButtonSetPaddingAttrib(Ihandle* ih, const char* value)
 {
+  if (iupStrEqual(value, "DEFAULTBUTTONPADDING"))
+    value = IupGetGlobal("DEFAULTBUTTONPADDING");
+
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
   if (ih->handle)
   {
-#if GTK_CHECK_VERSION(3, 14, 0)
-    g_object_set(G_OBJECT(ih->handle), "margin-bottom", ih->data->vert_padding, NULL);
-    g_object_set(G_OBJECT(ih->handle), "margin-top", ih->data->vert_padding, NULL);
-    g_object_set(G_OBJECT(ih->handle), "margin-left", ih->data->horiz_padding, NULL);
-    g_object_set(G_OBJECT(ih->handle), "margin-right", ih->data->horiz_padding, NULL);
+#if GTK_CHECK_VERSION(3, 4, 0)
+    iupgtkSetMargin(ih->handle, ih->data->horiz_padding, ih->data->vert_padding, 0);
 #else
     if (ih->data->type == IUP_BUTTON_TEXT)   /* text only */
     {
@@ -220,7 +221,8 @@ static int gtkButtonSetFgColorAttrib(Ihandle* ih, const char* value)
 
 static int gtkButtonSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetFontAttrib(ih, value);
+  if (!iupdrvSetFontAttrib(ih, value))
+    return 0;
 
   if (ih->handle)
   {
@@ -241,7 +243,7 @@ static void gtkButtonSetPixbuf(Ihandle* ih, const char* name, int make_inactive)
 
   if (name && image)
   {
-    GdkPixbuf* pixbuf = iupImageGetImage(name, ih, make_inactive);
+    GdkPixbuf* pixbuf = iupImageGetImage(name, ih, make_inactive, NULL);
     GdkPixbuf* old_pixbuf = gtk_image_get_pixbuf(image);
     if (pixbuf != old_pixbuf)
       gtk_image_set_from_pixbuf(image, pixbuf);
@@ -396,7 +398,7 @@ static void gtkButtonLayoutUpdateMethod(Ihandle *ih)
     if (frame && GTK_IS_FRAME(frame))
     {
       int x = 0, y = 0;
-      iupdrvButtonAddBorders(&x, &y);
+      iupdrvButtonAddBorders(ih, &x, &y);
       if (ih->currentwidth - x > 0 && ih->currentheight - y > 0)
         gtk_widget_set_size_request(frame, ih->currentwidth-x, ih->currentheight-y);
     }
@@ -524,6 +526,12 @@ static int gtkButtonMapMethod(Ihandle* ih)
 
   g_signal_connect(G_OBJECT(ih->handle), "button-press-event", G_CALLBACK(gtkButtonEvent), ih);
   g_signal_connect(G_OBJECT(ih->handle), "button-release-event",G_CALLBACK(gtkButtonEvent), ih);
+
+  if (!has_border)
+  {
+    GtkWidget* img = gtk_bin_get_child((GtkBin*)ih->handle);
+    gtk_widget_realize(img);
+  }
 
   gtk_widget_realize(ih->handle);
 

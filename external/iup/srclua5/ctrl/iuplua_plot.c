@@ -23,6 +23,7 @@
 #include "iup_object.h"
 #include "iup_assert.h"
 #include "iup_predialogs.h"
+#include "iup_str.h"
 
 
 typedef int(*IFnL)(Ihandle*, lua_State *L);
@@ -33,7 +34,7 @@ static void ShowFormulaError(Ihandle* ih, lua_State *L)
   const char* error = lua_tostring(L, -1);
   char msg[1024];
   sprintf(msg, "%s\n  Lua error: %s", str_message, error);
-  iupShowError(IupGetDialog(ih), msg);
+  IupMessageError(IupGetDialog(ih), msg);
 }
 
 int IupPlotSetFormula(Ihandle* ih, int sample_count, const char* formula, const char* init)
@@ -111,7 +112,7 @@ int IupPlotSetFormula(Ihandle* ih, int sample_count, const char* formula, const 
     if (!lua_isnumber(L, -1))
     {
       const char* str_message = IupGetLanguageString("IUP_ERRORINVALIDFORMULA");
-      iupShowError(IupGetDialog(ih), str_message);
+      IupMessageError(IupGetDialog(ih), str_message);
       lua_close(L);
       return -1;
     }
@@ -121,7 +122,7 @@ int IupPlotSetFormula(Ihandle* ih, int sample_count, const char* formula, const 
       if (!lua_isnumber(L, -2))
       {
         const char* str_message = IupGetLanguageString("IUP_ERRORINVALIDFORMULA");
-        iupShowError(IupGetDialog(ih), str_message);
+        IupMessageError(IupGetDialog(ih), str_message);
         lua_close(L);
         return -1;
       }
@@ -160,6 +161,50 @@ static int plot_predraw_cb(Ihandle *self, cdCanvas* cnv)
   lua_State *L = iuplua_call_start(self, "predraw_cb");
   cdlua_pushcanvas(L, cnv);
   return iuplua_call(L, 1);
+}
+
+static int plot_ytickformatnumber_cb(Ihandle *self, char * p0, char * p1, double p2, char * p3)
+{
+  int status;
+  lua_State *L = iuplua_call_start(self, "ytickformatnumber_cb");
+  lua_pushstring(L, p1);
+  lua_pushnumber(L, p2);
+  lua_pushstring(L, p3);
+  status = iuplua_call_raw(L, 3, 2);
+
+  if (status != LUA_OK)
+    return IUP_DEFAULT;
+  else
+  {
+    char* tmp_s = lua_isnil(L, -2) ? NULL : (char*)lua_tostring(L, -2);
+    int tmp_i = (int)lua_isnil(L, -1) ? IUP_DEFAULT : (int)lua_tointeger(L, -1);
+    lua_pop(L, 2);  /* remove the results */
+    if (tmp_i == IUP_DEFAULT && tmp_s)
+      iupStrCopyN(p0, 128, tmp_s);
+    return tmp_i;
+  }
+}
+
+static int plot_xtickformatnumber_cb(Ihandle *self, char * p0, char * p1, double p2, char * p3)
+{
+  int status;
+  lua_State *L = iuplua_call_start(self, "xtickformatnumber_cb");
+  lua_pushstring(L, p1);
+  lua_pushnumber(L, p2);
+  lua_pushstring(L, p3);
+
+  status = iuplua_call_raw(L, 3, 2);
+  if (status != LUA_OK)
+    return IUP_DEFAULT;
+  else
+  {
+    char* tmp_s = lua_isnil(L, -2) ? NULL : (char*)lua_tostring(L, -2);
+    int tmp_i = (int)lua_isnil(L, -1) ? IUP_DEFAULT : (int)lua_tointeger(L, -1);
+    lua_pop(L, 2);  /* remove the results */
+    if (tmp_i == IUP_DEFAULT && tmp_s)
+      iupStrCopyN(p0, 128, tmp_s);
+    return tmp_i;
+  }
 }
 
 static int PlotBegin(lua_State *L)
@@ -414,6 +459,8 @@ void iuplua_plotfuncs_open (lua_State *L)
 {
   iuplua_register_cb(L, "PREDRAW_CB", (lua_CFunction)plot_predraw_cb, NULL);
   iuplua_register_cb(L, "POSTDRAW_CB", (lua_CFunction)plot_postdraw_cb, NULL); 
+  iuplua_register_cb(L, "XTICKFORMATNUMBER_CB", (lua_CFunction)plot_xtickformatnumber_cb, NULL);
+  iuplua_register_cb(L, "YTICKFORMATNUMBER_CB", (lua_CFunction)plot_ytickformatnumber_cb, NULL);
 
   iuplua_register(L, PlotBegin       ,"PlotBegin");
   iuplua_register(L, PlotAdd         ,"PlotAdd");

@@ -1,0 +1,143 @@
+$(OBJDIR)/iup_glcontrols.o: iup_glcontrols.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupgl.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_childtree.h \
+ ../src/iup_register.h ../src/iup_attrib.h iup_glcontrols.h
+$(OBJDIR)/iup_glcanvasbox.o: iup_glcanvasbox.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupgl.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_glfont.h \
+ iup_glsubcanvas.h ../include/iup_varg.h ../include/iup.h
+$(OBJDIR)/iup_glsubcanvas.o: iup_glsubcanvas.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupgl.h ../src/iup_assert.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_attrib.h ../src/iup_str.h ../src/iup_layout.h \
+ iup_glcontrols.h iup_glfont.h iup_glsubcanvas.h
+$(OBJDIR)/iup_gllabel.o: iup_gllabel.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_glicon.h
+$(OBJDIR)/iup_glimage.o: iup_glimage.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_attrib.h ../src/iup_str.h ../src/iup_image.h iup_glcontrols.h \
+ iup_glimage.h
+$(OBJDIR)/iup_glfont.o: iup_glfont.c /tecgraf/ftgl/include/FTGL/ftgl.h \
+ /usr/include/freetype2/ft2build.h \
+ /usr/include/freetype2/config/ftheader.h \
+ /usr/include/freetype2/freetype.h \
+ /usr/include/freetype2/config/ftconfig.h \
+ /usr/include/freetype2/fttypes.h /usr/include/freetype2/ftsystem.h \
+ /usr/include/freetype2/ftimage.h /usr/include/freetype2/fterrors.h \
+ /usr/include/freetype2/ftmoderr.h /usr/include/freetype2/fterrdef.h \
+ /usr/include/freetype2/ftglyph.h /usr/include/freetype2/ftoutln.h \
+ /tecgraf/ftgl/include/FTGL/FTPoint.h /tecgraf/ftgl/include/FTGL/FTBBox.h \
+ /tecgraf/ftgl/include/FTGL/FTBuffer.h \
+ /tecgraf/ftgl/include/FTGL/FTGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTBitmapGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTBufferGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTExtrdGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTOutlineGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTPixmapGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTPolyGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTTextureGlyph.h \
+ /tecgraf/ftgl/include/FTGL/FTFont.h \
+ /tecgraf/ftgl/include/FTGL/FTGLBitmapFont.h \
+ /tecgraf/ftgl/include/FTGL/FTBufferFont.h \
+ /tecgraf/ftgl/include/FTGL/FTGLExtrdFont.h \
+ /tecgraf/ftgl/include/FTGL/FTGLOutlineFont.h \
+ /tecgraf/ftgl/include/FTGL/FTGLPixmapFont.h \
+ /tecgraf/ftgl/include/FTGL/FTGLPolygonFont.h \
+ /tecgraf/ftgl/include/FTGL/FTGLTextureFont.h \
+ /tecgraf/ftgl/include/FTGL/FTLayout.h \
+ /tecgraf/ftgl/include/FTGL/FTSimpleLayout.h ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iup_export.h \
+ ../include/iupgl.h ../src/iup_assert.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_attrib.h ../src/iup_str.h ../src/iup_array.h \
+ ../src/iup_drvfont.h iup_glcontrols.h iup_glfont.h
+$(OBJDIR)/iup_gldraw.o: iup_gldraw.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../src/iup_assert.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h \
+ ../src/iup_array.h ../src/iup_image.h iup_glcontrols.h iup_glfont.h \
+ iup_gldraw.h iup_glicon.h iup_glimage.h
+$(OBJDIR)/iup_glicon.o: iup_glicon.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h \
+ ../src/iup_register.h ../src/iup_image.h iup_glcontrols.h iup_glfont.h \
+ iup_gldraw.h iup_glicon.h iup_glimage.h
+$(OBJDIR)/iup_glseparator.o: iup_glseparator.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_gldraw.h
+$(OBJDIR)/iup_glbutton.o: iup_glbutton.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_gldraw.h \
+ iup_glicon.h iup_glsubcanvas.h iup_glimage.h
+$(OBJDIR)/iup_gltoggle.o: iup_gltoggle.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_gldraw.h \
+ iup_glicon.h iup_glsubcanvas.h
+$(OBJDIR)/iup_gllink.o: iup_gllink.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_glicon.h
+$(OBJDIR)/iup_glprogressbar.o: iup_glprogressbar.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iup_export.h \
+ ../include/iupcbs.h ../include/iupglcontrols.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_attrib.h ../src/iup_str.h ../src/iup_register.h \
+ iup_glcontrols.h iup_glfont.h iup_gldraw.h iup_glimage.h
+$(OBJDIR)/iup_glval.o: iup_glval.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_glfont.h \
+ iup_gldraw.h iup_glimage.h iup_glsubcanvas.h
+$(OBJDIR)/iup_glframe.o: iup_glframe.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_gldraw.h \
+ iup_glicon.h iup_glsubcanvas.h
+$(OBJDIR)/iup_glexpander.o: iup_glexpander.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h iup_glcontrols.h iup_glfont.h \
+ iup_gldraw.h iup_glimage.h iup_glsubcanvas.h
+$(OBJDIR)/iup_glscrollbars.o: iup_glscrollbars.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../include/iup_export.h \
+ ../include/iupcbs.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_register.h \
+ ../src/iup_attrib.h ../src/iup_str.h ../src/iup_layout.h \
+ iup_glcontrols.h iup_glscrollbars.h iup_gldraw.h iup_glsubcanvas.h
+$(OBJDIR)/iup_glscrollbox.o: iup_glscrollbox.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_register.h \
+ ../src/iup_attrib.h ../src/iup_str.h ../src/iup_layout.h \
+ iup_glcontrols.h iup_glscrollbars.h iup_glsubcanvas.h
+$(OBJDIR)/iup_glsizebox.o: iup_glsizebox.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupglcontrols.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h \
+ ../src/iup_register.h ../src/iup_layout.h iup_glcontrols.h iup_gldraw.h \
+ iup_glsubcanvas.h
+$(OBJDIR)/iup_gltext.o: iup_gltext.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcbs.h \
+ ../include/iupglcontrols.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_attrib.h \
+ ../src/iup_str.h ../src/iup_register.h ../src/iup_childtree.h \
+ iup_glcontrols.h iup_gldraw.h iup_glicon.h iup_glsubcanvas.h

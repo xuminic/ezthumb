@@ -108,6 +108,7 @@ static int iLabelCreateMethod(Ihandle* ih, void** params)
   ih->data = iupALLOCCTRLDATA();
 
   /* used only by the Windows driver */
+  ih->data->horiz_alignment = IUP_ALIGN_ALEFT;
   ih->data->vert_alignment = IUP_ALIGN_ACENTER;
   return IUP_NOERROR;
 }
@@ -142,6 +143,8 @@ static void iLabelComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chi
     natural_h += 2*ih->data->vert_padding;
   }
 
+  iupdrvLabelAddExtraPadding(ih, &natural_w, &natural_h);
+
   *w = natural_w;
   *h = natural_h;
 }
@@ -150,7 +153,7 @@ static void iLabelComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chi
 /******************************************************************************/
 
 
-Ihandle* IupLabel(const char* title)
+IUP_API Ihandle* IupLabel(const char* title)
 {
   void *params[2];
   params[0] = (void*)title;
@@ -164,6 +167,7 @@ Iclass* iupLabelNewClass(void)
 
   ic->name = "label";
   ic->format = "s"; /* one string */
+  ic->format_attr = "TITLE";
   ic->nativetype = IUP_TYPECONTROL;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 0;
@@ -196,6 +200,7 @@ Iclass* iupLabelNewClass(void)
 
   /* IupLabel only */
   iupClassRegisterAttribute(ic, "SEPARATOR", iLabelGetSeparatorAttrib, iLabelSetSeparatorAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CPADDING", iupBaseGetCPaddingAttrib, iupBaseSetCPaddingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
 
   iupdrvLabelInitClass(ic);
 

@@ -22,25 +22,25 @@
 #include "iup_assert.h"
 
 
-void iupBaseCallValueChangedCb(Ihandle* ih)
+IUP_SDK_API void iupBaseCallValueChangedCb(Ihandle* ih)
 {
   IFn vc_cb = (IFn)IupGetCallback(ih, "VALUECHANGED_CB");
   if (vc_cb)
     vc_cb(ih);
 }
 
-int iupBaseTypeVoidMapMethod(Ihandle* ih)
+IUP_SDK_API int iupBaseTypeVoidMapMethod(Ihandle* ih)
 {
   ih->handle = (InativeHandle*)-1;  /* fake value just to indicate that it is already mapped */
   return IUP_NOERROR;
 }
 
-char* iupBaseGetWidAttrib(Ihandle *ih)
+IUP_SDK_API char* iupBaseGetWidAttrib(Ihandle *ih)
 {
   return (char*)ih->handle;
 }
 
-void iupBaseUpdateAttribFromFont(Ihandle* ih)
+IUP_SDK_API void iupBaseUpdateAttribFromFont(Ihandle* ih)
 {
   char* value = iupAttribGet(ih, "SIZE");
   if (value)
@@ -53,7 +53,7 @@ void iupBaseUpdateAttribFromFont(Ihandle* ih)
   }
 }
 
-int iupBaseSetSizeAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetSizeAttrib(Ihandle* ih, const char* value)
 {
   if (!value)
   {
@@ -76,7 +76,7 @@ int iupBaseSetSizeAttrib(Ihandle* ih, const char* value)
   return 1;  /* always save in the hash table, so when FONT is changed SIZE can be updated */
 }
 
-char* iupBaseGetSizeAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseGetSizeAttrib(Ihandle* ih)
 {
   int charwidth, charheight, width, height;
 
@@ -97,10 +97,11 @@ char* iupBaseGetSizeAttrib(Ihandle* ih)
 
   if (width == 0 && height == 0)
     return NULL;
+
   return iupStrReturnIntInt(iupRASTER2WIDTH(width, charwidth), iupRASTER2HEIGHT(height, charheight), 'x');
 }
 
-int iupBaseSetRasterSizeAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetRasterSizeAttrib(Ihandle* ih, const char* value)
 {
   if (!value)
   {
@@ -121,13 +122,52 @@ int iupBaseSetRasterSizeAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-char* iupBaseGetClientOffsetAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseGetClientOffsetAttrib(Ihandle* ih)
 {
   (void)ih;
   return "0x0";
 }
 
-char* iupBaseGetCurrentSizeAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseCanvasGetClientOffsetAttrib(Ihandle* ih)
+{
+  int dx = 0, dy = 0;
+  if (iupAttribGetBoolean(ih, "BORDER"))
+  {
+    dx = 1;
+    dy = 1;
+  }
+  return iupStrReturnIntInt(dx, dy, 'x');
+}
+
+IUP_SDK_API char* iupBaseCanvasGetClientSizeAttrib(Ihandle* ih)
+{
+  int width = ih->currentwidth;
+  int height = ih->currentheight;
+
+  if (iupAttribGetBoolean(ih, "BORDER"))
+  {
+    width -= 2;
+    height -= 2;
+  }
+
+  if (width < 0) width = 0;
+  if (height < 0) height = 0;
+
+  return iupStrReturnIntInt(width, height, 'x');
+}
+
+IUP_SDK_API char* iupBaseGetClientSizeAttrib(Ihandle* ih)
+{
+  int width = ih->currentwidth;
+  int height = ih->currentheight;
+
+  if (width < 0) width = 0;
+  if (height < 0) height = 0;
+
+  return iupStrReturnIntInt(width, height, 'x');
+}
+
+IUP_SDK_API char* iupBaseGetCurrentSizeAttrib(Ihandle* ih)
 {
   int width = ih->currentwidth;
   int height = ih->currentheight;
@@ -138,7 +178,7 @@ char* iupBaseGetCurrentSizeAttrib(Ihandle* ih)
   return iupStrReturnIntInt(width, height, 'x');
 }
 
-char* iupBaseGetRasterSizeAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseGetRasterSizeAttrib(Ihandle* ih)
 {
   int width, height;
 
@@ -162,7 +202,7 @@ char* iupBaseGetRasterSizeAttrib(Ihandle* ih)
   return iupStrReturnIntInt(width, height, 'x');
 }
 
-char* iupBaseGetCharSizeAttrib(Ihandle* ih)
+static char* iBaseGetCharSizeAttrib(Ihandle* ih)
 {
   int charwidth, charheight;
 
@@ -222,7 +262,7 @@ static char* iBaseGetScreenPositionAttrib(Ihandle *ih)
   return iupStrReturnIntInt(x, y, ',');
 }
 
-char* iupBaseGetActiveAttrib(Ihandle *ih)
+IUP_SDK_API char* iupBaseGetActiveAttrib(Ihandle *ih)
 {
   return iupStrReturnBoolean (iupdrvIsActive(ih)); 
 }
@@ -240,7 +280,7 @@ static int iBaseNativeParentIsActive(Ihandle* ih)
     return iupdrvIsActive(parent);
 }
 
-int iupBaseSetActiveAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetActiveAttrib(Ihandle* ih, const char* value)
 {
   if (iupStrBoolean(value))
   {
@@ -252,18 +292,18 @@ int iupBaseSetActiveAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-char* iupBaseGetVisibleAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseGetVisibleAttrib(Ihandle* ih)
 {
   return iupStrReturnBoolean (iupdrvIsVisible(ih)); 
 }
 
-int iupBaseSetVisibleAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetVisibleAttrib(Ihandle* ih, const char* value)
 {
   iupdrvSetVisible(ih, iupStrBoolean(value));
   return 1;  /* must be 1 to mark when set at the element */
 }
 
-char* iupBaseNativeParentGetBgColorAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseNativeParentGetBgColorAttrib(Ihandle* ih)
 {
   /* Used only by those who need a transparent background */
   char* color = iupAttribGetInheritNativeParent(ih, "BGCOLOR");
@@ -272,7 +312,7 @@ char* iupBaseNativeParentGetBgColorAttrib(Ihandle* ih)
   return color;
 }
 
-char* iupBaseNativeParentGetBgColor(Ihandle* ih)
+IUP_SDK_API char* iupBaseNativeParentGetBgColor(Ihandle* ih)
 {
   /* Used in SetBgColorAttrib */
   char* color = iupAttribGetInheritNativeParent(ih, "BGCOLOR");
@@ -280,12 +320,12 @@ char* iupBaseNativeParentGetBgColor(Ihandle* ih)
   return color;
 }
 
-int iupRound(double x)
+IUP_SDK_API int iupRound(double x)
 {
   return iupROUND(x);
 }
 
-int iupBaseGetScrollbar(Ihandle* ih)
+IUP_SDK_API int iupBaseGetScrollbar(Ihandle* ih)
 {
   int sb = IUP_SB_NONE;  /* NO scrollbar by default */
   char* value = IupGetAttribute(ih, "SCROLLBAR");
@@ -301,6 +341,17 @@ int iupBaseGetScrollbar(Ihandle* ih)
   return sb;
 }
 
+static int iBaseSetThemeAttrib(Ihandle* ih, const char* value)
+{
+  Ihandle* theme = IupGetHandle(value);
+  if (theme)
+  {
+    iupAttribSetTheme(ih, theme);
+    return 1;
+  }
+  return 0;
+}
+
 static int iBaseSetNormalizerGroupAttrib(Ihandle* ih, const char* value)
 {
   Ihandle* ih_normalizer = IupGetHandle(value);
@@ -311,7 +362,13 @@ static int iBaseSetNormalizerGroupAttrib(Ihandle* ih, const char* value)
   }
 
   IupSetAttribute(ih_normalizer, "ADDCONTROL_HANDLE", (char*)ih);
-  return 1;
+  iupAttribSetStr(ih, "_IUP_NORMALIZERGROUP", value);
+  return 0;
+}
+
+static  char* iBaseGetNormalizerGroupAttrib(Ihandle* ih)
+{
+  return iupAttribGet(ih, "_IUP_NORMALIZERGROUP");
 }
 
 static Ihandle* iBaseFindNamedChild(Ihandle* ih, const char* name)
@@ -334,7 +391,7 @@ static Ihandle* iBaseFindNamedChild(Ihandle* ih, const char* name)
   return NULL;
 }
 
-Ihandle* IupGetDialogChild(Ihandle* ih, const char* name)
+IUP_API Ihandle* IupGetDialogChild(Ihandle* ih, const char* name)
 {
   Ihandle *child, *dialog;
   char attrib[1024] = "_IUP_DIALOG_CHILD_";
@@ -368,7 +425,7 @@ Ihandle* IupGetDialogChild(Ihandle* ih, const char* name)
   return NULL;
 }
 
-int iupBaseSetNameAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetNameAttrib(Ihandle* ih, const char* value)
 {
   if (!value)
   {
@@ -417,7 +474,7 @@ static char* iBaseGetFloatingAttrib(Ihandle* ih)
     return iupStrReturnBoolean (ih->flags & IUP_FLOATING); 
 }
 
-int iupBaseSetMaxSizeAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetMaxSizeAttrib(Ihandle* ih, const char* value)
 {
   if (value)
     ih->flags |= IUP_MAXSIZE;
@@ -426,7 +483,7 @@ int iupBaseSetMaxSizeAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-int iupBaseSetMinSizeAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetMinSizeAttrib(Ihandle* ih, const char* value)
 {
   if (value)
     ih->flags |= IUP_MINSIZE;
@@ -435,7 +492,7 @@ int iupBaseSetMinSizeAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-int iupBaseSetExpandAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupBaseSetExpandAttrib(Ihandle* ih, const char* value)
 {
   if (iupStrEqualNoCase(value, "YES"))
     ih->expand = IUP_EXPAND_BOTH;
@@ -452,7 +509,7 @@ int iupBaseSetExpandAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-char* iupBaseGetExpandAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseGetExpandAttrib(Ihandle* ih)
 {
   if ((ih->expand & IUP_EXPAND_WIDTH) && (ih->expand & IUP_EXPAND_HEIGHT))
     return "YES";
@@ -468,7 +525,7 @@ char* iupBaseGetExpandAttrib(Ihandle* ih)
     return "NO";
 }
 
-void iupBaseContainerUpdateExpand(Ihandle* ih)
+IUP_SDK_API void iupBaseContainerUpdateExpand(Ihandle* ih)
 {
   char *expand = iupAttribGetInherit(ih, "EXPAND");
   if (!expand)
@@ -494,20 +551,108 @@ void iupBaseContainerUpdateExpand(Ihandle* ih)
    but it is inheritable for containers. 
    So if you set at a container it will not affect its children,
    but children that are containers will get the same value. */
-char* iupBaseContainerGetExpandAttrib(Ihandle* ih)
+IUP_SDK_API char* iupBaseContainerGetExpandAttrib(Ihandle* ih)
 {
   return iupAttribGetInherit(ih, "EXPAND");
 }
 
-void iupBaseRegisterCommonAttrib(Iclass* ic)
+IUP_SDK_API int iupBaseSetCPaddingAttrib(Ihandle* ih, const char* value)
+{
+  if (!value)
+    IupSetAttribute(ih, "PADDING", NULL);
+  else
+  {
+    int cpad_horiz = -1, cpad_vert = -1;
+    int ret = iupStrToIntInt(value, &cpad_horiz, &cpad_vert, 'x');
+    if (ret == 2)
+    {
+      int pad_horiz, pad_vert;
+      int charwidth, charheight;
+      iupdrvFontGetCharSize(ih, &charwidth, &charheight);
+      pad_horiz = iupWIDTH2RASTER(cpad_horiz, charwidth);
+      pad_vert = iupHEIGHT2RASTER(cpad_vert, charheight);
+      IupSetStrf(ih, "PADDING", "%dx%d", pad_horiz, pad_vert);
+    }
+    else if (ret == 1)
+    {
+      int pad_horiz, pad_vert;
+      int charwidth, charheight;
+      IupGetIntInt(ih, "PADDING", &pad_horiz, &pad_vert);
+      iupdrvFontGetCharSize(ih, &charwidth, &charheight);
+
+      if (cpad_vert == -1)
+        pad_horiz = iupWIDTH2RASTER(cpad_horiz, charwidth);
+      else
+        pad_vert = iupHEIGHT2RASTER(cpad_vert, charheight);
+
+      IupSetStrf(ih, "PADDING", "%dx%d", pad_horiz, pad_vert);
+    }
+  }
+  return 0;  /* NOT stored */
+}
+
+IUP_SDK_API char* iupBaseGetCPaddingAttrib(Ihandle* ih)
+{
+  int pad_horiz, pad_vert;
+  int charheight, charwidth;
+  IupGetIntInt(ih, "PADDING", &pad_horiz, &pad_vert);
+  iupdrvFontGetCharSize(ih, &charwidth, &charheight);
+
+  pad_horiz = iupRASTER2WIDTH(pad_horiz, charwidth);
+  pad_vert = iupRASTER2HEIGHT(pad_vert, charheight);
+
+  return iupStrReturnIntInt(pad_horiz, pad_vert, 'x');
+}
+
+/*
+iupClassRegisterAttribute(ic, "CPADDING", iupBaseGetCPaddingAttrib, iupBaseSetCPaddingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
+*/
+
+IUP_SDK_API int iupBaseSetCSpacingAttrib(Ihandle* ih, const char* value)
+{
+  if (!value)
+    IupSetAttribute(ih, "SPACING", NULL);
+  else
+  {
+    int cspacing;
+    if (iupStrToInt(value, &cspacing))
+    {
+      int spacing;
+      int charheight;
+      iupdrvFontGetCharSize(ih, NULL, &charheight);
+      spacing = iupHEIGHT2RASTER(cspacing, charheight);
+      IupSetInt(ih, "SPACING", spacing);
+    }
+  }
+  return 0;  /* NOT stored */
+}
+
+IUP_SDK_API char* iupBaseGetCSpacingAttrib(Ihandle* ih)
+{
+  int spacing = IupGetInt(ih, "SPACING");
+  int charheight;
+  iupdrvFontGetCharSize(ih, NULL, &charheight);
+
+  spacing = iupRASTER2HEIGHT(spacing, charheight);
+
+  return iupStrReturnInt(spacing);
+}
+
+/*
+iupClassRegisterAttribute(ic, "CSPACING", iupBaseGetCSpacingAttrib, iupBaseSetCSpacingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
+*/
+
+IUP_SDK_API void iupBaseRegisterCommonAttrib(Iclass* ic)
 {
   iupClassRegisterAttribute(ic, "WID", iupBaseGetWidAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT|IUPAF_NO_STRING);
   iupClassRegisterAttribute(ic, "NAME", NULL, iupBaseSetNameAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FLOATING", iBaseGetFloatingAttrib, iBaseSetFloatingAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseGetExpandAttrib, iupBaseSetExpandAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "NORMALIZERGROUP", NULL, iBaseSetNormalizerGroupAttrib, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "NORMALIZERGROUP", iBaseGetNormalizerGroupAttrib, iBaseSetNormalizerGroupAttrib, NULL, NULL, IUPAF_IHANDLENAME|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "EXPANDWEIGHT", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "HANDLENAME", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "HANDLENAME", NULL, NULL, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "THEME", NULL, iBaseSetThemeAttrib, NULL, NULL, IUPAF_IHANDLENAME | IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "NTHEME", NULL, iBaseSetThemeAttrib, NULL, NULL, IUPAF_IHANDLENAME | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   /* make sure everyone has the correct default value */
   iupClassRegisterAttribute(ic, "ACTIVE", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_DEFAULT);  /* inherited */
@@ -515,6 +660,7 @@ void iupBaseRegisterCommonAttrib(Iclass* ic)
     iupClassRegisterAttribute(ic, "CANFOCUS", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_INHERIT);
   else
     iupClassRegisterAttribute(ic, "CANFOCUS", NULL, NULL, IUPAF_SAMEASSYSTEM, "NO", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "PROPAGATEFOCUS", NULL, NULL, IUPAF_SAMEASSYSTEM, "NO", IUPAF_NO_INHERIT);
 
   /* if not native container, must set at children,
      native container will automatically hide its children. */
@@ -522,7 +668,7 @@ void iupBaseRegisterCommonAttrib(Iclass* ic)
 
   iupClassRegisterAttribute(ic, "SIZE", iupBaseGetSizeAttrib, iupBaseSetSizeAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NO_DEFAULTVALUE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "RASTERSIZE", iupBaseGetRasterSizeAttrib, iupBaseSetRasterSizeAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NO_DEFAULTVALUE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "CHARSIZE", iupBaseGetCharSizeAttrib, NULL, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CHARSIZE", iBaseGetCharSizeAttrib, NULL, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "NATURALSIZE", iBaseGetNaturalSizeAttrib, NULL, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "USERSIZE", iBaseGetUserSizeAttrib, iupBaseSetRasterSizeAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
@@ -539,7 +685,7 @@ void iupBaseRegisterCommonAttrib(Iclass* ic)
   iupdrvBaseRegisterCommonAttrib(ic);
 }
 
-void iupBaseRegisterVisualAttrib(Iclass* ic)
+IUP_SDK_API void iupBaseRegisterVisualAttrib(Iclass* ic)
 {
   iupClassRegisterAttribute(ic, "VISIBLE", iupBaseGetVisibleAttrib, iupBaseSetVisibleAttrib, "YES", "NO", IUPAF_NO_SAVE | IUPAF_DEFAULT);   /* must be inheritable to propagate visual state to children and from parent */
   iupClassRegisterAttribute(ic, "ACTIVE", iupBaseGetActiveAttrib, iupBaseSetActiveAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_DEFAULT);  /* must be inheritable to propagate visual state to children and from parent */
@@ -559,12 +705,19 @@ void iupBaseRegisterVisualAttrib(Iclass* ic)
   iupdrvBaseRegisterVisualAttrib(ic);
 }
 
-void iupBaseRegisterCommonCallbacks(Iclass* ic)
+IUP_SDK_API void iupBaseRegisterBaseCallbacks(Iclass* ic)
 {
   iupClassRegisterCallback(ic, "DESTROY_CB", "");
   iupClassRegisterCallback(ic, "LDESTROY_CB", "");
   iupClassRegisterCallback(ic, "MAP_CB", "");
   iupClassRegisterCallback(ic, "UNMAP_CB", "");
+  iupClassRegisterCallback(ic, "POSTMESSAGE_CB", "sidV");
+}
+
+IUP_SDK_API void iupBaseRegisterCommonCallbacks(Iclass* ic)
+{
+  iupBaseRegisterBaseCallbacks(ic);
+
   iupClassRegisterCallback(ic, "GETFOCUS_CB", "");
   iupClassRegisterCallback(ic, "KILLFOCUS_CB", "");
   iupClassRegisterCallback(ic, "ENTERWINDOW_CB", "");
@@ -573,7 +726,7 @@ void iupBaseRegisterCommonCallbacks(Iclass* ic)
   iupClassRegisterCallback(ic, "K_ANY", "i");
 }
 
-int iupBaseNoSaveCheck(Ihandle* ih, const char* name)
+IUP_SDK_API int iupBaseNoSaveCheck(Ihandle* ih, const char* name)
 {
   if (iupStrEqual(name, "BGCOLOR") ||
       iupStrEqual(name, "VISIBLE") ||

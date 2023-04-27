@@ -41,12 +41,39 @@
 typedef struct _ImenuPos
 {
   int x, y;
+  Ihandle* ih;
 } ImenuPos;
 
 static void gtkMenuPositionFunc(GtkMenu *menu, gint *x, gint *y, gboolean *push_in, ImenuPos *menupos)
 {
+  char* value = iupAttribGet(menupos->ih, "POPUPALIGN");
+
   *x = menupos->x;
   *y = menupos->y;
+
+  if (value)
+  {
+    GtkRequisition size;
+    char value1[30], value2[30];
+    iupStrToStrStr(value, value1, value2, ':');
+
+#if GTK_CHECK_VERSION(3, 0, 0)
+    gtk_widget_get_preferred_size(menupos->ih->handle, NULL, &size);
+#else
+    gtk_widget_size_request(menupos->ih->handle, &size);
+#endif
+
+    if (iupStrEqualNoCase(value1, "ARIGHT"))
+      *x -= size.width;
+    else if (iupStrEqualNoCase(value1, "ACENTER"))
+      *x -= size.width/2;
+
+    if (iupStrEqualNoCase(value2, "ABOTTOM"))
+      *y -= size.height;
+    else if (iupStrEqualNoCase(value2, "ACENTER"))
+      *y -= size.height/2;
+  }
+
   *push_in = FALSE;
   (void)menu;
 }
@@ -56,13 +83,14 @@ int iupdrvMenuPopup(Ihandle* ih, int x, int y)
   ImenuPos menupos;
   menupos.x = x;
   menupos.y = y;
+  menupos.ih = ih;
   gtk_menu_popup((GtkMenu*)ih->handle, NULL, NULL, (GtkMenuPositionFunc)gtkMenuPositionFunc,
                  (gpointer)&menupos, 0, gtk_get_current_event_time());
   gtk_main();
   return IUP_NOERROR;
 }
 
-int iupdrvMenuGetMenuBarSize(Ihandle* ih)
+IUP_SDK_API int iupdrvMenuGetMenuBarSize(Ihandle* ih)
 {
   int ch;
   iupdrvFontGetCharSize(ih, NULL, &ch);
@@ -73,14 +101,47 @@ int iupdrvMenuGetMenuBarSize(Ihandle* ih)
 #endif
 }
 
+/* TODO:
+GtkImageMenuItem has been deprecated since GTK+ 3.10. 
+If you want to display an icon in a menu item, 
+you should use GtkMenuItem and pack a GtkBox with a GtkImage and a GtkLabel instead. 
+
+Furthermore, if you would like to display keyboard accelerator, 
+you must pack the accel label into the box using gtk_box_pack_end() 
+and align the label, otherwise the accelerator will not display correctly. 
+
+Example:
+
+GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+GtkWidget *icon = gtk_image_new_from_icon_name ("folder-music-symbolic", GTK_ICON_SIZE_MENU);
+GtkWidget *label = gtk_accel_label_new ("Music");
+GtkWidget *menu_item = gtk_menu_item_new ();
+GtkAccelGroup *accel_group = gtk_accel_group_new ();
+
+gtk_container_add (GTK_CONTAINER (box), icon);
+
+gtk_label_set_use_underline (GTK_LABEL (label), TRUE);
+gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+
+gtk_widget_add_accelerator (menu_item, "activate", accel_group,
+GDK_KEY_m, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+gtk_accel_label_set_accel_widget (GTK_ACCEL_LABEL (label), menu_item);
+
+gtk_box_pack_end (GTK_BOX (box), label, TRUE, TRUE, 0);
+
+gtk_container_add (GTK_CONTAINER (menu_item), box);
+
+gtk_widget_show_all (menu_item);
+*/
+
 static void gtkItemUpdateImage(Ihandle* ih, const char* value, const char* image, const char* impress)
 {
   GdkPixbuf* pixbuf;
 
   if (!impress || !iupStrBoolean(value))
-    pixbuf = iupImageGetImage(image, ih, 0);
+    pixbuf = iupImageGetImage(image, ih, 0, NULL);
   else
-    pixbuf = iupImageGetImage(impress, ih, 0);
+    pixbuf = iupImageGetImage(impress, ih, 0, NULL);
 
   if (pixbuf)
   {
@@ -233,8 +294,6 @@ static int gtkMenuMapMethod(Ihandle* ih)
     else
     {
       /* top level menu used for IupPopup */
-      iupAttribSet(ih, "_IUPGTK_POPUP_MENU", "1");
-
       g_signal_connect(G_OBJECT(ih->handle), "map", G_CALLBACK(gtkMenuMap), ih);
       g_signal_connect(G_OBJECT(ih->handle), "unmap", G_CALLBACK(gtkPopupMenuUnMap), ih);
     }
@@ -379,12 +438,14 @@ static int gtkItemMapMethod(Ihandle* ih)
     else
     {
       char* hidemark = iupAttribGetStr(ih, "HIDEMARK");
-      if (!hidemark && gtk_check_version(2, 14, 0) == NULL)
+#if GTK_CHECK_VERSION(2, 14, 0)
+      if (!hidemark)
       {
-        /* force HIDEMARK if VALUE is defined before Map, after GTK 2.14 */
+        /* change HIDEMARK default if VALUE is not defined, after GTK 2.14 */
         if (!iupAttribGet(ih, "VALUE")) 
           hidemark = "YES";
       }
+#endif
 
       if (iupStrBoolean(hidemark))
         ih->handle = gtk_menu_item_new_with_label("");

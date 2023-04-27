@@ -1,0 +1,10 @@
+$(OBJDIR)/il_scintilla.o: ctrl/il_scintilla.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iup_scintilla.h ../srclua5/il.h lh/scintilla.lh
+$(OBJDIR)/il_scintilladlg.o: ctrl/il_scintilladlg.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iup_scintilla.h ../srclua5/il.h lh/scintilladlg.lh

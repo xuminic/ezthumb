@@ -3,7 +3,7 @@ LIBNAME = iupcd
 OPT = YES
 
 DEFINES = CD_NO_OLD_INTERFACE
-SRC = iup_cd.c iup_cdutil.c 
+SRC = iup_cd.c iup_cdutil.c iup_draw_cd.c
 DEF_FILE = iupcd.def
 
 USE_CD=YES

@@ -24,6 +24,7 @@ tOleHandler::tOleHandler()
   natural_height = 0;
 
   m_hWnd=NULL;
+  m_pIStorage=NULL;
 
   m_fInitialized=0;
   m_cOpens=0;
@@ -60,8 +61,6 @@ tOleHandler::tOleHandler()
   m_cLockInPlace=0;
   m_fPendingDeactivate=FALSE;
   //End CHAPTER24MOD
-
-  return;
 }
 
 
@@ -437,6 +436,9 @@ void tOleHandler::Close(BOOL fCommit)
 
             //We know we only hold one ref from Create or Load
             ReleaseInterface(m_pObj);
+
+            if (NULL != m_pIStorage)
+              ReleaseInterface(m_pIStorage);
 
     return;
     }

@@ -12,6 +12,20 @@
 #include "il.h"
 
 
+static int scrollbox_action(Ihandle *self, float p0, float p1)
+{
+  lua_State *L = iuplua_call_start(self, "action");
+  lua_pushnumber(L, p0);
+  lua_pushnumber(L, p1);
+  return iuplua_call(L, 2);
+}
+
+static int scrollbox_layoutupdate_cb(Ihandle *self)
+{
+  lua_State *L = iuplua_call_start(self, "layoutupdate_cb");
+  return iuplua_call(L, 0);
+}
+
 static int ScrollBox(lua_State *L)
 {
   Ihandle *ih = IupScrollBox(iuplua_checkihandleornil(L, 1));
@@ -24,6 +38,8 @@ int iupscrollboxlua_open(lua_State * L)
 {
   iuplua_register(L, ScrollBox, "ScrollBox");
 
+  iuplua_register_cb(L, "ACTION", (lua_CFunction)scrollbox_action, "scrollbox");
+  iuplua_register_cb(L, "LAYOUTUPDATE_CB", (lua_CFunction)scrollbox_layoutupdate_cb, NULL);
 
 #ifdef IUPLUA_USELOH
 #include "scrollbox.loh"

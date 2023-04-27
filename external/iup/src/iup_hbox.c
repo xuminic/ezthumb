@@ -19,6 +19,7 @@
 #include "iup_layout.h"
 #include "iup_box.h"
 #include "iup_normalizer.h"
+#include "iup_varg.h"
 
 
 static int iHboxSetRasterSizeAttrib(Ihandle* ih, const char* value)
@@ -81,6 +82,12 @@ static char* iHboxGetAlignmentAttrib(Ihandle* ih)
   return align2str[ih->data->alignment];
 }
 
+static char* iHboxGetOrientationAttrib(Ihandle* ih)
+{
+  (void)ih;
+  return "HORIZONTAL";
+}
+
 static void iHboxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   Ihandle* child;
@@ -126,8 +133,8 @@ static void iHboxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chil
     children_natural_width = children_natural_maxwidth*children_count;
 
   /* compute the Hbox contents natural size */
-  total_natural_width  = children_natural_width + (children_count-1)*ih->data->gap + 2*ih->data->margin_x;
-  total_natural_height = children_natural_maxheight + 2*ih->data->margin_y;
+  total_natural_width  = children_natural_width + (children_count-1)*ih->data->gap + 2*ih->data->margin_horiz;
+  total_natural_height = children_natural_maxheight + 2*ih->data->margin_vert;
 
   /* Store to be used in iHboxCalcEmptyWidth */
   ih->data->total_natural_size = total_natural_width;
@@ -151,7 +158,7 @@ static int iHboxCalcHomogeneousWidth(Ihandle *ih)
     return 0;
 
   /* equal spaces for all elements */
-  homogeneous_width = (ih->currentwidth - (children_count-1)*ih->data->gap - 2*ih->data->margin_x)/children_count;
+  homogeneous_width = (ih->currentwidth - (children_count-1)*ih->data->gap - 2*ih->data->margin_horiz)/children_count;
   if (homogeneous_width<0) homogeneous_width = 0;
   return homogeneous_width;
 }
@@ -198,7 +205,7 @@ static void iHboxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
       empty_w0 = iHboxCalcEmptyWidth(ih, IUP_EXPAND_W0);
   }
 
-  client_height = ih->currentheight - 2*ih->data->margin_y;
+  client_height = ih->currentheight - 2*ih->data->margin_vert;
   if (client_height<0) client_height=0;
 
   for (child = ih->firstchild; child; child = child->brother)
@@ -213,8 +220,8 @@ static void iHboxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
         char* weight_str = iupAttribGet(child, "EXPANDWEIGHT");
         if (weight_str)
         {
-          float weight; 
-          if (iupStrToFloat(weight_str, &weight))
+          double weight;
+          if (iupStrToDouble(weight_str, &weight))
             empty = iupRound(empty * weight);
         }
         iupBaseSetCurrentSize(child, child->naturalwidth+empty, client_height, shrink);
@@ -233,10 +240,10 @@ static void iHboxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
   int dy, client_height;
   Ihandle* child;
 
-  x += ih->data->margin_x;
-  y += ih->data->margin_y;
+  x += ih->data->margin_horiz;
+  y += ih->data->margin_vert;
 
-  client_height = ih->currentheight - 2*ih->data->margin_y;
+  client_height = ih->currentheight - 2*ih->data->margin_vert;
   if (client_height<0) client_height=0;
 
   for (child = ih->firstchild; child; child = child->brother)
@@ -267,23 +274,24 @@ static void iHboxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 /******************************************************************************/
 
 
-Ihandle *IupHboxv(Ihandle **children)
+IUP_API Ihandle* IupHboxv(Ihandle **children)
 {
   return IupCreatev("hbox", (void**)children);
 }
 
-Ihandle *IupHbox(Ihandle* child, ...)
+IUP_API Ihandle* IupHboxV(Ihandle* child, va_list arglist)
 {
-  Ihandle **children;
+  return IupCreateV("hbox", child, arglist);
+}
+
+IUP_API Ihandle* IupHbox(Ihandle* child, ...)
+{
   Ihandle *ih;
 
   va_list arglist;
   va_start(arglist, child);
-  children = (Ihandle **)iupObjectGetParamList(child, arglist);
+  ih = IupCreateV("hbox", child, arglist);
   va_end(arglist);
-
-  ih = IupCreatev("hbox", (void**)children);
-  free(children);
 
   return ih;
 }
@@ -303,6 +311,8 @@ Iclass* iupHboxNewClass(void)
   /* Overwrite Common */
   iupClassRegisterAttribute(ic, "SIZE", iupBaseGetSizeAttrib, iHboxSetSizeAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "RASTERSIZE", iupBaseGetRasterSizeAttrib, iHboxSetRasterSizeAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "ORIENTATION", iHboxGetOrientationAttrib, NULL, IUPAF_SAMEASSYSTEM, "HORIZONTAL", IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   /* Hbox only */
   iupClassRegisterAttribute(ic, "ALIGNMENT", iHboxGetAlignmentAttrib, iHboxSetAlignmentAttrib, IUPAF_SAMEASSYSTEM, "ATOP", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

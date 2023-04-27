@@ -27,15 +27,32 @@
 #include "iupgtk_drv.h"
 
 
-void iupdrvFrameGetDecorOffset(int *x, int *y)
+void iupdrvFrameGetDecorOffset(Ihandle* ih, int *x, int *y)
 {
+  (void)ih;
   /* LAYOUT_DECORATION_ESTIMATE */
   *x = 2;
   *y = 2;
 }
 
-int iupdrvFrameHasClientOffset(void)
+int iupdrvFrameHasClientOffset(Ihandle* ih)
 {
+  (void)ih;
+  return 0;
+}
+
+int iupdrvFrameGetTitleHeight(Ihandle* ih, int *h)
+{
+  (void)ih;
+  (void)h;
+  return 0;
+}
+
+int iupdrvFrameGetDecorSize(Ihandle* ih, int *w, int *h)
+{
+  (void)ih;
+  (void)w;
+  (void)h;
   return 0;
 }
 
@@ -106,7 +123,8 @@ static int gtkFrameSetFgColorAttrib(Ihandle* ih, const char* value)
 
 static int gtkFrameSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetFontAttrib(ih, value);
+  if (!iupdrvSetFontAttrib(ih, value))
+    return 0;
 
   if (ih->handle)
   {
@@ -141,12 +159,12 @@ static int gtkFrameMapMethod(Ihandle* ih)
     iupAttribSet(ih, "_IUPFRAME_HAS_TITLE", "1");
   else
   {
-    if (iupAttribGet(ih, "BGCOLOR"))
+    if (iupAttribGet(ih, "BGCOLOR") || iupAttribGet(ih, "BACKCOLOR"))
       iupAttribSet(ih, "_IUPFRAME_HAS_BGCOLOR", "1");
   }
 
   /* the container that will receive the child element. */
-  /* use a window to be a full native containter */
+  /* use a window to be a full native container */
   inner_parent = iupgtkNativeContainerNew(1);
 
   gtk_container_add((GtkContainer*)ih->handle, inner_parent);
@@ -178,6 +196,7 @@ void iupdrvFrameInitClass(Iclass* ic)
 
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", iupFrameGetBgColorAttrib, gtkFrameSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_DEFAULT);
+  iupClassRegisterAttribute(ic, "BACKCOLOR", iupFrameGetBgColorAttrib, gtkFrameSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SUNKEN", NULL, gtkFrameSetSunkenAttrib, NULL, NULL, IUPAF_NO_INHERIT);
 
   /* Special */

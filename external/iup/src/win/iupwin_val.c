@@ -237,6 +237,12 @@ static int winValMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *r
       if (iupwinBaseMsgProc(ih, msg, wp, lp, result)==1)
         return 1;
 
+      if (!iupObjectCheck(ih))
+      {
+        *result = 0;
+        return 1;
+      }
+
       if (GetKeyState(VK_CONTROL) & 0x8000)  /* handle Ctrl+Arrows */
       {
         if (wp == VK_UP || wp == VK_LEFT)
@@ -252,6 +258,7 @@ static int winValMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *r
           return 1;
         }
       }
+
       return 0;
     }
   }
@@ -356,4 +363,6 @@ void iupdrvValInitClass(Iclass* ic)
 
   /* Visual */
   iupClassRegisterAttribute(ic, "BGCOLOR", NULL, winValSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "DLGBGCOLOR", IUPAF_DEFAULT);
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

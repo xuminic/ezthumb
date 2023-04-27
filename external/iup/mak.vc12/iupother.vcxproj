@@ -1,0 +1,306 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\android\iupandroid_drv.h" />
+    <ClInclude Include="..\src\android\iupandroid_jnicacheglobals.h" />
+    <ClInclude Include="..\src\android\iupandroid_jnimacros.h" />
+    <ClInclude Include="..\src\cocoatouch\IupAppDelegate.h" />
+    <ClInclude Include="..\src\cocoatouch\IupAppDelegateProtocol.h" />
+    <ClInclude Include="..\src\cocoatouch\iupcocoatouch_drv.h" />
+    <ClInclude Include="..\src\cocoatouch\IupLaunchViewController.h" />
+    <ClInclude Include="..\src\cocoatouch\IupNavigationController.h" />
+    <ClInclude Include="..\src\cocoatouch\IupViewController.h" />
+    <ClInclude Include="..\src\cocoa\IupAppDelegate.h" />
+    <ClInclude Include="..\src\cocoa\IupCocoaFont.h" />
+    <ClInclude Include="..\src\cocoa\IupCocoaTreeToggleTableCellView.h" />
+    <ClInclude Include="..\src\cocoa\IUPCocoaVerticalAlignmentTextFieldCell.h" />
+    <ClInclude Include="..\src\cocoa\iupcocoa_canvas.h" />
+    <ClInclude Include="..\src\cocoa\iupcocoa_dragdrop.h" />
+    <ClInclude Include="..\src\cocoa\iupcocoa_draw.h" />
+    <ClInclude Include="..\src\cocoa\iupcocoa_drv.h" />
+    <ClInclude Include="..\src\cocoa\iupmac_keycodes.h" />
+    <ClInclude Include="..\src\cocoa\IUPTextSpinnerFilesOwner.h" />
+    <ClInclude Include="..\src\emscripten\iupemscripten_drv.h" />
+    <ClInclude Include="..\src\haiku\iuphaiku_drv.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\cocoatouch\IupAppDelegate.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_button.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_calendar.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_canvas.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_clipboard.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_colordlg.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_common.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_dialog.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_dragdrop.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_draw.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_filedlg.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_focus.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_font.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_fontdlg.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_frame.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_globalattrib.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_image.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_info.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_key.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_label.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_list.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_loop.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_menu.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_messagedlg.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_open.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_progressbar.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_tabs.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_text.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_timer.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_tips.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_toggle.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_tree.m" />
+    <None Include="..\src\cocoatouch\iupcocoatouch_val.m" />
+    <None Include="..\src\cocoatouch\IupLaunchViewController.m" />
+    <None Include="..\src\cocoatouch\IupNavigationController.m" />
+    <None Include="..\src\cocoatouch\IupViewController.m" />
+    <None Include="..\src\cocoa\IupAppDelegate.m" />
+    <None Include="..\src\cocoa\IupCocoaTreeToggleTableCellView.m" />
+    <None Include="..\src\cocoa\IUPCocoaVerticalAlignmentTextFieldCell.m" />
+    <None Include="..\src\cocoa\iupcocoa_button.m" />
+    <None Include="..\src\cocoa\iupcocoa_calendar.m" />
+    <None Include="..\src\cocoa\iupcocoa_canvas.m" />
+    <None Include="..\src\cocoa\iupcocoa_clipboard.m" />
+    <None Include="..\src\cocoa\iupcocoa_colordlg.m" />
+    <None Include="..\src\cocoa\iupcocoa_common.m" />
+    <None Include="..\src\cocoa\iupcocoa_dialog.m" />
+    <None Include="..\src\cocoa\iupcocoa_dragdrop.m" />
+    <None Include="..\src\cocoa\iupcocoa_draw.m" />
+    <None Include="..\src\cocoa\iupcocoa_filedlg.m" />
+    <None Include="..\src\cocoa\iupcocoa_focus.m" />
+    <None Include="..\src\cocoa\iupcocoa_font.m" />
+    <None Include="..\src\cocoa\iupcocoa_fontdlg.m" />
+    <None Include="..\src\cocoa\iupcocoa_frame.m" />
+    <None Include="..\src\cocoa\iupcocoa_image.m" />
+    <None Include="..\src\cocoa\iupcocoa_info.m" />
+    <None Include="..\src\cocoa\iupcocoa_label.m" />
+    <None Include="..\src\cocoa\iupcocoa_list.m" />
+    <None Include="..\src\cocoa\iupcocoa_loop.m" />
+    <None Include="..\src\cocoa\iupcocoa_menu.m" />
+    <None Include="..\src\cocoa\iupcocoa_messagedlg.m" />
+    <None Include="..\src\cocoa\iupcocoa_open.m" />
+    <None Include="..\src\cocoa\iupcocoa_progressbar.m" />
+    <None Include="..\src\cocoa\iupcocoa_tabs.m" />
+    <None Include="..\src\cocoa\iupcocoa_text.m" />
+    <None Include="..\src\cocoa\iupcocoa_timer.m" />
+    <None Include="..\src\cocoa\iupcocoa_tips.m" />
+    <None Include="..\src\cocoa\iupcocoa_toggle.m" />
+    <None Include="..\src\cocoa\iupcocoa_tree.m" />
+    <None Include="..\src\cocoa\iupcocoa_val.m" />
+    <None Include="..\src\cocoa\iupmac_globalattrib.m" />
+    <None Include="..\src\cocoa\iupmac_help.m" />
+    <None Include="..\src\cocoa\iupmac_info.m" />
+    <None Include="..\src\cocoa\iupmac_key.m" />
+    <None Include="..\src\cocoa\IUPTextSpinnerFilesOwner.m" />
+    <None Include="..\src\emscripten\iupemscripten_button.js" />
+    <None Include="..\src\emscripten\iupemscripten_common.js" />
+    <None Include="..\src\emscripten\iupemscripten_dialog.js" />
+    <None Include="..\src\emscripten\iupemscripten_font.js" />
+    <None Include="..\src\emscripten\iupemscripten_frame.js" />
+    <None Include="..\src\emscripten\iupemscripten_label.js" />
+    <None Include="..\src\emscripten\iupemscripten_list.js" />
+    <None Include="..\src\emscripten\iupemscripten_progressbar.js" />
+    <None Include="..\src\emscripten\iupemscripten_text.js" />
+    <None Include="..\src\emscripten\iupemscripten_timer.js" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\android\iupandroid_button.c" />
+    <ClCompile Include="..\src\android\iupandroid_calendar.c" />
+    <ClCompile Include="..\src\android\iupandroid_canvas.c" />
+    <ClCompile Include="..\src\android\iupandroid_clipboard.c" />
+    <ClCompile Include="..\src\android\iupandroid_colordlg.c" />
+    <ClCompile Include="..\src\android\iupandroid_common.c" />
+    <ClCompile Include="..\src\android\iupandroid_dialog.c" />
+    <ClCompile Include="..\src\android\iupandroid_dragdrop.c" />
+    <ClCompile Include="..\src\android\iupandroid_draw.c" />
+    <ClCompile Include="..\src\android\iupandroid_filedlg.c" />
+    <ClCompile Include="..\src\android\iupandroid_focus.c" />
+    <ClCompile Include="..\src\android\iupandroid_font.c" />
+    <ClCompile Include="..\src\android\iupandroid_fontdlg.c" />
+    <ClCompile Include="..\src\android\iupandroid_frame.c" />
+    <ClCompile Include="..\src\android\iupandroid_globalattrib.c" />
+    <ClCompile Include="..\src\android\iupandroid_help.c" />
+    <ClCompile Include="..\src\android\iupandroid_image.c" />
+    <ClCompile Include="..\src\android\iupandroid_info.c" />
+    <ClCompile Include="..\src\android\iupandroid_jnicacheglobals.c" />
+    <ClCompile Include="..\src\android\iupandroid_jni_IupActivity.c" />
+    <ClCompile Include="..\src\android\iupandroid_jni_IupApplication.c" />
+    <ClCompile Include="..\src\android\iupandroid_jni_IupCommon.c" />
+    <ClCompile Include="..\src\android\iupandroid_jni_IupLaunchActivity.c" />
+    <ClCompile Include="..\src\android\iupandroid_jni_IupPostMessage.c" />
+    <ClCompile Include="..\src\android\iupandroid_key.c" />
+    <ClCompile Include="..\src\android\iupandroid_label.c" />
+    <ClCompile Include="..\src\android\iupandroid_list.c" />
+    <ClCompile Include="..\src\android\iupandroid_loop.c" />
+    <ClCompile Include="..\src\android\iupandroid_menu.c" />
+    <ClCompile Include="..\src\android\iupandroid_messagedlg.c" />
+    <ClCompile Include="..\src\android\iupandroid_open.c" />
+    <ClCompile Include="..\src\android\iupandroid_progressbar.c" />
+    <ClCompile Include="..\src\android\iupandroid_tabs.c" />
+    <ClCompile Include="..\src\android\iupandroid_text.c" />
+    <ClCompile Include="..\src\android\iupandroid_timer.c" />
+    <ClCompile Include="..\src\android\iupandroid_tips.c" />
+    <ClCompile Include="..\src\android\iupandroid_toggle.c" />
+    <ClCompile Include="..\src\android\iupandroid_tree.c" />
+    <ClCompile Include="..\src\android\iupandroid_val.c" />
+    <ClCompile Include="..\src\android\main_c.c" />
+    <ClCompile Include="..\src\cocoatouch\iupcocoatouch_help.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_button.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_calendar.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_canvas.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_clipboard.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_colordlg.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_common.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_dialog.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_dragdrop.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_draw.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_filedlg.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_focus.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_font.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_fontdlg.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_frame.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_globalattrib.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_help.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_image.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_info.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_key.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_label.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_list.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_loop.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_menu.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_messagedlg.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_open.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_progressbar.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_tabs.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_text.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_timer.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_tips.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_toggle.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_tree.c" />
+    <ClCompile Include="..\src\emscripten\iupemscripten_val.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_button.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_canvas.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_clipboard.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_common.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_dialog.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_dragdrop.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_draw.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_filedlg.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_focus.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_font.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_fontdlg.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_frame.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_globalattrib.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_help.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_image.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_info.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_label.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_list.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_loop.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_menu.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_messagedlg.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_open.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_progressbar.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_tabs.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_text.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_timer.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_tips.c" />
+    <ClCompile Include="..\src\haiku\iuphaiku_toggle.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_tree.cpp" />
+    <ClCompile Include="..\src\haiku\iuphaiku_val.cpp" />
+    <ClCompile Include="..\src\haiku\iupmac_help.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2597192E-7880-4A64-9A92-A0ECEF75BC36}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\lib\Debug_64\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\obj\Debug\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_64\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\src;..\src\win;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;IUP_ASSERT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\src;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_CRT_SECURE_NO_DEPRECATE;IUP_ASSERT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(ProjectName).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

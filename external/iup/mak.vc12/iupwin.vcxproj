@@ -47,8 +47,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_WIN32_WINNT=0x0501;_WIN32_IE=0x0600;WINVER=0x0501;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;NOTREEVIEW;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\src;..\include;..\src\win\wdl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_WIN32_WINNT=0x0601;_WIN32_IE=0x0900;COBJMACROS;WINVER=0x0601;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;NOTREEVIEW;UNICODE;_UNICODE;USE_NEW_DRAW;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -69,8 +69,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_WIN32_WINNT=0x0501;_WIN32_IE=0x0600;WINVER=0x0501;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;NOTREEVIEW;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\src;..\include;..\src\win\wdl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;DEBUG;_LIB;_WIN32_WINNT=0x0601;_WIN32_IE=0x0900;COBJMACROS;WINVER=0x0601;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;NOTREEVIEW;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -96,6 +96,17 @@
     <ClInclude Include="..\src\win\iupwin_handle.h" />
     <ClInclude Include="..\src\win\iupwin_info.h" />
     <ClInclude Include="..\src\win\iupwin_str.h" />
+    <ClInclude Include="..\src\win\wdl\backend-d2d.h" />
+    <ClInclude Include="..\src\win\wdl\backend-dwrite.h" />
+    <ClInclude Include="..\src\win\wdl\backend-gdix.h" />
+    <ClInclude Include="..\src\win\wdl\backend-wic.h" />
+    <ClInclude Include="..\src\win\wdl\dummy\d2d1.h" />
+    <ClInclude Include="..\src\win\wdl\dummy\dwrite.h" />
+    <ClInclude Include="..\src\win\wdl\dummy\gdiplus.h" />
+    <ClInclude Include="..\src\win\wdl\lock.h" />
+    <ClInclude Include="..\src\win\wdl\memstream.h" />
+    <ClInclude Include="..\src\win\wdl\misc.h" />
+    <ClInclude Include="..\src\win\wdl\wdl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\win\iupwindows_help.c" />
@@ -108,10 +119,19 @@
     </ClCompile>
     <ClCompile Include="..\src\win\iupwin_dragdrop.c" />
     <ClCompile Include="..\src\win\iupwin_draw.c" />
+    <ClCompile Include="..\src\win\iupwin_draw_wdl.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_draw_gdi.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\win\iupwin_focus.c" />
     <ClCompile Include="..\src\win\iupwin_font.c" />
     <ClCompile Include="..\src\win\iupwin_globalattrib.c" />
     <ClCompile Include="..\src\win\iupwin_handle.c" />
+    <ClCompile Include="..\src\win\iupwin_image_wdl.c" />
     <ClCompile Include="..\src\win\iupwin_info.c" />
     <ClCompile Include="..\src\win\iupwin_key.c" />
     <ClCompile Include="..\src\win\iupwin_loop.c" />
@@ -122,7 +142,6 @@
     <ClCompile Include="..\src\win\iupwin_button.c" />
     <ClCompile Include="..\src\win\iupwin_canvas.c" />
     <ClCompile Include="..\src\win\iupwin_clipboard.c" />
-    <ClCompile Include="..\src\win\iupwin_colordlg.c" />
     <ClCompile Include="..\src\win\iupwin_dialog.c" />
     <ClCompile Include="..\src\win\iupwin_filedlg.c" />
     <ClCompile Include="..\src\win\iupwin_fontdlg.c" />
@@ -139,6 +158,24 @@
     <ClCompile Include="..\src\win\iupwin_toggle.c" />
     <ClCompile Include="..\src\win\iupwin_tree.c" />
     <ClCompile Include="..\src\win\iupwin_val.c" />
+    <ClCompile Include="..\src\win\wdl\backend-d2d.c" />
+    <ClCompile Include="..\src\win\wdl\backend-dwrite.c" />
+    <ClCompile Include="..\src\win\wdl\backend-gdix.c" />
+    <ClCompile Include="..\src\win\wdl\backend-wic.c" />
+    <ClCompile Include="..\src\win\wdl\bitblt.c" />
+    <ClCompile Include="..\src\win\wdl\brush.c" />
+    <ClCompile Include="..\src\win\wdl\cachedimage.c" />
+    <ClCompile Include="..\src\win\wdl\canvas.c" />
+    <ClCompile Include="..\src\win\wdl\draw.c" />
+    <ClCompile Include="..\src\win\wdl\fill.c" />
+    <ClCompile Include="..\src\win\wdl\font.c" />
+    <ClCompile Include="..\src\win\wdl\image.c" />
+    <ClCompile Include="..\src\win\wdl\init.c" />
+    <ClCompile Include="..\src\win\wdl\memstream.c" />
+    <ClCompile Include="..\src\win\wdl\misc.c" />
+    <ClCompile Include="..\src\win\wdl\path.c" />
+    <ClCompile Include="..\src\win\wdl\string.c" />
+    <ClCompile Include="..\src\win\wdl\strokestyle.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\iup.def" />

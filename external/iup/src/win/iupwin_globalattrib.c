@@ -39,13 +39,6 @@ static HWND win_findwindow = NULL;
 static HHOOK win_OldGetMessageHook = NULL;
 
 
-int iupdrvCheckMainScreen(int *w, int *h)
-{
-  (void)w;
-  (void)h;
-  return 0;
-}
-
 static int winGlobalSetMutex(const char* name)
 {
   if (win_singleintance)
@@ -316,7 +309,7 @@ static LRESULT CALLBACK winHookGetMessageProc(int hcode, WPARAM gm_wp, LPARAM gm
   return CallNextHookEx(win_OldGetMessageHook, hcode, gm_wp, gm_lp);
 }
 
-int iupdrvSetGlobal(const char* name, const char* value)
+IUP_SDK_API int iupdrvSetGlobal(const char* name, const char* value)
 {
   if (iupStrEqual(name, "INPUTCALLBACKS"))
   {
@@ -374,11 +367,22 @@ int iupdrvSetGlobal(const char* name, const char* value)
     SystemParametersInfoA(SPI_SETHOTTRACKING, 0, (void*)flag, 0);
     return 1;
   }
-  
+  if (iupStrEqual(name, "PROCESSWINDOWSGHOSTING"))
+  {
+    if (!iupStrBoolean(value))
+      DisableProcessWindowsGhosting();
+    return 1;
+  }
+  if (iupStrEqual(name, "CUSTOMQUITMESSAGE"))
+  {
+    iupwinSetCustomQuitMessage(iupStrBoolean(value));
+    return 1;
+  }
+
   return 1;
 }
 
-char* iupdrvGetGlobal(const char* name)
+IUP_SDK_API char* iupdrvGetGlobal(const char* name)
 {
   if (iupStrEqual(name, "VIRTUALSCREEN"))
   {

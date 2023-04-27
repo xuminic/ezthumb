@@ -106,6 +106,10 @@ static int iAnimatedLabelSetAnimationHandleAttrib(Ihandle* ih, const char* value
   iupAttribSet(ih, "_IUP_ANIMATEDLABEL_ANIMATION", (char*)animation);
   iupAttribSet(ih, "_IUP_ANIMATEDLABEL_FRAME", "0");
 
+  /* make sure it has at least one name */
+  if (!iupAttribGetHandleName(animation))
+    iupAttribSetHandleName(animation);
+
   child = IupGetChild(animation, 0);
   IupSetAttributeHandle(ih, "IMAGE", child);
 
@@ -188,6 +192,7 @@ Iclass* iupAnimatedLabelNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("label"));
 
   ic->name = "animatedlabel";
+  ic->cons = "AnimatedLabel";
   ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPECONTROL;
   ic->childtype = IUP_CHILDNONE;
@@ -208,11 +213,13 @@ Iclass* iupAnimatedLabelNewClass(void)
   iupClassRegisterAttribute(ic, "ANIMATION", iAnimatedLabelGetAnimationAttrib, iAnimatedLabelSetAnimationAttrib, NULL, NULL, IUPAF_IHANDLENAME | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "ANIMATION_HANDLE", iAnimatedLabelGetAnimationHandleAttrib, iAnimatedLabelSetAnimationHandleAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
   iupClassRegisterAttribute(ic, "STOPWHENHIDDEN", NULL, NULL, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "FIRST_CONTROL_HANDLE", iAnimatedLabelGetAnimationHandleAttrib, NULL, NULL, NULL, IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
+  iupClassRegisterAttribute(ic, "NEXT_CONTROL_HANDLE", NULL, NULL, NULL, NULL, IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
 
   return ic;
 }
 
-Ihandle* IupAnimatedLabel(Ihandle* animation)
+IUP_API Ihandle* IupAnimatedLabel(Ihandle* animation)
 {
   void *params[2];
   params[0] = (void*)animation;

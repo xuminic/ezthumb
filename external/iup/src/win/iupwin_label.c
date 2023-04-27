@@ -38,13 +38,19 @@
 #define DT_HIDEPREFIX   0x00100000
 #endif
 
+void iupdrvLabelAddExtraPadding(Ihandle* ih, int *x, int *y)
+{
+  (void)ih;
+  (void)x;
+  (void)y;
+}
 
 static void winLabelDrawImage(Ihandle* ih, HDC hDC, int rect_width, int rect_height)
 {
   int xpad = ih->data->horiz_padding, 
       ypad = ih->data->vert_padding;
   int x, y, width, height, bpp;
-  HBITMAP hBitmap, hMask = NULL;
+  HBITMAP hBitmap;
   char *name;
   int make_inactive = 0;
 
@@ -60,7 +66,7 @@ static void winLabelDrawImage(Ihandle* ih, HDC hDC, int rect_width, int rect_hei
     }
   }
 
-  hBitmap = iupImageGetImage(name, ih, make_inactive);
+  hBitmap = iupImageGetImage(name, ih, make_inactive, NULL);
   if (!hBitmap)
     return;
 
@@ -84,13 +90,7 @@ static void winLabelDrawImage(Ihandle* ih, HDC hDC, int rect_width, int rect_hei
   x += xpad;
   y += ypad;
 
-  if (bpp == 8)
-    hMask = iupdrvImageCreateMask(IupGetHandle(name));
-
-  iupwinDrawBitmap(hDC, hBitmap, hMask, x, y, width, height, bpp);
-
-  if (hMask)
-    DeleteObject(hMask);
+  iupwinDrawBitmap(hDC, hBitmap, x, y, width, height, width, height, bpp);
 }
 
 static void winLabelDrawText(Ihandle* ih, HDC hDC, int rect_width, int rect_height, UINT itemState)
@@ -185,15 +185,15 @@ static int winLabelSetAlignmentAttrib(Ihandle* ih, const char* value)
       ih->data->horiz_alignment = IUP_ALIGN_ARIGHT;
     else if (iupStrEqualNoCase(value1, "ACENTER"))
       ih->data->horiz_alignment = IUP_ALIGN_ACENTER;
-    else /* "ALEFT" */
+    else /* "ALEFT" (default) */
       ih->data->horiz_alignment = IUP_ALIGN_ALEFT;
 
     if (iupStrEqualNoCase(value2, "ABOTTOM"))
       ih->data->vert_alignment = IUP_ALIGN_ABOTTOM;
-    else if (iupStrEqualNoCase(value2, "ACENTER"))
-      ih->data->vert_alignment = IUP_ALIGN_ACENTER;
-    else /* "ATOP" */
+    else if (iupStrEqualNoCase(value2, "ATOP"))
       ih->data->vert_alignment = IUP_ALIGN_ATOP;
+    else /* "ACENTER" (default) */
+      ih->data->vert_alignment = IUP_ALIGN_ACENTER;
 
     iupdrvRedrawNow(ih);
   }
@@ -293,7 +293,10 @@ static int winLabelMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT 
   case WM_MBUTTONDOWN:
   case WM_RBUTTONDOWN:
     {
-      iupwinButtonDown(ih, msg, wp, lp);
+      if (IupGetCallback(ih, "BUTTON_CB"))
+        SetCapture(ih->handle);
+
+      (void)iupwinButtonDown(ih, msg, wp, lp); /* ignore return value */
       break;
     }
   case WM_XBUTTONUP:
@@ -301,7 +304,10 @@ static int winLabelMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT 
   case WM_MBUTTONUP:
   case WM_RBUTTONUP:
     {
-      iupwinButtonUp(ih, msg, wp, lp);
+      if (IupGetCallback(ih, "BUTTON_CB") && GetCapture() == ih->handle)
+        ReleaseCapture();
+
+      (void)iupwinButtonUp(ih, msg, wp, lp); /* ignore return value */
       break;
     }
   case WM_MOUSEMOVE:
@@ -421,4 +427,6 @@ void iupdrvLabelInitClass(Iclass* ic)
 
   /* Not Supported */
   iupClassRegisterAttribute(ic, "MARKUP", NULL, NULL, NULL, NULL, IUPAF_NOT_SUPPORTED|IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

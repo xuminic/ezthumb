@@ -12,10 +12,6 @@ cd srccontrols
 ./make_uname $1 $2 $3 $4 $5 $6 $7 $8
 cd ..
 
-cd srcmatrixex 
-./make_uname $1 $2 $3 $4 $5 $6 $7 $8
-cd ..
-
 cd srcgl
 ./make_uname $1 $2 $3 $4 $5 $6 $7 $8
 cd ..
@@ -52,33 +48,12 @@ cd srcweb
 ./make_uname $1 $2 $3 $4 $5 $6 $7 $8
 cd ..
 
-cd srcledc
-./make_uname $1 $2 $3 $4 $5 $6 $7 $8
-cd ..
-
-cd srcview
-./make_uname $1 $2 $3 $4 $5 $6 $7 $8
-cd ..
-
 cd srclua5
 #./make_uname $1 $2 $3 $4 $5 $6 $7 $8
 ./make_uname USE_LUA51=Yes $1 $2 $3 $4 $5 $6 $7 $8
 ./make_uname USE_LUA52=Yes $1 $2 $3 $4 $5 $6 $7 $8
 ./make_uname USE_LUA53=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA54=Yes $1 $2 $3 $4 $5 $6 $7 $8
 cd ..
 
-cd srcconsole
-#./make_uname $1 $2 $3 $4 $5 $6 $7 $8
-./make_uname USE_LUA51=Yes $1 $2 $3 $4 $5 $6 $7 $8
-./make_uname USE_LUA52=Yes $1 $2 $3 $4 $5 $6 $7 $8
-./make_uname USE_LUA53=Yes $1 $2 $3 $4 $5 $6 $7 $8
-cd ..
-
-cd html/examples/tests
-./make_uname $1 $2 $3 $4 $5 $6 $7 $8
-cd ../../..
-
-cd html/examples/tutorial/simple_paint2
-./make_uname $1 $2 $3 $4 $5 $6 $7 $8
-cd ../../../..
-
+./make_uname_tools $1 $2 $3 $4 $5 $6 $7 $8

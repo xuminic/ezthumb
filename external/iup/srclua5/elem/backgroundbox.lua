@@ -8,7 +8,7 @@ local ctrl = {
   creation = "I",
   funcname = "BackgroundBox",
   callback = {
-    action = "ff",
+    action = "ff", -- must repeat this callback because of its non-exclusive name
     }
 }
 

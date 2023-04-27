@@ -1,0 +1,684 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{b484569f-a8c6-470e-8fc0-310fae62332e}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;hpj;bat;for;f90</Extensions>
+    </Filter>
+    <Filter Include="Source Files\controls">
+      <UniqueIdentifier>{c709c352-69af-474c-abcb-50efa9d1b6ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lua">
+      <UniqueIdentifier>{fc47fbfc-41b9-4e7b-8354-0fb3e976f407}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lua\controls">
+      <UniqueIdentifier>{681f28aa-0abf-4708-b625-d0205f84b18b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Includes">
+      <UniqueIdentifier>{747caeb2-28b0-4a15-a127-e6be7a49a92a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Includes\controls">
+      <UniqueIdentifier>{8e86871b-d8cc-4188-b2c2-c0c0b05234d8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\srclua5\iuplua.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_api.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_detachbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_dialog.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_expander.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_filedlg.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_fill.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_fontdlg.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_frame.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_gridbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_hbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_image.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_imagergb.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_imagergba.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_item.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_label.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_link.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_list.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_menu.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_messagedlg.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_multiline.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_normalizer.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_progressbar.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_progressdlg.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_radio.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_sbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_scrollbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_separator.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_spin.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_spinbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_split.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_submenu.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_tabs.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_text.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_timer.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_toggle.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_tree.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_user.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_val.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_vbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_zbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_backgroundbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_button.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_canvas.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_cbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_clipboard.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_colordlg.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_getcolor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_getparam.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_scanf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_tree_aux.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_config.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatbutton.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_animatedlabel.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_calendar.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_datepick.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_parambox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_param.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\iuplua_draw.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatframe.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flattabs.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatscrollbox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_dial.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_gauge.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_colorbar.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_colorbrowser.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatlabel.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_dropbutton.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flattoggle.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatseparator.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_space.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_multibox.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatlist.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flatval.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_thread.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srclua5\elem\il_flattree.c">
+      <Filter>Source Files\controls</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\srclua5\iuplua.def">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\srclua5\constants.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\..\srclua5\ctrl_template.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\..\srclua5\generator.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\..\srclua5\iuplua.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\button.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\canvas.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\cbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\clipboard.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\colordlg.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\detachbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\dialog.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\expander.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\filedlg.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\fill.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\fontdlg.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\frame.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\gridbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\hbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\image.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\imagergb.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\imagergba.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\item.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\label.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\link.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\list.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\menu.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\messagedlg.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\multiline.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\normalizer.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\progressbar.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\progressdlg.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\radio.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\sbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\scrollbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\separator.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\spin.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\spinbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\split.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\submenu.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\tabs.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\text.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\timer.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\toggle.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\tree.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\user.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\val.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\vbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\zbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\backgroundbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatbutton.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\animatedlabel.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\calendar.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\datepick.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\param.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\parambox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatframe.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flattabs.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatscrollbox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\dial.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\gauge.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\colorbar.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\colorbrowser.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatlabel.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\dropbutton.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flattoggle.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatseparator.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\space.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\multibox.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\canvas.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\backgroundbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\iup_config.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\dialog.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\imagergba.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\imagergb.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flattabs.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\normalizer.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\dropbutton.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flattoggle.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\dial.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flatbutton.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\progressdlg.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\colorbar.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\tabs.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\parambox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\scrollbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\submenu.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\list.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\colordlg.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\colorbrowser.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\filedlg.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\messagedlg.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\text.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\animatedlabel.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\param.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\fontdlg.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\detachbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\val.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\expander.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\multiline.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flatseparator.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\item.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\progressbar.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flatscrollbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flatlabel.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\link.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\toggle.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\flatframe.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\button.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\datepick.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\multibox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\timer.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\spin.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\gridbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\spinbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\clipboard.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\separator.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\gauge.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\label.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\calendar.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\radio.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\space.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\split.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\frame.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\fill.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\cbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\hbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\sbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\vbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\zbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\user.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\iuplua.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\tree.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\constants.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\image.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\menu.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatlist.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flatval.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\thread.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\elem\flattree.lua">
+      <Filter>Lua\controls</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\srclua5\il.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\iuplua.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

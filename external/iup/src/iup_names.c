@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <memory.h>
 
 #include "iup.h"
 
@@ -64,6 +65,7 @@ void iupNamesDestroyHandles(void)
     return;
 
   ih_array = (Ihandle**)malloc(count * sizeof(Ihandle*));
+  memset(ih_array, 0, count * sizeof(Ihandle*));
 
   /* store the handles before updating so we can remove elements in the loop */
   name = iupTableFirst(inames_strtable);
@@ -114,11 +116,33 @@ void iupRemoveNames(Ihandle* ih)
      So, some names may have left invalid on the handle names database. */
 }
 
-Ihandle *IupGetHandle(const char *name)
+IUP_API Ihandle *IupGetHandle(const char *name)
 {
   if (!name) /* no iupASSERT needed here */
     return NULL;
   return (Ihandle*)iupTableGet (inames_strtable, name);
+}
+
+int iupNamesFindAll(Ihandle *ih, char** names, int n)
+{
+  int i = 0;
+  char* name = iupTableFirst(inames_strtable);
+  while (name)
+  {
+    if ((Ihandle*)iupTableGetCurr(inames_strtable) == ih)
+    {
+      if (names)
+        names[i] = name;
+
+      i++;
+      if (i == n && n != 0 && n != -1)
+        break;
+    }
+
+    name = iupTableNext(inames_strtable);
+  }
+
+  return i;
 }
 
 static char* iNameFindHandle(Ihandle *ih)
@@ -136,7 +160,7 @@ static char* iNameFindHandle(Ihandle *ih)
   return NULL;
 }
 
-Ihandle* IupSetHandle(const char *name, Ihandle *ih)
+IUP_API Ihandle* IupSetHandle(const char *name, Ihandle *ih)
 {
   Ihandle *old_ih;
 
@@ -180,9 +204,8 @@ Ihandle* IupSetHandle(const char *name, Ihandle *ih)
   return old_ih;
 }
 
-char* IupGetName(Ihandle* ih)
+IUP_API char* IupGetName(Ihandle* ih)
 {
-  char *name;
   if (!ih) /* no iupASSERT needed here */
     return NULL;
 
@@ -191,23 +214,19 @@ char* IupGetName(Ihandle* ih)
   if (iupObjectCheck(ih)) /* if ih is an Ihandle* */
   {
     /* check for a name */
-    name = iupAttribGetHandleName(ih);
-    if (name)
-      return name;
-    else
-      return NULL;
+    return iupAttribGetHandleName(ih);
   }
 
   /* search for a name */
   return iNameFindHandle(ih);
 }
 
-int IupGetAllNames(char** names, int n)
+IUP_API int IupGetAllNames(char** names, int n)
 {
   int i = 0;
   char* name;
 
-  if (!names || !n)
+  if (!names || n == 0 || n == -1)
     return iupTableCount(inames_strtable);
 
   name = iupTableFirst(inames_strtable);
@@ -239,12 +258,12 @@ static int iNamesCountDialogs(void)
   return i;
 }
 
-int IupGetAllDialogs(char** names, int n)
+IUP_API int IupGetAllDialogs(char** names, int n)
 {
   int i = 0;
   char* name;
 
-  if (!names || !n)
+  if (!names || n==0 || n==-1)
     return iNamesCountDialogs();
 
   name = iupTableFirst(inames_strtable);

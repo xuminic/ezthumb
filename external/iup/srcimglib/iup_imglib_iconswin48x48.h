@@ -56,8 +56,6 @@ static Ihandle* load_image_DeviceFax(void)
   return image;
 }
 
-
-
 static Ihandle* load_image_DeviceNetwork(void)
 {
   unsigned char imgdata[] = {
@@ -734,6 +732,7 @@ static Ihandle* load_image_DeviceHardDrive(void)
 
 #endif
 
+#ifdef IUP_IMGLIB_LARGE_ICON
 static Ihandle* load_image_IconMessageInfo(void)
 {
   unsigned char imgdata[] = {
@@ -1013,3 +1012,4 @@ static Ihandle* load_image_IconMessageHelp(void)
   Ihandle* image = IupImageRGBA(48, 48, imgdata);
   return image;
 }
+#endif

@@ -17,10 +17,14 @@ extern "C" {
 extern HINSTANCE iupwin_hinstance;      /* iupwin_open.c */
 extern int       iupwin_comctl32ver6;   /* iupwin_open.c */
 extern HINSTANCE iupwin_dll_hinstance;  /* iupwindows_main.c */
-
+extern DWORD     iupwin_mainthreadid;   /* iupwin_open.c */
+#ifdef USE_WINHOOKPOST
+extern HHOOK     iupwin_threadmsghook;  /* iupwin_open.c */
+#endif
 
 /* open */
-void iupwinShowLastError(void);
+IUP_DRV_API void iupwinShowLastError(void);
+IUP_DRV_API void iupwinSetInstance(HINSTANCE hInstance);
 
 /* focus */
 void iupwinWmSetFocus(Ihandle *ih);
@@ -48,7 +52,7 @@ HFONT iupwinGetHFont(const char* value);
 char* iupwinFindHFont(HFONT hFont);
 
 /* DnD */
-int iupwinDragStart(Ihandle* ih);
+int iupwinDragDetectStart(Ihandle* ih);
 void iupwinDropFiles(HDROP hDrop, Ihandle *ih);
 void iupwinDestroyDragDrop(Ihandle* ih);
 
@@ -56,6 +60,9 @@ void iupwinDestroyDragDrop(Ihandle* ih);
 void iupwinMenuDialogProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
 Ihandle* iupwinMenuGetItemHandle(HMENU hmenu, int menuId);
 Ihandle* iupwinMenuGetHandle(HMENU hMenu);
+
+/* loop */
+void iupwinSetCustomQuitMessage(int enable);
 
 
 /***************************/
@@ -84,7 +91,7 @@ typedef int (*IFwmCommand)(Ihandle* ih, WPARAM wp, LPARAM lp);
 typedef int (*IwinMsgProc)(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *result);
 
 /* Base IwinMsgProc callback used by native controls. */
-int iupwinBaseMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *result);
+IUP_DRV_API int iupwinBaseMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *result);
 
 /* Base IwinMsgProc callback used by native containers. 
    Handle messages that are sent to the parent Window.  */
@@ -96,13 +103,19 @@ LRESULT CALLBACK iupwinBaseWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
 void iupwinChangeWndProc(Ihandle *ih, WNDPROC newProc);
 
-int iupwinButtonUp(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
-int iupwinButtonDown(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
-int iupwinMouseMove(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
+IUP_DRV_API int iupwinButtonUp(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
+IUP_DRV_API int iupwinButtonDown(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
+IUP_DRV_API int iupwinMouseMove(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp);
 void iupwinTrackMouseLeave(Ihandle* ih);
 void iupwinRefreshCursor(Ihandle* ih);
+IUP_DRV_API void iupwinFlagButtonDown(Ihandle* ih, UINT msg);
+IUP_DRV_API int iupwinFlagButtonUp(Ihandle* ih, UINT msg);
 
 int iupwinListDND(Ihandle *ih, UINT uNotification, POINT pt);
+
+#ifdef USE_WINHOOKPOST
+LRESULT CALLBACK iupwinPostMessageFilterProc(int code, WPARAM wParam, LPARAM lParam);
+#endif
 
 
 /*********************/
@@ -113,7 +126,7 @@ HWND iupwinCreateWindowEx(HWND hParent, LPCTSTR lpClassName, DWORD dwExStyle, DW
 
 /* Creates the Window with native parent and child ID, associate HWND with Ihandle*, 
    and replace the WinProc by iupwinBaseWndProc */
-int iupwinCreateWindow(Ihandle* ih, LPCTSTR lpClassName, DWORD dwExStyle, DWORD dwStyle, void* clientdata);
+IUP_DRV_API int iupwinCreateWindow(Ihandle* ih, LPCTSTR lpClassName, DWORD dwExStyle, DWORD dwStyle, void* clientdata);
 
 void iupwinGetNativeParentStyle(Ihandle* ih, DWORD *dwExStyle, DWORD *dwStyle);
 void iupwinMergeStyle(Ihandle* ih, DWORD old_mask, DWORD value);
@@ -126,6 +139,7 @@ int iupwinClassExist(const TCHAR* name);
 /*      Utilities    */
 /*********************/
 
+
 int iupwinSetTitleAttrib(Ihandle* ih, const char* value);
 TCHAR* iupwinGetWindowText(HWND hWnd);
 
@@ -136,6 +150,8 @@ int iupwinGetParentBgColor(Ihandle* ih, COLORREF* cr);
 
 int iupwinSetAutoRedrawAttrib(Ihandle* ih, const char* value);
 void iupwinSetMnemonicTitle(Ihandle *ih, int pos, const char* value);
+
+void iupwinDrawFocusRect(HDC hDC, int x, int y, int w, int h);
 
 int iupwinGetScreenRes(void);
 /* 1 point = 1/72 inch */

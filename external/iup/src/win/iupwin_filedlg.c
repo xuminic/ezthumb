@@ -75,6 +75,7 @@ static INT CALLBACK winFileDlgBrowseCallback(HWND hWnd, UINT uMsg, LPARAM lParam
     {
       TCHAR* wstr = iupwinStrToSystemFilename(value);
       winFileDlgStrReplacePathSlash(wstr);
+      SendMessage(hWnd, BFFM_SETEXPANDED, TRUE, (LPARAM)wstr);
       SendMessage(hWnd, BFFM_SETSELECTION, TRUE, (LPARAM)wstr);
       free(value);
     }
@@ -83,7 +84,7 @@ static INT CALLBACK winFileDlgBrowseCallback(HWND hWnd, UINT uMsg, LPARAM lParam
   {
     TCHAR buffer[IUP_MAX_FILENAME_SIZE];
     ITEMIDLIST* selecteditem = (ITEMIDLIST*)lParam;
-    if (SHGetPathFromIDList(selecteditem, buffer) && lstrlen(buffer) != 0)
+    if (SHGetPathFromIDList(selecteditem, buffer) && buffer[0] != 0)
       SendMessage(hWnd, BFFM_ENABLEOK, 0, (LPARAM)TRUE);
     else
       SendMessage(hWnd, BFFM_ENABLEOK, 0, (LPARAM)FALSE);
@@ -507,21 +508,24 @@ static UINT_PTR CALLBACK winFileDlgPreviewHook(HWND hWnd, UINT uiMsg, WPARAM wPa
         Ihandle* ih = (Ihandle*)GetWindowLongPtr(hWnd, DWLP_USER);
         /* callback here always exists */
         IFnss cb = (IFnss)IupGetCallback(ih, "FILE_CB");
-        TCHAR filename[IUP_MAX_FILENAME_SIZE];
-        iupAttribSet(ih, "PREVIEWDC", (char*)lpDrawItem->hDC);
-        iupAttribSet(ih, "HDC_WMPAINT", (char*)lpDrawItem->hDC);
-
-        if (winFileDlgGetSelectedFile(ih, hWnd, filename))
+        if (cb)
         {
-          if (winIsFile(filename))
-            cb(ih, iupwinStrFromSystemFilename(filename), "PAINT");
+          TCHAR filename[IUP_MAX_FILENAME_SIZE];
+          iupAttribSet(ih, "PREVIEWDC", (char*)lpDrawItem->hDC);
+          iupAttribSet(ih, "HDC_WMPAINT", (char*)lpDrawItem->hDC);
+
+          if (winFileDlgGetSelectedFile(ih, hWnd, filename))
+          {
+            if (winIsFile(filename))
+              cb(ih, iupwinStrFromSystemFilename(filename), "PAINT");
+            else
+              cb(ih, NULL, "PAINT");
+          }
           else
             cb(ih, NULL, "PAINT");
+          iupAttribSet(ih, "PREVIEWDC", NULL);
+          iupAttribSet(ih, "HDC_WMPAINT", NULL);
         }
-        else
-          cb(ih, NULL, "PAINT");
-        iupAttribSet(ih, "PREVIEWDC", NULL);
-        iupAttribSet(ih, "HDC_WMPAINT", NULL);
       }
       break;
     }
@@ -548,7 +552,7 @@ static UINT_PTR CALLBACK winFileDlgPreviewHook(HWND hWnd, UINT uiMsg, WPARAM wPa
       Ihandle* ih = (Ihandle*)GetWindowLongPtr(hWnd, DWLP_USER);
       /* callback here always exists */
       IFnss cb = (IFnss)IupGetCallback(ih, "FILE_CB");
-      cb(ih, NULL, "FINISH");
+      if (cb) cb(ih, NULL, "FINISH");
       break;
     }
   case WM_XBUTTONDBLCLK:
@@ -638,6 +642,20 @@ static TCHAR* winFileDlgStrReplaceSeparator(const TCHAR* name)
   buffer[i] = 0;
   buffer[i+1] = 0;      /* additional 0 at the end */
   return buffer;
+}
+
+static int winFileDlgUseHook(Ihandle *ih, int x, int y)
+{
+  if (IupGetCallback(ih, "FILE_CB") || IupGetCallback(ih, "HELP_CB"))
+    return 1;
+
+  if (x != IUP_CENTER && x != IUP_CURRENT && x != IUP_CENTERPARENT)
+    return 1;
+
+  if (y != IUP_CENTER && y != IUP_CURRENT && y != IUP_CENTERPARENT)
+    return 1;
+
+  return 0;
 }
 
 static int winFileDlgPopup(Ihandle *ih, int x, int y)
@@ -737,6 +755,9 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
   openfilename.lpstrTitle = iupwinStrToSystem(iupAttribGet(ih, "TITLE"));
   openfilename.Flags = OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
 
+  if (iupAttribGetBoolean(ih, "NOPLACESBAR"))
+    openfilename.FlagsEx = OFN_EX_NOPLACESBAR;
+
   if (!iupAttribGetBoolean(ih, "NOOVERWRITEPROMPT"))
     openfilename.Flags |= OFN_OVERWRITEPROMPT;
 
@@ -762,9 +783,14 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
   if (iupAttribGetBoolean(ih, "MULTIPLEFILES"))
      openfilename.Flags |= OFN_ALLOWMULTISELECT;
 
-  openfilename.lpfnHook = winFileDlgSimpleHook;
-  openfilename.Flags |= OFN_ENABLEHOOK | OFN_EXPLORER | OFN_ENABLESIZING;
-  openfilename.lCustData = (LPARAM)ih;
+  if (winFileDlgUseHook(ih, x, y))
+  {
+    openfilename.lpfnHook = winFileDlgSimpleHook;
+    openfilename.Flags |= OFN_ENABLEHOOK;
+    openfilename.lCustData = (LPARAM)ih;
+  }
+
+  openfilename.Flags |= OFN_EXPLORER | OFN_ENABLESIZING;
 
   if (iupAttribGetBoolean(ih, "SHOWPREVIEW") && IupGetCallback(ih, "FILE_CB"))
   {
@@ -811,8 +837,8 @@ static int winFileDlgPopup(Ihandle *ih, int x, int y)
             char* filename = iupwinStrFromSystemFilename(openfilename.lpstrFile + i + 1);
             if (iupAttribGetBoolean(ih, "MULTIVALUEPATH"))
             {
-              char* value = iupAttribGet(ih, "VALUE");
               char nameid[100];
+              value = iupAttribGet(ih, "VALUE");
               sprintf(nameid, "MULTIVALUE%d", count);
               iupAttribSetStrf(ih, nameid, "%s%s", dir, filename);
 
@@ -906,4 +932,7 @@ void iupdrvFileDlgInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "EXTFILTER", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTERINFO", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTERUSED", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+
+  /* Windows Only */
+  iupClassRegisterAttribute(ic, "NOPLACESBAR", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

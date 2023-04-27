@@ -35,7 +35,7 @@ typedef struct _IbeFont
 
 static Iarray* be_fonts = NULL;
 
-char* iupdrvGetSystemFont(void)
+IUP_SDK_API char* iupdrvGetSystemFont(void)
 {
   static char str[B_FONT_FAMILY_LENGTH + B_FONT_STYLE_LENGTH + 7];
   /* must return a static string, because it will be used as the default value
@@ -146,7 +146,7 @@ static BFont* beFontCreateNativeFont(Ihandle* ih, const char* value)
 }
 
 
-int iupdrvSetStandardFontAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvSetStandardFontAttrib(Ihandle* ih, const char* value)
 {
   BFont* bfont = beFontCreateNativeFont(ih, value);
   if(!bfont)
@@ -186,7 +186,7 @@ static BFont* beFontGet(Ihandle *ih)
   return bfont;
 }
 
-void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
+IUP_SDK_API void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
 {
   int max_w = 0;
 
@@ -230,7 +230,7 @@ void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int 
   if (h) *h = height * iupStrLineCount(str);
 }
 
-int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
+IUP_SDK_API int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
 {
   BFont* bfont = beFontGet(ih);
   if (!bfont || !str)
@@ -241,7 +241,7 @@ int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
   return (int)bfont->StringWidth(str);
 }
 
-void iupdrvFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)
+IUP_SDK_API void iupdrvFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)
 {
   BFont* befont = beFontGet(ih);
   if(!befont)

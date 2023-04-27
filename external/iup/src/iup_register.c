@@ -38,14 +38,15 @@ void iupRegisterFinish(void)
   iregister_table = NULL;
 }
 
-int IupGetAllClasses(char** list, int n)
+IUP_API int IupGetAllClasses(char** list, int n)
 {
   int i = 0;
-  char* name = iupTableFirst(iregister_table);
+  char* name;
 
-  if (!list || !n)
+  if (!list || n==0 || n==-1)
     return iupTableCount(iregister_table);
 
+  name = iupTableFirst(iregister_table);
   while (name)
   {
     list[i] = name;
@@ -59,12 +60,23 @@ int IupGetAllClasses(char** list, int n)
   return i;
 }
 
-Iclass* iupRegisterFindClass(const char* name)
+IUP_SDK_API Iclass* iupRegisterFindClass(const char* name)
 {
   return (Iclass*)iupTableGet(iregister_table, name);
 }
 
-void iupRegisterClass(Iclass* ic)
+static void iupRegisterClassInternal(Iclass* ic)
+{
+  Iclass* old_ic = (Iclass*)iupTableGet(iregister_table, ic->name);
+  if (old_ic)
+    iupClassRelease(old_ic);
+
+  ic->is_internal = 1;
+
+  iupTableSet(iregister_table, ic->name, (void*)ic, IUPTABLE_POINTER);
+}
+
+IUP_SDK_API void iupRegisterClass(Iclass* ic)
 {
   Iclass* old_ic = (Iclass*)iupTableGet(iregister_table, ic->name);
   if (old_ic)
@@ -89,62 +101,77 @@ void iupRegisterUpdateClasses(void)
 
 void iupRegisterInternalClasses(void)
 {
-  iupRegisterClass(iupDialogNewClass());
-  iupRegisterClass(iupMessageDlgNewClass());
-  iupRegisterClass(iupColorDlgNewClass());
-  iupRegisterClass(iupFontDlgNewClass());
-  iupRegisterClass(iupFileDlgNewClass());
-  iupRegisterClass(iupProgressDlgNewClass());
-  iupRegisterClass(iupParamBoxNewClass());
-  iupRegisterClass(iupParamNewClass());
+  iupRegisterClassInternal(iupDialogNewClass());
+  iupRegisterClassInternal(iupMessageDlgNewClass());
+  iupRegisterClassInternal(iupColorDlgNewClass());
+  iupRegisterClassInternal(iupFontDlgNewClass());
+  iupRegisterClassInternal(iupFileDlgNewClass());
+  iupRegisterClassInternal(iupProgressDlgNewClass());
+  iupRegisterClassInternal(iupParamBoxNewClass());
+  iupRegisterClassInternal(iupParamNewClass());
 
-  iupRegisterClass(iupTimerNewClass());
-  iupRegisterClass(iupImageNewClass());
-  iupRegisterClass(iupImageRGBNewClass());
-  iupRegisterClass(iupImageRGBANewClass());
-  iupRegisterClass(iupUserNewClass());
-  iupRegisterClass(iupClipboardNewClass());
+  iupRegisterClassInternal(iupTimerNewClass());
+  iupRegisterClassInternal(iupImageNewClass());
+  iupRegisterClassInternal(iupImageRGBNewClass());
+  iupRegisterClassInternal(iupImageRGBANewClass());
+  iupRegisterClassInternal(iupUserNewClass());
+  iupRegisterClassInternal(iupClipboardNewClass());
+  iupRegisterClassInternal(iupThreadNewClass());
 
-  iupRegisterClass(iupRadioNewClass());
-  iupRegisterClass(iupFillNewClass());
-  iupRegisterClass(iupHboxNewClass());
-  iupRegisterClass(iupVboxNewClass());
-  iupRegisterClass(iupZboxNewClass());
-  iupRegisterClass(iupCboxNewClass());
-  iupRegisterClass(iupSboxNewClass());
-  iupRegisterClass(iupNormalizerNewClass());
-  iupRegisterClass(iupSplitNewClass());
-  iupRegisterClass(iupExpanderNewClass());
-  iupRegisterClass(iupDetachBoxNewClass());
+  iupRegisterClassInternal(iupRadioNewClass());
+  iupRegisterClassInternal(iupFillNewClass());
+  iupRegisterClassInternal(iupHboxNewClass());
+  iupRegisterClassInternal(iupVboxNewClass());
+  iupRegisterClassInternal(iupZboxNewClass());
+  iupRegisterClassInternal(iupCboxNewClass());
+  iupRegisterClassInternal(iupSboxNewClass());
+  iupRegisterClassInternal(iupNormalizerNewClass());
+  iupRegisterClassInternal(iupSplitNewClass());
+  iupRegisterClassInternal(iupExpanderNewClass());
+  iupRegisterClassInternal(iupDetachBoxNewClass());
 
-  iupRegisterClass(iupMenuNewClass());
-  iupRegisterClass(iupItemNewClass());
-  iupRegisterClass(iupSeparatorNewClass());
-  iupRegisterClass(iupSubmenuNewClass());
+  iupRegisterClassInternal(iupMenuNewClass());
+  iupRegisterClassInternal(iupItemNewClass());
+  iupRegisterClassInternal(iupSeparatorNewClass());
+  iupRegisterClassInternal(iupSubmenuNewClass());
 
-  iupRegisterClass(iupLabelNewClass());
-  iupRegisterClass(iupButtonNewClass());
-  iupRegisterClass(iupToggleNewClass());
-  iupRegisterClass(iupCanvasNewClass());
-  iupRegisterClass(iupFrameNewClass());
-  iupRegisterClass(iupTextNewClass());
-  iupRegisterClass(iupMultilineNewClass());
-  iupRegisterClass(iupListNewClass());
-  iupRegisterClass(iupFlatButtonNewClass());
-  iupRegisterClass(iupCalendarNewClass());
-  iupRegisterClass(iupDatePickNewClass());
+  iupRegisterClassInternal(iupLabelNewClass());
+  iupRegisterClassInternal(iupButtonNewClass());
+  iupRegisterClassInternal(iupToggleNewClass());
+  iupRegisterClassInternal(iupCanvasNewClass());
+  iupRegisterClassInternal(iupFrameNewClass());
+  iupRegisterClassInternal(iupTextNewClass());
+  iupRegisterClassInternal(iupMultilineNewClass());
+  iupRegisterClassInternal(iupListNewClass());
+  iupRegisterClassInternal(iupFlatLabelNewClass());
+  iupRegisterClassInternal(iupFlatButtonNewClass());
+  iupRegisterClassInternal(iupFlatToggleNewClass());
+  iupRegisterClassInternal(iupFlatSeparatorNewClass());
+  iupRegisterClassInternal(iupDropButtonNewClass());
+  iupRegisterClassInternal(iupCalendarNewClass());
+  iupRegisterClassInternal(iupDatePickNewClass());
+  iupRegisterClassInternal(iupSpaceNewClass());
 
-  iupRegisterClass(iupProgressBarNewClass());
-  iupRegisterClass(iupValNewClass());
-  iupRegisterClass(iupTabsNewClass());
-  iupRegisterClass(iupSpinNewClass());
-  iupRegisterClass(iupSpinboxNewClass());
-  iupRegisterClass(iupTreeNewClass());
-  iupRegisterClass(iupScrollBoxNewClass());
-  iupRegisterClass(iupBackgroundBoxNewClass());
-  iupRegisterClass(iupLinkNewClass());
-  iupRegisterClass(iupGridBoxNewClass());
-  iupRegisterClass(iupAnimatedLabelNewClass());
-  iupRegisterClass(iupFlatFrameNewClass());
-  iupRegisterClass(iupFlatTabsNewClass());
+  iupRegisterClassInternal(iupProgressBarNewClass());
+  iupRegisterClassInternal(iupValNewClass());
+  iupRegisterClassInternal(iupTabsNewClass());
+  iupRegisterClassInternal(iupSpinNewClass());
+  iupRegisterClassInternal(iupSpinboxNewClass());
+  iupRegisterClassInternal(iupTreeNewClass());
+  iupRegisterClassInternal(iupScrollBoxNewClass());
+  iupRegisterClassInternal(iupBackgroundBoxNewClass());
+  iupRegisterClassInternal(iupLinkNewClass());
+  iupRegisterClassInternal(iupGridBoxNewClass());
+  iupRegisterClassInternal(iupAnimatedLabelNewClass());
+  iupRegisterClassInternal(iupFlatFrameNewClass());
+  iupRegisterClassInternal(iupFlatTabsNewClass());
+  iupRegisterClassInternal(iupFlatScrollBoxNewClass());
+  iupRegisterClassInternal(iupDialNewClass());
+  iupRegisterClassInternal(iupGaugeNewClass());
+  iupRegisterClassInternal(iupColorbarNewClass());
+  iupRegisterClassInternal(iupColorBrowserNewClass());
+  iupRegisterClassInternal(iupMultiBoxNewClass());
+  iupRegisterClassInternal(iupFlatListNewClass());
+  iupRegisterClassInternal(iupFlatValNewClass());
+  iupRegisterClassInternal(iupFlatTreeNewClass());
 }

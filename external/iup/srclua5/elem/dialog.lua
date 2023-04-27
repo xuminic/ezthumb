@@ -22,6 +22,9 @@ local ctrl = {
     dragdata_cb = "son",
     dragend_cb = "n",
     dropdata_cb = "sonnn",
+    customframedraw_cb = "",
+    customframeactivate_cb = "n",
+    postmessage_cb = "sndo",
   }
 }
 

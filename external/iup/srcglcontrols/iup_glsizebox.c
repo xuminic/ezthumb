@@ -88,7 +88,7 @@ static int iGLSizeBoxSetCursor(Ihandle* ih, int x, int y)
 
 static void iGLSizeBoxResizeChild(Ihandle* ih, int resizer, int w, int h)
 {
-  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
   Ihandle* child = ih->firstchild;
   int redraw = 0;
 
@@ -159,6 +159,9 @@ static int iGLSizeBoxMOTION_CB(Ihandle* ih, int x, int y, char* status)
 {
   iGLSizeBoxSetCursor(ih, x, y);
 
+  if (!iup_isbutton1(status))
+    ih->data->isholding = 0;
+
   if (ih->data->isholding)
   {
     int final_x = ih->x + x;
@@ -173,7 +176,6 @@ static int iGLSizeBoxMOTION_CB(Ihandle* ih, int x, int y, char* status)
     iGLSizeBoxResizeChild(ih, ih->data->hold_resizer, w, h);
   }
 
-  (void)status;
   return IUP_DEFAULT;
 }
 
@@ -329,9 +331,10 @@ Iclass* iupGLSizeBoxNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glsubcanvas"));
 
   ic->name   = "glsizebox";
+  ic->cons = "GLSizeBox";
   ic->format = "h";   /* one Ihandle* */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype  = IUP_CHILDMANY+1;  /* one child */
+  ic->childtype = IUP_CHILDMANY+1;  /* 1 child */
   ic->is_interactive = 0;
 
   /* Class functions */

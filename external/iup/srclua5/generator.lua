@@ -3,6 +3,17 @@ function dofile(f)
   pcall(loadfile(f))
 end
 
+function pairsSorted(t, f)
+  local i, tt = 0, {}
+  for k in pairs(t) do table.insert(tt, k) end
+  table.sort(tt, f)
+  return function ()
+      i = i + 1
+      if not tt[i] then return nil end
+      return tt[i], t[tt[i]]
+    end
+end
+
 -- compatibility functions (with iuplua.lua)
 iup = {}
 function iup.SetClass(ctrl, name)
@@ -30,7 +41,7 @@ c_types = {
 -- Adjust the callbacks table
 function adjustcallbacktable(c)
    d = {}
-   for i,j in pairs(c) do
+   for i,j in pairsSorted(c) do
       if type(j) == "string" then
          d[i] = { j, "IUP_".. string.upper(i)}
       elseif type(j) == "table" then
@@ -89,9 +100,9 @@ function write_creation(o, t)
       elseif p == "i" then io.write("iuplua_checkihandle(L, ",aux.n,")")
       elseif p == "I" then io.write("iuplua_checkihandleornil(L, ",aux.n,")")
       elseif p == "-" then io.write("NULL")
-      elseif p == "a" then io.write("iuplua_checkstring_array(L, ",aux.n,",0)")
-      elseif p == "t" then io.write("iuplua_checkint_array(L, ",aux.n,",0)")
-      elseif p == "v" then io.write("iuplua_checkihandle_array(L, ",aux.n,",0)")
+      elseif p == "a" then io.write("iuplua_checkstring_array(L, ",aux.n,", -1)")
+      elseif p == "t" then io.write("iuplua_checkint_array(L, ",aux.n,", -1)")
+      elseif p == "v" then io.write("iuplua_checkihandle_array(L, ",aux.n,", -1)")
       else io.write("FORMAT '", p, "' NOT SUPPORTED\n")
       end
       if aux.n < max then io.write(", ") end
@@ -107,7 +118,7 @@ end
 
 function write_callbacks(o, c)
    local aux = { }
-   for i,v in pairs(c) do
+   for i,v in pairsSorted(c) do
       local s = v[1]
       local max = string.len(s)
       aux.n = 0
@@ -178,13 +189,13 @@ function write_initialization(o,t)
    end
    io.write(u, ', "', u,'");\n\n')
    
-   for i,v in pairs(c) do
+   for i,v in pairsSorted(c) do
       local type = "NULL"
       -- Handle callbacks that have same names but different parameters
-      if i == "action" or 
-         i == "action_cb" or 
-         i == "edit_cb" or 
-         i == "mousemove_cb" then
+      if i == "action" or -- canvas, button, item, list, text, toggle, etc  
+         i == "action_cb" or -- matrix and timer
+         i == "flat_action" or -- flatbutton, flatlist, dropbutton, flattoggle
+         i == "mousemove_cb" then -- matrix and val
         type = '"'..string.lower(o)..'"'
       end
       io.write('  iuplua_register_cb(L, "',string.upper(i),'", (lua_CFunction)',o,'_',i,', ',type,');\n')

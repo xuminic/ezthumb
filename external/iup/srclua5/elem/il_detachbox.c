@@ -12,18 +12,18 @@
 #include "il.h"
 
 
-static int detachbox_restored_cb(Ihandle *self, Ihandle * p0, int p1, int p2)
+static int detachbox_detached_cb(Ihandle *self, Ihandle * p0, int p1, int p2)
 {
-  lua_State *L = iuplua_call_start(self, "restored_cb");
+  lua_State *L = iuplua_call_start(self, "detached_cb");
   iuplua_pushihandle(L, p0);
   lua_pushinteger(L, p1);
   lua_pushinteger(L, p2);
   return iuplua_call(L, 3);
 }
 
-static int detachbox_detached_cb(Ihandle *self, Ihandle * p0, int p1, int p2)
+static int detachbox_restored_cb(Ihandle *self, Ihandle * p0, int p1, int p2)
 {
-  lua_State *L = iuplua_call_start(self, "detached_cb");
+  lua_State *L = iuplua_call_start(self, "restored_cb");
   iuplua_pushihandle(L, p0);
   lua_pushinteger(L, p1);
   lua_pushinteger(L, p2);
@@ -42,8 +42,8 @@ int iupdetachboxlua_open(lua_State * L)
 {
   iuplua_register(L, DetachBox, "DetachBox");
 
-  iuplua_register_cb(L, "RESTORED_CB", (lua_CFunction)detachbox_restored_cb, NULL);
   iuplua_register_cb(L, "DETACHED_CB", (lua_CFunction)detachbox_detached_cb, NULL);
+  iuplua_register_cb(L, "RESTORED_CB", (lua_CFunction)detachbox_restored_cb, NULL);
 
 #ifdef IUPLUA_USELOH
 #include "detachbox.loh"

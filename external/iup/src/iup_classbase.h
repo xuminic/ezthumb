@@ -25,7 +25,7 @@ extern "C" {
  * FONT (and derived)                    \n\n
  * All controls that are positioned inside a dialog must register all common base attributes.
  * \ingroup iclassbase */
-void iupBaseRegisterCommonAttrib(Iclass* ic);
+  IUP_SDK_API void iupBaseRegisterCommonAttrib(Iclass* ic);
 
 /** Register all visual base attributes: \n
  * VISIBLE, ACTIVE                       \n
@@ -33,25 +33,30 @@ void iupBaseRegisterCommonAttrib(Iclass* ic);
  * TIP (and derived)                     \n\n
  * All controls that are positioned inside a dialog must register all visual base attributes.
  * \ingroup iclassbase */
-void iupBaseRegisterVisualAttrib(Iclass* ic);
+IUP_SDK_API void iupBaseRegisterVisualAttrib(Iclass* ic);
 
-/** Register all common callbacks: \n
-* MAP_CB, UNMAP_CB, GETFOCUS_CB, KILLFOCUS_CB, ENTERWINDOW_CB, LEAVEWINDOW_CB, K_ANY, HELP_CB.
+/** Register all base callbacks: \n
+* MAP_CB, UNMAP_CB, DESTROY_CB, LDESTROY_CB.
 * \ingroup iclassbase */
-void iupBaseRegisterCommonCallbacks(Iclass* ic);
+IUP_SDK_API void iupBaseRegisterBaseCallbacks(Iclass* ic);
+
+/** Register all base and common callbacks: \n
+* MAP_CB, UNMAP_CB, DESTROY_CB, LDESTROY_CB, GETFOCUS_CB, KILLFOCUS_CB, ENTERWINDOW_CB, LEAVEWINDOW_CB, K_ANY, HELP_CB.
+* \ingroup iclassbase */
+IUP_SDK_API void iupBaseRegisterCommonCallbacks(Iclass* ic);
 
 /* Register driver dependent common attributes. 
    Used only from iupBaseRegisterCommonAttrib */
-void iupdrvBaseRegisterCommonAttrib(Iclass* ic);
+IUP_SDK_API void iupdrvBaseRegisterCommonAttrib(Iclass* ic);
 
 /* Register driver dependent visual attributes. 
    Used only from iupBaseRegisterVisualAttrib */
-void iupdrvBaseRegisterVisualAttrib(Iclass* ic);
+IUP_SDK_API void iupdrvBaseRegisterVisualAttrib(Iclass* ic);
 
 /** Updates the expand member of the IUP object from the EXPAND attribute.
  * Should be called in the beginning of the ComputeNaturalSize for a container.
  * \ingroup iclassbase */
-void iupBaseContainerUpdateExpand(Ihandle* ih);
+IUP_SDK_API void iupBaseContainerUpdateExpand(Ihandle* ih);
 
 /** Initializes the natural size using the user size, then
  * if a container then update the "expand" member from the EXPAND attribute, then
@@ -60,25 +65,25 @@ void iupBaseContainerUpdateExpand(Ihandle* ih);
  * Must be called for each children in the container. \n
  * First call is in iupLayoutCompute.
  * \ingroup iclassbase */
-void iupBaseComputeNaturalSize(Ihandle* ih);
+IUP_SDK_API void iupBaseComputeNaturalSize(Ihandle* ih);
 
 /** Update the current size from the available size, the natural size, expand and shrink.
  * Call \ref iupClassObjectSetChildrenCurrentSize for containers if they have children.
  * Must be called for each children in the container. \n
  * First call is in iupLayoutCompute.
  * \ingroup iclassbase */
-void iupBaseSetCurrentSize(Ihandle* ih, int w, int h, int shrink);
+IUP_SDK_API void iupBaseSetCurrentSize(Ihandle* ih, int w, int h, int shrink);
 
 /** Set the current position and update children position for containers.
  * Call \ref iupClassObjectSetChildrenPosition for containers if they have children.
  * Must be called for each children in the container. \n
  * First call is in iupLayoutCompute.
  * \ingroup iclassbase */
-void iupBaseSetPosition(Ihandle* ih, int x, int y);
+IUP_SDK_API void iupBaseSetPosition(Ihandle* ih, int x, int y);
 
 /* Updates the SIZE attribute if defined. 
    Called only from iupdrvSetFontAttrib. */
-void iupBaseUpdateAttribFromFont(Ihandle* ih);
+IUP_SDK_API void iupBaseUpdateAttribFromFont(Ihandle* ih);
 
 
 /** \defgroup iclassbasemethod Base Class Methods
@@ -89,15 +94,15 @@ void iupBaseUpdateAttribFromFont(Ihandle* ih);
 
 /** Driver dependent \ref Iclass::LayoutUpdate method.
  * \ingroup iclassbasemethod */
-void iupdrvBaseLayoutUpdateMethod(Ihandle *ih);
+IUP_SDK_API void iupdrvBaseLayoutUpdateMethod(Ihandle *ih);
 
 /** Driver dependent \ref Iclass::UnMap method.
  * \ingroup iclassbasemethod */
-void iupdrvBaseUnMapMethod(Ihandle* ih);
+IUP_SDK_API void iupdrvBaseUnMapMethod(Ihandle* ih);
 
 /** Native type void \ref Iclass::Map method.
  * \ingroup iclassbasemethod */
-int iupBaseTypeVoidMapMethod(Ihandle* ih);
+IUP_SDK_API int iupBaseTypeVoidMapMethod(Ihandle* ih);
 
 
 /** \defgroup iclassbaseattribfunc Base Class Attribute Functions
@@ -110,41 +115,48 @@ int iupBaseTypeVoidMapMethod(Ihandle* ih);
  */
 
 /* common */
-char* iupBaseGetWidAttrib(Ihandle* ih);
-int iupBaseSetNameAttrib(Ihandle* ih, const char* value);
-int iupBaseSetRasterSizeAttrib(Ihandle* ih, const char* value);
-int iupBaseSetSizeAttrib(Ihandle* ih, const char* value);
-char* iupBaseGetSizeAttrib(Ihandle* ih);
-char* iupBaseGetCurrentSizeAttrib(Ihandle* ih);
-char* iupBaseGetRasterSizeAttrib(Ihandle* ih);
-char* iupBaseGetClientOffsetAttrib(Ihandle* ih);
-int iupBaseSetMaxSizeAttrib(Ihandle* ih, const char* value);
-int iupBaseSetMinSizeAttrib(Ihandle* ih, const char* value);
-char* iupBaseGetExpandAttrib(Ihandle* ih);
-int iupBaseSetExpandAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseGetWidAttrib(Ihandle* ih);
+IUP_SDK_API int iupBaseSetNameAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupBaseSetRasterSizeAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupBaseSetSizeAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseGetSizeAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseGetCurrentSizeAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseGetRasterSizeAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseGetClientOffsetAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseGetClientSizeAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseCanvasGetClientOffsetAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseCanvasGetClientSizeAttrib(Ihandle* ih);
+IUP_SDK_API int iupBaseSetMaxSizeAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupBaseSetMinSizeAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseGetExpandAttrib(Ihandle* ih);
+IUP_SDK_API int iupBaseSetExpandAttrib(Ihandle* ih, const char* value);
 
 /* visual */
-char* iupBaseGetVisibleAttrib(Ihandle* ih);
-int iupBaseSetVisibleAttrib(Ihandle* ih, const char* value);
-char* iupBaseGetActiveAttrib(Ihandle *ih);
-int iupBaseSetActiveAttrib(Ihandle* ih, const char* value);
-int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value);
-int iupdrvBaseSetTipAttrib(Ihandle* ih, const char* value);
-int iupdrvBaseSetTipVisibleAttrib(Ihandle* ih, const char* value);
-char* iupdrvBaseGetTipVisibleAttrib(Ihandle* ih);
-int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value);
-int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value);
-char* iupBaseNativeParentGetBgColorAttrib(Ihandle* ih);
+IUP_SDK_API char* iupBaseGetVisibleAttrib(Ihandle* ih);
+IUP_SDK_API int iupBaseSetVisibleAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseGetActiveAttrib(Ihandle *ih);
+IUP_SDK_API int iupBaseSetActiveAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupdrvBaseSetTipAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupdrvBaseSetTipVisibleAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupdrvBaseGetTipVisibleAttrib(Ihandle* ih);
+IUP_SDK_API int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseNativeParentGetBgColorAttrib(Ihandle* ih);
+IUP_SDK_API int iupBaseSetCPaddingAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseGetCPaddingAttrib(Ihandle* ih);
+IUP_SDK_API int iupBaseSetCSpacingAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseGetCSpacingAttrib(Ihandle* ih);
 
 /* other */
-char* iupBaseContainerGetExpandAttrib(Ihandle* ih);
-int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value);
+IUP_SDK_API char* iupBaseContainerGetExpandAttrib(Ihandle* ih);
+IUP_SDK_API int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value);
 
 /* drag&drop */
-void iupdrvRegisterDragDropAttrib(Iclass* ic);
+IUP_SDK_API void iupdrvRegisterDragDropAttrib(Iclass* ic);
 
 /* util */
-int iupBaseNoSaveCheck(Ihandle* ih, const char* name);
+IUP_SDK_API int iupBaseNoSaveCheck(Ihandle* ih, const char* name);
 
 
 /** @} */
@@ -159,8 +171,9 @@ int iupBaseNoSaveCheck(Ihandle* ih, const char* name);
  */
 
 #define iupMAX(_a,_b) ((_a)>(_b)?(_a):(_b))
+#define iupMIN(_a,_b) ((_a)<(_b)?(_a):(_b))
 #define iupROUND(_x) ((int)((_x)>0? (_x)+0.5: (_x)-0.5))
-int     iupRound(double x);
+IUP_SDK_API int     iupRound(double x);
 
 #define iupCOLOR8TO16(_x) ((unsigned short)(_x*257))  
 #define iupCOLOR16TO8(_x) ((unsigned char)(_x/257))   /* 65535/257 = 255 */
@@ -172,10 +185,10 @@ enum{IUP_ALIGN_ALEFT, IUP_ALIGN_ACENTER, IUP_ALIGN_ARIGHT};
 #define IUP_ALIGN_ATOP IUP_ALIGN_ALEFT
 
 enum{IUP_SB_NONE, IUP_SB_HORIZ, IUP_SB_VERT};
-int iupBaseGetScrollbar(Ihandle* ih);
+IUP_SDK_API int iupBaseGetScrollbar(Ihandle* ih);
 
-char* iupBaseNativeParentGetBgColor(Ihandle* ih);
-void iupBaseCallValueChangedCb(Ihandle* ih);
+IUP_SDK_API char* iupBaseNativeParentGetBgColor(Ihandle* ih);
+IUP_SDK_API void iupBaseCallValueChangedCb(Ihandle* ih);
 
 /** @} */
 

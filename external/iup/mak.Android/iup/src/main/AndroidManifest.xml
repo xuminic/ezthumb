@@ -1,0 +1,23 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
+          package="br.pucrio.tecgraf.iup"
+>
+
+	<application android:supportsRtl="true"
+				 android:theme="@style/AppTheme"
+		>
+		<activity 
+			android:name="br.pucrio.tecgraf.iup.IupLaunchActivity"
+			android:configChanges="orientation|keyboardHidden|screenSize"
+			android:noHistory="true"
+		>
+        </activity>
+		<activity
+			android:name="br.pucrio.tecgraf.iup.IupActivity"
+			android:configChanges="orientation|keyboardHidden|screenSize"
+		>
+        </activity>
+
+    </application>
+
+</manifest>

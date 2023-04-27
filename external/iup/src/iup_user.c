@@ -20,7 +20,7 @@ static int iUserSetClearAttributesAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-Ihandle* IupUser(void)
+IUP_API Ihandle* IupUser(void)
 {
   return IupCreate("user");
 }
@@ -31,13 +31,15 @@ Iclass* iupUserNewClass(void)
 
   ic->name = "user";
   ic->format = NULL;  /* no parameters */
-  ic->nativetype = IUP_TYPEVOID;
+  ic->nativetype = IUP_TYPEOTHER;
   ic->childtype = IUP_CHILDMANY; /* can have children */
   ic->is_interactive = 0;
 
   ic->New = iupUserNewClass;
 
-  iupClassRegisterAttribute(ic, "CLEARATTRIBUTES", NULL, iUserSetClearAttributesAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupBaseRegisterBaseCallbacks(ic);
+
+  iupClassRegisterAttribute(ic, "CLEARATTRIBUTES", NULL, iUserSetClearAttributesAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   return ic;
 }

@@ -1,0 +1,7 @@
+$(OBJDIR)/iuplua_cd.o: iuplua_cd.c /tecgraf/cd/include/cd.h \
+ /tecgraf/cd/include/cdiup.h /tecgraf/lua52/include/lua.h \
+ /tecgraf/lua52/include/luaconf.h /tecgraf/lua52/include/lauxlib.h \
+ /tecgraf/lua52/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ /tecgraf/cd/include/cdlua.h /tecgraf/cd/include/cdluaiup.h \
+ /tecgraf/cd/include/cdlua5_private.h

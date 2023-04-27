@@ -1,5 +1,5 @@
 /** \file
- * \brief global attributes enviroment
+ * \brief global attributes environment
  *
  * See Copyright Notice in "iup.h"
  */
@@ -135,7 +135,7 @@ static void iRecInputKeyPressCB(int key, int pressed)
   }
 }
 
-int IupRecordInput(const char* filename, int mode)
+IUP_API int IupRecordInput(const char* filename, int mode)
 {
   if (irec_file)
     fclose(irec_file);
@@ -233,7 +233,7 @@ static int iPlayAction(FILE* file, int mode)
   char action[4];
   char eol;
   int time;
-  static int pressed = 0;
+  static int last_pressed = 0;
 
   iPlayReadStr(file, action, 3, mode);
   iPlayReadInt(file, &time, mode);
@@ -263,9 +263,9 @@ static int iPlayAction(FILE* file, int mode)
       /* Process all messages between button press and release without interruption.
          This will not work if two butons are pressed together. */
 /*      if (status == 1 || status == 2)
-        pressed = 1;
+        last_pressed = 1;
       else if (status == 0)
-        pressed = 0; */
+        last_pressed = 0; */
       break;
     }
   case 'M':
@@ -318,7 +318,7 @@ static int iPlayAction(FILE* file, int mode)
   }
 
   irec_lastclock = iRecClock();
-  return pressed;
+  return last_pressed;
 }
 
 static int iPlayTimer_CB(Ihandle* timer)
@@ -357,7 +357,7 @@ static int iPlayTimer_CB(Ihandle* timer)
   return IUP_DEFAULT;
 }
 
-int IupPlayInput(const char* filename)
+IUP_API int IupPlayInput(const char* filename)
 {
   Ihandle* timer = (Ihandle*)IupGetGlobal("_IUP_PLAYTIMER");
   FILE* file;

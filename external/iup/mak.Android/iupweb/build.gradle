@@ -1,0 +1,76 @@
+apply plugin: 'com.android.library'
+
+android {
+	compileSdkVersion rootProject.ext.compileSdkVersion
+
+	defaultConfig {
+		minSdkVersion rootProject.ext.minSdkVersion
+		targetSdkVersion rootProject.ext.targetSdkVersion
+		versionCode rootProject.ext.versionCode
+		versionName rootProject.ext.versionName
+//		testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+		externalNativeBuild {
+			cmake {
+				arguments "-DIUP_ANDROID_BUILD_IUPWEB=1"
+				cFlags ""
+				cppFlags ""
+			}
+		}
+
+		ndk {
+			// Specifies the ABI configurations of your native
+			// libraries Gradle should build and package with your APK.
+//			abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+//			abiFilters 'arm64-v8a', 'x86_64'
+//			abiFilters 'armeabi-v7a', 'x86'
+//			abiFilters 'armeabi-v7a'
+//			abiFilters 'x86'
+//			abiFilters 'arm64-v8a'
+			abiFilters rootProject.ext.abiFilters
+		}
+
+		packagingOptions {
+			exclude 'lib/armeabi/libiup.so'
+			exclude 'lib/armeabi/libiupimglib.so'
+			exclude 'lib/armeabi-v7a/libiup.so'
+			exclude 'lib/armeabi-v7a/libiupimglib.so'
+			exclude 'lib/x86/libiup.so'
+			exclude 'lib/x86/libiupimglib.so'
+			exclude 'lib/x86_64/libiup.so'
+			exclude 'lib/x86_64/libiupimglib.so'
+			exclude 'lib/arm64-v8a/libiup.so'
+			exclude 'lib/arm64-v8a/libiupimglib.so'
+			exclude 'R.txt'
+			exclude 'res/anim/**'
+			exclude 'res/anim/iup_slide_from_left.xml'
+			exclude 'res/anim/*.xml'
+			exclude '/res/anim/**'
+			exclude '**/res/anim/**'
+
+
+
+		}
+	}
+	buildTypes {
+		release {
+			minifyEnabled false
+			proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../../CMakeLists.txt"
+		}
+	}
+}
+
+dependencies {
+	implementation project(':iup')
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+//	androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+//		exclude group: 'com.android.support', module: 'support-annotations'
+//	})
+	implementation rootProject.ext.appCompat
+//	testCompile 'junit:junit:4.12'
+}

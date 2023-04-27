@@ -1,0 +1,59 @@
+// If you want IupLua, you must have a pre-built Lua and you need to
+// Add a new entry to your local.properties:
+// prebuilt_external_libs.dir=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32
+// This should contain a lua directory with a layout like the old Android NDK "module" system, which contains include/ and libs/<arch>/liblua.so
+// where <arch> is armeabi-v7a, arm64-v8a, x86, x86_64, etc.
+// This path will be passed to CMake as -DPREBUILT_LIBRARY_PATH because the Android cross-compile chain disables the FIND_ system with CMAKE_PREFIX_PATH and friends.
+// This custom flag works in conjunction with our InitialCacheAndroid.cmake file which effectively restores the FIND_ behavior.
+
+include ':iup', ':iupweb', ':iuptestapp', ':iuptestappwebbrowser'
+
+
+// Ugh: Android Studio 3.1 (plugin 4.4) broke the default path so new File('local.properties') fails.
+// Furthermore, System.getProperty("user.dir") changes as it iterates through each sub-project.
+// So in the startup case, System.getProperty("user.dir") + "/local.properties" works,
+// where root/Android/local.properties
+// but when it descends into a sub-project, it breaks because it looks in root/Android/iup/local.properties.
+
+// For now: you will have to comment/uncomment the additional include for iuplua, etc.
+include ':iuplua', ':iuptestapplua'
+
+
+/*
+// println  "  project dir:  ${System.getProperty("user.dir")}"
+
+def project_dir = System.getProperty("user.dir");
+// We need the full path.
+def full_path_local_properties = project_dir + "/local.properties"
+def file_handle = new File(full_path_local_properties)
+if(file_handle.exists())
+{
+	Properties local_properties = new Properties()
+	local_properties.load(file_handle.newDataInputStream())
+	def prebuilt_library_path = local_properties.getProperty('prebuilt_external_libs.dir')
+	if(prebuilt_library_path)
+	{
+		include ':iuplua', ':iuptestapplua'
+	}
+	else
+	{
+	}
+
+}
+else
+{
+	// Hack. We only go one level deep. So we can check .. for the path. If so, we are traversing in a subdirectory and can ignore this case.
+
+	full_path_local_properties = project_dir + "/../local.properties"
+	file_handle = new File(full_path_local_properties)
+	if (file_handle.exists())
+	{
+		// Safe to ignore case.
+	}
+	else
+	{
+		println "ATTENTION: To build IupLua, you must add an entry called prebuilt_external_libs.dir in local.properties. See settings.gradle for more info.\n"
+	}
+}
+
+*/

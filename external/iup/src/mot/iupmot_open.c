@@ -29,7 +29,7 @@ int      iupmot_screen = 0;
 Visual*  iupmot_visual = 0;
 XtAppContext iupmot_appcontext = 0;
 
-void* iupdrvGetDisplay(void)
+IUP_SDK_API void* iupdrvGetDisplay(void)
 {
   return iupmot_display;
 }

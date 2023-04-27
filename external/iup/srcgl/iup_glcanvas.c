@@ -29,6 +29,7 @@ static Iclass* iGlCanvasNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("canvas"));
 
   ic->name = "glcanvas";
+  ic->cons = "GLCanvas";
   ic->format = "a"; /* one ACTION callback name */
   ic->nativetype = IUP_TYPECANVAS;
   ic->childtype = IUP_CHILDNONE;
@@ -57,7 +58,12 @@ static Iclass* iGlCanvasNewClass(void)
 
 static Iclass* iGLBackgroundBoxNewClass(void)
 {
-  return iupBackgroundBoxNewBaseClass("glbackgroundbox", "glcanvas");
+  Iclass* ic = iupBackgroundBoxNewBaseClass(iupRegisterFindClass("glcanvas"));
+
+  ic->name = "glbackgroundbox";
+  ic->cons = "GLBackgroundBox";
+
+  return ic;
 }
 
 Ihandle* IupGLBackgroundBox(Ihandle* child)
@@ -78,6 +84,9 @@ Ihandle* IupGLCanvas(const char *action)
 
 void IupGLCanvasOpen(void)
 {
+  if (!IupIsOpened())
+    return;
+
   if (!IupGetGlobal("_IUP_GLCANVAS_OPEN"))
   {
     iupRegisterClass(iGlCanvasNewClass());

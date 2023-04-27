@@ -386,7 +386,9 @@ static int winListSetBgColorAttrib(Ihandle *ih, const char *value)
 
 static int winListSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetFontAttrib(ih, value);
+  if (!iupdrvSetFontAttrib(ih, value))
+    return 0;
+
   if (ih->handle)
   {
     winListUpdateItemWidth(ih);
@@ -560,6 +562,7 @@ static int winListSetPaddingAttrib(Ihandle* ih, const char* value)
 
   iupStrToIntInt(value, &(ih->data->horiz_padding), &(ih->data->vert_padding), 'x');
   ih->data->vert_padding = 0;
+
   if (ih->handle)
   {
     HWND cbedit = (HWND)iupAttribGet(ih, "_IUPWIN_EDITBOX");
@@ -960,16 +963,26 @@ static int winListSetScrollToPosAttrib(Ihandle* ih, const char* value)
 
 static int winListSetImageAttrib(Ihandle* ih, int id, const char* value)
 {
-  HBITMAP hBitmap = iupImageGetImage(value, ih, 0);
+  HBITMAP hBitmap;
   int pos = iupListGetPosAttrib(ih, id);
 
   if (!ih->data->show_image || pos < 0)
     return 0;
 
+  hBitmap = iupImageGetImage(value, ih, 0, NULL);
   winListSetItemData(ih, pos, NULL, hBitmap);
 
   iupdrvRedrawNow(ih);
   return 0;
+}
+
+static char* winListGetImageNativeHandleAttribId(Ihandle* ih, int id)
+{
+  winListItemData *itemdata = winListGetItemData(ih, id - 1);
+  if (itemdata)
+    return (char*)itemdata->hBitmap;
+  else
+    return NULL;
 }
 
 void* iupdrvListGetImageHandle(Ihandle* ih, int id)
@@ -980,7 +993,7 @@ void* iupdrvListGetImageHandle(Ihandle* ih, int id)
 
 int iupdrvListSetImageHandle(Ihandle* ih, int id, void* hImage)
 {
-  winListSetItemData(ih, id-1, NULL, (HBITMAP)hImage);
+  winListSetItemData(ih, id, NULL, (HBITMAP)hImage);
   iupdrvRedrawNow(ih);
   return 0;
 }
@@ -1327,6 +1340,11 @@ static int winListEditProc(Ihandle* ih, HWND cbedit, UINT msg, WPARAM wp, LPARAM
   if (msg==WM_KEYDOWN) /* process K_ANY before text callbacks */
   {
     ret = iupwinBaseMsgProc(ih, msg, wp, lp, result);
+    if (!iupObjectCheck(ih))
+    {
+      *result = 0;
+      return 1;
+    }
 
     if (ret) 
     {
@@ -1402,14 +1420,6 @@ static int winListEditProc(Ihandle* ih, HWND cbedit, UINT msg, WPARAM wp, LPARAM
       break;
     }
   case WM_CLEAR:
-    {
-      if (!winListCallEditCb(ih, cbedit, NULL, 1))
-        ret = 1;
-
-      PostMessage(cbedit, WM_IUPCARET, 0, 0L);
-
-      break;
-    }
   case WM_CUT:
     {
       if (!winListCallEditCb(ih, cbedit, NULL, 1))
@@ -1495,7 +1505,7 @@ static LRESULT CALLBACK winListEditWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
   Ihandle *ih;
 
   ih = iupwinHandleGet(hwnd); 
-  if (!ih)
+  if (!iupObjectCheck(ih))
     return DefWindowProc(hwnd, msg, wp, lp);  /* should never happen */
 
   /* retrieve the control previous procedure for subclassing */
@@ -1521,6 +1531,8 @@ static int winListComboListProc(Ihandle* ih, HWND cblist, UINT msg, WPARAM wp, L
   case WM_LBUTTONDOWN:
   case WM_MBUTTONDOWN:
   case WM_RBUTTONDOWN:
+    iupwinFlagButtonDown(ih, msg);
+
     if (iupwinButtonDown(ih, msg, wp, lp)==-1)
     {
       *result = 0;
@@ -1530,6 +1542,12 @@ static int winListComboListProc(Ihandle* ih, HWND cblist, UINT msg, WPARAM wp, L
   case WM_MBUTTONUP:
   case WM_RBUTTONUP:
   case WM_LBUTTONUP:
+    if (!iupwinFlagButtonUp(ih, msg))
+    {
+      *result = 0;
+      return 1;
+    }
+
     if (iupwinButtonUp(ih, msg, wp, lp)==-1)
     {
       *result = 0;
@@ -1556,7 +1574,7 @@ static LRESULT CALLBACK winListComboListWndProc(HWND hwnd, UINT msg, WPARAM wp, 
   Ihandle *ih;
 
   ih = iupwinHandleGet(hwnd); 
-  if (!ih)
+  if (!iupObjectCheck(ih))
     return DefWindowProc(hwnd, msg, wp, lp);  /* should never happen */
 
   /* retrieve the control previous procedure for subclassing */
@@ -1572,7 +1590,6 @@ static LRESULT CALLBACK winListComboListWndProc(HWND hwnd, UINT msg, WPARAM wp, 
 
 static int winListMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *result)
 {
-
   if (ih->data->is_dropdown)
   {
     switch (msg)
@@ -1635,6 +1652,7 @@ static int winListMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
       *result = 0;
       return 1;
     }
+    break;
   case WM_SETFOCUS:
   case WM_KILLFOCUS:
   case WM_MOUSELEAVE:
@@ -1657,6 +1675,8 @@ static void winListDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
   HDC hDC;
   RECT rect;
   COLORREF fgcolor, bgcolor;
+
+  /* called only when SHOWIMAGE=Yes */
 
   int x = drawitem->rcItem.left;
   int y = drawitem->rcItem.top;
@@ -1702,28 +1722,17 @@ static void winListDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
   if (itemdata->hBitmap)
   {
     int bpp, img_w, img_h;
-    HBITMAP hMask = NULL;
 
     iupdrvImageGetInfo(itemdata->hBitmap, &img_w, &img_h, &bpp);
 
-    if (bpp == 8)
-    {
-      char name[50];
-      sprintf(name, "IMAGE%d", (int)drawitem->itemID+1);
-      hMask = iupdrvImageCreateMask(IupGetAttributeHandle(ih, name));
-    }
-
     x = 0;
     y = (height - img_h)/2;  /* vertically centered */
-    iupwinDrawBitmap(hDC, itemdata->hBitmap, hMask, x, y, img_w, img_h, bpp);
-
-    if (hMask)
-      DeleteObject(hMask);
+    iupwinDrawBitmap(hDC, itemdata->hBitmap, x, y, img_w, img_h, img_w, img_h, bpp);
   }
 
   /* If the item has the focus, draw the focus rectangle */
   if (drawitem->itemState & ODS_FOCUS)
-    iupdrvPaintFocusRect(ih, hDC, 0, 0, width, height);
+    iupwinDrawFocusRect(hDC, 0, 0, width, height);
 
   iupwinDrawDestroyBitmapDC(&bmpDC);
 }
@@ -1929,7 +1938,7 @@ void iupdrvListInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "BGCOLOR", NULL, winListSetBgColorAttrib, IUPAF_SAMEASSYSTEM, "TXTBGCOLOR", IUPAF_NOT_MAPPED);
 
   /* Special */
-  iupClassRegisterAttribute(ic, "FGCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "TXTFGCOLOR", IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "FGCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "TXTFGCOLOR", IUPAF_DEFAULT);
   iupClassRegisterAttribute(ic, "AUTOREDRAW", NULL, iupwinSetAutoRedrawAttrib, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
 
   /* IupList only */
@@ -1957,7 +1966,10 @@ void iupdrvListInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "SCROLLTOPOS", NULL, winListSetScrollToPosAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
 
   iupClassRegisterAttributeId(ic, "IMAGE", NULL, winListSetImageAttrib, IUPAF_IHANDLENAME|IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
+  iupClassRegisterAttributeId(ic, "IMAGENATIVEHANDLE", winListGetImageNativeHandleAttribId, NULL, IUPAF_NO_STRING | IUPAF_READONLY | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "CUEBANNER", NULL, winListSetCueBannerAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTER", NULL, winListSetFilterAttrib, NULL, NULL, IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

@@ -172,7 +172,9 @@ static Iclass* iOleControlNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("canvas"));
 
   ic->name = "olecontrol";
+  ic->cons = "OleControl";
   ic->format = "s"; /* one string */
+  ic->format_attr = "PROGID";
   ic->nativetype = IUP_TYPECANVAS;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 1;
@@ -197,7 +199,7 @@ static Iclass* iOleControlNewClass(void)
   return ic;
 }
 
-Ihandle *IupOleControl(const char *ProgID)
+IUPOLE_API Ihandle *IupOleControl(const char *ProgID)
 {
   void *params[2];
   params[0] = (void*)ProgID;
@@ -205,8 +207,11 @@ Ihandle *IupOleControl(const char *ProgID)
   return IupCreatev("olecontrol", params);
 }
 
-int IupOleControlOpen(void)
+IUPOLE_API int IupOleControlOpen(void)
 {
+  if (!IupIsOpened())
+    return IUP_ERROR;
+
   if (IupGetGlobal("_IUP_OLECONTROL_OPEN"))
     return IUP_OPENED;
 

@@ -122,7 +122,7 @@ void iupwinTouchProcessInput(Ihandle* ih, int count, void* lp)
             if (ti[i].dwFlags & TOUCHEVENTF_PRIMARY)
               state = (ti[i].dwFlags & TOUCHEVENTF_DOWN)? "DOWN-PRIMARY": ((ti[i].dwFlags & TOUCHEVENTF_UP)? "UP-PRIMARY": "MOVE-PRIMARY");
 
-            if (cb(ih, ti->dwID, x, y, state)==IUP_CLOSE)
+            if (cb(ih, ti[i].dwID, x, y, state)==IUP_CLOSE)
             {
               IupExitLoop();
 

@@ -22,7 +22,7 @@ typedef struct Idiallst_
 static Idiallst *idlglist = NULL;  /* list of all created dialogs */
 static int idlg_count = 0;
 
-void iupDlgListAdd(Ihandle *ih)
+IUP_SDK_API void iupDlgListAdd(Ihandle *ih)
 {
   if (ih)
   {
@@ -36,7 +36,7 @@ void iupDlgListAdd(Ihandle *ih)
   }
 }
 
-void iupDlgListRemove(Ihandle *ih)
+IUP_SDK_API void iupDlgListRemove(Ihandle *ih)
 {
   if (!idlglist || !ih)
     return;
@@ -67,18 +67,18 @@ void iupDlgListRemove(Ihandle *ih)
 
 static Idiallst *idlg_first = NULL;
 
-int iupDlgListCount(void)
+IUP_SDK_API int iupDlgListCount(void)
 {
   return idlg_count;
 }
 
-Ihandle *iupDlgListFirst (void)
+IUP_SDK_API Ihandle *iupDlgListFirst(void)
 {
   idlg_first = idlglist;
   return iupDlgListNext();
 }
 
-Ihandle *iupDlgListNext (void)
+IUP_SDK_API Ihandle *iupDlgListNext(void)
 {
   Ihandle *ih = NULL;
   if (idlg_first)
@@ -91,7 +91,7 @@ Ihandle *iupDlgListNext (void)
 
 static int idlg_nvisiblewin = 0;
 
-void iupDlgListVisibleInc(void)
+IUP_SDK_API void iupDlgListVisibleInc(void)
 {
   iupASSERT(idlg_nvisiblewin < idlg_count);
   if (idlg_nvisiblewin == idlg_count)
@@ -99,32 +99,31 @@ void iupDlgListVisibleInc(void)
   idlg_nvisiblewin++;
 }
 
-void iupDlgListVisibleDec(void)
+IUP_SDK_API void iupDlgListVisibleDec(void)
 {
   iupASSERT(idlg_nvisiblewin > 0);
   idlg_nvisiblewin--;
 }
 
-int iupDlgListVisibleCount(void)
+IUP_SDK_API int iupDlgListVisibleCount(void)
 {
   return idlg_nvisiblewin;
 }
 
 void iupDlgListDestroyAll(void)
 {
-  int i = 0, count;
+  int i, count = 0;
   Ihandle** ih_array = (Ihandle**)malloc(idlg_count * sizeof(Ihandle*));
   Idiallst *list;
   for (list = idlglist; list; list = list->next)
   {
     if (iupObjectCheck(list->ih))
     {
-      ih_array[i] = list->ih;
-      i++;
+      ih_array[count] = list->ih;
+      count++;
     }
   }
 
-  count = i;
   for (i = 0; i < count; i++)
   {
     if (iupObjectCheck(ih_array[i]))

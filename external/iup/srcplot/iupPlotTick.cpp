@@ -7,8 +7,8 @@
 #include "iupPlot.h"
 
 
-const double kTickValueVeryBig = 1.0e4;// switch to scientific format
-const double kTickValueVerySmall = 1.0e-3;
+const double kTickValueVeryBig = 1.0e4;     // switch to scientific format
+const double kTickValueVerySmall = 1.0e-3;  // switch to scientific format
 const double kLittleIncrease = 1.0001;
 const double kLittleDecrease = 0.9999;
 const double kEps = 1e-4;
@@ -102,13 +102,18 @@ int iupPlotCalcPrecision(double inValue)
   }
 }
 
-static void iPlotMakeFormatString(double inValue, char* outFormatString)
+static void iPlotMakeAutoFormatString(double inValue, char* outFormatString, bool sign_space)
 {
   if (inValue < 0)
     inValue = -inValue;
   
   if (inValue > kTickValueVeryBig || inValue < kTickValueVerySmall)
-    strcpy(outFormatString, "%.1e");
+  {
+    if (sign_space)
+      strcpy(outFormatString, "% .1e");
+    else
+      strcpy(outFormatString, "%.1e");
+  }
   else 
   {
     int thePrecision = 0;
@@ -122,9 +127,18 @@ static void iPlotMakeFormatString(double inValue, char* outFormatString)
       }
     }
 
-    char theBuf[128] = "%.0f";
-    theBuf[2] = (char)('0' + thePrecision);
-    strcpy(outFormatString, theBuf);
+    if (sign_space)
+    {
+      char theBuf[128] = IUP_PLOT_DEF_NUMBERFORMATSIGNED;
+      theBuf[3] = (char)('0' + thePrecision); // "% ."
+      strcpy(outFormatString, theBuf);
+    }
+    else
+    {
+      char theBuf[128] = IUP_PLOT_DEF_NUMBERFORMAT;
+      theBuf[2] = (char)('0' + thePrecision);  // "%."
+      strcpy(outFormatString, theBuf);
+    }
   }
 }
 
@@ -185,7 +199,7 @@ bool iupPlotTickIterLinear::CalculateSpacing (double inParRange, double inDivGue
 
   // Calculated only once for Linear scale
   if (ioTick.mFormatAuto)
-    iPlotMakeFormatString(ioTick.mMajorSpan, ioTick.mFormatString);
+    iPlotMakeAutoFormatString(ioTick.mMajorSpan, ioTick.mFormatString, mAxis->mVertical && mAxis->mReverseTicksLabel);
 
   return true;
 }
@@ -251,9 +265,9 @@ bool iupPlotTickIterLog::GetNextTick (double &outTick, bool &outIsMajorTick, cha
   outTick = mCurrentTick;
   outIsMajorTick = (mCount%mAxis->mTick.mMinorDivision == 0);
 
-  // Calculated in every interation for Log scale
+  // Calculated in every iteration for Log scale
   if (outFormatString && mAxis->mTick.mFormatAuto) 
-    iPlotMakeFormatString(outTick, outFormatString);
+    iPlotMakeAutoFormatString(outTick, outFormatString, mAxis->mVertical && mAxis->mReverseTicksLabel);
 
   double theBase = mAxis->mLogBase;
   double theLogNow = iupPlotLog(mCurrentTick, theBase);

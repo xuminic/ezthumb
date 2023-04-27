@@ -1,5 +1,5 @@
 /** \file
- * \brief global attributes enviroment
+ * \brief global attributes environment
  *
  * See Copyright Notice in "iup.h"
  */
@@ -20,6 +20,7 @@
 #include "iup_assert.h"
 #include "iup_str.h"
 #include "iup_strmessage.h"
+#include "iup_attrib.h"
 
 
 static Itable *iglobal_table = NULL;
@@ -136,7 +137,7 @@ static void iGlobalSet(const char *name, const char *value, int store)
   {
     int x, y, status;
     char bt; 
-    if (sscanf(value, "%dx%d %c %d", &x, &y, &bt, &status) == 4)
+    if (value && sscanf(value, "%dx%d %c %d", &x, &y, &bt, &status) == 4)
       iupdrvSendMouse(x, y, bt, status);
     return;
   }
@@ -146,22 +147,22 @@ static void iGlobalSet(const char *name, const char *value, int store)
     iGlobalTableSet(name, value, store);
 }
 
-void IupSetGlobal(const char *name, const char *value)
+IUP_API void IupSetGlobal(const char *name, const char *value)
 {
   iGlobalSet(name, value, 0);
 }
 
-void IupStoreGlobal(const char *name, const char *value)
+IUP_API void IupStoreGlobal(const char *name, const char *value)
 {
   iGlobalSet(name, value, 1);
 }
 
-void IupSetStrGlobal(const char *name, const char *value)
+IUP_API void IupSetStrGlobal(const char *name, const char *value)
 {
   iGlobalSet(name, value, 1);
 }
 
-char* IupGetGlobal(const char *name)
+IUP_API char* IupGetGlobal(const char *name)
 {
   char* value;
   
@@ -218,8 +219,8 @@ char* IupGetGlobal(const char *name)
   }
   if (iupStrEqual(name, "SCREENDPI"))
   {
-    float dpi = iupdrvGetScreenDpi();
-    return iupStrReturnFloat(dpi);
+    double dpi = iupdrvGetScreenDpi();
+    return iupStrReturnDouble(dpi);
   }
   if (iupStrEqual(name, "SYSTEMLOCALE"))
     return iupdrvLocaleInfo();
@@ -234,7 +235,7 @@ char* IupGetGlobal(const char *name)
   return value;
 }
 
-int iupGlobalIsPointer(const char* name)
+IUP_SDK_API int iupGlobalIsPointer(const char* name)
 {
   static struct {
     const char *name;
@@ -263,4 +264,30 @@ int iupGlobalIsPointer(const char* name)
   }
 
   return 0;
+}
+
+int iupGetGlobalAttributes(char** names, int n)
+{
+  int count = iupTableCount(iglobal_table);
+  char * name;
+  int i = 0;
+
+  if (n == 0 || n == -1)
+    return count;
+
+  name = iupTableFirst(iglobal_table);
+  while (name)
+  {
+    if (!iupATTRIB_ISINTERNAL(name))
+    {
+      names[i] = name;
+      i++;
+      if (i == n)
+        break;
+    }
+
+    name = iupTableNext(iglobal_table);
+  }
+
+  return i;
 }

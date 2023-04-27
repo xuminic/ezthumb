@@ -9,6 +9,7 @@
 #include <string.h>
 #include <memory.h>
 
+#include "iup_export.h"
 #include "iup_array.h"
 #include "iup_assert.h"
 
@@ -22,7 +23,7 @@ struct _Iarray
   int start_count;
 };
 
-Iarray* iupArrayCreate(int start_count, int elem_size)
+IUP_SDK_API Iarray* iupArrayCreate(int start_count, int elem_size)
 {
   Iarray* iarray = (Iarray*)malloc(sizeof(Iarray));
   iarray->count = 0;
@@ -40,7 +41,7 @@ Iarray* iupArrayCreate(int start_count, int elem_size)
   return iarray;
 }
 
-void iupArrayDestroy(Iarray* iarray)
+IUP_SDK_API void iupArrayDestroy(Iarray* iarray)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)
@@ -53,7 +54,7 @@ void iupArrayDestroy(Iarray* iarray)
   free(iarray);
 }
 
-void* iupArrayGetData(Iarray* iarray)
+IUP_SDK_API void* iupArrayGetData(Iarray* iarray)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)
@@ -61,7 +62,18 @@ void* iupArrayGetData(Iarray* iarray)
   return iarray->data;
 }
 
-void* iupArrayInc(Iarray* iarray)
+IUP_SDK_API void* iupArrayReleaseData(Iarray* iarray)
+{
+  void* data;
+  iupASSERT(iarray != NULL);
+  if (!iarray)
+    return NULL;
+  data = iarray->data;
+  iarray->data = NULL;
+  return data; 
+}
+
+IUP_SDK_API void* iupArrayInc(Iarray* iarray)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)
@@ -80,7 +92,7 @@ void* iupArrayInc(Iarray* iarray)
   return iarray->data;
 }
 
-void* iupArrayAdd(Iarray* iarray, int add_count)
+IUP_SDK_API void* iupArrayAdd(Iarray* iarray, int add_count)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)
@@ -99,7 +111,7 @@ void* iupArrayAdd(Iarray* iarray, int add_count)
   return iarray->data;
 }
 
-void* iupArrayInsert(Iarray* iarray, int index, int insert_count)
+IUP_SDK_API void* iupArrayInsert(Iarray* iarray, int index, int insert_count)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)
@@ -116,7 +128,7 @@ void* iupArrayInsert(Iarray* iarray, int index, int insert_count)
   return iarray->data;
 }
 
-void iupArrayRemove(Iarray* iarray, int index, int remove_count)
+IUP_SDK_API void iupArrayRemove(Iarray* iarray, int index, int remove_count)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)
@@ -132,7 +144,7 @@ void iupArrayRemove(Iarray* iarray, int index, int remove_count)
   iarray->count -= remove_count;
 }
 
-int iupArrayCount(Iarray* iarray)
+IUP_SDK_API int iupArrayCount(Iarray* iarray)
 {
   iupASSERT(iarray!=NULL);
   if (!iarray)

@@ -7,7 +7,10 @@ local ctrl = {
   subdir = "elem",
   creation = "I",
   funcname = "ScrollBox",
-  callback = {}
+  callback = {
+    action = "ff", -- must repeat this callback because of its non-exclusive name
+    layoutupdate_cb = "",
+  }
 }
 
 function ctrl.createElement(class, param)

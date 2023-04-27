@@ -46,9 +46,9 @@ static void iProgressDlgSetPercent(IprogressDlgData* progress_data, int percent)
   if (progress_data->state != 1)
     return;
 
-  /* only set if a significant amount of time passed or 10% */
   cur_clock = (int)clock();
-  if (cur_clock > progress_data->last_clock + progress_data->min_clock || progress_data->percent < progress_data->last_percent + progress_data->min_percent)
+  if (cur_clock - progress_data->last_clock > progress_data->min_clock ||  /* significant amount of time */
+      progress_data->percent - progress_data->last_percent > progress_data->min_percent)  /* minimum percentage */
   {
     /* avoid duplicate updates */
     if (percent != progress_data->percent)
@@ -320,14 +320,15 @@ Iclass* iupProgressDlgNewClass(void)
 {
   Iclass* ic = iupClassNew(iupRegisterFindClass("dialog"));
 
-  ic->New = iupProgressDlgNewClass;
-  ic->Create = iProgressDlgCreateMethod;
-  ic->Destroy = iProgressDlgDestroyMethod;
-
   ic->name = "progressdlg";
+  ic->cons = "ProgressDlg";
   ic->nativetype = IUP_TYPEDIALOG;
   ic->is_interactive = 1;
   ic->childtype = IUP_CHILDNONE;
+
+  ic->New = iupProgressDlgNewClass;
+  ic->Create = iProgressDlgCreateMethod;
+  ic->Destroy = iProgressDlgDestroyMethod;
 
   iupClassRegisterCallback(ic, "CANCEL_CB", "");
 
@@ -345,8 +346,7 @@ Iclass* iupProgressDlgNewClass(void)
   return ic;
 }
 
-Ihandle* IupProgressDlg(void)
+IUP_API Ihandle* IupProgressDlg(void)
 {
   return IupCreate("progressdlg");
 }
-

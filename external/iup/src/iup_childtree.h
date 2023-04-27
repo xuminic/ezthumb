@@ -26,25 +26,26 @@ extern "C" {
  * See \ref iup_childtree.h
  * \ingroup object */
 
-/** Returns the native parent. It simply excludes containers that are from IUP_TYPEVOID classes.
+/** Returns the native parent. It simply skips parents that are from IUP_TYPEVOID classes.
  * \ingroup childtree */
-Ihandle* iupChildTreeGetNativeParent(Ihandle* ih);
+IUP_SDK_API Ihandle* iupChildTreeGetNativeParent(Ihandle* ih);
 
 /** Returns the native parent handle. Uses \ref iupChildTreeGetNativeParent and \ref iupClassObjectGetInnerNativeContainerHandle.
  * \ingroup childtree */
-InativeHandle* iupChildTreeGetNativeParentHandle(Ihandle* ih);
+IUP_SDK_API InativeHandle* iupChildTreeGetNativeParentHandle(Ihandle* ih);
 
 /** Adds the child directly to the parent tree.
  * \ingroup childtree */
-void iupChildTreeAppend(Ihandle* parent, Ihandle* child);
+IUP_SDK_API void iupChildTreeAppend(Ihandle* parent, Ihandle* child);
 
-/** Checks if the child belongs to the parent tree.
+/** Checks if the element is in the parent tree.\n 
+ * Which means the element is a grand-parent of parent.
  * \ingroup childtree */
-int iupChildTreeIsChild(Ihandle* ih, Ihandle* child);
+IUP_SDK_API int iupChildTreeIsParent(Ihandle* ih, Ihandle* parent);
 
 /** Returns the previous brother if any.
  * \ingroup childtree */
-Ihandle* iupChildTreeGetPrevBrother(Ihandle* ih);
+IUP_SDK_API Ihandle* iupChildTreeGetPrevBrother(Ihandle* ih);
 
 
 /* Other functions declared in <iup.h> and implemented here. 

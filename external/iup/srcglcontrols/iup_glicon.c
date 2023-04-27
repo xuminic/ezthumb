@@ -48,24 +48,24 @@ Ihandle* iupGLIconGetImageHandle(Ihandle* ih, const char* baseattrib, const char
     {
       int pressed = iupAttribGetInt(ih, "PRESSED");
       if (pressed)
-        image = iupImageGetHandle(iGLIconGetImageName(ih, baseattrib, "PRESS"));
+        image = IupImageGetHandle(iGLIconGetImageName(ih, baseattrib, "PRESS"));
       else
       {
         int highlight = iupAttribGetInt(ih, "HIGHLIGHT");
         if (highlight)
-          image = iupImageGetHandle(iGLIconGetImageName(ih, baseattrib, "HIGHLIGHT"));
+          image = IupImageGetHandle(iGLIconGetImageName(ih, baseattrib, "HIGHLIGHT"));
       }
     }
     else
     {
-      image = iupImageGetHandle(iGLIconGetImageName(ih, baseattrib, "INACTIVE"));
+      image = IupImageGetHandle(iGLIconGetImageName(ih, baseattrib, "INACTIVE"));
       if (!image)
         make_inactive = 1;
     }
   }
 
   if (!image)
-    image = iupImageGetHandle(imagename);
+    image = IupImageGetHandle(imagename);
 
   if (image && make_inactive)
     iupAttribSet(image, "MAKEINACTIVE", "1");
@@ -91,28 +91,21 @@ static void iGLIconGetAlignment(const char* value, int *horiz_alignment, int *ve
 {
   char value1[30], value2[30];
 
-  if (!value)
-  {
-    *horiz_alignment = IUP_ALIGN_ALEFT;
-    *vert_alignment = IUP_ALIGN_ATOP;
-    return;
-  }
-
   iupStrToStrStr(value, value1, value2, ':');
 
   if (iupStrEqualNoCase(value1, "ARIGHT"))
     *horiz_alignment = IUP_ALIGN_ARIGHT;
   else if (iupStrEqualNoCase(value1, "ACENTER"))
     *horiz_alignment = IUP_ALIGN_ACENTER;
-  else /* "ALEFT" */
+  else /* "ALEFT" (default) */
     *horiz_alignment = IUP_ALIGN_ALEFT;
 
   if (iupStrEqualNoCase(value2, "ABOTTOM"))
     *vert_alignment = IUP_ALIGN_ABOTTOM;
-  else if (iupStrEqualNoCase(value2, "ACENTER"))
-    *vert_alignment = IUP_ALIGN_ACENTER;
-  else /* "ATOP" */
+  else if (iupStrEqualNoCase(value2, "ATOP"))
     *vert_alignment = IUP_ALIGN_ATOP;
+  else /* "ACENTER" (default) */
+    *vert_alignment = IUP_ALIGN_ACENTER;
 }
 
 static void iGLIconGetPosition(Ihandle* ih, int icon_width, int icon_height, int *x, int *y, int width, int height)
@@ -307,7 +300,9 @@ void iupGLIconGetSize(Ihandle* ih, const char* imagename, const char* title, int
 void iupGLIconRegisterAttrib(Iclass* ic)
 {
   iupClassRegisterAttribute(ic, "SPACING", NULL, NULL, IUPAF_SAMEASSYSTEM, "2", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CSPACING", iupBaseGetCSpacingAttrib, iupBaseSetCSpacingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
   iupClassRegisterAttribute(ic, "IMAGEPOSITION", NULL, NULL, IUPAF_SAMEASSYSTEM, "LEFT", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "ALIGNMENT", NULL, NULL, IUPAF_SAMEASSYSTEM, "ALEFT:ACENTER", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "PADDING", NULL, NULL, IUPAF_SAMEASSYSTEM, "0x0", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CPADDING", iupBaseGetCPaddingAttrib, iupBaseSetCPaddingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
 }

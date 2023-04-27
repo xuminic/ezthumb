@@ -22,6 +22,9 @@
 #include "iup_str.h"
 #include "iup_drv.h"
 #include "iup_drvfont.h"
+#include "iup_mask.h"
+#include "iup_array.h"
+#include "iup_text.h"
 
 #include "iupgtk_drv.h"
 
@@ -86,8 +89,6 @@ static char* gtkCalendarGetTodayAttrib(Ihandle* ih)
   return iupStrReturnStrf("%d/%d/%d", timeinfo->tm_year + 1900, timeinfo->tm_mon + 1, timeinfo->tm_mday);
 }
 
-void iupdrvTextAddBorders(int *w, int *h);
-
 static void gtkCalendarComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   (void)children_expand; /* unset if not a container */
@@ -101,7 +102,7 @@ static void gtkCalendarComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int
 
   *h += 4; /* for the last or first line */
 
-  iupdrvTextAddBorders(w, h);
+  iupdrvTextAddBorders(ih, w, h);
 }
 
 static void gtkCalendarDaySelected(GtkCalendar *calendar, Ihandle* ih)
@@ -175,7 +176,7 @@ Iclass* iupCalendarNewClass(void)
   return ic;
 }
 
-Ihandle *IupCalendar(void)
+IUP_API Ihandle* IupCalendar(void)
 {
   return IupCreate("calendar");
 }

@@ -68,5 +68,19 @@
     <ClCompile Include="..\html\examples\tests\progressdlg.c" />
     <ClCompile Include="..\html\examples\tests\plot.c" />
     <ClCompile Include="..\html\examples\tests\flatbutton.c" />
+    <ClCompile Include="..\html\examples\tests\flatframe.c" />
+    <ClCompile Include="..\html\examples\tests\flatlabel.c" />
+    <ClCompile Include="..\html\examples\tests\flatsample.c" />
+    <ClCompile Include="..\html\examples\tests\flatscrollbox.c" />
+    <ClCompile Include="..\html\examples\tests\flattabs.c" />
+    <ClCompile Include="..\html\examples\tests\flattoggle.c" />
+    <ClCompile Include="..\html\examples\tests\dial_led.c" />
+    <ClCompile Include="..\html\examples\tests\cbox.c" />
+    <ClCompile Include="..\html\examples\tests\detachbox.c" />
+    <ClCompile Include="..\html\examples\tests\dropbutton.c" />
+    <ClCompile Include="..\html\examples\tests\calendar.c" />
+    <ClCompile Include="..\html\examples\tests\mgllabel.c" />
+    <ClCompile Include="..\html\examples\tests\matrixlist.c" />
+    <ClCompile Include="..\html\examples\tests\mathglsamples.c" />
   </ItemGroup>
 </Project>

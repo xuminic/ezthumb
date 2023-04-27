@@ -35,6 +35,8 @@
 #include "iup_glimage.h"
 
 
+#define iupGLDrawCheckSwapCoord(_c1, _c2) { if (_c1 > _c2) { int t = _c2; _c2 = _c1; _c1 = t; } }   /* make sure _c1 is smaller than _c2 */
+
 void iupGLDrawLine(Ihandle* ih, int x1, int y1, int x2, int y2, float linewidth, const char* color, int active)
 {
   unsigned char r = 0, g = 0, b = 0, a = 255;
@@ -68,8 +70,8 @@ void iupGLDrawFrameRect(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, flo
   if (!color || linewidth == 0 || xmin == xmax || ymin == ymax)
     return;
 
-  if (xmin > xmax) { int _t = xmin; xmin = xmax; xmax = _t; }
-  if (ymin > ymax) { int _t = ymin; ymin = ymax; ymax = _t; }
+  iupGLDrawCheckSwapCoord(xmin, xmax);
+  iupGLDrawCheckSwapCoord(ymin, ymax);
 
   iupStrToRGBA(color, &r, &g, &b, &a);
   if (!active)
@@ -82,27 +84,28 @@ void iupGLDrawFrameRect(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, flo
   /* y is oriented top to bottom in IUP */
   ymin = ih->currentheight - 1 - ymin;
   ymax = ih->currentheight - 1 - ymax;
+  iupGLDrawCheckSwapCoord(ymin, ymax);
 
   /* position frame title at left-center */
-  ymin -= title_height / 2;
+  ymax -= title_height / 2;
 
   glBegin(GL_LINE_STRIP);
 
-  glVertex2i(xmin + title_x + title_width, ymin);
+  glVertex2i(xmin + title_x + title_width, ymax);
 
-  glVertex2i(xmax - d, ymin);
-  glVertex2i(xmax, ymin - d);
-
-  glVertex2i(xmax, ymax + d);
   glVertex2i(xmax - d, ymax);
+  glVertex2i(xmax, ymax - d);
 
-  glVertex2i(xmin + d, ymax);
-  glVertex2i(xmin, ymax + d);
+  glVertex2i(xmax, ymin + d);
+  glVertex2i(xmax - d, ymin);
 
-  glVertex2i(xmin, ymin - d);
   glVertex2i(xmin + d, ymin);
+  glVertex2i(xmin, ymin + d);
 
-  glVertex2i(xmin + title_x, ymin);
+  glVertex2i(xmin, ymax - d);
+  glVertex2i(xmin + d, ymax);
+
+  glVertex2i(xmin + title_x, ymax);
 
   glEnd();
 }
@@ -114,8 +117,8 @@ void iupGLDrawRect(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, float li
   if (!color || linewidth == 0 || xmin == xmax || ymin == ymax)
     return;
 
-  if (xmin > xmax) { int _t = xmin; xmin = xmax; xmax = _t; }
-  if (ymin > ymax) { int _t = ymin; ymin = ymax; ymax = _t; }
+  iupGLDrawCheckSwapCoord(xmin, xmax);
+  iupGLDrawCheckSwapCoord(ymin, ymax);
 
   iupStrToRGBA(color, &r, &g, &b, &a);
   if (!active)
@@ -128,24 +131,25 @@ void iupGLDrawRect(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, float li
   /* y is oriented top to bottom in IUP */
   ymin = ih->currentheight - 1 - ymin;
   ymax = ih->currentheight - 1 - ymax;
+  iupGLDrawCheckSwapCoord(ymin, ymax);
 
   glBegin(GL_LINE_LOOP);
 
   if (round)
   {
-    int r = 2;
+    int rd = 2;
 
-    glVertex2i(xmin, ymin-r);
-    glVertex2i(xmin+r, ymin);
+    glVertex2i(xmin, ymax-rd);
+    glVertex2i(xmin+rd, ymax);
 
-    glVertex2i(xmax-r, ymin);
-    glVertex2i(xmax, ymin-r);
+    glVertex2i(xmax-rd, ymax);
+    glVertex2i(xmax, ymax-rd);
 
-    glVertex2i(xmax, ymax+r);
-    glVertex2i(xmax-r, ymax);
+    glVertex2i(xmax, ymin+rd);
+    glVertex2i(xmax-rd, ymin);
 
-    glVertex2i(xmin+r, ymax);
-    glVertex2i(xmin, ymax+r);
+    glVertex2i(xmin+rd, ymin);
+    glVertex2i(xmin, ymin+rd);
   }
   else
   {
@@ -164,7 +168,7 @@ static void iGLDrawBuildSmallCircle(int cx, int cy, int rd)
   Copyright SiegeLord's Abode */
   int i, num_segments = 16;
   double theta = 2 * 3.1415926 / (double)num_segments;
-  double c = cos(theta);  /* precalculate the sine and cosine */
+  double c = cos(theta);  /* pre-calculate the sine and cosine */
   double s = sin(theta);
   double t, x, y;
 
@@ -238,6 +242,9 @@ void iupGLDrawBox(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, const cha
   if (!color || xmin == xmax || ymin == ymax)
     return;
 
+  iupGLDrawCheckSwapCoord(xmin, xmax);
+  iupGLDrawCheckSwapCoord(ymin, ymax);
+
   iupStrToRGBA(color, &r, &g, &b, &a);
   if (!active)
     iupGLColorMakeInactive(&r, &g, &b);
@@ -247,15 +254,16 @@ void iupGLDrawBox(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, const cha
   /* y is oriented top to bottom in IUP */
   ymin = ih->currentheight - 1 - ymin;
   ymax = ih->currentheight - 1 - ymax;
+  iupGLDrawCheckSwapCoord(ymin, ymax);
 
   /* must disable polygon smooth or fill may get diagonal lines */
   smooth = glIsEnabled(GL_POLYGON_SMOOTH);
   if (smooth) glDisable(GL_POLYGON_SMOOTH);
   glBegin(GL_QUADS);
-  glVertex2i(xmin, ymin);
-  glVertex2i(xmax, ymin);
-  glVertex2i(xmax, ymax);
-  glVertex2i(xmin, ymax);
+  glVertex2i(xmin,   ymin);
+  glVertex2i(xmax+1, ymin);     /* fill the last pixel */
+  glVertex2i(xmax+1, ymax+1);
+  glVertex2i(xmin,   ymax+1);
   glEnd();
   if (smooth) glEnable(GL_POLYGON_SMOOTH);
 }
@@ -449,9 +457,7 @@ static void iGLDrawImage(Ihandle* ih, int xmin, int xmax, int ymin, int ymax, Ih
       /* y is oriented top to bottom in IUP */
       ymin = ih->currentheight - 1 - ymin;
       ymax = ih->currentheight - 1 - ymax;
-
-      /* y is at image bottom and oriented bottom to top in OpenGL */
-      { int tmp = ymin; ymin = ymax; ymax = tmp; }
+      iupGLDrawCheckSwapCoord(ymin, ymax);
 
       glBegin(GL_QUADS);
       glTexCoord2d(0.0, 0.0); glVertex2d(xmin, ymin);
@@ -571,7 +577,7 @@ static void iGLDrawText(Ihandle* ih, const char* str, int max_len, int x, int y)
     glTranslated(0.0, (double)-lineheight, 0.0);
 
     curstr = nextstr;
-  } while (*nextstr);
+  } while (nextstr && *nextstr);
 
   glPopMatrix();
 }

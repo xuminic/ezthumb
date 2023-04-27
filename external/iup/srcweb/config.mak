@@ -7,6 +7,10 @@ LDIR = ../lib/$(TEC_UNAME)
 LIBS = iup
 SRC = iup_webbrowser.c
 
+ifeq ($(findstring Win, $(TEC_SYSNAME)), )
+  DEPENDDIR = dep
+endif
+
 ifneq ($(findstring Win, $(TEC_SYSNAME)), )
   SRC += iupwin_webbrowser.cpp
   LIBS += iupole comsuppw
@@ -27,21 +31,26 @@ else
     SRC  += iupgtk_webbrowser.c
     USE_GTK = Yes
     INCLUDES += ../src/gtk
-    STDINCS += $(GTK)/include/webkit-1.0 $(GTK)/include/libsoup-2.4
+    STDINCS += $(GTK)/include/libsoup-2.4
     LINK_WEBKIT = Yes
     
-    ifneq ($(findstring Linux4, $(TEC_UNAME)), )
-      USE_GTK3 = Yes
-      STDINCS += $(GTK)/include/webkitgtk-3.0
+    ifdef USE_GTK3
+      ifneq ($(findstring Linux5, $(TEC_UNAME)), )
+        DEFINES += USE_WEBKIT2
+        STDINCS += $(GTK)/include/webkitgtk-4.0
+      else
+        ifneq ($(findstring Linux4, $(TEC_UNAME)), )
+          DEFINES += USE_WEBKIT2
+          STDINCS += $(GTK)/include/webkitgtk-4.0
+        else
+          STDINCS += $(GTK)/include/webkitgtk-3.0
+        endif
+      endif
     else 
       ifneq ($(findstring Linux3, $(TEC_UNAME)), )
-        ifneq ($(findstring Linux31, $(TEC_UNAME)), )
-          USE_GTK3 = Yes
-          STDINCS += $(GTK)/include/webkitgtk-3.0
-        else
-          STDINCS += $(GTK)/include/webkitgtk-1.0
-        endif
+        STDINCS += $(GTK)/include/webkitgtk-1.0
       else
+        STDINCS += $(GTK)/include/webkit-1.0
       endif
     endif
   else

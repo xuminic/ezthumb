@@ -341,10 +341,8 @@ static int wGLCanvasMapMethod(Ihandle* ih)
   return wGLCreateContext(ih, gldata);
 }
 
-static void wGLCanvasUnMapMethod(Ihandle* ih)
+static void wGLReleaseContext(IGlControlData* gldata)
 {
-  IGlControlData* gldata = (IGlControlData*)iupAttribGet(ih, "_IUP_GLCONTROLDATA");
-
   if (gldata->context)
   {
     if (gldata->context == wglGetCurrentContext())
@@ -352,6 +350,13 @@ static void wGLCanvasUnMapMethod(Ihandle* ih)
 
     wglDeleteContext(gldata->context);
   }
+}
+
+static void wGLCanvasUnMapMethod(Ihandle* ih)
+{
+  IGlControlData* gldata = (IGlControlData*)iupAttribGet(ih, "_IUP_GLCONTROLDATA");
+
+  wGLReleaseContext(gldata);
 
   if (gldata->palette)
     DeleteObject((HGDIOBJ)gldata->palette);
@@ -375,13 +380,7 @@ static int wGLCanvasSetRefreshContextAttrib(Ihandle* ih, const char* value)
 
   if (!gldata->is_owned_dc)
   {
-    if (gldata->context)
-    {
-      if (gldata->context == wglGetCurrentContext())
-        wglMakeCurrent(NULL, NULL);
-
-      wglDeleteContext(gldata->context);
-    }
+    wGLReleaseContext(gldata);
 
     if (gldata->device)
       ReleaseDC(gldata->window, gldata->device);

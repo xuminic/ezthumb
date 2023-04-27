@@ -12,7 +12,7 @@
 
 #include "iup_str.h"
 
-int IupExecute(const char *filename, const char* parameters)
+IUP_API int IupExecute(const char *filename, const char* parameters)
 {
   int ret;
   if (parameters)
@@ -34,7 +34,7 @@ int IupExecute(const char *filename, const char* parameters)
   return 1;
 }
 
-int IupExecuteWait(const char *filename, const char* parameters)
+IUP_API int IupExecuteWait(const char *filename, const char* parameters)
 {
   int ret;
   if (parameters)
@@ -51,7 +51,7 @@ int IupExecuteWait(const char *filename, const char* parameters)
   return 1;
 }
 
-int IupHelp(const char *url)
+IUP_API int IupHelp(const char *url)
 {
   char *browser = getenv("IUP_HELPAPP");
   if (!browser) 

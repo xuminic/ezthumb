@@ -1,5 +1,5 @@
 /** \file
- * \brief Text Controls Private Declarations
+ * \brief Text Control (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -13,8 +13,8 @@ extern "C" {
 
 
 void iupdrvTextInitClass(Iclass* ic);
-void iupdrvTextAddBorders(int *w, int *h);
-void iupdrvTextAddSpin(int *w, int h);
+void iupdrvTextAddBorders(Ihandle* ih, int *w, int *h);
+void iupdrvTextAddSpin(Ihandle* ih, int *w, int h);
 void* iupdrvTextAddFormatTagStartBulk(Ihandle* ih);
 void iupdrvTextAddFormatTagStopBulk(Ihandle* ih, void* state);
 void iupdrvTextAddFormatTag(Ihandle* ih, Ihandle* formattag, int bulk);

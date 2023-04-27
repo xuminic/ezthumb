@@ -235,14 +235,11 @@ static const char* iKeyBaseCodeToName(int code, unsigned char *mod)
   return name;                               \
 }
 
-char* iupKeyCodeToName(int code)
+IUP_SDK_API char* iupKeyCodeToName(int code)
 {
   unsigned char mod = 0;
   const char* base_name;
 
-  if (code <= 0)
-    return NULL;
-  
   base_name = iKeyBaseCodeToName(iup_XkeyBase(code), &mod);
   if (!base_name)
   {
@@ -295,7 +292,7 @@ static void iKeyCallFunc(void (*func)(const char *name, int code, void* user_dat
   }
 }
 
-void iupKeyForEach(void (*func)(const char *name, int code, void* user_data), void* user_data)
+IUP_SDK_API void iupKeyForEach(void(*func)(const char *name, int code, void* user_data), void* user_data)
 {
   /* Used only by the IupLua binding. */
   int code, map;
@@ -328,7 +325,7 @@ void iupKeyForEach(void (*func)(const char *name, int code, void* user_data), vo
   iKeyCallFunc(func, user_data, "K_diaeresis", K_diaeresis, 1);
 }
 
-int iupKeyCallKeyCb(Ihandle *ih, int code)
+IUP_SDK_API int iupKeyCallKeyCb(Ihandle *ih, int code)
 {
   char* name = iupKeyCodeToName(code);
   for (; ih; ih = ih->parent)
@@ -349,7 +346,7 @@ int iupKeyCallKeyCb(Ihandle *ih, int code)
   return IUP_DEFAULT;
 }
 
-int iupKeyCallKeyPressCb(Ihandle *ih, int code, int press)
+IUP_SDK_API int iupKeyCallKeyPressCb(Ihandle *ih, int code, int press)
 {
   IFnii cb = (IFnii)IupGetCallback(ih, "KEYPRESS_CB");
   if (cb) return cb(ih, code, press);
@@ -362,7 +359,43 @@ static void iupKeyActivate(Ihandle* ih)
     iupdrvActivate(ih);
 }
 
-int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
+static void iupSetFontSizeChildren(Ihandle *ih, int inc)
+{
+  /* if FONT is set at a child, 
+     then it will not inherit the value set at the dialog.
+     Must be manually increased or decreased. */
+  Ihandle* child = ih->firstchild;
+  while (child)
+  {
+    if (child->iclass->childtype == IUP_CHILDNONE &&  /* only for non-containers */
+        iupTableGet(child->attrib, "FONT"))  /* FONT must be defined */
+    {
+      int new_size;
+      int size = IupGetInt(child, "FONTSIZE");
+
+      if (inc)
+      {
+        new_size = (size * 11) / 10; /* 10% increase */
+        if (new_size == size) new_size++;
+        inc = 1;
+      }
+      else
+      {
+        new_size = (size * 9) / 10; /* 10% decrease */
+        if (new_size == size) new_size--;
+        inc = 0;
+      }
+
+      IupSetInt(child, "FONTSIZE", new_size);
+    }
+
+    iupSetFontSizeChildren(child, inc);
+
+    child = child->brother;
+  }
+}
+
+IUP_SDK_API int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
 {
   /* this is called after K_ANY is processed, 
      so the user may change its behavior */
@@ -409,8 +442,10 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
   {
     Ihandle* bt = IupGetAttributeHandle(IupGetDialog(ih), "DEFAULTESC");
     if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "flatbutton")))
+    {
       iupKeyActivate(bt);
-    return 1;
+      return 1;
+    }
   }
   else if (code==K_CR || code==K_cCR)
   {
@@ -421,8 +456,10 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
     {
       Ihandle* bt = IupGetAttributeHandle(IupGetDialog(ih), "DEFAULTENTER");
       if (iupObjectCheck(bt) && (IupClassMatch(bt, "button") || IupClassMatch(bt, "flatbutton")))
+      {
         iupKeyActivate(bt);
-      return 1;
+        return 1;
+      }
     }
   }
   else if (iup_isCtrlXkey(code) && iup_isShiftXkey(code) && iup_isAltXkey(code) && iup_XkeyBase(code) == K_L)
@@ -437,22 +474,26 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
     if (iupStrBoolean(IupGetGlobal("GLOBALLAYOUTRESIZEKEY")))
     {
       int new_size;
-      int size = IupGetInt(IupGetDialog(ih), "FONTSIZE");
+      Ihandle* dialog = IupGetDialog(ih);
+      int size = IupGetInt(dialog, "FONTSIZE");
+      int inc;
 
       if (iup_XkeyBase(code) == K_plus || iup_XkeyBase(code) == K_equal)
       {
         new_size = (size * 11) / 10; /* 10% increase */
         if (new_size == size) new_size++;
+        inc = 1;
       }
       else
       {
         new_size = (size * 9) / 10; /* 10% decrease */
         if (new_size == size) new_size--;
+        inc = 0;
       }
 
-      IupSetInt(IupGetDialog(ih), "FONTSIZE", new_size);
+      IupSetInt(dialog, "FONTSIZE", new_size);
+      iupSetFontSizeChildren(dialog, inc);
 
-      IupSetAttribute(IupGetDialog(ih), "SIZE", NULL);
       IupRefresh(ih);
     }
   }
@@ -467,7 +508,7 @@ int iupKeyProcessNavigation(Ihandle* ih, int code, int shift)
   return 0;
 }
 
-int iupKeyProcessMnemonic(Ihandle* ih, int code)
+IUP_SDK_API int iupKeyProcessMnemonic(Ihandle* ih, int code)
 {
   Ihandle *ih_mnemonic, *dialog = IupGetDialog(ih);
   char attrib[16] = "_IUP_MNEMONIC_ ";
@@ -500,7 +541,7 @@ int iupKeyProcessMnemonic(Ihandle* ih, int code)
   return 0;
 }
 
-void iupKeySetMnemonic(Ihandle* ih, int code, int pos)
+IUP_SDK_API void iupKeySetMnemonic(Ihandle* ih, int code, int pos)
 {
   Ihandle* ih_dialog = IupGetDialog(ih);
   char attrib[16] = "_IUP_MNEMONIC_ ";

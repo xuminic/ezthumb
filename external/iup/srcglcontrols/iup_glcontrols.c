@@ -18,6 +18,9 @@
 
 int IupGLControlsOpen(void)
 {
+  if (!IupIsOpened())
+    return IUP_ERROR;
+
   IupGLCanvasOpen();
 
   if (IupGetGlobal("_IUP_GLCONTROLS_OPEN"))

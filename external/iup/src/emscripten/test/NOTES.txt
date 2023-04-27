@@ -1,0 +1,28 @@
+Use the build_all.sh script because the build_link.sh doesn't work. (See below)
+
+- I am still unable to properly build a library. Symbols are getting stripped (see below) and the --js-library modules don't seem to be appearing.
+
+
+- IUP is oddly one of the few cross-platform projects that doesn't use visibility export annotations for public APIs. Emscripten doesn't support export files, so we need the marker, otherwise all public symbols get stripped when building a library. Emscripten provides the marker EMSCRIPTEN_KEEPALIVE which is easily compatible with the Windows __declspec and gcc visibility attributes.
+
+
+
+ - To build the library (which doesn't work yet), go to the root of the source tree and do:
+emmake make -f Makefile.emscripten
+
+
+- I'm currently trying to have separate .js files for each widget implementation. This is resulting in needing --js-library flags for each. This doesn't seem to be common. This should be investigated to see what I'm really supposed to be doing, or if I'm even using it right.
+
+- Need to know where the clear place for initialization and destruction is for the s_integerIdToIhandleMap in iupemscripen_common.c
+
+
+- As I stated in my Event loop modification proposal ("ENTRY_POINT") due to Mac, iOS, and Android, Emscripten shares similar problems. Basically, you may not block the event loop. Furthermore, int main() runs straight through now, so you cannot have IupClose() at the end of main. 
+Note: Emscripten will keep the app alive/functioning after main finishes with -s NO_EXIT_RUNTIME=1, so if IupClose() is omitted, the program will continue to respond.
+Overall, I feel this further validates my proposal.
+I hacked in an ENTRY_POINT functionality similar to my proposal.
+However, I was lazy in my implementation and did not create new function pointer types and API functions to set the entry point. I am reusing IupSetFunction and Icallback, but ignoring the return type and parameter. But Emscripten is intoleratnt of this and throws an exception. Types must be exact. 
+Hence:
+int IupEntryPoint(Ihandle* noop)
+instead of
+void IupEntryPoint(void)
+

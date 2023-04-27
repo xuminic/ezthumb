@@ -1,0 +1,102 @@
+apply plugin: 'com.android.library'
+
+// Add a new entry to local.properties:
+// prebuilt_external_libs.dir=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32
+// This should contain a lua directory with a layout like the old Android NDK "module" system, which contains include/ and libs/<arch>/lib*.so
+// This path will be passed to CMake as -DPREBUILT_LIBRARY_PATH because the Android cross-compile chain disables the FIND_ system with CMAKE_PREFIX_PATH and friends.
+// This custom flag works in conjunction with our InitialCacheAndroid.cmake file which effectively restores the FIND_ behavior.
+Properties local_properties = new Properties()
+local_properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def prebuilt_library_path = local_properties.getProperty('prebuilt_external_libs.dir')
+
+android {
+	compileSdkVersion rootProject.ext.compileSdkVersion
+
+	defaultConfig {
+		minSdkVersion rootProject.ext.minSdkVersion
+		targetSdkVersion rootProject.ext.targetSdkVersion
+		versionCode rootProject.ext.versionCode
+		versionName rootProject.ext.versionName
+
+//		testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+
+
+		externalNativeBuild {
+			cmake {
+				arguments "-DIUP_USE_LUA:BOOL=1",
+						"-DIUP_ANDROID_BUILD_IUPWEB=1",
+//						"-DLUA_DIR=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32/lua",
+//						"-DLUA_DIR=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32/lua",
+//						"-DPREBUILT_LIBRARY_PATH=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32",
+						"-DPREBUILT_LIBRARY_PATH=" + prebuilt_library_path,
+						"-C../../CMakeModules/InitialCacheAndroid.cmake"
+//						"-DLUA_INCLUDE_PREFIX:PATH=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32",
+//						"-DLUA_INCLUDE_DIR:PATH=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32/lua/include",
+//						"-DLUA_LIBRARY:FILEPATH=/Users/ewing/Source/Blurrr/Release/BlurrrSDKApple/Libraries/SDK/Android/Lua_f32_i32/lua/libs/armeabi-v7a/liblua.so"
+				cFlags ""
+				cppFlags ""
+			}
+		}
+
+		ndk {
+			// Specifies the ABI configurations of your native
+			// libraries Gradle should build and package with your APK.
+//			abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+//			abiFilters 'arm64-v8a', 'x86_64'
+//			abiFilters 'armeabi-v7a', 'x86'
+//			abiFilters 'armeabi-v7a'
+//			abiFilters 'x86'
+//			abiFilters 'arm64-v8a'
+			abiFilters rootProject.ext.abiFilters
+
+		}
+
+		packagingOptions {
+			exclude 'lib/armeabi/libiup.so'
+			exclude 'lib/armeabi/libiupimglib.so'
+			exclude 'lib/armeabi-v7a/libiup.so'
+			exclude 'lib/armeabi-v7a/libiupimglib.so'
+			exclude 'lib/armeabi-v7a/libiupweb.so'
+			exclude 'lib/x86/libiup.so'
+			exclude 'lib/x86/libiupimglib.so'
+			exclude 'lib/x86/libiupweb.so'
+			exclude 'lib/x86_64/libiup.so'
+			exclude 'lib/x86_64/libiupimglib.so'
+			exclude 'lib/x86_64/libiupweb.so'
+			exclude 'lib/arm64-v8a/libiup.so'
+			exclude 'lib/arm64-v8a/libiupimglib.so'
+			exclude 'lib/arm64-v8a/libiupweb.so'
+			exclude 'R.txt'
+			exclude 'res/anim/**'
+			exclude 'res/anim/iup_slide_from_left.xml'
+			exclude 'res/anim/*.xml'
+			exclude '/res/anim/**'
+			exclude '**/res/anim/**'
+
+
+
+		}
+	}
+	buildTypes {
+		release {
+			minifyEnabled false
+			proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../../CMakeLists.txt"
+		}
+	}
+}
+
+dependencies {
+//	compile project(':iupweb')
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+//	androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+//		exclude group: 'com.android.support', module: 'support-annotations'
+//	})
+	implementation rootProject.ext.appCompat
+//	testCompile 'junit:junit:4.12'
+}

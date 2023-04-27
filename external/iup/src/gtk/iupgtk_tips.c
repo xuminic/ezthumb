@@ -38,7 +38,7 @@ static void gtkTooltipSetTitle(Ihandle* ih, GtkWidget* widget, const char* value
 }
 
 #if GTK_CHECK_VERSION(2, 12, 0)
-static gboolean gtkQueryTooltip(GtkWidget *widget, gint x, gint y, gboolean keyboard_mode, GtkTooltip *tooltip, Ihandle* ih)
+static gboolean gtkQueryTooltip(GtkWidget *widget, gint _x, gint _y, gboolean keyboard_mode, GtkTooltip *tooltip, Ihandle* ih)
 {
   char* value;
 
@@ -84,8 +84,8 @@ static gboolean gtkQueryTooltip(GtkWidget *widget, gint x, gint y, gboolean keyb
    TIPBGCOLOR, TIPFGCOLOR and TIPFONT, but it does not work
    because it returns NULL inside the signal. */
 
-  (void)y;
-  (void)x;
+  (void)_y;
+  (void)_x;
   (void)widget;
   return FALSE;
 }

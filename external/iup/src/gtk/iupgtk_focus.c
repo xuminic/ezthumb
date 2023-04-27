@@ -20,7 +20,7 @@
 #include "iupgtk_drv.h"
 
 
-void iupgtkSetCanFocus(GtkWidget *widget, int can)
+IUP_DRV_API void iupgtkSetCanFocus(GtkWidget *widget, int can)
 {
 #if GTK_CHECK_VERSION(2, 18, 0)
   gtk_widget_set_can_focus(widget, can);
@@ -40,9 +40,12 @@ void iupdrvSetFocus(Ihandle *ih)
   gtk_widget_grab_focus(ih->handle);
 }
 
-gboolean iupgtkFocusInOutEvent(GtkWidget *widget, GdkEventFocus *evt, Ihandle *ih)
+IUP_DRV_API gboolean iupgtkFocusInOutEvent(GtkWidget *widget, GdkEventFocus *evt, Ihandle *ih)
 {
   (void)widget;
+
+  if (!iupObjectCheck(ih))
+    return TRUE;
 
   if (evt->in)
   {

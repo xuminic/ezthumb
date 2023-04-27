@@ -32,14 +32,31 @@
 #include "iupmot_color.h"
 
 
-void iupdrvFrameGetDecorOffset(int *x, int *y)
+void iupdrvFrameGetDecorOffset(Ihandle* ih, int *x, int *y)
 {
+  (void)ih;
   *x = 2;
   *y = 2;
 }
 
-int iupdrvFrameHasClientOffset(void)
+int iupdrvFrameHasClientOffset(Ihandle* ih)
 {
+  (void)ih;
+  return 0;
+}
+
+int iupdrvFrameGetTitleHeight(Ihandle* ih, int *h)
+{
+  (void)ih;
+  (void)h;
+  return 0;
+}
+
+int iupdrvFrameGetDecorSize(Ihandle* ih, int *w, int *h)
+{
+  (void)ih;
+  (void)w;
+  (void)h;
   return 0;
 }
 
@@ -104,7 +121,7 @@ static int motFrameSetBackgroundAttrib(Ihandle* ih, const char* value)
   }
   else
   {
-    Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0);
+    Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0, NULL);
     if (pixmap)
     {
       Widget child_manager = (Widget)iupAttribGet(ih, "_IUPMOT_FRAMECONTAINER");
@@ -135,7 +152,8 @@ static int motFrameSetFgColorAttrib(Ihandle* ih, const char* value)
 
 static int motFrameSetFontAttrib(Ihandle* ih, const char* value)
 {
-  iupdrvSetFontAttrib(ih, value);
+  if (!iupdrvSetFontAttrib(ih, value))
+    return 0;
 
   if (ih->handle)
   {

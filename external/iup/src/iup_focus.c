@@ -16,9 +16,10 @@
 #include "iup_attrib.h"
 #include "iup_str.h"
 #include "iup_drv.h"
+#include "iup_childtree.h"
 
 
-Ihandle* iupFocusNextInteractive(Ihandle *ih)
+IUP_SDK_API Ihandle* iupFocusNextInteractive(Ihandle *ih)
 {
   Ihandle *c;
 
@@ -34,7 +35,7 @@ Ihandle* iupFocusNextInteractive(Ihandle *ih)
   return NULL;
 }
 
-int iupFocusCanAccept(Ihandle *ih)
+IUP_SDK_API int iupFocusCanAccept(Ihandle *ih)
 {
   if (ih->iclass->is_interactive &&  /* interactive */
       iupAttribGetBoolean(ih, "CANFOCUS") &&   /* can receive focus */
@@ -113,7 +114,7 @@ static Ihandle* iFocusFindNext(Ihandle *ih, int checkradio)
   return NULL;
 }
 
-Ihandle* IupNextField(Ihandle *ih)
+IUP_API Ihandle* IupNextField(Ihandle *ih)
 {
   Ihandle *ih_next;
 
@@ -124,7 +125,7 @@ Ihandle* IupNextField(Ihandle *ih)
   ih_next = iFocusFindNext(ih, 1);
   if (!ih_next)
   {
-    /* not found after the element, then start over from the begining,
+    /* not found after the element, then start over from the beginning,
        at the dialog. */
     ih_next = iFocusFindNext(IupGetDialog(ih), 1);
     if (ih_next == ih)
@@ -145,7 +146,7 @@ void iupFocusNext(Ihandle *ih)
   Ihandle *ih_next = iFocusFindNext(ih, 0);
   if (!ih_next)
   {
-    /* not found after the element, then start over from the begining,
+    /* not found after the element, then start over from the beginning,
        at the dialog. */
     ih_next = iFocusFindNext(IupGetDialog(ih), 0);
     if (ih_next == ih)
@@ -186,7 +187,7 @@ static int iFocusFindPrevious(Ihandle *parent, Ihandle **previous, Ihandle *ih, 
   return 0;
 }
 
-Ihandle* IupPreviousField(Ihandle *ih)
+IUP_API Ihandle* IupPreviousField(Ihandle *ih)
 {
   Ihandle *previous = NULL;
 
@@ -219,9 +220,9 @@ void iupFocusPrevious(Ihandle *ih)
 
 /* local variables */
 static Ihandle* iup_current_focus = NULL;
-static Ihandle* iup_current_focus_dialog = NULL;
+static Ihandle* iup_current_dialog_focus = NULL;
 
-Ihandle* IupGetFocus(void)
+IUP_API Ihandle* IupGetFocus(void)
 {
   return iup_current_focus;
 }
@@ -233,25 +234,37 @@ void iupSetCurrentFocus(Ihandle *ih)
   if (ih)
   {
     Ihandle* dialog = IupGetDialog(ih);
-    if (iup_current_focus_dialog != dialog)
+    Ihandle* current_dialog = iup_current_dialog_focus;
+
+    if (current_dialog != dialog)
     {
       IFni cb;
 
-      if (iupObjectCheck(iup_current_focus_dialog)) /* can be NULL at start or can be destroyed */
+      /* change it before calling the callbacks 
+         because focus can be changed again from inside the callbacks. */
+      iup_current_dialog_focus = dialog;
+
+      if (iupObjectCheck(current_dialog)) /* can be NULL at start or can be destroyed */
       {
-        cb = (IFni)IupGetCallback(iup_current_focus_dialog, "FOCUS_CB");
-        if (cb) cb(iup_current_focus_dialog, 0);
+        cb = (IFni)IupGetCallback(current_dialog, "FOCUS_CB");
+        if (cb) cb(current_dialog, 0);
       }
 
-      iup_current_focus_dialog = dialog;
-
-      cb = (IFni)IupGetCallback(iup_current_focus_dialog, "FOCUS_CB");
-      if (cb) cb(iup_current_focus_dialog, 1);
+      cb = (IFni)IupGetCallback(iup_current_dialog_focus, "FOCUS_CB");
+      if (cb) cb(iup_current_dialog_focus, 1);
     }
   }
 }
 
-Ihandle *IupSetFocus(Ihandle *ih)
+void iupResetCurrentFocus(Ihandle *destroyed_ih)
+{
+  if (iup_current_focus == destroyed_ih)
+    iup_current_focus = NULL;
+  if (iup_current_dialog_focus == destroyed_ih)
+    iup_current_dialog_focus = NULL;
+}
+
+IUP_API Ihandle *IupSetFocus(Ihandle *ih)
 {
   Ihandle* old_focus = IupGetFocus();
 
@@ -268,7 +281,7 @@ Ihandle *IupSetFocus(Ihandle *ih)
   return old_focus;
 }
 
-void iupCallGetFocusCb(Ihandle *ih)
+IUP_SDK_API void iupCallGetFocusCb(Ihandle *ih)
 {
   Icallback cb;
 
@@ -285,9 +298,25 @@ void iupCallGetFocusCb(Ihandle *ih)
   }
 
   iupSetCurrentFocus(ih);
+
+  if (iupAttribGetBoolean(ih, "PROPAGATEFOCUS"))
+  {
+    Ihandle* parent = iupChildTreeGetNativeParent(ih);
+    while (parent)
+    {
+      IFni focus_cb = (IFni)IupGetCallback(parent, "FOCUS_CB");
+      if (focus_cb)
+      {
+        focus_cb(parent, 1);
+        break;
+      }
+
+      parent = iupChildTreeGetNativeParent(parent);
+    }
+  }
 }
 
-void iupCallKillFocusCb(Ihandle *ih)
+IUP_SDK_API void iupCallKillFocusCb(Ihandle *ih)
 {
   Icallback cb;
 
@@ -301,6 +330,22 @@ void iupCallKillFocusCb(Ihandle *ih)
   {
     IFni cb2 = (IFni)IupGetCallback(ih, "FOCUS_CB");
     if (cb2) cb2(ih, 0);
+  }
+
+  if (iupObjectCheck(ih) && iupAttribGetBoolean(ih, "PROPAGATEFOCUS"))
+  {
+    Ihandle* parent = iupChildTreeGetNativeParent(ih);
+    while (parent)
+    {
+      IFni focus_cb = (IFni)IupGetCallback(parent, "FOCUS_CB");
+      if (focus_cb)
+      {
+        focus_cb(parent, 0);
+        break;
+      }
+
+      parent = iupChildTreeGetNativeParent(parent);
+    }
   }
 
   iupSetCurrentFocus(NULL);

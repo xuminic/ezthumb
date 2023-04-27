@@ -10,6 +10,7 @@
 #include <string.h>
 #include <memory.h>
 
+#include "iup_export.h"
 #include "iup_table.h"
 #include "iup_str.h"
 #include "iup_assert.h"
@@ -31,10 +32,10 @@ typedef struct _ItableContext
 } ItableContext;
 
 /* A key of an item.
- * To avoid lots of string comparisions we store
+ * To avoid lots of string comparisons we store
  * a keyindex as an integer.
  * To find a key in an item list we only have to
- * do integer comparisions.
+ * do integer comparisons.
  * Additionally the key itself is stored in
  * keyStr. In a string indexed hashtable this is
  * a duplicated string, in a pointer indexed hash table
@@ -112,13 +113,13 @@ static void iTableCheckDuplicated(ItableItem *item, unsigned int nextItemIndex,
 #endif
 
 
-Itable *iupTableCreate(Itable_IndexTypes indexType)
+IUP_SDK_API Itable *iupTableCreate(Itable_IndexTypes indexType)
 {
   return iupTableCreateSized(indexType, 1);  /* 101 shows to be a better start for IUP */
 }
 
 
-Itable *iupTableCreateSized(Itable_IndexTypes indexType, unsigned int initialSizeIndex)
+IUP_SDK_API Itable *iupTableCreateSized(Itable_IndexTypes indexType, unsigned int initialSizeIndex)
 {
   Itable *it = (Itable *)malloc(sizeof(Itable));
   iupASSERT(it!=NULL);
@@ -149,7 +150,7 @@ Itable *iupTableCreateSized(Itable_IndexTypes indexType, unsigned int initialSiz
   return it;
 }
 
-void iupTableClear(Itable *it)
+IUP_SDK_API void iupTableClear(Itable *it)
 {
   unsigned int i;
 
@@ -174,7 +175,7 @@ void iupTableClear(Itable *it)
   it->context.itemIndex = (unsigned int)-1;
 }
 
-void iupTableDestroy(Itable *it)
+IUP_SDK_API void iupTableDestroy(Itable *it)
 {
   if (!it)
     return;
@@ -194,7 +195,7 @@ void iupTableDestroy(Itable *it)
   free(it);
 }
 
-int iupTableCount(Itable *it)
+IUP_SDK_API int iupTableCount(Itable *it)
 {
   iupASSERT(it!=NULL);
   if (!it)
@@ -202,12 +203,12 @@ int iupTableCount(Itable *it)
   return it->numberOfEntries;
 }
 
-void iupTableSetFunc(Itable *it, const char *key, Ifunc func)
+IUP_SDK_API void iupTableSetFunc(Itable *it, const char *key, Ifunc func)
 {
   iupTableSet(it, key, (void*)func, IUPTABLE_FUNCPOINTER); /* type cast from function pointer to void* */
 }
 
-void iupTableSet(Itable *it, const char *key, void *value, Itable_Types itemType)
+IUP_SDK_API void iupTableSet(Itable *it, const char *key, void *value, Itable_Types itemType)
 {
   unsigned int  itemIndex,
                 itemFound;
@@ -261,7 +262,6 @@ void iupTableSet(Itable *it, const char *key, void *value, Itable_Types itemType
   else
   {
     /* change an existing item */
-    void *v;
     item = &(entry->items[itemIndex]);
 
     if (itemType == IUPTABLE_STRING && item->itemType == IUPTABLE_STRING)
@@ -279,7 +279,7 @@ void iupTableSet(Itable *it, const char *key, void *value, Itable_Types itemType
     if (item->itemType == IUPTABLE_STRING)
       free(item->value);
 
-    item->value    = v;
+    item->value = v;
     item->itemType = itemType;
   }
 }
@@ -314,7 +314,7 @@ static void iTableRemoveItem(Itable *it, ItableEntry *entry, unsigned int itemIn
   it->numberOfEntries--;
 }
 
-void iupTableRemove(Itable *it, const char *key)
+IUP_SDK_API void iupTableRemove(Itable *it, const char *key)
 {
   unsigned int itemFound,
                itemIndex;
@@ -331,37 +331,7 @@ void iupTableRemove(Itable *it, const char *key)
     iTableRemoveItem(it, entry, itemIndex);
 }
 
-void *iupTableGet(Itable *it, const char *key)
-{
-  unsigned int  itemFound,
-                itemIndex;
-  unsigned long keyIndex;
-  ItableEntry  *entry;
-  void         *value = 0;
-
-  iupASSERT(it!=NULL);
-  iupASSERT(key!=NULL);
-  if (!it || !key)
-    return 0;
-
-  itemFound = iTableFindItem(it, key, &entry, &itemIndex, &keyIndex);
-  if (itemFound)
-    value = entry->items[itemIndex].value;
-
-  return value;
-}
-
-Ifunc iupTableGetFunc(Itable *it, const char *key, void **value)
-{
-  Itable_Types itemType = IUPTABLE_POINTER;
-  *value = iupTableGetTyped(it, key, &itemType);
-  if (itemType == IUPTABLE_FUNCPOINTER)
-    return (Ifunc)(*value); /* type cast from void* to function pointer */
-  else
-    return (Ifunc)0;
-}
-
-void *iupTableGetTyped(Itable *it, const char *key, Itable_Types *itemType)
+IUP_SDK_API void* iupTableGet(Itable *it, const char *key)
 {
   unsigned int  itemFound,
                 itemIndex;
@@ -377,15 +347,50 @@ void *iupTableGetTyped(Itable *it, const char *key, Itable_Types *itemType)
   itemFound = iTableFindItem(it, key, &entry, &itemIndex, &keyIndex);
   if (itemFound)
   {
-    value = entry->items[itemIndex].value;
-    if (itemType) 
-      *itemType = entry->items[itemIndex].itemType;
+    ItableItem* item = &(entry->items[itemIndex]);
+    value = item->value;
   }
 
   return value;
 }
 
-void iupTableSetCurr(Itable *it, void* value, Itable_Types itemType)
+IUP_SDK_API Ifunc iupTableGetFunc(Itable *it, const char *key, void **value)
+{
+  Itable_Types itemType = IUPTABLE_POINTER;
+  *value = iupTableGetTyped(it, key, &itemType);
+  if (itemType == IUPTABLE_FUNCPOINTER)
+    return (Ifunc)(*value); /* type cast from void* to function pointer */
+  else
+    return (Ifunc)0;
+}
+
+IUP_SDK_API void* iupTableGetTyped(Itable *it, const char *key, Itable_Types *itemType)
+{
+  unsigned int  itemFound,
+                itemIndex;
+  unsigned long keyIndex;
+  ItableEntry  *entry;
+  void         *value = 0;
+
+  iupASSERT(it!=NULL);
+  iupASSERT(key!=NULL);
+  if (!it || !key)
+    return 0;
+
+  itemFound = iTableFindItem(it, key, &entry, &itemIndex, &keyIndex);
+  if (itemFound)
+  {
+    ItableItem* item = &(entry->items[itemIndex]);
+
+    value = item->value;
+    if (itemType) 
+      *itemType = item->itemType;
+  }
+
+  return value;
+}
+
+IUP_SDK_API void iupTableSetCurr(Itable *it, void* value, Itable_Types itemType)
 {
   void* v;
   ItableItem *item;
@@ -412,22 +417,25 @@ void iupTableSetCurr(Itable *it, void* value, Itable_Types itemType)
   if (item->itemType == IUPTABLE_STRING)
     free(item->value);
 
-  item->value    = v;
+  item->value = v;
   item->itemType = itemType;
 
 }
 
-void* iupTableGetCurr(Itable *it)
+IUP_SDK_API void* iupTableGetCurr(Itable *it)
 {
   iupASSERT(it!=NULL);
   if (!it || it->context.entryIndex == (unsigned int)-1
          || it->context.itemIndex == (unsigned int)-1)
     return 0;
-
-  return it->entries[it->context.entryIndex].items[it->context.itemIndex].value;
+  else
+  {
+    ItableItem* item = &(it->entries[it->context.entryIndex].items[it->context.itemIndex]);
+    return item->value;
+  }
 }
 
-int iupTableGetCurrType(Itable *it)
+IUP_SDK_API int iupTableGetCurrType(Itable *it)
 {
   iupASSERT(it!=NULL);
   if (!it || it->context.entryIndex == (unsigned int)-1
@@ -437,7 +445,7 @@ int iupTableGetCurrType(Itable *it)
   return it->entries[it->context.entryIndex].items[it->context.itemIndex].itemType;
 }
 
-char *iupTableFirst(Itable *it)
+IUP_SDK_API char *iupTableFirst(Itable *it)
 {
   unsigned int entryIndex;
 
@@ -462,11 +470,8 @@ char *iupTableFirst(Itable *it)
   return 0;
 }
 
-
-char *iupTableNext(Itable *it)
+IUP_SDK_API char *iupTableNext(Itable *it)
 {
-  unsigned int entryIndex;
-
   iupASSERT(it!=NULL);
   if (!it || it->context.entryIndex == (unsigned int)-1
          || it->context.itemIndex == (unsigned int)-1)
@@ -480,6 +485,7 @@ char *iupTableNext(Itable *it)
   }
   else
   {
+    unsigned int entryIndex;
     /* find the next used entry */
     for (entryIndex = it->context.entryIndex+1; entryIndex < it->entriesSize; entryIndex++)
     {
@@ -495,10 +501,9 @@ char *iupTableNext(Itable *it)
   return 0;
 }
 
-char *iupTableRemoveCurr(Itable *it)
+IUP_SDK_API char *iupTableRemoveCurr(Itable *it)
 {
   char* key;
-  unsigned int entryIndex;
   ItableEntry  *entry;
   unsigned int itemIndex;
 
@@ -521,6 +526,7 @@ char *iupTableRemoveCurr(Itable *it)
   }
   else
   {
+    unsigned int entryIndex;
     /* find the next used entry */
     for (entryIndex = it->context.entryIndex+1; entryIndex < it->entriesSize; entryIndex++)
     {
@@ -548,6 +554,7 @@ char *iupTableRemoveCurr(Itable *it)
 static void iTableFreeItemArray(Itable_IndexTypes indexType, unsigned int nextFreeIndex, ItableItem *items)
 {
   unsigned int i;
+  ItableItem* item;
 
   /* Used only in iupTableClear */
 
@@ -559,23 +566,25 @@ static void iTableFreeItemArray(Itable_IndexTypes indexType, unsigned int nextFr
   {
     for (i = 0; i < nextFreeIndex; i++)
     {
-      free((void *)(items[i].key.keyStr));
-      items[i].key.keyStr = NULL;
+      item = items + i;
+      free((void *)(item->key.keyStr));
+      item->key.keyStr = NULL;
     }
   }
 
   for (i = 0; i < nextFreeIndex; i++)
   {
-    if (items[i].itemType == IUPTABLE_STRING)
+    item = items + i;
+
+    if (item->itemType == IUPTABLE_STRING)
     {
-      free(items[i].value);
-      items[i].value = NULL;
+      free(item->value);
+      item->value = NULL;
     }
   }
 
   free(items);
 }
-
 
 static unsigned int iTableGetEntryIndex(Itable *it, const char *key, unsigned long *keyIndex)
 {
@@ -583,7 +592,7 @@ static unsigned int iTableGetEntryIndex(Itable *it, const char *key, unsigned lo
   {
     register unsigned int checksum = 0;
 
-/*     Orignal version
+/*     Original version
     unsigned int i;
     for (i = 0; key[i]; i++)
       checksum = checksum*31 + key[i];  
@@ -709,7 +718,6 @@ static unsigned int iTableResize(Itable *it)
                  entryIndex,
                  i;
   Itable        *newTable;
-  ItableEntry   *entry;
   ItableItem    *item;
 
   /* check if we do not need to resize the hash table */
@@ -726,7 +734,7 @@ static unsigned int iTableResize(Itable *it)
 
   for (entryIndex = 0; entryIndex < it->entriesSize; entryIndex++)
   {
-    entry = &(it->entries[entryIndex]);
+    ItableEntry *entry = &(it->entries[entryIndex]);
 
     if (entry->items)
     {

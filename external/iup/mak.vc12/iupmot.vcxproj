@@ -47,7 +47,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src;..\src\mot;..\include;d:\lng\x11inc;D:\_goodies\iup\_libs\openmotif2.1.30\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\src\mot;..\include;\lng\x11inc;\_goodies\iup\_libs\openmotif2.1.30\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -64,7 +64,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\src;..\src\mot;..\include;d:\lng\x11inc;D:\_goodies\iup\_libs\openmotif2.1.30\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\src\mot;..\include;\lng\x11inc;\_goodies\iup\_libs\openmotif2.1.30\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -86,7 +86,7 @@
     <ClCompile Include="..\src\mot\iupmot_color.c" />
     <ClCompile Include="..\src\mot\iupmot_common.c" />
     <ClCompile Include="..\src\mot\iupmot_dragdrop.c" />
-    <ClCompile Include="..\src\mot\iupmot_draw.c" />
+    <ClCompile Include="..\src\mot\iupmot_draw_x11.c" />
     <ClCompile Include="..\src\mot\iupmot_focus.c" />
     <ClCompile Include="..\src\mot\iupmot_font.c" />
     <ClCompile Include="..\src\mot\iupmot_globalattrib.c" />
@@ -97,7 +97,6 @@
     <ClCompile Include="..\src\mot\iupmot_button.c" />
     <ClCompile Include="..\src\mot\iupmot_canvas.c" />
     <ClCompile Include="..\src\mot\iupmot_clipboard.c" />
-    <ClCompile Include="..\src\mot\iupmot_colordlg.c" />
     <ClCompile Include="..\src\mot\iupmot_dialog.c" />
     <ClCompile Include="..\src\mot\iupmot_filedlg.c" />
     <ClCompile Include="..\src\mot\iupmot_fontdlg.c" />

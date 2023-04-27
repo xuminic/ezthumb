@@ -83,6 +83,7 @@ Iclass* iupLinkNewClass(void)
 
   ic->name = "link";
   ic->format = "ss"; /* two strings */
+  ic->format_attr = "URL";  /* must handle TITLE manually */
   ic->nativetype = IUP_TYPECONTROL;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 1;
@@ -104,7 +105,7 @@ Iclass* iupLinkNewClass(void)
   return ic;
 }
 
-Ihandle *IupLink(const char *url, const char * title)
+IUP_API Ihandle* IupLink(const char *url, const char * title)
 {
   void *params[3];
   params[0] = (void*)url;

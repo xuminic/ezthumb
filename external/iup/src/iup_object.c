@@ -6,7 +6,6 @@
 
 #include <stdio.h>  
 #include <stdlib.h>  
-#include <stdarg.h>  
 #include <memory.h>  
 
 #include "iup.h"
@@ -15,6 +14,9 @@
 #include "iup_assert.h"
 #include "iup_register.h"
 #include "iup_names.h"
+#include "iup_varg.h"
+#include "iup_focus.h"
+#include "iup_attrib.h"
 
 
 static Ihandle* iHandleCreate(void)
@@ -41,7 +43,7 @@ static void iHandleDestroy(Ihandle* ih)
   free(ih);
 }
 
-int iupObjectCheck(Ihandle* ih)
+IUP_SDK_API int iupObjectCheck(Ihandle* ih)
 {
   char* sig = (char*)ih;
 
@@ -56,8 +58,10 @@ int iupObjectCheck(Ihandle* ih)
   return 1;
 }
 
-Ihandle* iupObjectCreate(Iclass* iclass, void** params)
+IUP_SDK_API Ihandle* iupObjectCreate(Iclass* iclass, void** params)
 {
+  char* name;
+
   /* create the base handle structure */
   Ihandle* ih = iHandleCreate();
 
@@ -74,10 +78,18 @@ Ihandle* iupObjectCreate(Iclass* iclass, void** params)
   /* ensure attributes default values, at this time only the ones that can be set before map */
   iupClassObjectEnsureDefaultAttributes(ih);
 
+  name = IupGetGlobal("DEFAULTTHEME");
+  if (name)
+  {
+    Ihandle* theme = IupGetHandle(name);
+    if (theme)
+      iupAttribSetTheme(ih, theme);
+  }
+
   return ih;
 }
 
-void** iupObjectGetParamList(void* first, va_list arglist)
+IUP_SDK_API void** iupObjectGetParamList(void* first, va_list arglist)
 {
   const int INITIAL_NUMBER = 50;
   void **params;
@@ -112,7 +124,7 @@ void** iupObjectGetParamList(void* first, va_list arglist)
   return params;
 }
 
-Ihandle* IupCreatev(const char *name, void **params)
+IUP_API Ihandle* IupCreatev(const char *name, void **params)
 {
   Iclass *ic;
   iupASSERT(name!=NULL);
@@ -123,30 +135,41 @@ Ihandle* IupCreatev(const char *name, void **params)
     return NULL;
 }
 
-Ihandle *IupCreatep(const char *name, void* first, ...)
+IUP_API Ihandle *IupCreateV(const char *name, void* first, va_list arglist)
 {
-  va_list arglist;
   void **params;
   Ihandle *ih;
-  iupASSERT(name!=NULL);
 
-  va_start(arglist, first);
+  iupASSERT(name != NULL);
+
   params = iupObjectGetParamList(first, arglist);
-  va_end(arglist);
-
   ih = IupCreatev(name, params);
   free(params);
 
   return ih;
 }
 
-Ihandle* IupCreate(const char *name)
+IUP_API Ihandle *IupCreatep(const char *name, void* first, ...)
+{
+  va_list arglist;
+  Ihandle *ih;
+
+  iupASSERT(name!=NULL);
+
+  va_start(arglist, first);
+  ih = IupCreateV(name, first, arglist);
+  va_end(arglist);
+
+  return ih;
+}
+
+IUP_API Ihandle* IupCreate(const char *name)
 {
   iupASSERT(name!=NULL);
   return IupCreatev(name, NULL);
 }
 
-void IupDestroy(Ihandle *ih)
+IUP_API void IupDestroy(Ihandle *ih)
 {
   Icallback cb;
 
@@ -172,6 +195,9 @@ void IupDestroy(Ihandle *ih)
 
   /* unmap if mapped and remove from its parent child list */
   IupDetach(ih);
+
+  /* check if the element had the focus */
+  iupResetCurrentFocus(ih);
 
   /* removes names associated with the element */
   iupRemoveNames(ih);

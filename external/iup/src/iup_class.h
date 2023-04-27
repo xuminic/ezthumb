@@ -27,7 +27,8 @@ typedef enum _InativeType {
   IUP_TYPECANVAS,   /**< Drawing canvas, also used as a base control for custom controls. */ 
   IUP_TYPEDIALOG,   /**< DIALOG */
   IUP_TYPEIMAGE,    /**< IMAGE */
-  IUP_TYPEMENU      /**< MENU, SUBMENU, ITEM, SEPARATOR */
+  IUP_TYPEMENU,     /**< MENU, SUBMENU, ITEM, SEPARATOR */
+  IUP_TYPEOTHER     /**< Other resources - TIMER, CLIPBOARD, USER, etc */
 } InativeType;
 
 /** Possible number of children.
@@ -46,18 +47,20 @@ struct Iclass_
 {
   /* Class configuration parameters. */
   const char* name;     /**< class name. No default, must be initialized. */
+  const char* cons;     /**< constructor name in C, if more than the first letter uppercase, or NULL. */
   const char* format;   /**< Creation parameters format of the class. \n
                    * Used only for LED parsing. \n
                    * It can have none (NULL), one or more of the following.
-                   * - "b" = (unsigned char) - byte
-                   * - "c" = (unsigned char*) - array of byte
-                   * - "i" = (int) - integer
-                   * - "j" = (int*) - array of integer
-                   * - "f" = (float) - real
-                   * - "s" = (char*) - string 
+                   * - "b" = (unsigned char) - byte            >> unused <<
+                   * - "j" = (int*) - array of integer         >> unused <<
+                   * - "f" = (float) - real                    >> unused <<
+                   * - "i" = (int) - integer                   >> used in IupImage* only <<
+                   * - "c" = (unsigned char*) - array of byte  >> used in IupImage* only <<
+                   * - "s" = (char*) - string                  >> usually is for TITLE <<
                    * - "a" = (char*) - name of the ACTION callback
                    * - "h" = (Ihandle*) - element handle
-                   * - "g" = (Ihandle**) - array of element handle */
+                   * - "g" = (Ihandle**) - array of element handle (when used there are no other parameters) */
+  const char* format_attr; /**< attribute name of the first creation parameter when format[0] is 's' or 'a' */
   InativeType nativetype; /**< native type. Default is IUP_TYPEVOID. */
   int childtype;   /**< children count enum: none, many, or n, as described in \ref IchildType. Default is IUP_CHILDNONE. \n
                     * This identifies a container that can be manipulated with IupReparent, IupAppend and IupInsert. \n
@@ -66,6 +69,7 @@ struct Iclass_
   int is_interactive; /**< keyboard interactive boolean, 
                        * true if the class can have the keyboard input focus. Default is false. */
   int has_attrib_id;  /**< indicate if any attribute is numbered. Default is not. Can be 1 or 2. */
+  int is_internal;    /**< indicate an internal class initialized in IupOpen. */
 
   Iclass* parent; /**< class parent to implement inheritance.
                    * Class name must be different. \n
@@ -129,8 +133,8 @@ struct Iclass_
    */
   void* (*GetInnerNativeContainerHandle)(Ihandle* ih, Ihandle* child);
 
-  /** Notifies the element that a child was appended using IupAppend. \n
-   * Called only from IupAppend or IupReparent. 
+  /** Notifies the element that a child was added to the child tree hierarchy. \n
+   * Called only from IupAppend, IupInsert or IupReparent. 
    * The child is not mapped yet, but the parent can be mapped.
    */
   void (*ChildAdded)(Ihandle* ih, Ihandle* child);
@@ -193,18 +197,18 @@ struct Iclass_
  * If parent is specified then a new instance of the parent class is created
  * and set as the actual parent class.
  * \ingroup iclass */
-Iclass* iupClassNew(Iclass* ic_parent);
+IUP_SDK_API Iclass* iupClassNew(Iclass* ic_parent);
 
 /** Release the memory allocated by the class.
  *  Calls the \ref Iclass::Release method. \n
  *  Called from iupRegisterFinish.
  * \ingroup iclass */
-void iupClassRelease(Iclass* ic);
+IUP_SDK_API void iupClassRelease(Iclass* ic);
 
 /** Check if the class name match the given name. \n
  *  Parent classes are also checked.
  * \ingroup iclass */
-int iupClassMatch(Iclass* ic, const char* classname);
+IUP_SDK_API int iupClassMatch(Iclass* ic, const char* classname);
 
 
 /** GetAttribute called for a specific attribute.
@@ -288,7 +292,7 @@ typedef enum _IattribFlags{
  * If an attribute is not inheritable or not a string then it MUST be registered.
  * Internal attributes (starting with "_IUP") can never be registered.
  * \ingroup iclass */
-void iupClassRegisterAttribute(Iclass* ic, const char* name, 
+IUP_SDK_API void iupClassRegisterAttribute(Iclass* ic, const char* name,
                                            IattribGetFunc get, 
                                            IattribSetFunc set, 
                                            const char* default_value, 
@@ -297,21 +301,21 @@ void iupClassRegisterAttribute(Iclass* ic, const char* name,
 
 /** Same as \ref iupClassRegisterAttribute for attributes with Ids.
  * \ingroup iclass */
-void iupClassRegisterAttributeId(Iclass* ic, const char* name, 
+IUP_SDK_API void iupClassRegisterAttributeId(Iclass* ic, const char* name,
                                            IattribGetIdFunc get, 
                                            IattribSetIdFunc set, 
                                            int flags);
 
 /** Same as \ref iupClassRegisterAttribute for attributes with two Ids.
  * \ingroup iclass */
-void iupClassRegisterAttributeId2(Iclass* ic, const char* name, 
+IUP_SDK_API void iupClassRegisterAttributeId2(Iclass* ic, const char* name,
                                            IattribGetId2Func get, 
                                            IattribSetId2Func set, 
                                            int flags);
 
 /** Returns the attribute handling functions, defaults and flags.
  * \ingroup iclass */
-void iupClassRegisterGetAttribute(Iclass* ic, const char* name, 
+IUP_SDK_API void iupClassRegisterGetAttribute(Iclass* ic, const char* name,
                                            IattribGetFunc *get, 
                                            IattribSetFunc *set, 
                                            const char* *default_value, 
@@ -320,15 +324,15 @@ void iupClassRegisterGetAttribute(Iclass* ic, const char* name,
 
 /** Replaces the attribute handling functions of an already registered attribute.
  * \ingroup iclass */
-void iupClassRegisterReplaceAttribFunc(Iclass* ic, const char* name, IattribGetFunc _get, IattribSetFunc _set);
+IUP_SDK_API void iupClassRegisterReplaceAttribFunc(Iclass* ic, const char* name, IattribGetFunc _get, IattribSetFunc _set);
 
 /** Replaces the attribute handling default of an already registered attribute.
  * \ingroup iclass */
-void iupClassRegisterReplaceAttribDef(Iclass* ic, const char* name, const char* _default_value, const char* _system_default);
+IUP_SDK_API void iupClassRegisterReplaceAttribDef(Iclass* ic, const char* name, const char* _default_value, const char* _system_default);
 
 /** Replaces the attribute handling functions of an already registered attribute.
  * \ingroup iclass */
-void iupClassRegisterReplaceAttribFlags(Iclass* ic, const char* name, int _flags);
+IUP_SDK_API void iupClassRegisterReplaceAttribFlags(Iclass* ic, const char* name, int _flags);
 
 
 /** Register the parameters of a callback. \n
@@ -349,12 +353,12 @@ void iupClassRegisterReplaceAttribFlags(Iclass* ic, const char* name, int _flags
  * but a different return value can be specified using one of the above parameters, 
  * after all parameters using "=" to separate it from them.
  * \ingroup iclass */
-void iupClassRegisterCallback(Iclass* ic, const char* name, const char* format);
+IUP_SDK_API void iupClassRegisterCallback(Iclass* ic, const char* name, const char* format);
 
 /** Returns the format of the parameters of a registered callback. 
  * If NULL then the default callback definition is assumed.
  * \ingroup iclass */
-char* iupClassCallbackGetFormat(Iclass* ic, const char* name);
+IUP_SDK_API char* iupClassCallbackGetFormat(Iclass* ic, const char* name);
 
 
 
@@ -369,64 +373,68 @@ char* iupClassCallbackGetFormat(Iclass* ic, const char* name);
 /** Calls \ref Iclass::Create method. 
  * \ingroup iclassobject
  */
-int iupClassObjectCreate(Ihandle* ih, void** params);
+IUP_SDK_API int iupClassObjectCreate(Ihandle* ih, void** params);
 
 /** Calls \ref Iclass::Map method. 
  * \ingroup iclassobject
  */
-int iupClassObjectMap(Ihandle* ih);
+IUP_SDK_API int iupClassObjectMap(Ihandle* ih);
 
 /** Calls \ref Iclass::UnMap method. 
  * \ingroup iclassobject
  */
-void iupClassObjectUnMap(Ihandle* ih);
+IUP_SDK_API void iupClassObjectUnMap(Ihandle* ih);
 
 /** Calls \ref Iclass::Destroy method. 
  * \ingroup iclassobject
  */
-void iupClassObjectDestroy(Ihandle* ih);
+IUP_SDK_API void iupClassObjectDestroy(Ihandle* ih);
 
 /** Calls \ref Iclass::GetInnerNativeContainerHandle method. Returns ih->handle if there is no inner parent.
  * The parent class is ignored. If necessary the child class must handle the parent class internally.
  * \ingroup iclassobject
  */
-void* iupClassObjectGetInnerNativeContainerHandle(Ihandle* ih, Ihandle* child);
+IUP_SDK_API void* iupClassObjectGetInnerNativeContainerHandle(Ihandle* ih, Ihandle* child);
 
 /** Calls \ref Iclass::ChildAdded method. 
  * \ingroup iclassobject
  */
-void iupClassObjectChildAdded(Ihandle* ih, Ihandle* child);
+IUP_SDK_API void iupClassObjectChildAdded(Ihandle* ih, Ihandle* child);
 
 /** Calls \ref Iclass::ChildRemoved method. 
  * \ingroup iclassobject
  */
-void iupClassObjectChildRemoved(Ihandle* ih, Ihandle* child, int pos);
+IUP_SDK_API void iupClassObjectChildRemoved(Ihandle* ih, Ihandle* child, int pos);
 
 /** Calls \ref Iclass::LayoutUpdate method. 
  * \ingroup iclassobject
  */
-void iupClassObjectLayoutUpdate(Ihandle* ih);
+IUP_SDK_API void iupClassObjectLayoutUpdate(Ihandle* ih);
 
 /** Calls \ref Iclass::ComputeNaturalSize method. 
  * \ingroup iclassobject
  */
-void iupClassObjectComputeNaturalSize(Ihandle* ih, int *w, int *h, int *children_expand);
+IUP_SDK_API void iupClassObjectComputeNaturalSize(Ihandle* ih, int *w, int *h, int *children_expand);
 
 /** Calls \ref Iclass::SetChildrenCurrentSize method. 
  * \ingroup iclassobject
  */
-void iupClassObjectSetChildrenCurrentSize(Ihandle* ih, int shrink);
+IUP_SDK_API void iupClassObjectSetChildrenCurrentSize(Ihandle* ih, int shrink);
 
 /** Calls \ref Iclass::SetChildrenPosition method. 
  * \ingroup iclassobject
  */
-void iupClassObjectSetChildrenPosition(Ihandle* ih, int x, int y);
+IUP_SDK_API void iupClassObjectSetChildrenPosition(Ihandle* ih, int x, int y);
 
 /** Calls \ref Iclass::DlgPopup method. 
  * \ingroup iclassobject
  */
-int iupClassObjectDlgPopup(Ihandle* ih, int x, int y);
+IUP_SDK_API int iupClassObjectDlgPopup(Ihandle* ih, int x, int y);
 
+/** Checks if class has the \ref Iclass::DlgPopup method.
+* \ingroup iclassobject
+*/
+IUP_SDK_API int iupClassObjectHasDlgPopup(Ihandle* ih);
 
 
 /* Handle attributes, but since the attribute function table is shared by the class hierarchy,
@@ -450,6 +458,11 @@ int   iupClassObjectAttribIsNotString(Ihandle* ih, const char* name);
 /* Used only in iupAttribIsIhandle */
 int   iupClassObjectAttribIsIhandle(Ihandle* ih, const char* name);
 
+IUP_SDK_API int iupClassObjectAttribIsCallback(Ihandle* ih, const char* name);
+
+/* Used only in iupAttribSetTheme */
+int   iupClassObjectAttribCanCopy(Ihandle* ih, const char* name);
+
 /* Used only in iupAttribUpdateFromParent */
 int   iupClassObjectCurAttribIsInherit(Iclass* ic);
 
@@ -466,6 +479,8 @@ void iupClassGetAttribNameInfo(Iclass* ic, const char* name, char* *def_value, i
 /* Used in iupClassRegisterAttribute and iGlobalChangingDefaultColor */
 int iupClassIsGlobalDefault(const char* name, int colors);
 
+IUP_SDK_API void iupClassInfoGetDesc(Iclass* ic, Ihandle* ih, const char* attrib_name);
+IUP_SDK_API void iupClassInfoShowHelp(const char* className);
 
 /* Other functions declared in <iup.h> and implemented here. 
 IupGetClassType

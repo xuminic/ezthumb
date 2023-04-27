@@ -9,6 +9,7 @@
 #include <string.h>
 #include <locale.h>
 
+#include "iup_export.h"
 #include "iup_maskparse.h"
 #include "iup_mask.h"
 #include "iup_str.h"
@@ -35,7 +36,7 @@ struct _Imask
 };
 
 
-int iupMaskCheck(Imask* mask, const char *val)
+IUP_SDK_API int iupMaskCheck(Imask* mask, const char *val)
 {
   int ret;
 
@@ -81,7 +82,7 @@ int iupMaskCheck(Imask* mask, const char *val)
   return 1;
 }
 
-void iupMaskSetNoEmpty(Imask* mask, int noempty)
+IUP_SDK_API void iupMaskSetNoEmpty(Imask* mask, int noempty)
 {
   if (!mask)
     return;
@@ -89,7 +90,7 @@ void iupMaskSetNoEmpty(Imask* mask, int noempty)
   mask->noempty = noempty;
 }
 
-void iupMaskSetCaseI(Imask* mask, int casei)
+IUP_SDK_API void iupMaskSetCaseI(Imask* mask, int casei)
 {
   if (!mask)
     return;
@@ -97,7 +98,7 @@ void iupMaskSetCaseI(Imask* mask, int casei)
   mask->casei = casei;
 }
 
-Imask* iupMaskCreate(const char* mask_str)
+IUP_SDK_API Imask* iupMaskCreate(const char* mask_str)
 {
   ImaskParsed* fsm;
   Imask* mask;
@@ -125,7 +126,7 @@ Imask* iupMaskCreate(const char* mask_str)
   return mask;
 }
 
-Imask* iupMaskCreateInt(int min, int max)
+IUP_SDK_API Imask* iupMaskCreateInt(int min, int max)
 {
   Imask* mask;
 
@@ -144,7 +145,7 @@ Imask* iupMaskCreateInt(int min, int max)
   return mask;
 }
 
-Imask* iupMaskCreateReal(int positive, const char* decimal_symbol)
+IUP_SDK_API Imask* iupMaskCreateReal(int positive, const char* decimal_symbol)
 {
   Imask* mask;
   int use_comma = 0;
@@ -156,9 +157,11 @@ Imask* iupMaskCreateReal(int positive, const char* decimal_symbol)
   }
   else
   {
+#ifndef __ANDROID__
     struct lconv* locale_info = localeconv();
     if (locale_info->decimal_point[0] == ',')
       use_comma = 1;
+#endif
   }
 
   if (use_comma)
@@ -179,7 +182,7 @@ Imask* iupMaskCreateReal(int positive, const char* decimal_symbol)
   return mask;
 }
 
-Imask* iupMaskCreateFloat(float min, float max, const char* decimal_symbol)
+IUP_SDK_API Imask* iupMaskCreateFloat(float min, float max, const char* decimal_symbol)
 {
   Imask* mask = iupMaskCreateReal(min >= 0, decimal_symbol);
 
@@ -193,14 +196,14 @@ Imask* iupMaskCreateFloat(float min, float max, const char* decimal_symbol)
   return mask;
 }
 
-void iupMaskDestroy(Imask* mask)
+IUP_SDK_API void iupMaskDestroy(Imask* mask)
 {
   free(mask->mask_str); 
   free(mask->fsm); 
   free(mask); 
 }
 
-char* iupMaskGetStr(Imask* mask)
+IUP_SDK_API char* iupMaskGetStr(Imask* mask)
 {
   return mask->mask_str;
 }

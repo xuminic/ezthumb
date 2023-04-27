@@ -93,6 +93,7 @@
     <ClCompile Include="..\srcweb\iupwin_webbrowser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\srcweb\iupwebgtk_dlopen.h" />
     <ClInclude Include="..\srcweb\iup_webbrowser.h" />
     <ClInclude Include="..\include\iupweb.h" />
   </ItemGroup>

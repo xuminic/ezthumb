@@ -19,16 +19,6 @@ static int glsubcanvas_gl_action(Ihandle *self)
   return iuplua_call(L, 0);
 }
 
-static int glsubcanvas_gl_wheel_cb(Ihandle *self, float p0, int p1, int p2, char * p3)
-{
-  lua_State *L = iuplua_call_start(self, "gl_wheel_cb");
-  lua_pushnumber(L, p0);
-  lua_pushinteger(L, p1);
-  lua_pushinteger(L, p2);
-  lua_pushstring(L, p3);
-  return iuplua_call(L, 4);
-}
-
 static int glsubcanvas_gl_button_cb(Ihandle *self, int p0, int p1, int p2, int p3, char * p4)
 {
   lua_State *L = iuplua_call_start(self, "gl_button_cb");
@@ -61,6 +51,16 @@ static int glsubcanvas_gl_motion_cb(Ihandle *self, int p0, int p1, char * p2)
   return iuplua_call(L, 3);
 }
 
+static int glsubcanvas_gl_wheel_cb(Ihandle *self, float p0, int p1, int p2, char * p3)
+{
+  lua_State *L = iuplua_call_start(self, "gl_wheel_cb");
+  lua_pushnumber(L, p0);
+  lua_pushinteger(L, p1);
+  lua_pushinteger(L, p2);
+  lua_pushstring(L, p3);
+  return iuplua_call(L, 4);
+}
+
 static int GLSubCanvas(lua_State *L)
 {
   Ihandle *ih = IupGLSubCanvas();
@@ -74,11 +74,11 @@ int iupglsubcanvaslua_open(lua_State * L)
   iuplua_register(L, GLSubCanvas, "GLSubCanvas");
 
   iuplua_register_cb(L, "GL_ACTION", (lua_CFunction)glsubcanvas_gl_action, NULL);
-  iuplua_register_cb(L, "GL_WHEEL_CB", (lua_CFunction)glsubcanvas_gl_wheel_cb, NULL);
   iuplua_register_cb(L, "GL_BUTTON_CB", (lua_CFunction)glsubcanvas_gl_button_cb, NULL);
   iuplua_register_cb(L, "GL_ENTERWINDOW_CB", (lua_CFunction)glsubcanvas_gl_enterwindow_cb, NULL);
   iuplua_register_cb(L, "GL_LEAVEWINDOW_CB", (lua_CFunction)glsubcanvas_gl_leavewindow_cb, NULL);
   iuplua_register_cb(L, "GL_MOTION_CB", (lua_CFunction)glsubcanvas_gl_motion_cb, NULL);
+  iuplua_register_cb(L, "GL_WHEEL_CB", (lua_CFunction)glsubcanvas_gl_wheel_cb, NULL);
 
 #ifdef IUPLUA_USELOH
 #include "glsubcanvas.loh"

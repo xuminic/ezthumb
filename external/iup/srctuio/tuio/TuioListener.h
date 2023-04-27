@@ -1,29 +1,27 @@
 /*
- TUIO C++ Library - part of the reacTIVision project
- http://reactivision.sourceforge.net/
+ TUIO C++ Library
+ Copyright (c) 2005-2017 Martin Kaltenbrunner <martin@tuio.org>
  
- Copyright (c) 2005-2009 Martin Kaltenbrunner <mkalten@iua.upf.edu>
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 3.0 of the License, or (at your option) any later version.
  
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
- 
- This program is distributed in the hope that it will be useful,
+ This library is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ Lesser General Public License for more details.
  
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library.
+*/
 
 #ifndef INCLUDED_TUIOLISTENER_H
 #define INCLUDED_TUIOLISTENER_H
 
 #include "TuioObject.h"
 #include "TuioCursor.h"
+#include "TuioBlob.h"
 
 namespace TUIO {
 	
@@ -42,9 +40,9 @@ namespace TUIO {
 	 * </code></p>
 	 *
 	 * @author Martin Kaltenbrunner
-	 * @version 1.4
+	 * @version 1.1.6
 	 */
-	class TuioListener { 
+	class LIBDECL TuioListener { 
 		
 	public:
 		/**
@@ -93,6 +91,27 @@ namespace TUIO {
 		 * @param  tcur  the TuioCursor reference associated to the removeTuioCursor event
 		 */
 		virtual void removeTuioCursor(TuioCursor *tcur)=0;
+
+		/**
+		 * This callback method is invoked by the TuioClient when a new TuioBlob is added to the session.   
+		 *
+		 * @param  tcur  the TuioBlob reference associated to the addTuioBlob event
+		 */
+		virtual void addTuioBlob(TuioBlob *tblb)=0;
+		
+		/**
+		 * This callback method is invoked by the TuioClient when an existing TuioBlob is updated during the session.   
+		 *
+		 * @param  tblb  the TuioBlob reference associated to the updateTuioBlob event
+		 */
+		virtual void updateTuioBlob(TuioBlob *tblb)=0;
+		
+		/**
+		 * This callback method is invoked by the TuioClient when an existing TuioBlob is removed from the session.   
+		 *
+		 * @param  tblb  the TuioBlob reference associated to the removeTuioBlob event
+		 */
+		virtual void removeTuioBlob(TuioBlob *tblb)=0;
 		
 		/**
 		 * This callback method is invoked by the TuioClient to mark the end of a received TUIO message bundle.   
@@ -101,5 +120,5 @@ namespace TUIO {
 		 */
 		virtual void refresh(TuioTime ftime)=0;
 	};
-};
+}
 #endif /* INCLUDED_TUIOLISTENER_H */

@@ -123,18 +123,18 @@ static int gtkKeyMap2Iup(guint keyval, int state)
        and except when other modifiers are used */
     if ((keyval < K_exclam || keyval > K_tilde) ||
         (state & (GDK_CONTROL_MASK|GDK_MOD1_MASK|GDK_MOD5_MASK|GDK_MOD4_MASK)))
-      code |= iup_XkeyShift(code);  
+      code = iup_XkeyShift(code);  
   }
 
   if (state & GDK_CONTROL_MASK)   /* Ctrl */
-    code |= iup_XkeyCtrl(code);
+    code = iup_XkeyCtrl(code);
 
   if (state & GDK_MOD1_MASK ||
       state & GDK_MOD5_MASK)      /* Alt */
-    code |= iup_XkeyAlt(code);
+    code = iup_XkeyAlt(code);
 
   if (state & GDK_MOD4_MASK)      /* Apple/Win */
-    code |= iup_XkeySys(code);
+    code = iup_XkeySys(code);
 
   return code;
 }
@@ -193,7 +193,7 @@ static int iupObjectIsNativeContainer(Ihandle* ih)
     return 0;
 }
 
-gboolean iupgtkKeyPressEvent(GtkWidget *widget, GdkEventKey *evt, Ihandle *ih)
+IUP_DRV_API gboolean iupgtkKeyPressEvent(GtkWidget *widget, GdkEventKey *evt, Ihandle *ih)
 {
   int result;
   int code = iupgtkKeyDecode(evt);

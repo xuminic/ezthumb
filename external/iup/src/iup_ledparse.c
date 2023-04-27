@@ -15,111 +15,135 @@
 #include "iup_object.h"
 #include "iup_ledlex.h"
 #include "iup_str.h"
+#include "iup_attrib.h"
 #include "iup_assert.h"
             
             
 #define IPARSE_SYMBEXIST       1
 #define IPARSE_SYMBNOTDEF      2
 
-static Ihandle* iParseExp (void);
+static void* iParseExp (void);
 static Ihandle* iParseFunction (Iclass *ic);
 static int iParseError (int err, char *s);
 
 static int iparse_error = 0;
-#define IPARSE_RETURN_IF_ERRO(_e)        {iparse_error=(_e); if (iparse_error) return NULL;}
-#define IPARSE_RETURN_IF_ERRO2(_e, _x)   {iparse_error=(_e); if (iparse_error) { if (_x) free(_x); return NULL;} }
+static int iparse_saveinfo = 0;
+#define IPARSE_RETURN_IF_ERROR(_e)        {iparse_error=(_e); if (iparse_error) return NULL;}
+#define IPARSE_RETURN_IF_ERROR_FREE(_e, _x)   {iparse_error=(_e); if (iparse_error) { if (_x) free(_x); return NULL;} }
 
 
-char* IupLoad(const char *filename)
+
+IUP_SDK_API const char* iupLoadLed(const char *filename, const char *buffer, int save_info)
 {
-  iupASSERT(filename!=NULL);
+  iparse_saveinfo = save_info;
+
+  iparse_error = iupLexStart(filename, buffer);
+  if (iparse_error)
+  {
+    iupLexClose();
+    return iupLexGetError();
+  }
+
+  while (iupLexLookAhead() != IUPLEX_TK_END)
+  {
+    (void)iParseExp(); /* ignore return */
+    if (iparse_error)
+    {
+      iupLexClose();
+      return iupLexGetError();
+    }
+  }
+
+  iupLexClose();
+  return NULL;
+}
+
+IUP_API char* IupLoad(const char *filename)
+{
+  iupASSERT(filename != NULL);
   if (!filename)
     return "invalid file name";
 
-  iparse_error = iupLexStart(filename, 1);
-  if (iparse_error)
-  {
-    iupLexClose();
-    return iupLexGetError();
-  }
-
-  while (iupLexLookAhead() != IUPLEX_TK_END)
-  {
-    iParseExp();
-    if (iparse_error)
-    {
-      iupLexClose();
-      return iupLexGetError();
-    }
-  }
-
-  iupLexClose();
-  return NULL;
+  return (char*)iupLoadLed(filename, NULL, 0);  /* no save info */
 }
 
-char* IupLoadBuffer(const char *buffer)
+IUP_API char* IupLoadBuffer(const char *buffer)
 {
-  iupASSERT(buffer!=NULL);
+  iupASSERT(buffer != NULL);
   if (!buffer)
     return "invalid buffer";
 
-  iparse_error = iupLexStart(buffer, 0);
-  if (iparse_error)
-  {
-    iupLexClose();
-    return iupLexGetError();
-  }
-
-  while (iupLexLookAhead() != IUPLEX_TK_END)
-  {
-    iParseExp();
-    if (iparse_error)
-    {
-      iupLexClose();
-      return iupLexGetError();
-    }
-  }
-
-  iupLexClose();
-  return NULL;
+  return (char*)iupLoadLed(NULL, buffer, 0);  /* no save info */
 }
 
-static Ihandle* iParseExp(void)
+static void* iParseExp(void)
 {
   char* nm = NULL;
   Ihandle* ih = NULL;
 
-  int match = iupLexSeenMatch(IUPLEX_TK_FUNC,&iparse_error);
-  IPARSE_RETURN_IF_ERRO(iparse_error);
+  int match = iupLexSeenMatch(IUPLEX_TK_FUNC, &iparse_error);
+  IPARSE_RETURN_IF_ERROR_FREE(iparse_error, nm);
 
   if (match)
-    return iParseFunction(iupLexGetClass());
+    return iParseFunction(iupLexGetClass());  /* control + attributes + parameters = return ih */
 
   if (iupLexLookAhead() == IUPLEX_TK_NAME)
   {
     nm = iupLexGetName();
-    IPARSE_RETURN_IF_ERRO(iupLexAdvance());
+    IPARSE_RETURN_IF_ERROR_FREE(iupLexAdvance(), nm);
   }
   else
   {
-    iparse_error = iupLexMatch(IUPLEX_TK_NAME);
-    return NULL;  /* force iparse_error */
+    if (iupLexFollowedBy(IUPLEX_TK_ENDP)) /* allow empty containers */
+      return NULL;
+    else
+    {
+      iparse_error = iupLexMatch(IUPLEX_TK_NAME);
+      return NULL;  /* force iparse_error */
+    }
   }
 
-  match = iupLexSeenMatch(IUPLEX_TK_SET,&iparse_error); 
-  IPARSE_RETURN_IF_ERRO(iparse_error);
+  match = iupLexSeenMatch(IUPLEX_TK_SET, &iparse_error); 
+  IPARSE_RETURN_IF_ERROR_FREE(iparse_error, nm);
 
-  if (match)
+  if (match) /* new control '=' */
   {
-    ih = iParseExp();  
-    IPARSE_RETURN_IF_ERRO(iparse_error);
-    IupSetHandle(nm, ih);
+    ih = (Ihandle*)iParseExp();  
+    IPARSE_RETURN_IF_ERROR_FREE(iparse_error, nm);
+    if (ih)
+    {
+      if (iparse_saveinfo)
+      {
+        Ihandle* old_ih = IupGetHandle(nm);
+        if (iupObjectCheck(old_ih))  /* error only if old handle is still valid */
+          IPARSE_RETURN_IF_ERROR_FREE(iParseError(IPARSE_SYMBEXIST, nm), nm);
+      }
+
+      IupSetHandle(nm, ih);
+
+      if (iparse_saveinfo && nm)
+      {
+        int line = iupLexGetLine();
+        iupAttribSetInt(ih, "_IUPLED_LINE", line);  /* not an exact location, but enough for its use */
+      }
+    }
   }
-  else
+  else  /* just a name */
   {
     ih = IupGetHandle(nm);
     if (!ih)
-      IPARSE_RETURN_IF_ERRO(iParseError(IPARSE_SYMBNOTDEF,nm));
+    {
+      if (!iparse_saveinfo)
+      {
+        IPARSE_RETURN_IF_ERROR_FREE(iParseError(IPARSE_SYMBNOTDEF, nm), nm);
+      }
+      else
+      {
+        /* dummy element to be replaced later */
+        ih = IupUser();
+        iupAttribSetStr(ih, "_IUPLED_NOTDEF_NAME", nm);
+      }
+    }
   }
 
   if (nm) free(nm);
@@ -131,25 +155,25 @@ static void* iParseControlParam(char type)
   switch(type)
   {
   case 'a':
-    IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_NAME));
-    return iupLexGetName();
+    IPARSE_RETURN_IF_ERROR(iupLexMatch(IUPLEX_TK_NAME));
+    return (void*)iupLexGetName();
 
   case 's':
-    IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_STR));
-    return iupLexGetName();
+    IPARSE_RETURN_IF_ERROR(iupLexMatch(IUPLEX_TK_STR));
+    return (void*)iupLexGetName();
 
   case 'b':
   case 'c':
-    IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_NAME));
+    IPARSE_RETURN_IF_ERROR(iupLexMatch(IUPLEX_TK_NAME));
     return (void*)(unsigned long)iupLexByte();
 
   case 'i':
   case 'j':
-    IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_NAME));
+    IPARSE_RETURN_IF_ERROR(iupLexMatch(IUPLEX_TK_NAME));
     return (void*)(unsigned long)iupLexInt();
 
   case 'f':
-    IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_NAME));
+    IPARSE_RETURN_IF_ERROR(iupLexMatch(IUPLEX_TK_NAME));
     {
       float f = iupLexFloat();
       unsigned long* l = (unsigned long*)&f;
@@ -159,13 +183,32 @@ static void* iParseControlParam(char type)
   case 'g':
   case 'h':
     {
-      char *new_control = (char*)iParseExp();
-      IPARSE_RETURN_IF_ERRO(iparse_error);
-      return new_control;
+      void *p = iParseExp();
+      IPARSE_RETURN_IF_ERROR(iparse_error);
+      return p;
     }
 
   default:
     return 0;
+  }
+}
+
+static void iParseRelaseParamArray(void** params, const char *format, int num_format)
+{
+  int i;
+
+  for (i = 0; params[i] && i<num_format; i++)
+  {
+    if (format[i] == 'j' ||
+        format[i] == 'g' ||
+        format[i] == 'c')
+        break;
+
+    if (format[i] == 'a' || format[i] == 's')
+    {
+      if (params[i])
+        free(params[i]);   /* iupLexGetName returned a duplicated string */
+    }
   }
 }
 
@@ -179,18 +222,22 @@ static Ihandle* iParseControl(Iclass *ic)
     Ihandle *new_control;
     void** params;
     int i, alloc_arg, num_arg,
-        num_format = strlen(format);
+      num_format = (int)strlen(format);
                       
     num_arg = num_format;
     alloc_arg = num_arg+20;
-    params = (void**)malloc(sizeof(void*)*alloc_arg);
+    params = (void**)calloc(sizeof(void*), alloc_arg);
 
     for (i = 0; i < num_arg; )
     {
       char p_format = format[i];
 
       if (i > 0)
-        IPARSE_RETURN_IF_ERRO2(iupLexMatch (IUPLEX_TK_COMMA), params);
+      {
+        iparse_error = iupLexMatch(IUPLEX_TK_COMMA);
+        if (iparse_error) iParseRelaseParamArray(params, format, num_format);
+        IPARSE_RETURN_IF_ERROR_FREE(iparse_error, params);
+      }
 
       if (p_format != 'j' &&    /* not array */
           p_format != 'g' && 
@@ -198,7 +245,8 @@ static Ihandle* iParseControl(Iclass *ic)
       {
         params[i] = iParseControlParam(p_format);
         i++;
-        IPARSE_RETURN_IF_ERRO2(iparse_error, params);
+        if (iparse_error) iParseRelaseParamArray(params, format, num_format);
+        IPARSE_RETURN_IF_ERROR_FREE(iparse_error, params);
       }
       else    /* array */
       {
@@ -216,9 +264,11 @@ static Ihandle* iParseControl(Iclass *ic)
           }
           params[i] = iParseControlParam(p_format);
           i++;
-          IPARSE_RETURN_IF_ERRO2(iparse_error, params);
+          if (iparse_error) iParseRelaseParamArray(params, format, num_format);
+          IPARSE_RETURN_IF_ERROR_FREE(iparse_error, params);
           match = iupLexSeenMatch(IUPLEX_TK_COMMA,&iparse_error);
-          IPARSE_RETURN_IF_ERRO2(iparse_error, params);
+          if (iparse_error) iParseRelaseParamArray(params, format, num_format);
+          IPARSE_RETURN_IF_ERROR_FREE(iparse_error, params);
         } while (match); 
 
         /* after an array of parameters there are no more parameters */
@@ -229,16 +279,34 @@ static Ihandle* iParseControl(Iclass *ic)
     params[i] = NULL;
     new_control = iupObjectCreate(ic, params);
 
-    for (i = 0; params[i] && i<num_format ; i++)
+    if (iparse_saveinfo)
     {
-      if (format[i] == 'j' ||
-          format[i] == 'g' || 
-          format[i] == 'c')
-        break;
+      for (i = 0; i < num_format; i++)
+      {
+        if (format[i] == 's' || format[i] == 'a')
+        {
+          const char* name = NULL;
+          if (i == 0)
+            name = ic->format_attr;
+          if (!name)
+          {
+            if (format[i] == 'a')
+              name = "ACTION";
+            else
+              name = "TITLE";
+          }
 
-      if (format[i] == 'a' || format[i] == 's')
-        free(params[i]);   /* iupLexGetName returned a duplicated string */
+          if (name)
+          {
+            char led_name[200] = "_IUPLED_SAVED_";
+            strcat(led_name, name);
+            iupAttribSet(new_control, led_name, "1");
+          }
+        }
+      }
     }
+
+    iParseRelaseParamArray(params, format, num_format);
 
     free(params);
     return new_control;
@@ -251,23 +319,27 @@ static Ihandle* iParseFunction(Iclass *ic)
   char *attr = NULL;
 
   int match = iupLexSeenMatch(IUPLEX_TK_ATTR,&iparse_error); 
-  IPARSE_RETURN_IF_ERRO(iparse_error);
+  IPARSE_RETURN_IF_ERROR_FREE(iparse_error, attr);
 
   if (match)
-    attr = (char*)iupStrDup(iupLexName());
-
-  IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_BEGP));
+    attr = iupLexGetName();
+  
+  IPARSE_RETURN_IF_ERROR_FREE(iupLexMatch(IUPLEX_TK_BEGP), attr);
 
   ih = iParseControl(ic);
-  IPARSE_RETURN_IF_ERRO(iparse_error);
+  IPARSE_RETURN_IF_ERROR_FREE(iparse_error, attr);
+
+  if (iparse_saveinfo)
+    iupAttribSetStr(ih, "_IUPLED_FILENAME", iupLexFilename());
 
   if (attr)
   {
-    IupSetAttributes(ih, attr);
+    iupAttribParse(ih, attr, iparse_saveinfo);
     free(attr);
+    attr = NULL;
   }
 
-  IPARSE_RETURN_IF_ERRO(iupLexMatch(IUPLEX_TK_ENDP));
+  IPARSE_RETURN_IF_ERROR_FREE(iupLexMatch(IUPLEX_TK_ENDP), attr);
   return ih;
 }
 
@@ -278,12 +350,12 @@ static int iParseError(int err, char *s)
   switch (err)
   {
   case IPARSE_SYMBEXIST:
-    sprintf(msg, "symbol '%s' already exists", s);
+    sprintf(msg, "handle name '%s' already exists", s);
     break;
-  case IUPLEX_NOTMATCH:
-    sprintf(msg, "symbol '%s' not defined", s);
+  case IPARSE_SYMBNOTDEF:
+    sprintf(msg, "handle name '%s' not defined", s);
     break;
   }
 
-  return iupLexError(IUPLEX_PARSEERROR, msg);
+  return iupLexError(IUPLEX_ERR_PARSE, msg);
 }

@@ -11,21 +11,12 @@
     <Filter Include="Includes">
       <UniqueIdentifier>{1525e6dc-07e2-4287-835a-7fe8e68b6ba2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Includes\controls">
+      <UniqueIdentifier>{10acbc1d-faa6-4c78-9a6b-8cd4db617759}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\srclua5\ctrl\il_cells.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srclua5\ctrl\il_colorbar.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srclua5\ctrl\il_colorbrowser.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srclua5\ctrl\il_dial.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srclua5\ctrl\il_gauge.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srclua5\ctrl\il_matrix.c">
@@ -40,6 +31,9 @@
     <ClCompile Include="..\..\srclua5\ctrl\il_matrixlist.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\srclua5\ctrl\il_matrixex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\srclua5\ctrl\iupluacontrols.def">
@@ -48,23 +42,26 @@
     <None Include="..\..\srclua5\ctrl\cells.lua">
       <Filter>Lua</Filter>
     </None>
-    <None Include="..\..\srclua5\ctrl\colorbar.lua">
-      <Filter>Lua</Filter>
-    </None>
-    <None Include="..\..\srclua5\ctrl\colorbrowser.lua">
-      <Filter>Lua</Filter>
-    </None>
-    <None Include="..\..\srclua5\ctrl\dial.lua">
-      <Filter>Lua</Filter>
-    </None>
-    <None Include="..\..\srclua5\ctrl\gauge.lua">
-      <Filter>Lua</Filter>
-    </None>
     <None Include="..\..\srclua5\ctrl\matrix.lua">
       <Filter>Lua</Filter>
     </None>
     <None Include="..\..\srclua5\ctrl\matrixlist.lua">
       <Filter>Lua</Filter>
+    </None>
+    <None Include="..\..\srclua5\ctrl\matrixex.lua">
+      <Filter>Lua</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\cells.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\matrix.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\matrixex.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\matrixlist.lh">
+      <Filter>Includes\controls</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

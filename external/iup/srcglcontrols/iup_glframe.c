@@ -177,7 +177,7 @@ static char* iGLFrameGetClipMinAttrib(Ihandle* ih)
 
 static int iGLFrameSetMoveableAttrib(Ihandle* ih, const char* value)
 {
-  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
   /* only a direct child of the canvasbox can be moved */
   if (iupStrBoolean(value) && ih->parent == gl_parent)
   {
@@ -267,9 +267,10 @@ Iclass* iupGLFrameNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glsubcanvas"));
 
   ic->name = "glframe";
+  ic->cons = "GLFrame";
   ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype = IUP_CHILDMANY+1;   /* one child */
+  ic->childtype = IUP_CHILDMANY+1;   /* 1 child */
   ic->is_interactive = 0;
 
   /* Class functions */

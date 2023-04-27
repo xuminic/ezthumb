@@ -32,7 +32,7 @@ tOleInPlaceSite::tOleInPlaceSite(class tOleHandler *pTen
 
 tOleInPlaceSite::~tOleInPlaceSite(void)
     {
-    return;
+      delete m_oleinplaceframe;
     }
 
 

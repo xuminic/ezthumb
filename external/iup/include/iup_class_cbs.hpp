@@ -159,38 +159,6 @@ static int CB_##__cb(Ihandle* ih, float f1, int i1, int i2, char* s)          \
   return obj->__cb(ih, f1, i1, i2, s);                                  \
 }                                                           
 
-#define IUP_CLASS_DECLARECALLBACK_IFniiff(__class, __cb)  \
-       int      __cb(Ihandle* ih, int i1, int i2, float f1, float f2);         \
-static int CB_##__cb(Ihandle* ih, int i1, int i2, float f1, float f2)          \
-{                                                                   \
-  __class* obj = IUP_CLASS_GET_OBJECT(ih, __class);  \
-  return obj->__cb(ih, i1, i2, f1, f2);                                  \
-}                                                           
-
-#define IUP_CLASS_DECLARECALLBACK_IFniiffi(__class, __cb)  \
-       int      __cb(Ihandle* ih, int i1, int i2, float f1, float f2, int i3);         \
-static int CB_##__cb(Ihandle* ih, int i1, int i2, float f1, float f2, int i3)          \
-{                                                                   \
-  __class* obj = IUP_CLASS_GET_OBJECT(ih, __class);  \
-  return obj->__cb(ih, i1, i2, f1, f2, i3);                                  \
-}                                                           
-
-#define IUP_CLASS_DECLARECALLBACK_IFniiffFF(__class, __cb)  \
-       int      __cb(Ihandle* ih, int i1, int i2, float f1, float f2, float *f3, float *f4);         \
-static int CB_##__cb(Ihandle* ih, int i1, int i2, float f1, float f2, float *f3, float *f4)          \
-{                                                                   \
-  __class* obj = IUP_CLASS_GET_OBJECT(ih, __class);  \
-  return obj->__cb(ih, i1, i2, f1, f2, f3, f4);                                  \
-}                                                           
-
-#define IUP_CLASS_DECLARECALLBACK_IFniiffs(__class, __cb)  \
-       int      __cb(Ihandle* ih, int i1, int i2, float f1, float f2, char* s);         \
-static int CB_##__cb(Ihandle* ih, int i1, int i2, float f1, float f2, char* s)          \
-{                                                                   \
-  __class* obj = IUP_CLASS_GET_OBJECT(ih, __class);  \
-  return obj->__cb(ih, i1, i2, f1, f2, s);                                  \
-}                                                           
-
 #define IUP_CLASS_DECLARECALLBACK_IFnd(__class, __cb)  \
        int      __cb(Ihandle* ih, double d1);         \
 static int CB_##__cb(Ihandle* ih, double d1)          \
@@ -422,10 +390,6 @@ class IUP_CLASS_DUMMY
   IUP_CLASS_DECLARECALLBACK_IFnff(IUP_CLASS_DUMMY, IFnff);
   IUP_CLASS_DECLARECALLBACK_IFniff(IUP_CLASS_DUMMY, IFniff);
   IUP_CLASS_DECLARECALLBACK_IFnfiis(IUP_CLASS_DUMMY, IFnfiis);
-  IUP_CLASS_DECLARECALLBACK_IFniiff(IUP_CLASS_DUMMY, IFniiff);
-  IUP_CLASS_DECLARECALLBACK_IFniiffi(IUP_CLASS_DUMMY, IFniiffi);
-  IUP_CLASS_DECLARECALLBACK_IFniiffFF(IUP_CLASS_DUMMY, IFniiffFF);
-  IUP_CLASS_DECLARECALLBACK_IFniiffs(IUP_CLASS_DUMMY, IFniiffs);
   IUP_CLASS_DECLARECALLBACK_IFnd(IUP_CLASS_DUMMY, IFnd);
   IUP_CLASS_DECLARECALLBACK_IFndds(IUP_CLASS_DUMMY, IFndds);
   IUP_CLASS_DECLARECALLBACK_IFniid(IUP_CLASS_DUMMY, IFniid);

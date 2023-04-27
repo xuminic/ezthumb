@@ -1,5 +1,5 @@
 /** \file
- * \brief iuptree control internal definitions.
+ * \brief Tree control (not exported API)
  *
  * See Copyright Notice in iup.h
  */
@@ -35,13 +35,15 @@ typedef char InodeHandle;   /* should be void, but we use char to force compiler
 typedef struct _WidgetRec InodeHandle;
 #elif defined(WINVER)
 typedef struct _TREEITEM InodeHandle;
+#elif defined(__APPLE__)
+typedef void InodeHandle;   /* should be id, but don't want Obj-C in C header, and don't want id* */
 #else
 typedef struct _InodeData InodeHandle;
 #endif
 
 typedef struct _InodeData
 {
-  InodeHandle* node_handle;
+  InodeHandle* node_handle;  /* HTREEITEM (Windows), Widget (Motif), user_data (model-specific GTK), id (Apple) */
   void* userdata;
 } InodeData;
 
@@ -56,10 +58,11 @@ int iupdrvTreeTotalChildCount(Ihandle* ih, InodeHandle* node_handle);
 void iupTreeSelectLastCollapsedBranch(Ihandle* ih, int *last_id);
 
 void iupTreeDelFromCache(Ihandle* ih, int id, int count);
+void iupTreeIncCacheMem(Ihandle* ih); /* needed for IupCocoa */
 void iupTreeAddToCache(Ihandle* ih, int add, int kindPrev, InodeHandle* prevNode, InodeHandle* node_handle);
-void iupTreeCopyMoveCache(Ihandle* ih, int id_src, int id_dst, int count, int is_copy);
-void iupTreeDragDropCopyCache(Ihandle* ih, int id_src, int id_dst, int count);
+void iupTreeCopyMoveCache(Ihandle* ih, int id_src, int id_new, int count, int is_copy);
 
+/* copy from one control to another control */
 void iupdrvTreeDragDropCopyNode(Ihandle *src, Ihandle *dst, InodeHandle *itemSrc, InodeHandle *itemDst);
 
 /* Structure of the tree */
@@ -81,7 +84,7 @@ struct _IcontrolData
   void* def_image_collapsed_mask;  
   void* def_image_expanded_mask;  
 
-  InodeData *node_cache;
+  InodeData *node_cache;   /* given the id returns node native handle and user_data */
   int node_cache_max, node_count;
 };
 

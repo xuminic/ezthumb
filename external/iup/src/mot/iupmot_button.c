@@ -29,9 +29,10 @@
 #include "iupmot_drv.h"
 
 
-void iupdrvButtonAddBorders(int *x, int *y)
+void iupdrvButtonAddBorders(Ihandle* ih, int *x, int *y)
 {
   int border_size = 2*5;
+  (void)ih;  
   (*x) += border_size;
   (*y) += border_size;
 }
@@ -56,10 +57,10 @@ static int motButtonSetAlignmentAttrib(Ihandle* ih, const char* value)
 
   if (iupStrEqualNoCase(value1, "ARIGHT"))
     align = XmALIGNMENT_END;
-  else if (iupStrEqualNoCase(value1, "ACENTER"))
-    align = XmALIGNMENT_CENTER;
-  else /* "ALEFT" */
+  else if (iupStrEqualNoCase(value1, "ALEFT"))
     align = XmALIGNMENT_BEGINNING;
+  else /* "ACENTER" (default) */
+    align = XmALIGNMENT_CENTER;
 
   XtVaSetValues (ih->handle, XmNalignment, align, NULL);
   return 1;
@@ -107,6 +108,9 @@ static int motButtonSetImPressAttrib(Ihandle* ih, const char* value)
 
 static int motButtonSetPaddingAttrib(Ihandle* ih, const char* value)
 {
+  if (iupStrEqual(value, "DEFAULTBUTTONPADDING"))
+    value = IupGetGlobal("DEFAULTBUTTONPADDING");
+
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
   if (ih->handle)
   {
@@ -143,7 +147,7 @@ static int motButtonSetBackgroundAttrib(Ihandle* ih, const char* value)
       return 1;
     else
     {
-      Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0);
+      Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0, NULL);
       if (pixmap)
       {
         XtVaSetValues(ih->handle, XmNbackgroundPixmap, pixmap, NULL);

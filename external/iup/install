@@ -26,10 +26,10 @@ EchoDownloadTip()
 Copy_RunTime_Extra_CD()
 {
   # Do NOT overwrite for FreeType
-  cp -fn $1libfreetype.so $TEC_SYSTEM_LIB
+  #cp -fn $1libfreetype.so $TEC_SYSTEM_LIB
   
   cp -fv $1libpdflib.so $TEC_SYSTEM_LIB
-  cp -fv $1libftgl.so $TEC_SYSTEM_LIB
+  #cp -fv $1libftgl.so $TEC_SYSTEM_LIB
 }
 
 Copy_RunTime_To_System()

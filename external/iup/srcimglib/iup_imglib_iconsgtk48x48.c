@@ -13,9 +13,11 @@
 
 void iupImglibIconsGtk48x48Open(void)
 {
-  iupImageStockSet("IUP_IconMessageError", 0, "gtk-dialog-error");
-  iupImageStockSet("IUP_IconMessageHelp", 0, "gtk-dialog-question");
-  iupImageStockSet("IUP_IconMessageInfo", 0, "gtk-dialog-info");
-  iupImageStockSet("IUP_IconMessageSecurity", 0, "gtk-dialog-authentication");
-  iupImageStockSet("IUP_IconMessageWarning", 0, "gtk-dialog-warning");
+#ifdef IUP_IMGLIB_LARGE_ICON
+  iupImageStockSet("IUP_IconMessageError", NULL, "gtk-dialog-error");
+  iupImageStockSet("IUP_IconMessageHelp", NULL, "gtk-dialog-question");
+  iupImageStockSet("IUP_IconMessageInfo", NULL, "gtk-dialog-info");
+  iupImageStockSet("IUP_IconMessageSecurity", NULL, "gtk-dialog-authentication");
+  iupImageStockSet("IUP_IconMessageWarning", NULL, "gtk-dialog-warning");
+#endif
 }

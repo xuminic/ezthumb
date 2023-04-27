@@ -1,5 +1,5 @@
 /** \file
- * \brief Ihandle <-> Name table manager.
+ * \brief Ihandle <-> Name table manager (not exported API).
  *
  * See Copyright Notice in "iup.h"
  */
@@ -18,6 +18,8 @@ void iupNamesDestroyHandles(void);
 
 /* called from IupDestroy */
 void iupRemoveNames(Ihandle* ih);
+
+int iupNamesFindAll(Ihandle *ih, char** names, int n);
 
 /* Other functions declared in <iup.h> and implemented here.
 IupGetName

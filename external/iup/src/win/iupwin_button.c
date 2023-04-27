@@ -36,10 +36,11 @@ static int winButtonGetBorder(void)
   return 4;
 }
 
-void iupdrvButtonAddBorders(int *x, int *y)
+void iupdrvButtonAddBorders(Ihandle* ih, int *x, int *y)
 {
   /* LAYOUT_DECORATION_ESTIMATE */
   int border_size = winButtonGetBorder() * 2;
+  (void)ih;
   (*x) += border_size;
   (*y) += border_size;
 }
@@ -84,12 +85,11 @@ static int winButtonCalcAlignPosY(int vert_alignment, int rect_height, int heigh
   return y;
 }
 
-static HBITMAP winButtonGetBitmap(Ihandle* ih, UINT itemState, int *shift, int *w, int *h, int *bpp, HBITMAP *hMask)
+static HBITMAP winButtonGetBitmap(Ihandle* ih, UINT itemState, int *shift, int *w, int *h, int *bpp)
 {
   char *name;
   int make_inactive = 0;
   HBITMAP hBitmap;
-  *hMask = NULL;
 
   if (itemState & ODS_DISABLED)
   {
@@ -112,13 +112,10 @@ static HBITMAP winButtonGetBitmap(Ihandle* ih, UINT itemState, int *shift, int *
       name = iupAttribGet(ih, "IMAGE");
   }
 
-  hBitmap = iupImageGetImage(name, ih, make_inactive);
+  hBitmap = iupImageGetImage(name, ih, make_inactive, NULL);
 
   /* must use this info, since image can be a driver image loaded from resources */
   iupdrvImageGetInfo(hBitmap, w, h, bpp);
-
-  if (*bpp == 8)
-    *hMask = iupdrvImageCreateMask(IupGetHandle(name));
 
   return hBitmap;
 }
@@ -132,7 +129,7 @@ static void winButtonDrawImageText(Ihandle* ih, HDC hDC, int rect_width, int rec
       img_x, img_y, img_width, img_height, 
       bpp, shift = 0, style = 0;
   HFONT hFont = (HFONT)iupwinGetHFontAttrib(ih);
-  HBITMAP hBitmap, hMask;
+  HBITMAP hBitmap;
   COLORREF fgcolor;
 
   char* title = iupAttribGet(ih, "TITLE");
@@ -145,7 +142,7 @@ static void winButtonDrawImageText(Ihandle* ih, HDC hDC, int rect_width, int rec
   else
     fgcolor = ih->data->fgcolor;
 
-  hBitmap = winButtonGetBitmap(ih, itemState, NULL, &img_width, &img_height, &bpp, &hMask);
+  hBitmap = winButtonGetBitmap(ih, itemState, NULL, &img_width, &img_height, &bpp);
   if (!hBitmap)
     return;
 
@@ -235,11 +232,8 @@ static void winButtonDrawImageText(Ihandle* ih, HDC hDC, int rect_width, int rec
   else if (ih->data->horiz_alignment == IUP_ALIGN_ARIGHT)
     style |= DT_RIGHT;
 
-  iupwinDrawBitmap(hDC, hBitmap, hMask, img_x, img_y, img_width, img_height, bpp);
+  iupwinDrawBitmap(hDC, hBitmap, img_x, img_y, img_width, img_height, img_width, img_height, bpp);
   iupwinDrawText(hDC, title, txt_x, txt_y, txt_width, txt_height, hFont, fgcolor, style);
-
-  if (hMask)
-    DeleteObject(hMask);
 }
 
 static void winButtonDrawImage(Ihandle* ih, HDC hDC, int rect_width, int rect_height, int border, UINT itemState)
@@ -247,35 +241,34 @@ static void winButtonDrawImage(Ihandle* ih, HDC hDC, int rect_width, int rect_he
   int xpad = ih->data->horiz_padding + border, 
       ypad = ih->data->vert_padding + border;
   int x, y, width, height, bpp, shift = 0;
-  HBITMAP hBitmap, hMask;
+  HBITMAP hBitmap;
 
   if (itemState & ODS_SELECTED && !iupwin_comctl32ver6)
     shift = 1;
 
-  hBitmap = winButtonGetBitmap(ih, itemState, &shift, &width, &height, &bpp, &hMask);
+  hBitmap = winButtonGetBitmap(ih, itemState, &shift, &width, &height, &bpp);
   if (!hBitmap)
     return;
 
   x = winButtonCalcAlignPosX(ih->data->horiz_alignment, rect_width, width, xpad, shift);
   y = winButtonCalcAlignPosY(ih->data->vert_alignment, rect_height, height, ypad, shift);
 
-  iupwinDrawBitmap(hDC, hBitmap, hMask, x, y, width, height, bpp);
-
-  if (hMask)
-    DeleteObject(hMask);
+  iupwinDrawBitmap(hDC, hBitmap, x, y, width, height, width, height, bpp);
 }
 
 static void winButtonDrawText(Ihandle* ih, HDC hDC, int rect_width, int rect_height, int border, UINT itemState)
 {
   int xpad = ih->data->horiz_padding + border, 
       ypad = ih->data->vert_padding + border;
-  int x, y, width, height, shift = 0;
-  COLORREF fgcolor;
-
   char* title = iupAttribGet(ih, "TITLE");
+
   if (title)
   {
+	int x, y;
+	int width, height;
+	int shift = 0;
     int style = 0;
+    COLORREF fgcolor;
     HFONT hFont = (HFONT)iupwinGetHFontAttrib(ih);
     char* str = iupStrProcessMnemonic(title, NULL, 0);   /* remove & */
     iupdrvFontGetMultiLineStringSize(ih, str, &width, &height);
@@ -381,7 +374,7 @@ static void winButtonDrawItem(Ihandle* ih, DRAWITEMSTRUCT *drawitem)
       iupAttribGetBoolean(ih, "CANFOCUS"))
   {
     border--;
-    iupdrvPaintFocusRect(ih, hDC, border, border, width - 2 * border, height - 2 * border);
+    iupwinDrawFocusRect(hDC, border, border, width - 2 * border, height - 2 * border);
   }
 
   iupwinDrawDestroyBitmapDC(&bmpDC);
@@ -446,14 +439,14 @@ static int winButtonSetAlignmentAttrib(Ihandle* ih, const char* value)
     ih->data->horiz_alignment = IUP_ALIGN_ARIGHT;
   else if (iupStrEqualNoCase(value1, "ALEFT"))
     ih->data->horiz_alignment = IUP_ALIGN_ALEFT;
-  else /* "ACENTER" */
+  else /* "ACENTER" (default) */
     ih->data->horiz_alignment = IUP_ALIGN_ACENTER;
 
   if (iupStrEqualNoCase(value2, "ABOTTOM"))
     ih->data->vert_alignment = IUP_ALIGN_ABOTTOM;
   else if (iupStrEqualNoCase(value2, "ATOP"))
     ih->data->vert_alignment = IUP_ALIGN_ATOP;
-  else /* "ACENTER" */
+  else /* "ACENTER" (default) */
     ih->data->vert_alignment = IUP_ALIGN_ACENTER;
 
   if (ih->handle)
@@ -471,6 +464,9 @@ static char* winButtonGetAlignmentAttrib(Ihandle *ih)
 
 static int winButtonSetPaddingAttrib(Ihandle* ih, const char* value)
 {
+  if (iupStrEqual(value, "DEFAULTBUTTONPADDING"))
+    value = IupGetGlobal("DEFAULTBUTTONPADDING");
+
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
   if (ih->handle)
     iupdrvRedrawNow(ih);
@@ -487,15 +483,8 @@ static int winButtonSetTitleAttrib(Ihandle* ih, const char* value)
 
 static int winButtonSetBgColorAttrib(Ihandle* ih, const char* value)
 {
-  /* update internal image cache for controls that have the IMAGE attribute */
-  if (ih->data->type != IUP_BUTTON_TEXT)
-  {
-    iupAttribSet(ih, "BGCOLOR", value);
-    iupImageUpdateParent(ih);
-    iupdrvRedrawNow(ih);
-  }
-  else
-    iupdrvPostRedraw(ih);
+  (void)value;
+  iupdrvPostRedraw(ih);
   return 1;
 }
 
@@ -551,8 +540,10 @@ static int winButtonMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT
   case WM_MBUTTONDOWN:
   case WM_RBUTTONDOWN:
     {
+      iupwinFlagButtonDown(ih, msg);
+
       /* Process BUTTON_CB */
-      iupwinButtonDown(ih, msg, wp, lp);
+      (void)iupwinButtonDown(ih, msg, wp, lp); /* ignore return value */
 
       /* Feedback will NOT be done when not receiving the focus or when in double click */
       if ((msg==WM_LBUTTONDOWN && !iupAttribGetBoolean(ih, "CANFOCUS")) ||
@@ -568,8 +559,14 @@ static int winButtonMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT
   case WM_MBUTTONUP:
   case WM_RBUTTONUP:
     {
+      if (!iupwinFlagButtonUp(ih, msg))
+      {
+        *result = 0;
+        return 1;
+      }
+
       /* Process BUTTON_CB */
-      iupwinButtonUp(ih, msg, wp, lp);
+      (void)iupwinButtonUp(ih, msg, wp, lp); /* ignore return value */
       
       if (!iupObjectCheck(ih))
       {
@@ -785,4 +782,6 @@ void iupdrvButtonInitClass(Iclass* ic)
 
   /* NOT supported */
   iupClassRegisterAttribute(ic, "MARKUP", NULL, NULL, NULL, NULL, IUPAF_NOT_SUPPORTED|IUPAF_NOT_MAPPED);
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

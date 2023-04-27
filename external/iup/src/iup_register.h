@@ -22,11 +22,11 @@ extern "C" {
 
 /** Returns a class instance from a class name. The class name must be previously registered using \ref iupRegisterClass.
  * \ingroup register */
-Iclass* iupRegisterFindClass(const char* name);
+IUP_SDK_API Iclass* iupRegisterFindClass(const char* name);
 
 /** Register a class.
  * \ingroup register */
-void iupRegisterClass(Iclass* ic);
+IUP_SDK_API void iupRegisterClass(Iclass* ic);
                                      
                                      
 /* Register the internal classes. Called only from IupOpen. */

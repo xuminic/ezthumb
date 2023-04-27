@@ -1,0 +1,195 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{2C7E83B9-123A-BCDF-97BA-FCF4D0728408}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>NotSet</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\lib\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\lib\Debug_64\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\obj\Debug\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_64\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\src;..\include;..\src\win\wdl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_WIN32_WINNT=0x0601;_WIN32_IE=0x0900;COBJMACROS;WINVER=0x0601;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;NOTREEVIEW;UNICODE;_UNICODE;USE_NEW_DRAW;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>iupcore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)iup.lib</OutputFile>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\src;..\include;..\src\win\wdl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;DEBUG;_LIB;_WIN32_WINNT=0x0601;_WIN32_IE=0x0900;COBJMACROS;WINVER=0x0601;IUP_ASSERT;_CRT_SECURE_NO_DEPRECATE;NOTREEVIEW;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+      <DisableSpecificWarnings>4306</DisableSpecificWarnings>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>iupcore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)iup.lib</OutputFile>
+      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\win\iupwin_brush.h" />
+    <ClInclude Include="..\src\win\iupwin_draw.h" />
+    <ClInclude Include="..\src\win\iupwin_drv.h" />
+    <ClInclude Include="..\src\win\iupwin_handle.h" />
+    <ClInclude Include="..\src\win\iupwin_info.h" />
+    <ClInclude Include="..\src\win\iupwin_str.h" />
+    <ClInclude Include="..\src\win\wdl\backend-d2d.h" />
+    <ClInclude Include="..\src\win\wdl\backend-dwrite.h" />
+    <ClInclude Include="..\src\win\wdl\backend-gdix.h" />
+    <ClInclude Include="..\src\win\wdl\backend-wic.h" />
+    <ClInclude Include="..\src\win\wdl\dummy\d2d1.h" />
+    <ClInclude Include="..\src\win\wdl\dummy\dwrite.h" />
+    <ClInclude Include="..\src\win\wdl\dummy\gdiplus.h" />
+    <ClInclude Include="..\src\win\wdl\lock.h" />
+    <ClInclude Include="..\src\win\wdl\memstream.h" />
+    <ClInclude Include="..\src\win\wdl\misc.h" />
+    <ClInclude Include="..\src\win\wdl\wdl.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\win\iupwindows_help.c" />
+    <ClCompile Include="..\src\win\iupwin_brush.c" />
+    <ClCompile Include="..\src\win\iupwin_calendar.c" />
+    <ClCompile Include="..\src\win\iupwin_common.c" />
+    <ClCompile Include="..\src\win\iupwin_datepick.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_dragdrop.c" />
+    <ClCompile Include="..\src\win\iupwin_draw.c" />
+    <ClCompile Include="..\src\win\iupwin_draw_gdi.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_draw_wdl.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_filedlg.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\win\iupwin_focus.c" />
+    <ClCompile Include="..\src\win\iupwin_font.c" />
+    <ClCompile Include="..\src\win\iupwin_globalattrib.c" />
+    <ClCompile Include="..\src\win\iupwin_handle.c" />
+    <ClCompile Include="..\src\win\iupwin_image_wdl.c" />
+    <ClCompile Include="..\src\win\iupwin_info.c" />
+    <ClCompile Include="..\src\win\iupwin_key.c" />
+    <ClCompile Include="..\src\win\iupwin_loop.c" />
+    <ClCompile Include="..\src\win\iupwin_open.c" />
+    <ClCompile Include="..\src\win\iupwin_str.c" />
+    <ClCompile Include="..\src\win\iupwin_tips.c" />
+    <ClCompile Include="..\src\win\iupwin_touch.c" />
+    <ClCompile Include="..\src\win\iupwin_button.c" />
+    <ClCompile Include="..\src\win\iupwin_canvas.c" />
+    <ClCompile Include="..\src\win\iupwin_clipboard.c" />
+    <ClCompile Include="..\src\win\iupwin_dialog.c" />
+    <ClCompile Include="..\src\win\iupwin_fontdlg.c" />
+    <ClCompile Include="..\src\win\iupwin_frame.c" />
+    <ClCompile Include="..\src\win\iupwin_image.c" />
+    <ClCompile Include="..\src\win\iupwin_label.c" />
+    <ClCompile Include="..\src\win\iupwin_list.c" />
+    <ClCompile Include="..\src\win\iupwin_menu.c" />
+    <ClCompile Include="..\src\win\iupwin_messagedlg.c" />
+    <ClCompile Include="..\src\win\iupwin_progressbar.c" />
+    <ClCompile Include="..\src\win\iupwin_tabs.c" />
+    <ClCompile Include="..\src\win\iupwin_text.c" />
+    <ClCompile Include="..\src\win\iupwin_timer.c" />
+    <ClCompile Include="..\src\win\iupwin_toggle.c" />
+    <ClCompile Include="..\src\win\iupwin_tree.c" />
+    <ClCompile Include="..\src\win\iupwin_val.c" />
+    <ClCompile Include="..\src\win\wdl\backend-d2d.c" />
+    <ClCompile Include="..\src\win\wdl\backend-dwrite.c" />
+    <ClCompile Include="..\src\win\wdl\backend-gdix.c" />
+    <ClCompile Include="..\src\win\wdl\backend-wic.c" />
+    <ClCompile Include="..\src\win\wdl\bitblt.c" />
+    <ClCompile Include="..\src\win\wdl\brush.c" />
+    <ClCompile Include="..\src\win\wdl\cachedimage.c" />
+    <ClCompile Include="..\src\win\wdl\canvas.c" />
+    <ClCompile Include="..\src\win\wdl\draw.c" />
+    <ClCompile Include="..\src\win\wdl\fill.c" />
+    <ClCompile Include="..\src\win\wdl\font.c" />
+    <ClCompile Include="..\src\win\wdl\image.c" />
+    <ClCompile Include="..\src\win\wdl\init.c" />
+    <ClCompile Include="..\src\win\wdl\memstream.c" />
+    <ClCompile Include="..\src\win\wdl\misc.c" />
+    <ClCompile Include="..\src\win\wdl\path.c" />
+    <ClCompile Include="..\src\win\wdl\string.c" />
+    <ClCompile Include="..\src\win\wdl\strokestyle.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\iup.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="iupcore.vcxproj">
+      <Project>{2c7e83b9-7fe8-432a-97ba-fcf4d0728408}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

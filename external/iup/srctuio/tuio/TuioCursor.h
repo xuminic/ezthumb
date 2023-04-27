@@ -1,28 +1,24 @@
 /*
- TUIO C++ Library - part of the reacTIVision project
- http://reactivision.sourceforge.net/
+ TUIO C++ Library
+ Copyright (c) 2005-2017 Martin Kaltenbrunner <martin@tuio.org>
  
- Copyright (c) 2005-2009 Martin Kaltenbrunner <mkalten@iua.upf.edu>
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 3.0 of the License, or (at your option) any later version.
  
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
- 
- This program is distributed in the hope that it will be useful,
+ This library is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ Lesser General Public License for more details.
  
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library.
+*/
 
 #ifndef INCLUDED_TUIOCURSOR_H
 #define INCLUDED_TUIOCURSOR_H
 
-#include <math.h>
 #include "TuioContainer.h"
 
 namespace TUIO {
@@ -31,9 +27,9 @@ namespace TUIO {
 	 * The TuioCursor class encapsulates /tuio/2Dcur TUIO cursors.
 	 *
 	 * @author Martin Kaltenbrunner
-	 * @version 1.4
+	 * @version 1.1.6
 	 */ 
-	class TuioCursor: public TuioContainer {
+	class LIBDECL TuioCursor: public TuioContainer {
 		
 	protected:
 		/**
@@ -42,6 +38,8 @@ namespace TUIO {
 		int cursor_id;
 		
 	public:
+		using TuioContainer::update;
+		
 		/**
 		 * This constructor takes a TuioTime argument and assigns it along with the provided 
 		 * Session ID, Cursor ID, X and Y coordinate to the newly created TuioCursor.
@@ -52,9 +50,7 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */
-		TuioCursor (TuioTime ttime, long si, int ci, float xp, float yp):TuioContainer(ttime,si,xp,yp) {
-			cursor_id = ci;
-		};
+		TuioCursor (TuioTime ttime, long si, int ci, float xp, float yp);
 
 		/**
 		 * This constructor takes the provided Session ID, Cursor ID, X and Y coordinate 
@@ -65,9 +61,7 @@ namespace TUIO {
 		 * @param	xp	the X coordinate to assign
 		 * @param	yp	the Y coordinate to assign
 		 */
-		TuioCursor (long si, int ci, float xp, float yp):TuioContainer(si,xp,yp) {
-			cursor_id = ci;
-		};
+		TuioCursor (long si, int ci, float xp, float yp);
 		
 		/**
 		 * This constructor takes the atttibutes of the provided TuioCursor 
@@ -75,22 +69,18 @@ namespace TUIO {
 		 *
 		 * @param	tcur	the TuioCursor to assign
 		 */
-		TuioCursor (TuioCursor *tcur):TuioContainer(tcur) {
-			cursor_id = tcur->getCursorID();
-		};
+		TuioCursor (TuioCursor *tcur);
 		
 		/**
 		 * The destructor is doing nothing in particular. 
 		 */
-		~TuioCursor(){};
+		virtual ~TuioCursor(){};
 		
 		/**
 		 * Returns the Cursor ID of this TuioCursor.
 		 * @return	the Cursor ID of this TuioCursor
 		 */
-		int getCursorID() {
-			return cursor_id;
-		};
+		int getCursorID() const;
 	};
-};
+}
 #endif

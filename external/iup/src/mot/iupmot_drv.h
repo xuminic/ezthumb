@@ -70,6 +70,9 @@ void iupmotSetGlobalColorAttrib(Widget w, const char* xmname, const char* name);
 void iupmotSetBgColor(Widget w, Pixel color);
 char* iupmotGetBgColorAttrib(Ihandle* ih);
 
+/* image */
+Pixmap iupmotImageGetMask(const char* name);
+
 void iupmotSetPosition(Widget widget, int x, int y);
 void iupmotGetWindowSize(Ihandle *ih, int *width, int *height);
 
@@ -80,8 +83,6 @@ char* iupmotGetXWindowAttrib(Ihandle *ih);
 /* Unix Info */
 int iupUnixIsFile(const char* name);
 int iupUnixIsDirectory(const char* name);
-int iupUnixSetCurrentDirectory(const char* dir);
-char* iupUnixGetCurrentDirectory(void);
 int iupUnixMakeDirectory(const char* name);
 
 

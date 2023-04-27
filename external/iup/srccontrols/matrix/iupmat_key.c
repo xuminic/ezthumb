@@ -131,7 +131,7 @@ int iupMatrixProcessKeyPress(Ihandle* ih, int c)
       iupMATRIX_ScrollKeyUp(ih);
       iupMatrixAuxCallEnterCellCb(ih);
       iMatrixKeyCheckMarkEnd(ih, c, K_sUP);
-      break ;
+      break;
 
     case K_cDOWN:
     case K_sDOWN:
@@ -173,7 +173,7 @@ int iupMatrixProcessKeyPress(Ihandle* ih, int c)
 
     case K_CR:
       if (!ih->data->edit_hide_onfocus && ih->data->editing)
-        iupMatrixEditConfirm(ih);
+        (void)iupMatrixEditConfirm(ih);  /* ignore return value */
       else
       {
         if (iupMatrixEditShow(ih))

@@ -1,12 +1,12 @@
 ifeq ($(OS), Windows_NT)
   TECMAKE_CMD = $(MAKE) --no-print-directory -f ../tecmakewin.mak TEC_UNAME=$(TEC_UNAME)
-  WINLIBS = iupluaole
+  WINLIBS = iupluaole iupluafiledlg
 else
   TECMAKE_CMD = $(MAKE) --no-print-directory -f ../tecmake.mak
 endif
 
-.PHONY: do_all iuplua iupluacd iupluacontrols iupluamatrixex iupluagl iupluaglcontrols iuplua_plot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio iupluaole iupluaweb
-do_all: iuplua iupluacd iupluacontrols iupluamatrixex iupluagl iupluaglcontrols iuplua_plot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio $(WINLIBS) iupluaweb
+.PHONY: do_all iuplua iupluacd iupluacontrols iupluagl iupluaglcontrols iuplua_plot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio iupluaole iupluafiledlg iupluaweb iupluascripterdlg
+do_all: iuplua iupluacd iupluacontrols iupluagl iupluaglcontrols iuplua_plot iuplua_mglplot iuplua_scintilla iupluaim iupluaimglib iupluatuio $(WINLIBS) iupluaweb iupluascripterdlg
 
 iuplua:
 	@$(TECMAKE_CMD)  
@@ -16,9 +16,6 @@ iupluacd:
 
 iupluacontrols:
 	@$(TECMAKE_CMD) MF=iupcontrols 
-
-iupluamatrixex:
-	@$(TECMAKE_CMD) MF=iupmatrixex
 
 iupluagl:
 	@$(TECMAKE_CMD) MF=iupgl 
@@ -47,5 +44,11 @@ iupluatuio:
 iupluaole:
 	@$(TECMAKE_CMD) MF=iupole 
   
+iupluafiledlg:
+	@$(TECMAKE_CMD) MF=iupfiledlg
+  
 iupluaweb:
 	@$(TECMAKE_CMD) MF=iupweb 
+  
+iupluascripterdlg:
+	@$(TECMAKE_CMD) MF=iupluascripterdlg

@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>             
 
+#include "iup_export.h"
 #include "iupwin_str.h"
 #include "iup_str.h"
 
@@ -66,10 +67,10 @@ static void* winStrGetMemory(int size)
   static int buffers_sizes[MAX_BUFFERS];
   static int buffers_index = -1;
 
-  int i;
-
   if (size == -1) /* Frees memory */
   {
+    int i;
+
     buffers_index = -1;
     for (i = 0; i < MAX_BUFFERS; i++)
     {
@@ -158,7 +159,7 @@ static void winStrChar2Wide(const char* str, WCHAR* wstr, int *len)
   wstr[*len] = 0;
 }
 
-WCHAR* iupwinStrChar2Wide(const char* str)
+IUP_DRV_API WCHAR* iupwinStrChar2Wide(const char* str)
 {
   if (str)
   {
@@ -171,7 +172,7 @@ WCHAR* iupwinStrChar2Wide(const char* str)
   return NULL;
 }
 
-char* iupwinStrWide2Char(const WCHAR* wstr)
+IUP_DRV_API char* iupwinStrWide2Char(const WCHAR* wstr)
 {
   if (wstr)
   {
@@ -195,27 +196,29 @@ void iupwinStrCopy(TCHAR* dst_wstr, const char* src_str, int max_size)
   }
 }
 
-TCHAR* iupwinStrToSystemFilename(const char* str)
+IUP_DRV_API TCHAR* iupwinStrToSystemFilename(const char* str)
 {
   TCHAR* wstr;
   int old_utf8mode = iupwin_utf8mode;
-  iupwin_utf8mode = iupwin_utf8mode_file;
+  if (iupwin_utf8mode)
+    iupwin_utf8mode = iupwin_utf8mode_file;
   wstr = iupwinStrToSystem(str);
   iupwin_utf8mode = old_utf8mode;
   return wstr;
 }
 
-char* iupwinStrFromSystemFilename(const TCHAR* wstr)
+IUP_DRV_API char* iupwinStrFromSystemFilename(const TCHAR* wstr)
 {
   char* str;
   int old_utf8mode = iupwin_utf8mode;
-  iupwin_utf8mode = iupwin_utf8mode_file;
+  if (iupwin_utf8mode)
+    iupwin_utf8mode = iupwin_utf8mode_file;
   str = iupwinStrFromSystem(wstr);
   iupwin_utf8mode = old_utf8mode;
   return str;
 }
 
-TCHAR* iupwinStrToSystem(const char* str)
+IUP_DRV_API TCHAR* iupwinStrToSystem(const char* str)
 {
 #ifdef UNICODE
   if (str)
@@ -231,7 +234,7 @@ TCHAR* iupwinStrToSystem(const char* str)
 #endif
 }
 
-char* iupwinStrFromSystem(const TCHAR* wstr)
+IUP_DRV_API char* iupwinStrFromSystem(const TCHAR* wstr)
 {
 #ifdef UNICODE
   if (wstr)
@@ -247,7 +250,7 @@ char* iupwinStrFromSystem(const TCHAR* wstr)
 #endif
 }
 
-TCHAR* iupwinStrToSystemLen(const char* str, int *len)
+IUP_DRV_API TCHAR* iupwinStrToSystemLen(const char* str, int *len)
 {
   /* The len here is in bytes always, using UTF-8 or not.
      So, when converted to Unicode must return the actual size in characters. */
@@ -289,7 +292,8 @@ static char* iupStrCopyToUtf8Buffer(const char* str, int len, char* utf8_buffer,
   return utf8_buffer;
 }
 
-char* iupStrConvertToUTF8(const char* str, int len, char* utf8_buffer, int *utf8_buffer_max, int utf8mode)
+/* Used in glfont */
+IUP_SDK_API char* iupStrConvertToUTF8(const char* str, int len, char* utf8_buffer, int *utf8_buffer_max, int utf8mode)
 {
   if (utf8mode || iupStrIsAscii(str)) /* string is already utf8 or is ascii */
     return iupStrCopyToUtf8Buffer(str, len, utf8_buffer, utf8_buffer_max);

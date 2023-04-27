@@ -98,6 +98,7 @@
   <ItemGroup>
     <ClCompile Include="..\srccd\iup_cd.c" />
     <ClCompile Include="..\srccd\iup_cdutil.c" />
+    <ClCompile Include="..\srccd\iup_draw_cd.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\srccd\iupcd.def" />
@@ -110,6 +111,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cd\include\cdiup.h" />
+    <ClInclude Include="..\include\iupdraw_cd.h" />
     <ClInclude Include="..\srccd\iup_cdutil.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

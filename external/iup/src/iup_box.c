@@ -1,5 +1,5 @@
 /** \file
- * \brief Base for box Controls.
+ * \brief Base for Vbox and Hbox Controls.
  *
  * See Copyright Notice in "iup.h"
  */
@@ -25,8 +25,8 @@ static char* iBoxGetClientSizeAttrib(Ihandle* ih)
 {
   int width = ih->currentwidth;
   int height = ih->currentheight;
-  width -= 2*ih->data->margin_x;
-  height -= 2*ih->data->margin_y;
+  width -= 2*ih->data->margin_horiz;
+  height -= 2*ih->data->margin_vert;
   if (width < 0) width = 0;
   if (height < 0) height = 0;
   return iupStrReturnIntInt(width, height, 'x');
@@ -129,9 +129,9 @@ static int iBoxSetCMarginAttrib(Ihandle* ih, const char* value)
   iupdrvFontGetCharSize(ih, &charwidth, &charheight);
   iupStrToIntInt(value, &cmargin_x, &cmargin_y, 'x');
   if (cmargin_x!=-1)
-    ih->data->margin_x = iupWIDTH2RASTER(cmargin_x, charwidth);
+    ih->data->margin_horiz = iupWIDTH2RASTER(cmargin_x, charwidth);
   if (cmargin_y!=-1)
-    ih->data->margin_y = iupHEIGHT2RASTER(cmargin_y, charheight);
+    ih->data->margin_vert = iupHEIGHT2RASTER(cmargin_y, charheight);
   return 0;
 }
 
@@ -139,18 +139,18 @@ static char* iBoxGetCMarginAttrib(Ihandle* ih)
 {
   int charwidth, charheight;
   iupdrvFontGetCharSize(ih, &charwidth, &charheight);
-  return iupStrReturnIntInt(iupRASTER2WIDTH(ih->data->margin_x, charwidth), iupRASTER2HEIGHT(ih->data->margin_y, charheight), 'x');
+  return iupStrReturnIntInt(iupRASTER2WIDTH(ih->data->margin_horiz, charwidth), iupRASTER2HEIGHT(ih->data->margin_vert, charheight), 'x');
 }
 
 static int iBoxSetMarginAttrib(Ihandle* ih, const char* value)
 {
-  iupStrToIntInt(value, &ih->data->margin_x, &ih->data->margin_y, 'x');
+  iupStrToIntInt(value, &ih->data->margin_horiz, &ih->data->margin_vert, 'x');
   return 0;
 }
 
 static char* iBoxGetMarginAttrib(Ihandle* ih)
 {
-  return iupStrReturnIntInt(ih->data->margin_x, ih->data->margin_y, 'x');
+  return iupStrReturnIntInt(ih->data->margin_horiz, ih->data->margin_vert, 'x');
 }
 
 static int iBoxUpdateAttribFromFont(Ihandle* ih)
@@ -199,13 +199,16 @@ Iclass* iupBoxNewClassBase(void)
 
   ic->format = "g"; /* array of Ihandle */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype = IUP_CHILDMANY;
+  ic->childtype = IUP_CHILDMANY;  /* can have children */
   ic->is_interactive = 0;
 
   /* Class functions */
   ic->New = iupBoxNewClassBase;
   ic->Create = iBoxCreateMethod;
   ic->Map = iupBaseTypeVoidMapMethod;
+
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
 
   /* Internal Callback */
   iupClassRegisterCallback(ic, "UPDATEATTRIBFROMFONT_CB", "");

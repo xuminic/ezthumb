@@ -30,7 +30,7 @@
 
 static int dlg_popup_level = 1;
 
-InativeHandle* iupDialogGetNativeParent(Ihandle* ih)
+IUP_SDK_API InativeHandle* iupDialogGetNativeParent(Ihandle* ih)
 {
   Ihandle* parent = IupGetAttributeHandle(ih, "PARENTDIALOG");
   if (parent && parent->handle)
@@ -44,6 +44,18 @@ static char* iDialogGetBorderSizeAttrib(Ihandle* ih)
   int border, caption, menu;
   iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
   return iupStrReturnInt(border);
+}
+
+char* iupDialogGetClientSizeAttrib(Ihandle *ih)
+{
+  int width = ih->currentwidth, height = ih->currentheight;
+  int border = 0, caption = 0, menu = 0;
+  iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
+  width -= 2 * border;
+  height -= 2 * border + caption + menu;
+  if (width < 0) width = 0;
+  if (height < 0) height = 0;
+  return iupStrReturnIntInt(width, height, 'x');
 }
 
 int iupDialogSetClientSizeAttrib(Ihandle* ih, const char* value)
@@ -64,6 +76,7 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
   int screen_width = 0, screen_height = 0;
   int current_x = 0, current_y = 0;
   int parent_x = 0, parent_y = 0;
+  int parent_width = 0, parent_height = 0;
 
   /* the dialog is already mapped here */
 
@@ -85,25 +98,25 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
   }
 
   if (*x == IUP_CENTER || *y == IUP_CENTER ||
-      *x == IUP_RIGHT  || *y == IUP_RIGHT ||
-      *x == IUP_CENTERPARENT || *y == IUP_CENTERPARENT)
+      *x == IUP_RIGHT  || *y == IUP_RIGHT)
     iupdrvGetScreenSize(&screen_width, &screen_height);
 
-  if (*x == IUP_CENTERPARENT || *y == IUP_CENTERPARENT)
+  if (*x == IUP_CENTERPARENT || *y == IUP_CENTERPARENT ||
+      *x == IUP_LEFTPARENT   || *y == IUP_TOPPARENT    || 
+      *x == IUP_RIGHTPARENT  || *y == IUP_BOTTOMPARENT)
   {
     InativeHandle* parent = iupDialogGetNativeParent(ih);
     if (parent)
     {
       Ihandle* ih_parent = IupGetAttributeHandle(ih, "PARENTDIALOG");
-
       iupdrvDialogGetPosition(ih_parent, parent, &parent_x, &parent_y);
-
-      if (*x == IUP_CENTERPARENT && *y == IUP_CENTERPARENT)
-        iupdrvDialogGetSize(ih_parent, parent, &screen_width, &screen_height);
-      else if (*x == IUP_CENTERPARENT)
-        iupdrvDialogGetSize(ih_parent, parent, &screen_width, NULL);
-      else if (*y == IUP_CENTERPARENT)
-        iupdrvDialogGetSize(ih_parent, parent, NULL, &screen_height);
+      iupdrvDialogGetSize(ih_parent, parent, &parent_width, &parent_height);
+    }
+    else
+    {
+      iupdrvGetScreenSize(&screen_width, &screen_height);
+      parent_width = screen_width;
+      parent_height = screen_height;
     }
   }
 
@@ -119,9 +132,9 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
       parent_x = 0; 
       parent_y = 0;
 
-      /* screen size is now the size of the mdi client */
-      screen_width = client->currentwidth;
-      screen_height = client->currentheight;
+      /* screen/parent size is now the size of the mdi client */
+      parent_width = screen_width = client->currentwidth;
+      parent_height = screen_height = client->currentheight;
 
       iupdrvScreenToClient(client, &current_x, &current_y);
       iupdrvScreenToClient(client, &cursor_x, &cursor_y);
@@ -131,7 +144,7 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
   switch (*x)
   {
   case IUP_CENTERPARENT:
-    *x = (screen_width - ih->currentwidth)/2 + parent_x;
+    *x = (parent_width - ih->currentwidth)/2 + parent_x;
     break;
   case IUP_CENTER:
     *x = (screen_width - ih->currentwidth)/2;
@@ -141,6 +154,12 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
     break;
   case IUP_RIGHT:
     *x = screen_width - ih->currentwidth;
+    break;
+  case IUP_LEFTPARENT:
+    *x = parent_x;
+    break;
+  case IUP_RIGHTPARENT:
+    *x = parent_width - ih->currentwidth + parent_x;
     break;
   case IUP_MOUSEPOS:
     *x = cursor_x;
@@ -153,16 +172,22 @@ static void iDialogAdjustPos(Ihandle *ih, int *x, int *y)
   switch (*y)
   {
   case IUP_CENTERPARENT:
-    *y = (screen_height - ih->currentheight)/2 + parent_y;
+    *y = (parent_height - ih->currentheight)/2 + parent_y;
     break;
   case IUP_CENTER:
     *y = (screen_height - ih->currentheight)/2;
     break;
-  case IUP_LEFT:
+  case IUP_TOP:
     *y = 0;
     break;
-  case IUP_RIGHT:
+  case IUP_BOTTOM:
     *y = screen_height - ih->currentheight;
+    break;
+  case IUP_TOPPARENT:
+    *y = parent_y;
+    break;
+  case IUP_BOTTOMPARENT:
+    *y = parent_height - ih->currentheight + parent_y;
     break;
   case IUP_MOUSEPOS:
     *y = cursor_y;
@@ -273,6 +298,12 @@ static int iDialogCreateMethod(Ihandle* ih, void** params)
 
 static void iDialogDestroyMethod(Ihandle* ih)
 {
+  if (ih->data->menu)
+  {
+    IupDestroy(ih->data->menu);
+    ih->data->menu = NULL;
+  }
+
   iupDlgListRemove(ih);
 }
 
@@ -341,7 +372,7 @@ static void iDialogSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 
     if (offset) iupStrToIntInt(offset, &x, &y, 'x');
 
-    if (iupAttribGetBoolean(ih, "CUSTOMFRAME"))
+    if (iupAttribGetBoolean(ih, "CUSTOMFRAMEDRAW"))  /* Windows Only */
     {
       int border, caption, menu;
       iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
@@ -360,7 +391,8 @@ static void iDialogAfterHide(Ihandle* ih)
   IFni show_cb;
 
   /* process all pending messages, make sure the dialog is hidden */
-  IupFlush();
+  if (!iupAttribGetBoolean(ih, "NOFLUSH"))
+    IupFlush();
 
   show_cb = (IFni)IupGetCallback(ih, "SHOW_CB");
   if (show_cb && show_cb(ih, ih->data->show_state) == IUP_CLOSE)
@@ -373,28 +405,32 @@ static void iDialogAfterShow(Ihandle* ih)
 {
   Ihandle* old_focus;
   IFni show_cb;
-  int show_state;
+  int old_show_state;
 
   /* process all pending messages, make sure the dialog is visible */
-  IupFlush();
+  if (!iupAttribGetBoolean(ih, "NOFLUSH"))
+    IupFlush();
 
   old_focus = IupGetFocus();
-  show_state = ih->data->show_state;
+  old_show_state = ih->data->show_state;
 
   show_cb = (IFni)IupGetCallback(ih, "SHOW_CB");
-  if (show_cb && show_cb(ih, show_state) == IUP_CLOSE)
+  if (show_cb && show_cb(ih, ih->data->show_state) == IUP_CLOSE)
   {
     IupExitLoop();
     return;
   }
 
-  if (show_state == IUP_SHOW)
+  if (old_show_state == IUP_SHOW)
   {
     if (show_cb)
-      IupFlush();  /* again to update focus */
+    {
+      if (!iupAttribGetBoolean(ih, "NOFLUSH"))
+        IupFlush();  /* again to update focus */
+    }
 
     /* do it only if show_cb did NOT changed the current focus */
-    if (old_focus == IupGetFocus())
+    if (old_focus == IupGetFocus() && !iupAttribGetBoolean(ih, "SHOWNOFOCUS"))
     {
       Ihandle *startfocus = IupGetAttributeHandle(ih, "STARTFOCUS");
       if (startfocus)
@@ -417,6 +453,7 @@ int iupDialogGetChildId(Ihandle* ih)
 
 char* iupDialogGetChildIdStr(Ihandle* ih)
 {
+  /* Used only in Motif */
   Ihandle* dialog = IupGetDialog(ih);
   return iupStrReturnStrf("iup-%s-%d", ih->iclass->name, dialog->data->child_id);
 }
@@ -487,13 +524,13 @@ static void iDialogModalLoop(Ihandle* ih)
   hide the dialog if still visible. */
   if (iupObjectCheck(ih))
   {
-    iupAttribSet(ih, "_IUP_WAS_MODAL", "1");
+    iupAttribSet(ih, "_IUPDLG_WAS_MODAL", "1");
 
     iDialogUnSetModal(ih);
     iupDialogHide(ih);
 
     if (iupObjectCheck(ih))
-      iupAttribSet(ih, "_IUP_WAS_MODAL", NULL);
+      iupAttribSet(ih, "_IUPDLG_WAS_MODAL", NULL);
   }
   else
     iDialogListCheckLastVisible(1);
@@ -501,9 +538,20 @@ static void iDialogModalLoop(Ihandle* ih)
 
 int iupDialogPopup(Ihandle* ih, int x, int y)
 {
-  int ret = iupClassObjectDlgPopup(ih, x, y);
-  if (ret != IUP_INVALID) /* IUP_INVALID means it is not implemented */
+  if (iupClassObjectHasDlgPopup(ih))
+  {
+    int ret, automodal = IupGetInt(ih, "AUTOMODAL"); /* Used only for Windows MessageBox */
+
+    if (!automodal)
+      iDialogSetModal(ih);  /* make sure all other dialogs are inactive */
+
+    ret = iupClassObjectDlgPopup(ih, x, y);
+
+    if (!automodal)
+      iDialogUnSetModal(ih);
+
     return ret;
+  }
 
   ih->data->show_state = IUP_SHOW;
 
@@ -548,7 +596,7 @@ int iupDialogShowXY(Ihandle* ih, int x, int y)
 
 void iupDialogHide(Ihandle* ih)
 {
-  int was_modal = iupAttribGet(ih, "_IUP_WAS_MODAL") != NULL;
+  int was_modal = iupAttribGet(ih, "_IUPDLG_WAS_MODAL") != NULL;
 
   /* hidden at the system and marked hidden in IUP */
   if (!iupdrvDialogIsVisible(ih) && ih->data->show_state == IUP_HIDE) 
@@ -584,6 +632,398 @@ void iupDialogHide(Ihandle* ih)
 
 /****************************************************************/
 
+
+int iupDialogCustomFrameRestore(Ihandle* ih)
+{
+  if (iupAttribGet(ih, "_IUPDLG_OLD_MAXSIZE"))
+  {
+    int width = 0, height = 0, x = 0, y = 0;
+    IupGetIntInt(ih, "_IUPDLG_OLD_MAXPOS", &x, &y);
+    IupGetIntInt(ih, "_IUPDLG_OLD_MAXSIZE", &width, &height);
+    IupSetStrf(ih, "RASTERSIZE", "%dx%d", width, height);
+
+    iupAttribSet(ih, "_IUPDLG_OLD_MAXPOS", NULL);
+    iupAttribSet(ih, "_IUPDLG_OLD_MAXSIZE", NULL);
+    iupAttribSet(ih, "MAXIMIZED", NULL);
+
+    IupRefresh(ih);
+    IupFlush(); /* update size first */
+
+    iupdrvDialogSetPosition(ih, x, y);
+    return 1;
+  }
+  return 0;
+}
+
+void iupDialogCustomFrameMaximize(Ihandle* ih)
+{
+  int width = 0, height = 0, x = 0, y = 0;
+  iupdrvGetScreenSize(&width, &height);
+  iupdrvDialogGetPosition(ih, NULL, &x, &y);
+
+  iupAttribSetStrf(ih, "_IUPDLG_OLD_MAXPOS", "%dx%d", x, y);
+  iupAttribSetStrf(ih, "_IUPDLG_OLD_MAXSIZE", "%dx%d", ih->currentwidth, ih->currentheight);
+  IupSetStrf(ih, "RASTERSIZE", "%dx%d", width, height);
+  iupAttribSet(ih, "MAXIMIZED", "Yes");
+
+  IupRefresh(ih);
+
+  iupdrvDialogSetPosition(ih, 0, 0);
+}
+
+typedef enum
+{
+  IUP_DLG_EDGE_NORTH_WEST,
+  IUP_DLG_EDGE_NORTH,
+  IUP_DLG_EDGE_NORTH_EAST,
+  IUP_DLG_EDGE_WEST,
+  IUP_DLG_EDGE_EAST,
+  IUP_DLG_EDGE_SOUTH_WEST,
+  IUP_DLG_EDGE_SOUTH,
+  IUP_DLG_EDGE_SOUTH_EAST
+} iupWindowEdge;
+
+static int iDialogCustomFrameSimulateButton_CB(Ihandle* ih, int button, int pressed, int x, int y, char* status)
+{
+  int is_resizing, border, edge;
+
+  if (button != IUP_BUTTON1 || iup_isdouble(status))
+    return IUP_DEFAULT;
+
+  is_resizing = iupAttribGetInt(ih, "_IUPDLG_RESIZING");
+  border = 5;
+  edge = -1;
+
+  if (x < border)
+  {
+    if (y < 2 * border)
+      edge = IUP_DLG_EDGE_NORTH_WEST;
+    else if (y > ih->currentheight - 2 * border)
+      edge = IUP_DLG_EDGE_SOUTH_WEST;
+    else
+      edge = IUP_DLG_EDGE_WEST;
+  }
+  else if (x > ih->currentwidth - border)
+  {
+    if (y < 2 * border)
+      edge = IUP_DLG_EDGE_NORTH_EAST;
+    else if (y > ih->currentheight - 2 * border)
+      edge = IUP_DLG_EDGE_SOUTH_EAST;
+    else
+      edge = IUP_DLG_EDGE_EAST;
+  }
+  else
+  {
+    if (y < border)
+    {
+      if (x < 2 * border)
+        edge = IUP_DLG_EDGE_NORTH_WEST;
+      else if (x > ih->currentwidth - 2 * border)
+        edge = IUP_DLG_EDGE_NORTH_EAST;
+      else
+        edge = IUP_DLG_EDGE_NORTH;
+    }
+    else if (y > ih->currentheight - border)
+    {
+      if (x < 2 * border)
+        edge = IUP_DLG_EDGE_SOUTH_WEST;
+      else if (x > ih->currentwidth - 2 * border)
+        edge = IUP_DLG_EDGE_SOUTH_EAST;
+      else
+        edge = IUP_DLG_EDGE_SOUTH;
+    }
+  }
+
+  if (edge != -1)
+  {
+    if (!is_resizing && pressed)  /* DRAG BEGIN */
+    {
+      int cur_start_x, cur_start_y, dlg_start_x, dlg_start_y;
+
+      iupAttribSet(ih, "_IUPDLG_RESIZING", "1");
+
+      IupGetIntInt(NULL, "CURSORPOS", &cur_start_x, &cur_start_y);
+      dlg_start_x = IupGetInt(ih, "X");
+      dlg_start_y = IupGetInt(ih, "Y");
+
+      iupAttribSetInt(ih, "_IUPDLG_START_X", dlg_start_x);
+      iupAttribSetInt(ih, "_IUPDLG_START_Y", dlg_start_y);
+      iupAttribSetInt(ih, "_IUPDLG_START_W", ih->currentwidth);
+      iupAttribSetInt(ih, "_IUPDLG_START_H", ih->currentheight);
+      iupAttribSetInt(ih, "_IUPDLG_CUR_START_X", cur_start_x);
+      iupAttribSetInt(ih, "_IUPDLG_CUR_START_Y", cur_start_y);
+
+      iupAttribSetInt(ih, "_IUPDLG_RESIZE_EDGE", edge);
+    }
+    else if (is_resizing && !pressed)  /* DRAG END */
+      iupAttribSet(ih, "_IUPDLG_RESIZING", NULL);
+  }
+
+  return IUP_DEFAULT;
+}
+
+static void iDialogCustomFrameSimulateSetCursor(Ihandle* ih, const char* value)
+{
+  iupdrvBaseSetCursorAttrib(ih, value);
+  iupAttribSet(ih, "_IUPDLG_RESETCURSOR", "1");
+}
+
+static int iDialogCustomFrameSimulateMotion_CB(Ihandle* ih, int x, int y, char *status)
+{
+  int is_resizing = iupAttribGetInt(ih, "_IUPDLG_RESIZING");
+  int border = 5;
+  int set = 0;
+
+  if (x < border)
+  {
+    if (y < 2 * border)
+      iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_NW");
+    else if (y > ih->currentheight - 2 * border)
+      iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_SW");
+    else
+      iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_W");
+
+    set = 1;
+  }
+  else if (x > ih->currentwidth - border)
+  {
+    if (y < 2 * border)
+      iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_NE");
+    else if (y > ih->currentheight - 2 * border)
+      iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_SE");
+    else
+      iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_E");
+
+    set = 1;
+  }
+  else
+  {
+    if (y < border)
+    {
+      if (x < 2 * border)
+        iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_NW");
+      else if (x > ih->currentwidth - 2 * border)
+        iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_NE");
+      else
+        iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_N");
+
+      set = 1;
+    }
+    else if (y > ih->currentheight - border)
+    {
+      if (x < 2 * border)
+        iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_SW");
+      else if (x > ih->currentwidth - 2 * border)
+        iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_SE");
+      else
+        iDialogCustomFrameSimulateSetCursor(ih, "RESIZE_S");
+
+      set = 1;
+    }
+  }
+
+  if (!is_resizing && !set && iupAttribGet(ih, "_IUPDLG_RESETCURSOR"))
+  {
+    iupdrvBaseSetCursorAttrib(ih, IupGetAttribute(ih, "CURSOR"));
+    iupAttribSet(ih, "_IUPDLG_RESETCURSOR", NULL);
+  }
+
+  if (is_resizing)
+  {
+    if (iup_isbutton1(status))  /* DRAG MOVE */
+    {
+      int cur_end_x, cur_end_y, cur_start_x, cur_start_y, dlg_start_x, dlg_start_y;
+      int width, height, dlg_start_w, dlg_start_h, diff_x, diff_y;
+      int edge = iupAttribGetInt(ih, "_IUPDLG_RESIZE_EDGE");
+
+      IupGetIntInt(NULL, "CURSORPOS", &cur_end_x, &cur_end_y);
+      dlg_start_x = iupAttribGetInt(ih, "_IUPDLG_START_X");
+      dlg_start_y = iupAttribGetInt(ih, "_IUPDLG_START_Y");
+      dlg_start_w = iupAttribGetInt(ih, "_IUPDLG_START_W");
+      dlg_start_h = iupAttribGetInt(ih, "_IUPDLG_START_H");
+      cur_start_x = iupAttribGetInt(ih, "_IUPDLG_CUR_START_X");
+      cur_start_y = iupAttribGetInt(ih, "_IUPDLG_CUR_START_Y");
+
+      x = dlg_start_x;
+      y = dlg_start_y;
+      width = dlg_start_w;
+      height = dlg_start_h;
+
+      diff_x = (cur_end_x - cur_start_x);
+      diff_y = (cur_end_y - cur_start_y);
+
+      switch (edge)
+      {
+      case IUP_DLG_EDGE_NORTH_WEST:
+        y += diff_y;
+        height -= diff_y;
+        x += diff_x;
+        width -= diff_x;
+        break;
+      case IUP_DLG_EDGE_NORTH:
+        y += diff_y;
+        height -= diff_y;
+        break;
+      case IUP_DLG_EDGE_NORTH_EAST:
+        y += diff_y;
+        height -= diff_y;
+        width += diff_x;
+        break;
+      case IUP_DLG_EDGE_WEST:
+        x += diff_x;
+        width -= diff_x;
+        break;
+      case IUP_DLG_EDGE_EAST:
+        width += diff_x;
+        break;
+      case IUP_DLG_EDGE_SOUTH_WEST:
+        x += diff_x;
+        width -= diff_x;
+        height += diff_y;
+        break;
+      case IUP_DLG_EDGE_SOUTH:
+        height += diff_y;
+        break;
+      case IUP_DLG_EDGE_SOUTH_EAST:
+        width += diff_x;
+        height += diff_y;
+        break;
+      }
+
+      if (width != dlg_start_w || height != dlg_start_h)
+      {
+        IupSetStrf(ih, "RASTERSIZE", "%dx%d", width, height);
+        IupRefresh(ih);
+      }
+
+      if (x != dlg_start_x || y != dlg_start_y)
+        iupdrvDialogSetPosition(ih, x, y);
+    }
+    else
+      iupAttribSet(ih, "_IUPDLG_RESIZING", NULL);
+  }
+
+  (void)status;
+  return IUP_DEFAULT;
+}
+
+static int iDialogCustomFrameSimulateCaptionButton_CB(Ihandle* caption, int button, int pressed, int x, int y, char* status)
+{
+  Ihandle* ih = IupGetDialog(caption);
+  int is_moving = iupAttribGetInt(ih, "_IUPDLG_MOVING");
+
+  if (button != IUP_BUTTON1)
+    return IUP_DEFAULT;
+
+  if (iup_isdouble(status))
+  {
+    if (IupGetInt(ih, "MAXIMIZED"))
+      IupSetAttribute(ih, "PLACEMENT", NULL);
+    else
+      IupSetAttribute(ih, "PLACEMENT", "MAXIMIZED");
+
+    IupShow(ih);
+
+    return IUP_DEFAULT;
+  }
+
+  if (!is_moving && pressed)  /* DRAG BEGIN */
+  {
+    int cur_start_x, cur_start_y, dlg_start_x, dlg_start_y;
+
+    iupAttribSet(ih, "_IUPDLG_MOVING", "1");
+
+    IupGetIntInt(NULL, "CURSORPOS", &cur_start_x, &cur_start_y);
+    dlg_start_x = IupGetInt(ih, "X");
+    dlg_start_y = IupGetInt(ih, "Y");
+
+    iupAttribSetInt(ih, "_IUPDLG_START_X", dlg_start_x);
+    iupAttribSetInt(ih, "_IUPDLG_START_Y", dlg_start_y);
+    iupAttribSetInt(ih, "_IUPDLG_CUR_START_X", cur_start_x);
+    iupAttribSetInt(ih, "_IUPDLG_CUR_START_Y", cur_start_y);
+  }
+  else if (is_moving)  /* DRAG END */
+  {
+    iupAttribSet(ih, "_IUPDLG_MOVING", NULL);
+  }
+
+  (void)x;
+  (void)y;
+  return IUP_DEFAULT;
+}
+
+static int iDialogCustomFrameSimulateCaptionMotion_CB(Ihandle* caption, int x, int y, char *status)
+{
+  Ihandle* ih = IupGetDialog(caption);
+  int is_moving = iupAttribGetInt(ih, "_IUPDLG_MOVING");
+
+  if (iupAttribGet(ih, "_IUPDLG_RESETCURSOR") && !iupAttribGetInt(ih, "_IUPDLG_RESIZING"))
+  {
+    iupdrvBaseSetCursorAttrib(ih, IupGetAttribute(ih, "CURSOR"));
+    iupAttribSet(ih, "_IUPDLG_RESETCURSOR", NULL);
+  }
+
+  if (is_moving)
+  {
+    if (iup_isbutton1(status))  /* DRAG MOVE */
+    {
+      int cur_end_x, cur_end_y, cur_start_x, cur_start_y, dlg_start_x, dlg_start_y;
+
+      IupGetIntInt(NULL, "CURSORPOS", &cur_end_x, &cur_end_y);
+      dlg_start_x = iupAttribGetInt(ih, "_IUPDLG_START_X");
+      dlg_start_y = iupAttribGetInt(ih, "_IUPDLG_START_Y");
+      cur_start_x = iupAttribGetInt(ih, "_IUPDLG_CUR_START_X");
+      cur_start_y = iupAttribGetInt(ih, "_IUPDLG_CUR_START_Y");
+
+      x = dlg_start_x + (cur_end_x - cur_start_x);
+      y = dlg_start_y + (cur_end_y - cur_start_y);
+
+      iupdrvDialogSetPosition(ih, x, y);
+    }
+    else
+      iupAttribSet(ih, "_IUPDLG_MOVING", NULL);
+  }
+
+  return IUP_DEFAULT;
+}
+
+void iupDialogCustomFrameSimulateCheckCallbacks(Ihandle* ih)
+{
+  Ihandle* ih_caption = IupGetDialogChild(ih, "CUSTOMFRAMECAPTION");
+  if (ih_caption)
+  {
+    if (!IupGetCallback(ih_caption, "BUTTON_CB"))
+      IupSetCallback(ih_caption, "BUTTON_CB", (Icallback)iDialogCustomFrameSimulateCaptionButton_CB);
+
+    if (!IupGetCallback(ih_caption, "MOTION_CB"))
+      IupSetCallback(ih_caption, "MOTION_CB", (Icallback)iDialogCustomFrameSimulateCaptionMotion_CB);
+  }
+}
+
+static int iDialogSetCustomFrameSimulateAttrib(Ihandle* ih, const char* value)
+{
+  if (iupStrBoolean(value))
+  {
+    iupDialogCustomFrameSimulateCheckCallbacks(ih);
+
+    IupSetCallback(ih, "BUTTON_CB", (Icallback)iDialogCustomFrameSimulateButton_CB);
+    IupSetCallback(ih, "MOTION_CB", (Icallback)iDialogCustomFrameSimulateMotion_CB);
+
+    iupAttribSet(ih, "RESIZE", "NO");
+    iupAttribSet(ih, "MENUBOX", "NO");
+    iupAttribSet(ih, "MAXBOX", "NO");
+    iupAttribSet(ih, "MINBOX", "NO");
+    iupAttribSet(ih, "BORDER", "NO");
+
+    iupAttribSet(ih, "TITLE", NULL);
+
+    iupAttribSet(ih, "MENU", NULL); /* can NOT have a menu */
+
+    iupAttribSet(ih, "TASKBARBUTTON", "SHOW");
+  }
+
+  return 1;
+}
 
 static int iDialogSizeGetScale(const char* sz)
 {
@@ -759,7 +1199,7 @@ void iupDialogGetDecorSize(Ihandle* ih, int *decorwidth, int *decorheight)
   int border, caption, menu;
   iupdrvDialogGetDecoration(ih, &border, &caption, &menu);
 
-  if (iupAttribGetBoolean(ih, "CUSTOMFRAMEEX"))
+  if (iupAttribGetBoolean(ih, "CUSTOMFRAME"))
   {
     *decorwidth = 0;
     *decorheight = 0;
@@ -906,7 +1346,7 @@ static int iDialogSetMenuAttrib(Ihandle* ih, const char* value)
 /****************************************************************/
 
 
-Ihandle* IupDialog(Ihandle* child)
+IUP_API Ihandle* IupDialog(Ihandle* child)
 {
   void *children[2];
   children[0] = child;
@@ -921,7 +1361,7 @@ Iclass* iupDialogNewClass(void)
   ic->name = "dialog";
   ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPEDIALOG;
-  ic->childtype = IUP_CHILDMANY+1;  /* one child */
+  ic->childtype = IUP_CHILDMANY+1;  /* 1 child */
   ic->is_interactive = 1;
 
   /* Class functions */
@@ -936,6 +1376,7 @@ Iclass* iupDialogNewClass(void)
   iupClassRegisterCallback(ic, "SHOW_CB", "i");
   iupClassRegisterCallback(ic, "RESIZE_CB", "ii");
   iupClassRegisterCallback(ic, "CLOSE_CB", "");
+  iupClassRegisterCallback(ic, "FOCUS_CB", "i");
 
   /* Common Callbacks */
   iupBaseRegisterCommonCallbacks(ic);
@@ -990,11 +1431,14 @@ Iclass* iupDialogNewClass(void)
   iupClassRegisterAttribute(ic, "DIALOGFRAME",  NULL, iDialogSetDialogFrameAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "PARENTDIALOG", NULL, iDialogSetParentDialogAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_IHANDLENAME | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHRINK",       NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "STARTFOCUS",   NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "STARTFOCUS",   NULL, NULL, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_IHANDLENAME | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MODAL",        NULL, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "PLACEMENT",    NULL, NULL, "NORMAL", NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "NOFLUSH", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SHOWNOFOCUS", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "SIMULATEMODAL", NULL, iDialogSetSimulateModalAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CUSTOMFRAMESIMULATE", NULL, iDialogSetCustomFrameSimulateAttrib, IUPAF_SAMEASSYSTEM, NULL, IUPAF_NOT_MAPPED);
 
   iupClassRegisterAttribute(ic, "NATIVEPARENT", NULL, NULL, NULL, NULL, IUPAF_NO_STRING);
 

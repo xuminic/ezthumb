@@ -18,10 +18,8 @@
 #include "iup_str.h"
 #include "iup_predialogs.h"
 
-/* from iup_open, but it is not exported, used only here */
-int iupIsOpened(void);
 
-void iupError(const char* format, ...)
+IUP_SDK_API void iupError(const char* format, ...)
 {
   int size;
   char* msg = iupStrGetLargeMem(&size);
@@ -32,8 +30,8 @@ void iupError(const char* format, ...)
 #if IUP_ASSERT_CONSOLE 
   fprintf(stderr, "%s", msg);
 #else
-  if (iupIsOpened())
-    iupShowError(NULL, msg);
+  if (IupIsOpened())
+    IupMessageError(NULL, msg);
   else
     fprintf(stderr, "%s", msg);
 #endif
@@ -41,7 +39,7 @@ void iupError(const char* format, ...)
   size = 0;
 }
 
-void iupAssert(const char* expr, const char* file, int line, const char* func)
+IUP_SDK_API void iupAssert(const char* expr, const char* file, int line, const char* func)
 {
   if (func)
     iupError("File: %s\n"

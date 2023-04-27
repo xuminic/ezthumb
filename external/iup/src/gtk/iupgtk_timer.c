@@ -53,7 +53,10 @@ void iupdrvTimerRun(Ihandle *ih)
   {
     GTimer* g_timer;
 
-    ih->serial = g_timeout_add(time_ms, gtkTimerProc, (gpointer)ih);
+    if (iupAttribGetBoolean(ih, "PRIORITY_HIGH"))
+      ih->serial = g_timeout_add_full(G_PRIORITY_HIGH, time_ms, gtkTimerProc, (gpointer)ih, NULL);
+    else
+      ih->serial = g_timeout_add(time_ms, gtkTimerProc, (gpointer)ih);
 
     g_timer = g_timer_new();
     iupAttribSet(ih, "G_TIMER", (char*)g_timer);

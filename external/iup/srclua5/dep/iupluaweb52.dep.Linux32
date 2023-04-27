@@ -1,0 +1,6 @@
+$(OBJDIR)/il_webbrowser.o: ctrl/il_webbrowser.c /tecgraf/lua52/include/lua.h \
+ /tecgraf/lua52/include/luaconf.h /tecgraf/lua52/include/lauxlib.h \
+ /tecgraf/lua52/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupweb.h ../srclua5/il.h lh/webbrowser.lh \
+ ../include/iupluaweb.h

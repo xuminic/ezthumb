@@ -80,17 +80,20 @@
 #define WM_IUPCARET WM_APP+1   /* Custom IUP message */
 
 
-void iupdrvTextAddSpin(int *w, int h)
+void iupdrvTextAddSpin(Ihandle* ih, int *w, int h)
 {
   *w += h;
+  (void)ih;  
 }
 
-void iupdrvTextAddBorders(int *w, int *h)
+void iupdrvTextAddBorders(Ihandle* ih, int *w, int *h)
 {
+  /* Used also by IupCalendar and IupDatePick in Windows */
   /* LAYOUT_DECORATION_ESTIMATE */
   int border_size = 2 * 3;
   (*w) += border_size;
   (*h) += border_size;
+  (void)ih;  
 }
 
 static void winTextParseParagraphFormat(Ihandle* formattag, PARAFORMAT2 *paraformat, int convert2twips)
@@ -126,9 +129,9 @@ static void winTextParseParagraphFormat(Ihandle* formattag, PARAFORMAT2 *parafor
     {
       paraformat->dwMask |= PFM_NUMBERINGSTYLE;
 
-      if (iupStrEqualNoCase(format, "RIGHTPARENTESES"))
+      if (iupStrEqualNoCase(format, "RIGHTPARENTHESIS"))
         paraformat->wNumberingStyle = PFNS_PAREN;
-      else if (iupStrEqualNoCase(format, "PARENTESES"))
+      else if (iupStrEqualNoCase(format, "PARENTHESES"))
         paraformat->wNumberingStyle = PFNS_PARENS;
       else if (iupStrEqualNoCase(format, "PERIOD"))
         paraformat->wNumberingStyle = PFNS_PERIOD;
@@ -191,12 +194,12 @@ static void winTextParseParagraphFormat(Ihandle* formattag, PARAFORMAT2 *parafor
 
     while (format)
     {
-      str = iupStrDupUntil((char**)&format, ' ');
+      str = iupStrDupUntil((const char**)&format, ' ');
       if (!str) break;
       pos = atoi(str)*convert2twips;
       free(str);
 
-      str = iupStrDupUntil((char**)&format, ' ');
+      str = iupStrDupUntil((const char**)&format, ' ');
       if (!str) break;
 
       if (iupStrEqualNoCase(str, "DECIMAL"))
@@ -324,27 +327,27 @@ static void winTextParseCharacterFormat(Ihandle* formattag, CHARFORMAT2 *charfor
   format = iupAttribGet(formattag, "FONTSCALE");
   if (format && charformat->yHeight != 0)
   {
-    float fval = 0;
+    double fval = 0;
     if (iupStrEqualNoCase(format, "XX-SMALL"))
-      fval = 0.5787037037037f;
+      fval = 0.5787037037037;
     else if (iupStrEqualNoCase(format, "X-SMALL"))
-      fval = 0.6444444444444f;
+      fval = 0.6444444444444;
     else if (iupStrEqualNoCase(format, "SMALL"))
-      fval = 0.8333333333333f;
+      fval = 0.8333333333333;
     else if (iupStrEqualNoCase(format, "MEDIUM"))
-      fval = 1.0f;
+      fval = 1.0;
     else if (iupStrEqualNoCase(format, "LARGE"))
-      fval = 1.2f;
+      fval = 1.2;
     else if (iupStrEqualNoCase(format, "X-LARGE"))
-      fval = 1.4399999999999f;
+      fval = 1.4399999999999;
     else if (iupStrEqualNoCase(format, "XX-LARGE"))
-      fval = 1.728f;
+      fval = 1.728;
     else 
-      iupStrToFloat(format, &fval);
+      iupStrToDouble(format, &fval);
 
     if (fval > 0)
     {
-      fval = ((float)charformat->yHeight)*fval;
+      fval = charformat->yHeight * fval;
       charformat->yHeight = iupROUND(fval);
     }
   }
@@ -760,6 +763,71 @@ static TCHAR* winTextStrConvertToSystem(Ihandle* ih, const char* str)
   return iupwinStrToSystem(str);
 }
 
+static DWORD CALLBACK winTextWriteStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
+{
+  HANDLE hFile = (HANDLE)dwCookie;
+
+  if (WriteFile(hFile, lpBuff, cb, (DWORD *)pcb, NULL))
+    return 0;
+
+  return (DWORD)-1;
+}
+
+static BOOL winTextWriteRtfToFile(HWND hwnd, TCHAR* pszFileName)
+{
+  BOOL fSuccess = FALSE;
+
+  HANDLE hFile = CreateFile(pszFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
+  if (hFile != INVALID_HANDLE_VALUE)
+  {
+    EDITSTREAM es = { 0 };
+
+    es.pfnCallback = winTextWriteStreamCallback;
+    es.dwCookie = (DWORD_PTR)hFile;
+
+    if (SendMessage(hwnd, EM_STREAMOUT, SF_RTF, (LPARAM)&es) && es.dwError == 0)
+      fSuccess = TRUE;
+
+    CloseHandle(hFile);
+  }
+
+  return fSuccess;
+
+}
+
+static DWORD CALLBACK winTextReadStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
+{
+  HANDLE hFile = (HANDLE)dwCookie;
+
+  if (ReadFile(hFile, lpBuff, cb, (DWORD *)pcb, NULL))
+    return 0;
+
+  return (DWORD)-1;
+}
+
+static BOOL winTextReadRtfFromFile(HWND hwnd, TCHAR* pszFileName)
+{
+  BOOL fSuccess = FALSE;
+
+  HANDLE hFile = CreateFile(pszFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+  if (hFile != INVALID_HANDLE_VALUE)
+  {
+    EDITSTREAM es = { 0 };
+
+    es.pfnCallback = winTextReadStreamCallback;
+    es.dwCookie = (DWORD_PTR)hFile;
+
+    if (SendMessage(hwnd, EM_STREAMIN, SF_RTF, (LPARAM)&es) && es.dwError == 0)
+      fSuccess = TRUE;
+
+    CloseHandle(hFile);
+  }
+
+  return fSuccess;
+
+}
+
+
 /***********************************************************************************************/
 
 
@@ -820,7 +888,10 @@ static int winTextSetSelectedTextAttrib(Ihandle* ih, const char* value)
       return 0;
 
     str = winTextStrConvertToSystem(ih, value);
+
+    ih->data->disable_callbacks = 1;
     SendMessage(ih->handle, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)str);
+    ih->data->disable_callbacks = 0;
   }
   return 0;
 }
@@ -1018,7 +1089,11 @@ static int winTextSetInsertAttrib(Ihandle* ih, const char* value)
   if (!ih->handle)  /* do not do the action before map */
     return 0;
   if (value)
+  {
+    ih->data->disable_callbacks = 1;
     SendMessage(ih->handle, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)winTextStrConvertToSystem(ih, value));
+    ih->data->disable_callbacks = 0;
+  }
   return 0;
 }
 
@@ -1036,7 +1111,9 @@ static int winTextSetAppendAttrib(Ihandle* ih, const char* value)
   wpos = GetWindowTextLength(ih->handle)+1;
   SendMessage(ih->handle, EM_SETSEL, (WPARAM)wpos, (LPARAM)wpos);
 
-  if (ih->data->is_multiline && ih->data->append_newline && wpos!=1)
+  ih->data->disable_callbacks = 1;
+
+  if (ih->data->is_multiline && ih->data->append_newline && wpos != 1)
   {
     if (ih->data->has_formatting)
       SendMessage(ih->handle, EM_REPLACESEL, (WPARAM)FALSE, (LPARAM)TEXT("\r"));
@@ -1044,6 +1121,8 @@ static int winTextSetAppendAttrib(Ihandle* ih, const char* value)
       SendMessage(ih->handle, EM_REPLACESEL, (WPARAM)FALSE, (LPARAM)TEXT("\r\n"));
   }
   SendMessage(ih->handle, EM_REPLACESEL, (WPARAM)TRUE, (LPARAM)str);
+
+  ih->data->disable_callbacks = 0;
 
   return 0;
 }
@@ -1467,6 +1546,30 @@ static int winTextSetRemoveFormattingAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
+static int winTextSetLoadRtfAttrib(Ihandle* ih, const char* value)
+{
+  if (value)
+  {
+    if (winTextReadRtfFromFile(ih->handle, iupwinStrToSystemFilename(value)))
+      iupAttribSet(ih, "LOADRTFSTATUS", "OK");
+    else
+      iupAttribSet(ih, "LOADRTFSTATUS", "FAILED");
+  }
+  return 0;
+}
+
+static int winTextSetSaveRtfAttrib(Ihandle* ih, const char* value)
+{
+  if (value)
+  {
+    if (winTextWriteRtfToFile(ih->handle, iupwinStrToSystemFilename(value)))
+      iupAttribSet(ih, "SAVERTFSTATUS", "OK");
+    else
+      iupAttribSet(ih, "SAVERTFSTATUS", "FAILED");
+  }
+  return 0;
+}
+
 static int winTextSetOverwriteAttrib(Ihandle* ih, const char* value)
 {
   if (!ih->data->has_formatting)
@@ -1703,7 +1806,13 @@ static int winTextMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
   if (msg==WM_KEYDOWN) /* process K_ANY before text callbacks */
   {
     ret = iupwinBaseMsgProc(ih, msg, wp, lp, result);
-    if (ret) 
+    if (!iupObjectCheck(ih))
+    {
+      *result = 0;
+      return 1;
+    }
+
+    if (ret)
     {
       iupAttribSet(ih, "_IUPWIN_IGNORE_CHAR", "1");
       *result = 0;
@@ -1746,7 +1855,7 @@ static int winTextMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
             ret = 1;
         }
       }
-      else 
+      else if (wp != VK_ESCAPE)
       {
         int has_ctrl = GetKeyState(VK_CONTROL) & 0x8000;
         int has_alt = GetKeyState(VK_MENU) & 0x8000;
@@ -1812,7 +1921,7 @@ static int winTextMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
         return 1;
       }
       else
-        return 0;  /* already processed at the begining of this function */
+        return 0;  /* already processed at the beginning of this function */
     }
   case WM_KEYUP:
     {
@@ -1877,6 +1986,8 @@ static int winTextMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
   case WM_MBUTTONDOWN:
   case WM_RBUTTONDOWN:
     {
+      iupwinFlagButtonDown(ih, msg);
+
       if (iupwinButtonDown(ih, msg, wp, lp)==-1)
       {
         *result = 0;
@@ -1889,6 +2000,12 @@ static int winTextMsgProc(Ihandle* ih, UINT msg, WPARAM wp, LPARAM lp, LRESULT *
   case WM_RBUTTONUP:
   case WM_LBUTTONUP:
     {
+      if (!iupwinFlagButtonUp(ih, msg))
+      {
+        *result = 0;
+        return 1;
+      }
+
       if (iupwinButtonUp(ih, msg, wp, lp)==-1)
       {
         *result = 0;
@@ -2223,4 +2340,10 @@ void iupdrvTextInitClass(Iclass* ic)
   iupClassRegisterAttribute(ic, "CUEBANNER", NULL, winTextSetCueBannerAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FILTER", NULL, winTextSetFilterAttrib, NULL, NULL, IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "NOHIDESEL", NULL, NULL, IUPAF_SAMEASSYSTEM, "Yes", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "LOADRTF", NULL, winTextSetLoadRtfAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SAVERTF", NULL, winTextSetSaveRtfAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "LOADRTFSTATUS", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SAVERTFSTATUS", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

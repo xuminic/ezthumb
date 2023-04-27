@@ -18,6 +18,7 @@
 #include "iup_stdcontrols.h"
 #include "iup_layout.h"
 #include "iup_normalizer.h"
+#include "iup_varg.h"
 
 
 /* Orientation */
@@ -29,7 +30,7 @@ struct _IcontrolData
       expand_children,
       is_homogeneous_lin, is_homogeneous_col,
       normalize_size,
-      margin_x, margin_y,
+      margin_horiz, margin_vert,
       size_lin, size_col,
       gap_lin, gap_col,
       orientation, num_div, num_lin, num_col,
@@ -67,8 +68,8 @@ static char* iGridBoxGetClientSizeAttrib(Ihandle* ih)
 {
   int width = ih->currentwidth;
   int height = ih->currentheight;
-  width -= 2 * ih->data->margin_x;
-  height -= 2*ih->data->margin_y;
+  width -= 2 * ih->data->margin_horiz;
+  height -= 2*ih->data->margin_vert;
   if (width < 0) width = 0;
   if (height < 0) height = 0;
   return iupStrReturnIntInt(width, height, 'x');
@@ -326,9 +327,9 @@ static int iGridBoxSetCMarginAttrib(Ihandle* ih, const char* value)
   iupdrvFontGetCharSize(ih, &charwidth, &charheight);
   iupStrToIntInt(value, &cmargin_x, &cmargin_y, 'x');
   if (cmargin_x!=-1)
-    ih->data->margin_x = iupWIDTH2RASTER(cmargin_x, charwidth);
+    ih->data->margin_horiz = iupWIDTH2RASTER(cmargin_x, charwidth);
   if (cmargin_y!=-1)
-    ih->data->margin_y = iupHEIGHT2RASTER(cmargin_y, charheight);
+    ih->data->margin_vert = iupHEIGHT2RASTER(cmargin_y, charheight);
   return 1;
 }
 
@@ -336,18 +337,18 @@ static char* iGridBoxGetCMarginAttrib(Ihandle* ih)
 {
   int charwidth, charheight;
   iupdrvFontGetCharSize(ih, &charwidth, &charheight);
-  return iupStrReturnIntInt(iupRASTER2WIDTH(ih->data->margin_x, charwidth), iupRASTER2HEIGHT(ih->data->margin_y, charheight), 'x');
+  return iupStrReturnIntInt(iupRASTER2WIDTH(ih->data->margin_horiz, charwidth), iupRASTER2HEIGHT(ih->data->margin_vert, charheight), 'x');
 }
 
 static int iGridBoxSetMarginAttrib(Ihandle* ih, const char* value)
 {
-  iupStrToIntInt(value, &ih->data->margin_x, &ih->data->margin_y, 'x');
+  iupStrToIntInt(value, &ih->data->margin_horiz, &ih->data->margin_vert, 'x');
   return 0;
 }
 
 static char* iGridBoxGetMarginAttrib(Ihandle* ih)
 {
-  return iupStrReturnIntInt(ih->data->margin_x, ih->data->margin_y, 'x');
+  return iupStrReturnIntInt(ih->data->margin_horiz, ih->data->margin_vert, 'x');
 }
 
 static int iGridBoxSetOrientationAttrib(Ihandle* ih, const char* value)
@@ -673,8 +674,8 @@ static void iGridBoxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *c
     children_natural_height = children_natural_maxheight*num_lin;
 
   /* compute the GridBox contents natural size */
-  *w = children_natural_width  + (num_col-1)*ih->data->gap_col + 2*ih->data->margin_x;
-  *h = children_natural_height + (num_lin-1)*ih->data->gap_lin + 2*ih->data->margin_y;
+  *w = children_natural_width  + (num_col-1)*ih->data->gap_col + 2*ih->data->margin_horiz;
+  *h = children_natural_height + (num_lin-1)*ih->data->gap_lin + 2*ih->data->margin_vert;
 
   /* Store to be used in iGridCalcEmptyHeight */
   ih->data->total_natural_width  = *w;
@@ -685,7 +686,7 @@ static void iGridBoxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *c
 static int iGridBoxCalcHomogeneousWidth(Ihandle *ih)
 {
   /* all columns with the same width */
-  int homogeneous_width = (ih->currentwidth - (ih->data->num_col-1)*ih->data->gap_col - 2*ih->data->margin_x)/ih->data->num_col;
+  int homogeneous_width = (ih->currentwidth - (ih->data->num_col-1)*ih->data->gap_col - 2*ih->data->margin_horiz)/ih->data->num_col;
   if (homogeneous_width<0) homogeneous_width = 0;
   return homogeneous_width;
 }
@@ -693,7 +694,7 @@ static int iGridBoxCalcHomogeneousWidth(Ihandle *ih)
 static int iGridBoxCalcHomogeneousHeight(Ihandle *ih)
 {
   /* all lines with the same height */
-  int homogeneous_height = (ih->currentheight - (ih->data->num_lin-1)*ih->data->gap_lin - 2*ih->data->margin_y)/ih->data->num_lin;
+  int homogeneous_height = (ih->currentheight - (ih->data->num_lin-1)*ih->data->gap_lin - 2*ih->data->margin_vert)/ih->data->num_lin;
   if (homogeneous_height < 0) homogeneous_height = 0;
   return homogeneous_height;
 }
@@ -923,11 +924,11 @@ static void iGridBoxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
 
       if (ih->data->homogeneous_width && ih->data->homogeneous_height)
         iupBaseSetCurrentSize(child, ih->data->homogeneous_width, ih->data->homogeneous_height, shrink);
-      else if (ih->data->homogeneous_width)
+      else if (ih->data->homogeneous_width && lin_height)
         iupBaseSetCurrentSize(child, ih->data->homogeneous_width, lin_height[lin], shrink);
-      else if (ih->data->homogeneous_height)
+      else if (ih->data->homogeneous_height && col_width)
         iupBaseSetCurrentSize(child, col_width[col], ih->data->homogeneous_height, shrink);
-      else
+      else if (lin_height && col_width)
         iupBaseSetCurrentSize(child, col_width[col], lin_height[lin], shrink);
 
       i++;
@@ -1049,7 +1050,7 @@ static void iGridBoxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
       col_width[col] = iGridBoxGetColWidth(ih, child_array, col);
 
     if (col==0)
-      col_pos[col] = ih->data->margin_x;
+      col_pos[col] = ih->data->margin_horiz;
     else
       col_pos[col] = col_pos[col - 1] + col_width[col - 1] + ih->data->gap_col;
 
@@ -1064,7 +1065,7 @@ static void iGridBoxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
       lin_height[lin] = iGridBoxGetLinHeight(ih, child_array, lin);
 
     if (lin == 0)
-      line_pos[lin] = ih->data->margin_y;
+      line_pos[lin] = ih->data->margin_vert;
     else
       line_pos[lin] = line_pos[lin - 1] + lin_height[lin - 1] + ih->data->gap_lin;
 
@@ -1135,23 +1136,24 @@ static int iGridBoxCreateMethod(Ihandle* ih, void** params)
 /******************************************************************************/
 
 
-Ihandle *IupGridBoxv(Ihandle **children)
+IUP_API Ihandle* IupGridBoxv(Ihandle **children)
 {
   return IupCreatev("gridbox", (void**)children);
 }
 
-Ihandle *IupGridBox(Ihandle* child, ...)
+IUP_API Ihandle* IupGridBoxV(Ihandle* child, va_list arglist)
 {
-  Ihandle **children;
+  return IupCreateV("gridbox", child, arglist);
+}
+
+IUP_API Ihandle* IupGridBox(Ihandle* child, ...)
+{
   Ihandle *ih;
 
   va_list arglist;
   va_start(arglist, child);
-  children = (Ihandle **)iupObjectGetParamList(child, arglist);
+  ih = IupCreateV("gridbox", child, arglist);
   va_end(arglist);
-
-  ih = IupCreatev("gridbox", (void**)children);
-  free(children);
 
   return ih;
 }
@@ -1161,9 +1163,10 @@ Iclass* iupGridBoxNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name = "gridbox";
+  ic->cons = "GridBox";
   ic->format = "g"; /* array of Ihandle */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype = IUP_CHILDMANY;
+  ic->childtype = IUP_CHILDMANY;  /* can have children */
   ic->is_interactive = 0;
 
   /* Class functions */
@@ -1174,7 +1177,10 @@ Iclass* iupGridBoxNewClass(void)
   ic->SetChildrenCurrentSize = iGridBoxSetChildrenCurrentSizeMethod;
   ic->SetChildrenPosition = iGridBoxSetChildrenPositionMethod;
 
-  /* Internal Callback */
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
+
+  /* Callbacks */
   iupClassRegisterCallback(ic, "UPDATEATTRIBFROMFONT_CB", "");
 
   /* Common */
@@ -1208,7 +1214,7 @@ Iclass* iupGridBoxNewClass(void)
 
   iupClassRegisterAttribute(ic, "ALIGNMENTLIN", iGridBoxGetAlignmentLinAttrib, iGridBoxSetAlignmentLinAttrib, IUPAF_SAMEASSYSTEM, "ATOP", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "ALIGNMENTCOL", iGridBoxGetAlignmentColAttrib, iGridBoxSetAlignmentColAttrib, IUPAF_SAMEASSYSTEM, "ALEFT", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "ORIENTATION", iGridBoxGetOrientationAttrib, iGridBoxSetOrientationAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "ORIENTATION", iGridBoxGetOrientationAttrib, iGridBoxSetOrientationAttrib, IUPAF_SAMEASSYSTEM, "HORIZONTAL", IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "NUMDIV", iGridBoxGetNumDivAttrib, iGridBoxSetNumDivAttrib, IUPAF_SAMEASSYSTEM, "AUTO", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "NUMCOL", iGridBoxGetNumColAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "NUMLIN", iGridBoxGetNumLinAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

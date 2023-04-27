@@ -49,6 +49,7 @@ static void gtkFontUpdateLayout(IgtkFont* gtkfont, PangoLayout* layout)
     pango_attr_list_insert(attrs, pango_attribute_copy(gtkfont->strikethrough));
     pango_attr_list_insert(attrs, pango_attribute_copy(gtkfont->underline));
     pango_layout_set_attributes(layout, attrs);
+    pango_attr_list_unref(attrs);
   }
   else
   {
@@ -56,6 +57,27 @@ static void gtkFontUpdateLayout(IgtkFont* gtkfont, PangoLayout* layout)
     pango_attr_list_change(attrs, pango_attribute_copy(gtkfont->underline));
   }
 }
+
+#if 0
+static int gtkFontTypefaceCheck(const char* typeface)
+{
+  PangoFontFamily **families = NULL;
+  int i, n_families = 0;
+  pango_context_list_families(gtk_fonts_context,  &families, &n_families);
+
+  for (i = 0; i < n_families; i++)
+  {
+    if (iupStrEqualNoCase(typeface, pango_font_family_get_name(families[i])))
+    {
+      g_free(families);
+      return 1;
+    }
+  }
+
+  g_free(families);
+  return 0;
+}
+#endif
 
 static IgtkFont* gtkFindFont(const char *font)
 {
@@ -77,7 +99,7 @@ static IgtkFont* gtkFindFont(const char *font)
 
   /* not found, create a new one */
   {
-    int size = 0, is_pango = 0;
+    int size = 8, is_pango = 0;
     int is_bold = 0,
       is_italic = 0;
     char typeface[1024];
@@ -110,10 +132,18 @@ static IgtkFont* gtkFindFont(const char *font)
       char new_font[200];
       if (size<0)
       {
-        double res = ((double)gdk_screen_get_width(gdk_screen_get_default()) / (double)gdk_screen_get_width_mm(gdk_screen_get_default())); /* pixels/mm */
-        /* 1 point = 1/72 inch     1 inch = 25.4 mm */
-        /* pixel = ((point/72)*25.4)*pixel/mm */
-        size = (int)((-size/res)*2.83464567 + 0.5); /* from pixels to points */
+#if GTK_CHECK_VERSION(2, 10, 0)
+        double res = gdk_screen_get_resolution(gdk_screen_get_default()); /* dpi */
+#else
+        double res = ((double)gdk_screen_get_width(gdk_screen_get_default()) / 
+                      (double)gdk_screen_get_width_mm(gdk_screen_get_default())); /* pixels/mm */
+        res *= 25.4; /* dpi */
+#endif
+        /* The default value is 96, meaning that a 10 point font will be 13 pixels high. 
+           (10 * 96 / 72 = 13.3) */
+        /* 1 point = 1/72 inch  */
+        /* points = (pixels*72)/dpi */
+        size = iupRound((-size * 72.0) / res); /* from pixels to points */
       }
 
       sprintf(new_font, "%s, %s%s%d", typeface, is_bold?"Bold ":"", is_italic?"Italic ":"", size);
@@ -129,6 +159,8 @@ static IgtkFont* gtkFindFont(const char *font)
   fonts = (IgtkFont*)iupArrayInc(gtk_fonts);
 
   strcpy(fonts[i].font, font);
+
+  /* these are all released in iupdrvFontFinish */
   fonts[i].fontdesc = fontdesc;
   fonts[i].strikethrough = pango_attr_strikethrough_new(is_strikeout? TRUE: FALSE);
   fonts[i].underline = pango_attr_underline_new(is_underline? PANGO_UNDERLINE_SINGLE: PANGO_UNDERLINE_NONE);
@@ -141,7 +173,7 @@ static IgtkFont* gtkFindFont(const char *font)
   fonts[i].charwidth = iupGTK_PANGOUNITS2PIXELS(fonts[i].charwidth);
   pango_font_metrics_unref(metrics); 
 
-  gtkFontUpdateLayout(&(fonts[i]), fonts[i].layout);
+  gtkFontUpdateLayout(&(fonts[i]), fonts[i].layout);  /* for strikeout and underline */
 
   return &fonts[i];
 }
@@ -198,7 +230,7 @@ static void gtkFontUpdateWidget(Ihandle* ih, GtkWidget* widget, PangoFontDescrip
   {
     /* TODO: This is NOT working. */
     PangoLayout* layout = gtk_entry_get_layout(GTK_ENTRY(widget));
-    gtkFontUpdateLayout(gtkfont, layout);
+    gtkFontUpdateLayout(gtkfont, layout);  /* for strikeout and underline */
   }
 }
 
@@ -224,7 +256,8 @@ void iupgtkUpdateObjectFont(Ihandle* ih, gpointer object)
     attrs = pango_attr_list_new();
     pango_attr_list_insert(attrs, pango_attribute_copy(gtkfont->strikethrough));
     pango_attr_list_insert(attrs, pango_attribute_copy(gtkfont->underline));
-    g_object_set(object, "attributes", attrs, NULL);
+    g_object_set(object, "attributes", attrs, NULL);  /* TODO: does this reference attrs? */
+    /* pango_attr_list_unref(attrs); */
   }
   else
   {
@@ -233,7 +266,7 @@ void iupgtkUpdateObjectFont(Ihandle* ih, gpointer object)
   }
 }
 
-char* iupdrvGetSystemFont(void)
+IUP_SDK_API char* iupdrvGetSystemFont(void)
 {
   static char str[200]; /* must return a static string, because it will be used as the default value for the FONT attribute */
   const PangoFontDescription* font_desc = NULL;
@@ -316,7 +349,7 @@ char* iupgtkGetFontIdAttrib(Ihandle *ih)
   else
   {
 #if GTK_CHECK_VERSION(3, 0, 0)
-    return NULL;  /* TODO: check gtkglarea for GTK3 support, not available yet. */
+    return NULL;  /* TODO: not available yet. */
 #else
     /* both functions are marked as deprecated in GDK (since 2.22) */
     GdkFont* gdk_font = gdk_font_from_description(gtkfont->fontdesc);
@@ -326,11 +359,11 @@ char* iupgtkGetFontIdAttrib(Ihandle *ih)
   }
 }
 
-int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
 {
   IgtkFont* gtkfont = gtkFontCreateNativeFont(ih, value);
   if (!gtkfont)
-    return 1;
+    return 0;
 
   /* If FONT is changed, must update the SIZE attribute */
   iupBaseUpdateAttribFromFont(ih);
@@ -343,11 +376,10 @@ int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
+static void gtkFontGetTextSize(Ihandle* ih, IgtkFont* gtkfont, const char* str, int len, int *w, int *h)
 {
-  int max_w = 0;
+  int max_w = 0, line_count = 1;
 
-  IgtkFont* gtkfont = gtkFontGet(ih);
   if (!gtkfont)
   {
     if (w) *w = 0;
@@ -362,30 +394,74 @@ void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int 
     return;
   }
 
+  if (h)
+    line_count = iupStrLineCount(str, len);
+
   if (str[0])
   {
     int dummy_h;
+    char* text = iupgtkStrConvertToSystemLen(str, &len);
 
     if (iupAttribGetBoolean(ih, "MARKUP"))
     {
       pango_layout_set_attributes(gtkfont->layout, NULL);
-      pango_layout_set_markup(gtkfont->layout, iupgtkStrConvertToSystem(str), -1);
+      pango_layout_set_markup(gtkfont->layout, text, len);
     }
     else
-      pango_layout_set_text(gtkfont->layout, iupgtkStrConvertToSystem(str), -1);
+      pango_layout_set_text(gtkfont->layout, text, len);
 
     pango_layout_get_pixel_size(gtkfont->layout, &max_w, &dummy_h);
   }
 
   if (w) *w = max_w;
-  if (h) *h = gtkfont->charheight * iupStrLineCount(str);
+  if (h) *h = gtkfont->charheight * line_count;
 }
 
-int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
+IUP_SDK_API void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
+{
+  IgtkFont* gtkfont = gtkFontGet(ih);
+  if (gtkfont)
+    gtkFontGetTextSize(ih, gtkfont, str, str? (int)strlen(str): 0, w, h);
+}
+
+IUP_SDK_API void iupdrvFontGetTextSize(const char* font, const char* str, int len, int *w, int *h)
+{
+  IgtkFont *gtkfont = gtkFindFont(font);
+  if (gtkfont)
+    gtkFontGetTextSize(NULL, gtkfont, str, len, w, h);
+}
+
+IUP_SDK_API void iupdrvFontGetFontDim(const char* font, int *max_width, int *line_height, int *ascent, int *descent)
+{
+  IgtkFont *gtkfont = gtkFindFont(font);
+  if (gtkfont)
+  {
+    PangoFontMetrics* metrics;
+    int charwidth, charheight, charascent, chardescent;
+
+    if (!gtkfont->fontdesc)
+      return;
+
+    metrics = pango_context_get_metrics(gtk_fonts_context, gtkfont->fontdesc, pango_context_get_language(gtk_fonts_context));
+    charascent = pango_font_metrics_get_ascent(metrics);
+    chardescent = pango_font_metrics_get_descent(metrics);
+    charheight = charascent + chardescent;
+    charwidth = pango_font_metrics_get_approximate_char_width(metrics);
+
+    if (max_width)   *max_width = (((charwidth)+PANGO_SCALE / 2) / PANGO_SCALE);
+    if (line_height) *line_height = (((charheight)+PANGO_SCALE / 2) / PANGO_SCALE);
+    if (ascent)      *ascent = (((charascent)+PANGO_SCALE / 2) / PANGO_SCALE);
+    if (descent)     *descent = (((chardescent)+PANGO_SCALE / 2) / PANGO_SCALE);
+
+    pango_font_metrics_unref(metrics);
+  }
+}
+
+IUP_SDK_API int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
 {
   IgtkFont* gtkfont;
   int len, w;
-  const char* line_end;
+  const char* line_end, *text;
 
   if (!str || str[0]==0)
     return 0;
@@ -401,21 +477,21 @@ int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
   else
     len = (int)strlen(str);
 
-  str = iupgtkStrConvertToSystemLen(str, &len);
+  text = iupgtkStrConvertToSystemLen(str, &len);
 
   if (iupAttribGetBoolean(ih, "MARKUP"))
   {
     pango_layout_set_attributes(gtkfont->layout, NULL);
-    pango_layout_set_markup(gtkfont->layout, str, len);
+    pango_layout_set_markup(gtkfont->layout, text, len);
   }
   else
-    pango_layout_set_text(gtkfont->layout, str, len);
+    pango_layout_set_text(gtkfont->layout, text, len);
 
   pango_layout_get_pixel_size(gtkfont->layout, &w, NULL);
   return w;
 }
 
-void iupdrvFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)
+IUP_SDK_API void iupdrvFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)
 {
   IgtkFont* gtkfont = gtkFontGet(ih);
   if (!gtkfont)
@@ -446,6 +522,7 @@ void iupdrvFontFinish(void)
   for (i = 0; i < count; i++)
   {
     pango_font_description_free(fonts[i].fontdesc);
+    g_object_unref(fonts[i].layout);
     pango_attribute_destroy(fonts[i].strikethrough);
     pango_attribute_destroy(fonts[i].underline);
   }

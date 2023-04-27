@@ -21,6 +21,9 @@
     <None Include="..\..\srclua5\ctrl\olecontrol.lua">
       <Filter>Lua</Filter>
     </None>
+    <None Include="..\..\srclua5\lh\olecontrol.lh">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\iupluaole.h">

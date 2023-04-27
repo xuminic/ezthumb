@@ -17,16 +17,16 @@ void iupwinStrSetUTF8ModeFile(int utf8mode);
 int iupwinStrGetUTF8Mode(void);
 int iupwinStrGetUTF8ModeFile(void);
 
-char* iupwinStrFromSystem(const TCHAR* str);
-TCHAR* iupwinStrToSystem(const char* str);
-TCHAR* iupwinStrToSystemLen(const char* str, int *len);
-TCHAR* iupwinStrToSystemFilename(const char* str);
-char* iupwinStrFromSystemFilename(const TCHAR* str);
+IUP_DRV_API char* iupwinStrFromSystem(const TCHAR* str);
+IUP_DRV_API TCHAR* iupwinStrToSystem(const char* str);
+IUP_DRV_API TCHAR* iupwinStrToSystemLen(const char* str, int *len);
+IUP_DRV_API TCHAR* iupwinStrToSystemFilename(const char* str);
+IUP_DRV_API char* iupwinStrFromSystemFilename(const TCHAR* str);
 
 void iupwinStrRelease(void);
 
-WCHAR* iupwinStrChar2Wide(const char* str);
-char* iupwinStrWide2Char(const WCHAR* wstr);
+IUP_DRV_API WCHAR* iupwinStrChar2Wide(const char* str);
+IUP_DRV_API char* iupwinStrWide2Char(const WCHAR* wstr);
 
 void iupwinStrCopy(TCHAR* dst_wstr, const char* src_str, int max_size);
 

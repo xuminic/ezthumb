@@ -239,7 +239,7 @@ Iclass* iupSpinNewClass(void)
   return ic;
 }
 
-Ihandle* IupSpin(void)
+IUP_API Ihandle* IupSpin(void)
 {
   return IupCreate("spin");
 }
@@ -363,6 +363,10 @@ Iclass* iupSpinboxNewClass(void)
   ic->SetChildrenPosition = iSpinboxSetChildrenPositionMethod;
   ic->Map = iupBaseTypeVoidMapMethod;
 
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
+
+  /* Callbacks */
   iupClassRegisterCallback(ic, "SPIN_CB", "i");
 
   /* Common */
@@ -376,7 +380,7 @@ Iclass* iupSpinboxNewClass(void)
   return ic;
 }
 
-Ihandle* IupSpinbox(Ihandle* ctrl)
+IUP_API Ihandle* IupSpinbox(Ihandle* ctrl)
 {
   void *children[2];
   children[0] = (void*)ctrl;

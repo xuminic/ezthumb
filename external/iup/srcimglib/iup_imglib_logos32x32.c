@@ -16,10 +16,10 @@
 
 void iupImglibLogos32x32Open(void)
 {
-  iupImageStockSet("IUP_Tecgraf", load_image_Tecgraf, 0);
-  iupImageStockSet("IUP_PUC-Rio", load_image_PUC_Rio, 0);
-  iupImageStockSet("IUP_BR", load_image_BR, 0);
-  iupImageStockSet("IUP_Lua", load_image_Lua, 0);
-  iupImageStockSet("IUP_TecgrafPUC-Rio", load_image_TecgrafPUC_Rio, 0);
-  iupImageStockSet("IUP_Petrobras", load_image_Petrobras, 0);
+  iupImageStockSetNoResize("IUP_Tecgraf", load_image_Tecgraf, NULL);
+  iupImageStockSetNoResize("IUP_PUC-Rio", load_image_PUC_Rio, NULL);
+  iupImageStockSetNoResize("IUP_BR", load_image_BR, NULL);
+  iupImageStockSetNoResize("IUP_Lua", load_image_Lua, NULL);
+  iupImageStockSetNoResize("IUP_TecgrafPUC-Rio", load_image_TecgrafPUC_Rio, NULL);
+  iupImageStockSetNoResize("IUP_Petrobras", load_image_Petrobras, NULL);
 }

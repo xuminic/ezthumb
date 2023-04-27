@@ -239,11 +239,11 @@ static int motListSetBgColorAttrib(Ihandle* ih, const char* value)
   {
     Pixel color;
 
-    /* ignore given value for the scrollbars, must use only from parent */
+    /* ignore given value, must use only from parent for the scrollbars */
     char* parent_value = iupBaseNativeParentGetBgColor(ih);
 
     color = iupmotColorGetPixelStr(parent_value);
-    if (color != (Pixel)-1)
+    if (color != (Pixel)-1 && iupStrBoolean(IupGetGlobal("SB_BGCOLOR")))
     {
       Widget sb = NULL;
 
@@ -276,11 +276,14 @@ static int motListSetBgColorAttrib(Ihandle* ih, const char* value)
       XtVaGetValues(ih->handle, XmNlist, &cblist, NULL);
       if (cblist) iupmotSetBgColor(cblist, color);
 
-      XtVaGetValues(cblist, XmNverticalScrollBar, &sb, NULL);
-      if (sb) iupmotSetBgColor(sb, color);
+      if (iupStrBoolean(IupGetGlobal("SB_BGCOLOR")))
+      {
+        XtVaGetValues(cblist, XmNverticalScrollBar, &sb, NULL);
+        if (sb) iupmotSetBgColor(sb, color);
 
-      XtVaGetValues(cblist, XmNhorizontalScrollBar, &sb, NULL);
-      if (sb) iupmotSetBgColor(sb, color);
+        XtVaGetValues(cblist, XmNhorizontalScrollBar, &sb, NULL);
+        if (sb) iupmotSetBgColor(sb, color);
+      }
     }
 
     /* but reset just the background, so the combobox will look like a button */

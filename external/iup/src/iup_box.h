@@ -1,5 +1,5 @@
 /** \file
- * \brief Base for box Controls.
+ * \brief Base for box Controls (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -18,8 +18,8 @@ struct _IcontrolData
       expand_children,
       is_homogeneous,
       normalize_size,
-      margin_x,
-      margin_y,
+      margin_horiz,
+      margin_vert,
       gap;
   int total_natural_size,   /* calculated in ComputeNaturalSize, used in SetChildrenCurrentSize */
       homogeneous_size;       /* calculated in SetChildrenCurrentSize, used in SetChildrenPosition */

@@ -47,10 +47,10 @@ class IupTuioListener : public TuioListener
   std::list<iTuioCursorEnvent> cursor_events;
 
   void processCursor(TuioCursor *tcur, const char* state, const char* action);
-  void initCursorInfo(int cursor_count, int* pid, int* pstate);
-  void finishCursorInfo(int cursor_count, int* px, int* py, int* pstate, int w, int h, int use_client_coord, Ihandle* ih_canvas);
+  void initCursorInfo(std::list<TuioCursor*> &cursorList, int cursor_count, int* pid, int* pstate);
+  void finishCursorInfo(std::list<TuioCursor*> &cursorList, int cursor_count, int* px, int* py, int* pstate, int w, int h, int use_client_coord, Ihandle* ih_canvas);
   void updateCursorInfo(int *cursor_count, int* pid, int* px, int* py, int* pstate, int id, int x, int y, int state);
-  int GetMainCursor();
+  int GetMainCursor(std::list<TuioCursor*> &cursorList);
 
   static int timer_action_cb(Ihandle *timer);
 
@@ -68,6 +68,10 @@ class IupTuioListener : public TuioListener
     void updateTuioCursor(TuioCursor *tcur);
     void removeTuioCursor(TuioCursor *tcur);
 
+    void addTuioBlob(TuioBlob *tblb);
+    void updateTuioBlob(TuioBlob *tblb);
+    void removeTuioBlob(TuioBlob *tblb);
+
     void refresh(TuioTime frameTime);
 };
 
@@ -80,22 +84,34 @@ IupTuioListener::IupTuioListener(Ihandle* _ih, TuioClient* _client)
   IupSetCallback(timer, "ACTION_CB", timer_action_cb);
 }
 
-void IupTuioListener::addTuioObject(TuioObject *tobj) 
+void IupTuioListener::addTuioObject(TuioObject*) 
 {
   /* unused */
-  (void)tobj;
 }
 
-void IupTuioListener::updateTuioObject(TuioObject *tobj) 
+void IupTuioListener::updateTuioObject(TuioObject*) 
 {
   /* unused */
-  (void)tobj;
 }
 
-void IupTuioListener::removeTuioObject(TuioObject *tobj) 
+void IupTuioListener::removeTuioObject(TuioObject*) 
 {
   /* unused */
-  (void)tobj;
+}
+
+void IupTuioListener::addTuioBlob(TuioBlob*)
+{
+  /* unused */
+}
+
+void IupTuioListener::updateTuioBlob(TuioBlob*)
+{
+  /* unused */
+}
+
+void IupTuioListener::removeTuioBlob(TuioBlob*)
+{
+  /* unused */
 }
 
 void IupTuioListener::addTuioCursor(TuioCursor *tcur) 
@@ -149,9 +165,8 @@ void  IupTuioListener::refresh(TuioTime frameTime)
   }
 }
 
-void IupTuioListener::initCursorInfo(int cursor_count, int* pid, int* pstate)
+void IupTuioListener::initCursorInfo(std::list<TuioCursor*> &cursorList, int cursor_count, int* pid, int* pstate)
 {
-  std::list<TuioCursor*>& cursorList = this->client->getCursorList();
   std::list <TuioCursor*>::iterator iter;
   int i;
 
@@ -163,9 +178,8 @@ void IupTuioListener::initCursorInfo(int cursor_count, int* pid, int* pstate)
   }
 }
 
-int IupTuioListener::GetMainCursor()
+int IupTuioListener::GetMainCursor(std::list<TuioCursor*> &cursorList)
 {
-  std::list<TuioCursor*>& cursorList = this->client->getCursorList();
   std::list <TuioCursor*>::iterator iter;
   std::list <TuioCursor*>::iterator end = cursorList.end();
   int min_id = -1;
@@ -181,9 +195,8 @@ int IupTuioListener::GetMainCursor()
   return min_id;
 }
 
-void IupTuioListener::finishCursorInfo(int cursor_count, int* px, int* py, int* pstate, int w, int h, int use_client_coord, Ihandle* ih_canvas)
+void IupTuioListener::finishCursorInfo(std::list<TuioCursor*> &cursorList, int cursor_count, int* px, int* py, int* pstate, int w, int h, int use_client_coord, Ihandle* ih_canvas)
 {
-  std::list<TuioCursor*>& cursorList = this->client->getCursorList();
   std::list <TuioCursor*>::iterator iter;
   std::list <TuioCursor*>::iterator end = cursorList.end();
   int i;
@@ -239,8 +252,9 @@ int IupTuioListener::timer_action_cb(Ihandle *timer)
   if (!listener->locked)
     return IUP_DEFAULT;
 
+  std::list<TuioCursor*> cursorList = listener->client->getTuioCursors();
   int events_count = (int)listener->cursor_events.size();
-  int cursor_count = listener->client->CursorListCount();
+  int cursor_count = (int)cursorList.size();
   int total_count = events_count+cursor_count;
   if (!total_count)
   {
@@ -270,12 +284,12 @@ int IupTuioListener::timer_action_cb(Ihandle *timer)
     pid = new int[total_count];
     pstate = new int[total_count];
 
-    listener->initCursorInfo(cursor_count, pid, pstate);
+    listener->initCursorInfo(cursorList, cursor_count, pid, pstate);
   }
 
   int min_id = -1;
   if (cb)
-    min_id = listener->GetMainCursor();
+    min_id = listener->GetMainCursor(cursorList);
 
   for (int i = 0; i<events_count; i++) 
   {
@@ -305,7 +319,7 @@ int IupTuioListener::timer_action_cb(Ihandle *timer)
 
   if (mcb)
   {
-    listener->finishCursorInfo(cursor_count, px, py, pstate, w, h, use_client_coord, ih_canvas);
+    listener->finishCursorInfo(cursorList, cursor_count, px, py, pstate, w, h, use_client_coord, ih_canvas);
 
     if (mcb(ih_canvas, cursor_count, pid, px, py, pstate)==IUP_CLOSE)
       IupExitLoop();
@@ -411,6 +425,7 @@ static Iclass* iTuioNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name = (char*)"tuioclient";
+  ic->cons = (char*)"TuioClient";
   ic->format = (char*)"i";  /* (int) */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDNONE;
@@ -419,6 +434,9 @@ static Iclass* iTuioNewClass(void)
   ic->New = iTuioNewClass;
   ic->Create = iTuioCreateMethod;
   ic->Destroy = iTuioDestroyMethod;
+
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
 
   iupClassRegisterCallback(ic, "TOUCH_CB", "iiis");
   iupClassRegisterCallback(ic, "MULTITOUCH_CB", "iIIII");
@@ -431,6 +449,9 @@ static Iclass* iTuioNewClass(void)
 
 int IupTuioOpen(void)
 {
+  if (!IupIsOpened())
+    return IUP_ERROR;
+
   if (IupGetGlobal("_IUP_TUIO_OPEN"))
     return IUP_OPENED;
 

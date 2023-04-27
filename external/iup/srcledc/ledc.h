@@ -56,7 +56,7 @@ Telem*  elem( char* name, Tlist* attrs, Tlist* params );
 Tlist*  list( void );
 Tlist*  addlist( Tlist* l, void* data );
 Tlist*  revertlist( Tlist* l );
-Tparam** list2paramvector( Tlist* l );
+Tparam** list2param( Tlist* l );
 void    cleanlist( Tlist* l );
 
 void decl( Telem* e );

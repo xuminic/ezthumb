@@ -47,7 +47,7 @@ static int CB_list (Ihandle *ih, char *text, int item, int state)
   return IUP_DEFAULT;
 }
 
-int IupListDialog (int type, const char *title, int size, const char** list_str,
+IUP_API int IupListDialog (int type, const char *title, int size, const char** list_str,
                    int op, int max_col, int max_lin, int* marks)
 {
   Ihandle *lst, *ok, *dlg, *cancel, *dlg_box, *button_box;
@@ -151,7 +151,7 @@ static int iAlarmButtonAction_CB(Ihandle *ih)
   return IUP_CLOSE;
 }
 
-int IupAlarm(const char *title, const char *msg, const char *b1, const char *b2, const char *b3)
+IUP_API int IupAlarm(const char *title, const char *msg, const char *b1, const char *b2, const char *b3)
 {
   Ihandle  *dlg, *dlg_box, *button_box, *button, *default_esc, *default_enter;
   int bt;
@@ -224,7 +224,7 @@ int IupAlarm(const char *title, const char *msg, const char *b1, const char *b2,
   return bt;
 }
 
-int  iupDataEntry(int    maxlin,
+IUP_SDK_API int  iupDataEntry(int    maxlin,
                   int*   maxcol,
                   int*   maxscr,
                   char*  title,
@@ -309,7 +309,7 @@ int  iupDataEntry(int    maxlin,
   return bt;
 }
 
-int IupGetFile(char* filename)
+IUP_API int IupGetFile(char* filename)
 {
   Ihandle *dlg = 0;
   int ret;
@@ -347,10 +347,13 @@ int IupGetFile(char* filename)
   return ret;
 }
 
-int IupGetText(const char* title, char* text, int maxsize)
+IUP_API int IupGetText(const char* title, char* text, int maxsize)
 {
-  Ihandle *ok, *cancel, *multi_text, *button_box, *dlg_box, *dlg;
+  Ihandle *ok, *cancel = NULL, *multi_text, *button_box, *dlg_box, *dlg;
   int bt;
+
+  if (maxsize == 0)
+    maxsize = (int)strlen(text);
 
   multi_text = IupMultiLine(NULL);
   IupSetAttribute(multi_text,"EXPAND", "YES");
@@ -358,14 +361,18 @@ int IupGetText(const char* title, char* text, int maxsize)
   IupSetAttribute(multi_text,"FONT", "Courier, 12");
   IupSetAttribute(multi_text, "VISIBLELINES", "10");
   IupSetAttribute(multi_text, "VISIBLECOLUMNS", "50");
+  if (maxsize <= 0) IupSetAttribute(multi_text, "READONLY", "YES");
 
   ok = IupButton("_@IUP_OK", NULL);
   IupSetStrAttribute(ok, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(ok, "ACTION", (Icallback)CB_button_OK);
 
-  cancel  = IupButton("_@IUP_CANCEL", NULL);
-  IupSetStrAttribute(cancel, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
-  IupSetCallback(cancel, "ACTION", (Icallback)CB_button_CANCEL);
+  if (maxsize > 0)
+  {
+    cancel = IupButton("_@IUP_CANCEL", NULL);
+    IupSetStrAttribute(cancel, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
+    IupSetCallback(cancel, "ACTION", (Icallback)CB_button_CANCEL);
+  }
 
   button_box = IupHbox(
     IupFill(),
@@ -389,7 +396,8 @@ int IupGetText(const char* title, char* text, int maxsize)
   IupSetAttribute(dlg,"MINBOX","NO");
   IupSetAttribute(dlg,"MAXBOX","NO");
   IupSetAttributeHandle(dlg,"DEFAULTENTER", ok);
-  IupSetAttributeHandle(dlg,"DEFAULTESC", cancel);
+  if (cancel) IupSetAttributeHandle(dlg,"DEFAULTESC", cancel);
+  else IupSetAttributeHandle(dlg, "DEFAULTESC", ok);
   IupSetAttribute(dlg,"PARENTDIALOG", IupGetGlobal("PARENTDIALOG"));
   IupSetAttribute(dlg,"ICON", IupGetGlobal("ICON"));
 
@@ -401,7 +409,7 @@ int IupGetText(const char* title, char* text, int maxsize)
   IupPopup(dlg, IUP_CENTERPARENT, IUP_CENTERPARENT);
 
   bt = IupGetInt(dlg, "STATUS");
-  if (bt==1)
+  if (bt==1 && maxsize > 0)
     iupStrCopyN(text, maxsize, IupGetAttribute(multi_text, "VALUE"));
   else
     bt = 0; /* return 0 instead of -1 */
@@ -410,7 +418,7 @@ int IupGetText(const char* title, char* text, int maxsize)
   return bt;
 }
 
-int IupGetColor(int x, int y, unsigned char *r, unsigned char *g, unsigned char *b)
+IUP_API int IupGetColor(int x, int y, unsigned char *r, unsigned char *g, unsigned char *b)
 {
   int ret;
   Ihandle* dlg = IupColorDlg();
@@ -429,55 +437,5 @@ int IupGetColor(int x, int y, unsigned char *r, unsigned char *g, unsigned char 
   IupDestroy(dlg);
 
   return ret;
-}
-
-void iupShowVersion(void)
-{
-  Ihandle* dlg;
-
-  dlg = IupDialog(IupVbox(IupFrame(IupVbox(
-                      IupLabel(IupVersion()),
-                      IupLabel(IupVersionDate()),
-                      IupLabel(IUP_COPYRIGHT),
-                      NULL)), 
-                    IupButton("_@IUP_OK", NULL),
-                    NULL));
-
-  IupSetAttribute(dlg,"TITLE","IUP Version");
-  IupSetAttribute(dlg,"DIALOGFRAME","YES");
-  IupSetAttribute(dlg,"DIALOGHINT","YES");
-  IupSetAttribute(dlg,"GAP","10");
-  IupSetAttribute(dlg,"MARGIN","10x10");
-
-  IupPopup(dlg, IUP_CENTERPARENT, IUP_CENTERPARENT);
-  IupDestroy(dlg);
-}
-
-void iupShowError(Ihandle* parent, const char* message)
-{
-  Ihandle* dlg = IupMessageDlg();
-  char* title = NULL, *str_message;
-
-  if (parent)
-  {
-    IupSetAttributeHandle(dlg, "PARENTDIALOG", parent);
-    title = IupGetAttribute(parent, "TITLE");
-  }
-
-  if (!title)
-    title = "_@IUP_ERROR";
-
-  IupSetStrAttribute(dlg, "TITLE", title);
-  IupSetAttribute(dlg, "DIALOGTYPE", "ERROR");
-  IupSetAttribute(dlg, "BUTTONS", "OK");
-
-  str_message = IupGetLanguageString(message);
-  if (!str_message)
-    str_message = (char*)message;
-  IupStoreAttribute(dlg, "VALUE", str_message);
-
-  IupPopup(dlg, IUP_CURRENT, IUP_CURRENT);
-
-  IupDestroy(dlg);
 }
 

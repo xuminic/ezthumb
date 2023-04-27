@@ -24,10 +24,159 @@
 #include "iup_glicon.h"
 #include "iup_glsubcanvas.h"
 
+/* In GTK, a child of the IupGLCanvas does not work OK */
+/* #define GL_EDITDLG */
+
+#ifdef GL_EDITDLG
+static void iGLTextEditShowDlg(Ihandle* ih, Ihandle* text)
+{
+  int x, y;
+
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
+  Ihandle* dlg = IupGetDialog(text);
+  Ihandle* parent_dialog = IupGetAttributeHandle(dlg, "PARENTDIALOG");
+  Ihandle* dialog = IupGetDialog(ih);
+  if (dialog != parent_dialog)
+    IupSetAttributeHandle(dlg, "PARENTDIALOG", dialog);
+
+  x = IupGetInt(gl_parent, "X") + ih->x;
+  y = IupGetInt(gl_parent, "Y") + ih->y;
+
+  /* update drop dialog size before calc pos */
+  IupRefresh(dlg);
+
+  /* force current size to be updated during Show */
+  dlg->currentwidth = 0;
+  dlg->currentheight = 0;
+
+  IupShowXY(dlg, x, y);
+}
+#endif
+
+static int iGLTextEditKILLFOCUS_CB(Ihandle* text)
+{
+  Ihandle* ih = (Ihandle*)iupAttribGet(text, "_IUP_GLTEXT");
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
+
+#ifdef GL_EDITDLG
+  IupHide(IupGetDialog(text));
+#else
+  IupSetAttribute(text, "VISIBLE", "NO");
+  IupSetAttribute(text, "ACTIVE", "NO");
+#endif
+
+  IupSetAttribute(gl_parent, "REDRAW", NULL);  /* redraw the whole box */
+  return IUP_DEFAULT;
+}
+
+static int iGLTextEditKANY_CB(Ihandle* text, int c)
+{
+  if (c == K_ESC || c == K_CR)
+  {
+    iGLTextEditKILLFOCUS_CB(text);
+    return IUP_IGNORE;  /* always ignore to avoid the defaultenter/defaultesc behavior from here */
+  }
+
+  return IUP_CONTINUE;
+}
+
+static int iGLTextEditVALUECHANGED_CB(Ihandle* text)
+{
+  Ihandle* ih = (Ihandle*)iupAttribGet(text, "_IUP_GLTEXT");
+  Icallback cb = IupGetCallback(ih, "VALUECHANGED_CB");
+  if (cb)
+    cb(ih);
+  return IUP_DEFAULT;
+}
+
+static void iGLTextEditCreate(Ihandle* ih)
+{
+  Ihandle* text = IupText(NULL);
+  text->currentwidth = 20;  /* just to avoid initial size 0x0 */
+  text->currentheight = 10;
+
+#ifdef GL_EDITDLG
+  {
+    Ihandle* dlg = IupDialog(text);
+
+    IupSetAttribute(dlg, "RESIZE", "NO");
+    IupSetAttribute(dlg, "MENUBOX", "NO");
+    IupSetAttribute(dlg, "MAXBOX", "NO");
+    IupSetAttribute(dlg, "MINBOX", "NO");
+    IupSetAttribute(dlg, "BORDER", "NO");
+    IupSetAttribute(dlg, "NOFLUSH", "Yes");
+  }
+#else
+  text->flags |= IUP_INTERNAL;
+  iupChildTreeAppend(ih, text);
+
+  IupSetAttribute(text, "FLOATING", "IGNORE");
+  IupSetAttribute(text, "VISIBLE", "NO");
+  IupSetAttribute(text, "ACTIVE", "NO");
+#endif
+
+  IupSetCallback(text, "VALUECHANGED_CB", (Icallback)iGLTextEditVALUECHANGED_CB);
+  IupSetCallback(text, "KILLFOCUS_CB", (Icallback)iGLTextEditKILLFOCUS_CB);
+  IupSetCallback(text, "K_ANY", (Icallback)iGLTextEditKANY_CB);
+
+  IupSetAttribute(text, "_IUP_GLTEXT", (char*)ih);
+  IupSetAttribute(ih, "_IUP_GLTEXT_EDIT", (char*)text);
+}
+
+static Ihandle* iGLTextGetEditHandle(Ihandle* ih)
+{
+  Ihandle* text = (Ihandle*)iupAttribGet(ih, "_IUP_GLTEXT_EDIT");
+  return text;
+}
+
+static void iGLTextSetEditAlignemnt(Ihandle* ih, Ihandle* text)
+{
+  char value1[30], value2[30];
+  char* value = iupAttribGetStr(ih, "ALIGNMENT");
+  iupStrToStrStr(value, value1, value2, ':');
+  if (value1[0] == 0) strcpy(value1, "ALEFT");
+  IupSetStrAttribute(text, "ALIGNMENT", value1);
+}
+
+static void iGLTextEditShow(Ihandle* ih, int x, int y)
+{
+  int pos;
+  Ihandle* text = iGLTextGetEditHandle(ih);
+
+  iGLTextSetEditAlignemnt(ih, text);
+  IupSetStrAttribute(text, "FONT", IupGetAttribute(ih, "FONT"));
+
+  /* TODO: compensate IupText internal spacing */
+  /* IupSetStrAttribute(text, "PADDING", iupAttribGetStr(ih, "PADDING"));  */
+
+  text->currentwidth = ih->currentwidth;
+  text->currentheight = ih->currentheight;
+
+#ifdef GL_EDITDLG
+  iGLTextEditShowDlg(ih, text);
+#else
+  text->x = ih->x;
+  text->y = ih->y;
+
+  iupClassObjectLayoutUpdate(text);
+
+  IupSetAttribute(text, "VISIBLE", "YES");
+  IupSetAttribute(text, "ACTIVE", "YES");
+#endif
+
+  IupSetFocus(text);
+
+  pos = IupConvertXYToPos(text, x, y);
+  IupSetInt(text, "CARETPOS", pos);
+}
+
+
+/******************************************************************/
+
 
 static int iGLTextACTION(Ihandle* ih)
 {
-  char* value = IupGetAttribute(ih->firstchild, "VALUE");
+  char* value = IupGetAttribute(iGLTextGetEditHandle(ih), "VALUE");
   int active = iupAttribGetInt(ih, "ACTIVE");
   int highlight = iupAttribGetInt(ih, "HIGHLIGHT");
   char* fgcolor = iupAttribGetStr(ih, "FGCOLOR");
@@ -67,26 +216,7 @@ static int iGLTextBUTTON_CB(Ihandle* ih, int button, int pressed, int x, int y, 
     iupGLSubCanvasRedraw(ih);
 
     if (!pressed)
-    {
-      int pos;
-      Ihandle* text = ih->firstchild;
-
-      text->x = ih->x;
-      text->y = ih->y;
-
-      text->currentwidth = ih->currentwidth;
-      text->currentheight = ih->currentheight;
-
-      iupClassObjectLayoutUpdate(text);
-
-      IupSetAttribute(text, "FONT", IupGetAttribute(ih, "FONT"));
-      IupSetAttribute(text, "VISIBLE", "YES");
-      IupSetAttribute(text, "ACTIVE", "YES");
-      IupSetFocus(text);
-
-      pos = IupConvertXYToPos(text, x, y);
-      IupSetInt(text, "CARETPOS", pos);
-    }
+      iGLTextEditShow(ih, x, y);
   }
 
   (void)x;
@@ -95,70 +225,31 @@ static int iGLTextBUTTON_CB(Ihandle* ih, int button, int pressed, int x, int y, 
   return IUP_DEFAULT;
 }
 
-static int iGLTextEditKILLFOCUS_CB(Ihandle* text)
-{
-  Ihandle* ih = text->parent;
-  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
-  IupSetAttribute(text, "VISIBLE", "NO");
-  IupSetAttribute(text, "ACTIVE", "NO");
-  IupSetAttribute(gl_parent, "REDRAW", NULL);  /* redraw the whole box */
-  return IUP_DEFAULT;
-}
-
-static int iGLTextEditKANY_CB(Ihandle* text, int c)
-{
-  if (c == K_ESC || c == K_CR)
-  {
-    iGLTextEditKILLFOCUS_CB(text);
-    return IUP_IGNORE;  /* always ignore to avoid the defaultenter/defaultesc behavior from here */
-  }
-
-  return IUP_CONTINUE;
-}
-
-static int iGLTextEditVALUECHANGED_CB(Ihandle* text)
-{
-  Ihandle* ih = text->parent;
-  Icallback cb = IupGetCallback(ih, "VALUECHANGED_CB");
-  if (cb)
-    cb(ih);
-  return IUP_DEFAULT;
-}
 
 static int iGLTextSetValueAttrib(Ihandle* ih, const char* value)
 {
-  IupSetStrAttribute(ih->firstchild, "VALUE", value);
+  IupSetStrAttribute(iGLTextGetEditHandle(ih), "VALUE", value);
   return 0; /* do not store value in hash table */
 }
 
 static char* iGLTextGetValueAttrib(Ihandle* ih)
 {
-  return IupGetAttribute(ih->firstchild, "VALUE");
+  return IupGetAttribute(iGLTextGetEditHandle(ih), "VALUE");
 }
 
 static char* iGLTextGetTextAttrib(Ihandle* ih)
 {
-  return IupGetName(ih->firstchild);
+  return IupGetName(iGLTextGetEditHandle(ih));
 }
 
 static char* iGLTextGetTextHandleAttrib(Ihandle* ih)
 {
-  return (char*)ih->firstchild;
+  return (char*)iGLTextGetEditHandle(ih);
 }
 
 static int iGLTextCreateMethod(Ihandle* ih, void** params)
 {
-  Ihandle* text = IupText(NULL);
-  text->currentwidth = 20;  /* just to avoid initial size 0x0 */
-  text->currentheight = 10;
-  iupChildTreeAppend(ih, text);
-
-  IupSetCallback(text, "VALUECHANGED_CB", (Icallback)iGLTextEditVALUECHANGED_CB);
-  IupSetCallback(text, "KILLFOCUS_CB", (Icallback)iGLTextEditKILLFOCUS_CB);
-  IupSetCallback(text, "K_ANY", (Icallback)iGLTextEditKANY_CB);
-  IupSetAttribute(text, "FLOATING", "IGNORE");
-  IupSetAttribute(text, "VISIBLE", "NO");
-  IupSetAttribute(text, "ACTIVE", "NO");
+  iGLTextEditCreate(ih);
 
   IupSetCallback(ih, "GL_ACTION", iGLTextACTION);
   IupSetCallback(ih, "GL_BUTTON_CB", (Icallback)iGLTextBUTTON_CB);
@@ -172,8 +263,8 @@ static int iGLTextCreateMethod(Ihandle* ih, void** params)
 static void iGLTextComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   int natural_w = 0,
-    natural_h = 0,
-    visiblecolumns = iupAttribGetInt(ih, "VISIBLECOLUMNS");
+      natural_h = 0,
+      visiblecolumns = iupAttribGetInt(ih, "VISIBLECOLUMNS");
   float bwidth = iupAttribGetFloat(ih, "BORDERWIDTH");
   int border_width = (int)ceil(bwidth);
 
@@ -200,6 +291,7 @@ Iclass* iupGLTextNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glsubcanvas"));
 
   ic->name = "gltext";
+  ic->cons = "GLText";
   ic->format = NULL; /* no parameters */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDNONE;
@@ -220,7 +312,8 @@ Iclass* iupGLTextNewClass(void)
 
   /* replace default value */
   iupClassRegisterAttribute(ic, "PADDING", NULL, NULL, IUPAF_SAMEASSYSTEM, "2x2", IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "ALIGNMENT", NULL, NULL, IUPAF_SAMEASSYSTEM, "ALEFT:ABOTTOM", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CPADDING", iupBaseGetCPaddingAttrib, iupBaseSetCPaddingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "ALIGNMENT", NULL, NULL, IUPAF_SAMEASSYSTEM, "ALEFT:ATOP", IUPAF_NO_INHERIT);
 
   return ic;
 }

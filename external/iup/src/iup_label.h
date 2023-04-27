@@ -1,5 +1,5 @@
 /** \file
- * \brief Label Controls Private Declarations
+ * \brief Label Control (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -13,6 +13,7 @@ extern "C" {
 
 
 void iupdrvLabelInitClass(Iclass* ic);
+void iupdrvLabelAddExtraPadding(Ihandle* ih, int *x, int *y);
 
 char* iupLabelGetPaddingAttrib(Ihandle* ih);
 int iupLabelGetTypeBeforeMap(Ihandle* ih);

@@ -53,18 +53,18 @@ int iupluaScanf(lua_State *L)
 
   indParam = 2;        /* va_start(va,format); */
   REQUIRE((s1 = s = (char *) iupStrDup(format)) != NULL);
-  title = iupStrDupUntil(&s, '\n');
+  title = iupStrDupUntil((const char**)&s, '\n');
   REQUIRE(title != NULL);
   for (i = 0; i < fields; ++i) {
     int n;
-    prompt[i] = iupStrDupUntil(&s, '%');
+    prompt[i] = iupStrDupUntil((const char**)&s, '%');
     REQUIRE(prompt[i] != NULL);
     n = sscanf(s, "%d.%d", width + i, scroll + i);
     REQUIRE(n == 2);
     s = strchr(s, '%');
     REQUIRE(s != NULL);
     if (outf) free(outf);
-    outf = iupStrDupUntil(&s, '\n');
+    outf = iupStrDupUntil((const char**)&s, '\n');
     text[i] = ALLOC(width[i] + 1, char);
     REQUIRE(text[i] != NULL);
 

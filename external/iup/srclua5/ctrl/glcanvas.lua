@@ -9,11 +9,13 @@ local ctrl = {
   include = "iupgl.h",
   subdir = "ctrl",
   callback = {
-    action = "ff",
+    action = "ff", -- must repeat this callback because of its non-exclusive name
     swapbuffers_cb = "",
   },
   extrafuncs = 1,
   extracode = [[ 
+int iupglbackgroundboxlua_open(lua_State * L);
+
 int iupgllua_open(lua_State * L)
 {
   if (iuplua_opencall_internal(L))

@@ -239,6 +239,12 @@ static int iDatePickTextKAny_CB(Ihandle* ih_text, int key)
 /*********************************************************************************************/
 
 
+static int iDatePickSetShowDropdownAttrib(Ihandle* ih, const char* value)
+{
+  iDatePickToggleAction_CB(ih, iupStrBoolean(value));
+  return 0;
+}
+
 static int iDatePickSetValueAttrib(Ihandle* ih, const char* value)
 {
   if (iupStrEqualNoCase(value, "TODAY"))
@@ -255,7 +261,7 @@ static int iDatePickSetValueAttrib(Ihandle* ih, const char* value)
     {
       IupSetInt(txt_year, "VALUE", timeinfo->tm_year + 1900);
       IupSetStrf(txt_month, "VALUE", "%02d", timeinfo->tm_mon + 1);
-      IupSetStrf(txt_month, "VALUE", "%02d", timeinfo->tm_mday);
+      IupSetStrf(txt_day, "VALUE", "%02d", timeinfo->tm_mday);
     }
     else
     {
@@ -413,16 +419,20 @@ static int iDatePickCreateMethod(Ihandle* ih, void** params)
   IupSetCallback(tgl, "LEAVEWINDOW_CB", (Icallback)iDatePickToggleLeaveWindow_CB);
 
   box = IupHbox(iDatePickCreateText(), IupLabel("/"), iDatePickCreateText(), IupLabel("/"), iDatePickCreateText(), tgl, NULL);
+  IupSetAttribute(box, "MARGIN", "0x0");
+  IupSetAttribute(box, "GAP", "0");
+
   iupChildTreeAppend(ih, box);
   box->flags |= IUP_INTERNAL;
 
   iDatePickSetOrderAttrib(ih, "DMY");
   iDatePickSetValueAttrib(ih, iDatePickGetTodayAttrib(ih));
-
-  IupSetAttribute(box, "MARGIN", "0x0");
-  IupSetAttribute(box, "GAP", "0");
-
-  IupSetAttribute(ih, "BGCOLOR", IupGetGlobal("TXTBGCOLOR"));
+  
+#if 1 /* GTK_CHECK_VERSION(3, 16, 0) */
+  IupSetAttribute(ih, "BACKCOLOR", IupGetGlobal("TXTBGCOLOR")); /* workaround */
+#else
+  IupSetAttribute(ih, "BGCOLOR", IupGetGlobal("TXTBGCOLOR")); /* NOT Working in GTK > 3.16 */
+#endif
 
   return IUP_NOERROR;
 }
@@ -442,6 +452,7 @@ Iclass* iupDatePickNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("frame"));
 
   ic->name = "datepick";
+  ic->cons = "DatePick";
   ic->format = NULL;  /* no parameters */
   ic->nativetype = IUP_TYPECONTROL;
   ic->childtype = IUP_CHILDNONE;
@@ -463,11 +474,12 @@ Iclass* iupDatePickNewClass(void)
   iupClassRegisterAttribute(ic, "ZEROPRECED", NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "CALENDARWEEKNUMBERS", NULL, NULL, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SHOWDROPDOWN", NULL, iDatePickSetShowDropdownAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
 
   return ic;
 }
 
-Ihandle *IupDatePick(void)
+IUP_API Ihandle* IupDatePick(void)
 {
   return IupCreate("datepick");
 }

@@ -104,7 +104,7 @@ static XFontStruct* motLoadFont(const char* foundry, const char *typeface, int s
     double res = ((double)DisplayWidth(iupmot_display, iupmot_screen) / (double)DisplayWidthMM(iupmot_display, iupmot_screen)); /* pixels/mm */
     /* 1 point = 1/72 inch     1 inch = 25.4 mm */
     /* pixel = ((point/72)*25.4)*pixel/mm */
-    size = (int)((-size/res)*2.83464567 + 0.5); /* from pixels to points */
+    size = iupRound((-size / res)*2.83464567); /* from pixels to points */
   }
 
   size *= 10; /* convert to deci-points */
@@ -240,7 +240,7 @@ static ImotFont* motFindFont(const char* foundry, const char *font)
   return &fonts[i];
 }
 
-char* iupdrvGetSystemFont(void)
+IUP_SDK_API char* iupdrvGetSystemFont(void)
 {
   static char str[200]; /* must return a static string, because it will be used as the default value for the FONT attribute */
   ImotFont* motfont = NULL;
@@ -251,7 +251,7 @@ char* iupdrvGetSystemFont(void)
   if (!motfont)
   {
     font = "Fixed, 11";
-    motfont = motFindFont("misc", font);
+    motFindFont("misc", font);
   }
 
   strcpy(str, font);
@@ -344,11 +344,11 @@ char* iupmotGetFontIdAttrib(Ihandle *ih)
     return (char*)motfont->fontstruct->fid;
 }
 
-int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
 {
   ImotFont *motfont = motFontCreateNativeFont(ih, value);
   if (!motfont) 
-    return 1;
+    return 0;
 
   /* If FONT is changed, must update the SIZE attribute */
   iupBaseUpdateAttribFromFont(ih);
@@ -361,7 +361,7 @@ int iupdrvSetFontAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
+IUP_SDK_API int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
 {
   XFontStruct* fontstruct;
   int len;
@@ -383,11 +383,10 @@ int iupdrvFontGetStringWidth(Ihandle* ih, const char* str)
   return XTextWidth(fontstruct, str, len);
 }
 
-void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
+static void motFontGetTextSize(ImotFont* motfont, const char* str, int len, int *w, int *h)
 {
-  int max_w = 0;
+  int max_w = 0, line_count = 1;
 
-  ImotFont* motfont = motGetFont(ih);
   if (!motfont)
   {
     if (w) *w = 0;
@@ -404,29 +403,64 @@ void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int 
   
   if (str[0])
   {
-    int len, lw;
+    int l_len, lw, sum_len = 0;
     const char *nextstr;
     const char *curstr = str;
 
     do
     {
-      nextstr = iupStrNextLine(curstr, &len);
-      if (len)
+      nextstr = iupStrNextLine(curstr, &l_len);
+      if (sum_len + l_len > len)
+        l_len = len - sum_len;
+
+      if (l_len)
       {
-        lw = XTextWidth(motfont->fontstruct, curstr, len);
+        lw = XTextWidth(motfont->fontstruct, curstr, l_len);
         max_w = iupMAX(max_w, lw);
       }
+
+      sum_len += l_len;
+      if (sum_len == len)
+        break;
+
+      if (*nextstr)
+        line_count++;
 
       curstr = nextstr;
     } while(*nextstr);
   }
 
   if (w) *w = max_w;
-  if (h) *h = motfont->charheight * iupStrLineCount(str);
+  if (h) *h = motfont->charheight * line_count;
 }
 
+IUP_SDK_API void iupdrvFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
+{
+  ImotFont* motfont = motGetFont(ih);
+  if (motfont)
+    motFontGetTextSize(motfont, str, str? (int)strlen(str): 0, w, h);
+}
 
-void iupdrvFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)
+IUP_SDK_API void iupdrvFontGetTextSize(const char* font, const char* str, int len, int *w, int *h)
+{
+  ImotFont *motfont = motFindFont(NULL, font);
+  if (motfont)
+    motFontGetTextSize(motfont, str, len, w, h);
+}
+
+IUP_SDK_API void iupdrvFontGetFontDim(const char* font, int *max_width, int *line_height, int *ascent, int *descent)
+{
+  ImotFont *motfont = motFindFont(NULL, font);
+  if (motfont)
+  {
+    if (max_width) *max_width = motfont->fontstruct->max_bounds.width;
+    if (line_height) *line_height = motfont->fontstruct->ascent + motfont->fontstruct->descent;
+    if (ascent)    *ascent = motfont->fontstruct->ascent;
+    if (descent)   *descent = motfont->fontstruct->descent;
+  }
+}
+
+IUP_SDK_API void iupdrvFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)
 {
   ImotFont* motfont = motGetFont(ih);
   if (!motfont)

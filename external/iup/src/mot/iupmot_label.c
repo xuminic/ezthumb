@@ -29,6 +29,13 @@
 #include "iupmot_drv.h"
 
 
+void iupdrvLabelAddExtraPadding(Ihandle* ih, int *x, int *y)
+{
+  (void)ih;
+  (void)x;
+  (void)y;
+}
+
 static int motLabelSetTitleAttrib(Ihandle* ih, const char* value)
 {
   if (ih->data->type == IUP_LABEL_TEXT)
@@ -59,7 +66,7 @@ static int motLabelSetBackgroundAttrib(Ihandle* ih, const char* value)
     return 1;
   else
   {
-    Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0);
+    Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0, NULL);
     if (pixmap)
     {
       XtVaSetValues(ih->handle, XmNbackgroundPixmap, pixmap, NULL);
@@ -82,7 +89,7 @@ static int motLabelSetAlignmentAttrib(Ihandle* ih, const char* value)
       align = XmALIGNMENT_END;
     else if (iupStrEqualNoCase(value1, "ACENTER"))
       align = XmALIGNMENT_CENTER;
-    else /* "ALEFT" */
+    else /* "ALEFT" (default) */
       align = XmALIGNMENT_BEGINNING;
 
     XtVaSetValues(ih->handle, XmNalignment, align, NULL);

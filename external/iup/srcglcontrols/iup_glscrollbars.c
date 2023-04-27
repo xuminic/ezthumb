@@ -1,5 +1,5 @@
 /** \file
- * \brief GL Scrollars base functions.
+ * \brief GL Scrollbars base functions.
  *
  * See Copyright Notice in "iup.h"
  */
@@ -134,7 +134,7 @@ static void iGLScrollbarsDrawVertical(Ihandle* ih, int active, const char* fgcol
 
   if (pressed)
   {
-    char* presscolor = iupAttribGetStr(ih, "PRESSCOLOR");
+    char* presscolor = iupAttribGetStr(ih, "SB_PRESSCOLOR");
     if (presscolor)
     {
       if (pressed == SB_INC_Y)
@@ -147,7 +147,7 @@ static void iGLScrollbarsDrawVertical(Ihandle* ih, int active, const char* fgcol
   }
   else if (highlight)
   {
-    char* hlcolor = iupAttribGetStr(ih, "HIGHCOLOR");
+    char* hlcolor = iupAttribGetStr(ih, "SB_HIGHCOLOR");
     if (hlcolor)
     {
       if (highlight == SB_INC_Y)
@@ -198,7 +198,7 @@ static void iGLScrollbarsDrawHorizontal(Ihandle* ih, int active, const char* fgc
 
   if (pressed)
   {
-    char* presscolor = iupAttribGetStr(ih, "PRESSCOLOR");
+    char* presscolor = iupAttribGetStr(ih, "SB_PRESSCOLOR");
     if (presscolor)
     {
       if (pressed == SB_INC_X)
@@ -211,7 +211,7 @@ static void iGLScrollbarsDrawHorizontal(Ihandle* ih, int active, const char* fgc
   }
   else if (highlight)
   {
-    char* hlcolor = iupAttribGetStr(ih, "HIGHCOLOR");
+    char* hlcolor = iupAttribGetStr(ih, "SB_HIGHCOLOR");
     if (hlcolor)
     {
       if (highlight == SB_INC_X)
@@ -258,10 +258,10 @@ void iupGLScrollbarsDraw(Ihandle* ih, int active)
   int sb_ymax = iupAttribGetInt(ih, "YMAX");
   int sb_dx = iupAttribGetInt(ih, "DX");
   int sb_dy = iupAttribGetInt(ih, "DY");
-  char* fgcolor = iupAttribGetStr(ih, "FORECOLOR");
-  char* bgcolor = iupAttribGetStr(ih, "BACKCOLOR");
-  int highlight = iupAttribGetInt(ih, "_IUP_HIGHLIGHT_HANDLER");
-  int pressed = iupAttribGetInt(ih, "_IUP_PRESSED_HANDLER");
+  char* fgcolor = iupAttribGetStr(ih, "SB_FORECOLOR");
+  char* bgcolor = iupAttribGetStr(ih, "SB_BACKCOLOR");
+  int highlight = iupAttribGetInt(ih, "_IUPGLSB_HIGHLIGHT_HANDLER");
+  int pressed = iupAttribGetInt(ih, "_IUPGLSB_PRESSED_HANDLER");
 
   if (sb_xmax - sb_xmin > sb_dx)  /* has horizontal scrollbar */
     has_horiz_scroll = 1;
@@ -284,7 +284,9 @@ void iupGLScrollbarsChildLayoutUpdate(Ihandle *ih)
     int sb_posy = iupAttribGetInt(ih, "POSY");
 
     iupBaseSetPosition(ih->firstchild, ih->x - sb_posx, ih->y - sb_posy);
-    iupLayoutUpdate(ih->firstchild);
+
+    if (ih->firstchild->handle)
+      iupLayoutUpdate(ih->firstchild);
   }
 }
 
@@ -375,7 +377,7 @@ static int iGLScrollbarsMove(Ihandle* ih, int diff_x, int diff_y, int start_pos,
   if (sb_ymax - sb_ymin > sb_dy)  /* has vertical scrollbar */
     has_vert_scroll = 1;
 
-  if (handler == SB_DRAG_Y)
+  if (handler == SB_DRAG_Y && has_vert_scroll)
   {
     int ymin, ymax, posy, sb_posy;
     int height = ih->currentheight;
@@ -409,7 +411,7 @@ static int iGLScrollbarsMove(Ihandle* ih, int diff_x, int diff_y, int start_pos,
       return 1;
     }
   }
-  else if (handler == SB_DRAG_X)
+  else if (handler == SB_DRAG_X && has_horiz_scroll)
   {
     int xmin, xmax, posx, sb_posx;
     int width = ih->currentwidth;
@@ -507,7 +509,7 @@ static int iGLScrollbarsSetPosYAttrib(Ihandle *ih, const char *value)
     return 0;
 
   ymin = iupAttribGetInt(ih, "YMIN");
-  ymax = iupAttribGetInt(ih, "YMAY");
+  ymax = iupAttribGetInt(ih, "YMAX");
   dy = iupAttribGetInt(ih, "DY");
 
   if (posy < ymin) posy = ymin;
@@ -524,17 +526,17 @@ int iupGLScrollbarsButton(Ihandle *ih, int pressed, int x, int y)
   if (pressed)
   {
     int handler = iGLScrollbarsIsInsideHandlers(ih, x, y);
-    iupAttribSetInt(ih, "_IUP_PRESSED_HANDLER", handler);
+    iupAttribSetInt(ih, "_IUPGLSB_PRESSED_HANDLER", handler);
 
     if (handler == SB_DRAG_X || handler == SB_DRAG_Y)
     {
-      iupAttribSetInt(ih, "_IUP_START_X", x);
-      iupAttribSetInt(ih, "_IUP_START_Y", y);
+      iupAttribSetInt(ih, "_IUPGLSB_START_X", x);
+      iupAttribSetInt(ih, "_IUPGLSB_START_Y", y);
 
       if (handler == SB_DRAG_X)
-        iupAttribSetStr(ih, "_IUP_START_POS", iupAttribGet(ih, "POSX"));
+        iupAttribSetStr(ih, "_IUPGLSB_START_POS", iupAttribGet(ih, "POSX"));
       else
-        iupAttribSetStr(ih, "_IUP_START_POS", iupAttribGet(ih, "POSY"));
+        iupAttribSetStr(ih, "_IUPGLSB_START_POS", iupAttribGet(ih, "POSY"));
     }
 
     if (handler != SB_NONE)
@@ -542,7 +544,7 @@ int iupGLScrollbarsButton(Ihandle *ih, int pressed, int x, int y)
   }
   else 
   {
-    int press_handler = iupAttribGetInt(ih, "_IUP_PRESSED_HANDLER");
+    int press_handler = iupAttribGetInt(ih, "_IUPGLSB_PRESSED_HANDLER");
     int handler = iGLScrollbarsIsInsideHandlers(ih, x, y);
     if (handler != SB_NONE && handler != SB_DRAG_X && handler != SB_DRAG_Y &&
         handler == press_handler)
@@ -557,7 +559,7 @@ int iupGLScrollbarsButton(Ihandle *ih, int pressed, int x, int y)
 
       iupGLScrollbarsChildLayoutUpdate(ih);
     }
-    iupAttribSet(ih, "_IUP_PRESSED_HANDLER", NULL);
+    iupAttribSet(ih, "_IUPGLSB_PRESSED_HANDLER", NULL);
 
     if (handler != SB_NONE)
       return 1;
@@ -572,19 +574,19 @@ int iupGLScrollbarsMotion(Ihandle *ih, int x, int y)
   int handler = iGLScrollbarsIsInsideHandlers(ih, x, y);
 
   /* special highlight processing for scrollbar area */
-  int old_handler = iupAttribGetInt(ih, "_IUP_HIGHLIGHT_HANDLER");
+  int old_handler = iupAttribGetInt(ih, "_IUPGLSB_HIGHLIGHT_HANDLER");
   if (old_handler != handler)
   {
     redraw = 1;
-    iupAttribSetInt(ih, "_IUP_HIGHLIGHT_HANDLER", handler);
+    iupAttribSetInt(ih, "_IUPGLSB_HIGHLIGHT_HANDLER", handler);
   }
 
-  handler = iupAttribGetInt(ih, "_IUP_PRESSED_HANDLER");
+  handler = iupAttribGetInt(ih, "_IUPGLSB_PRESSED_HANDLER");
   if (handler == SB_DRAG_X || handler == SB_DRAG_Y)
   {
-    int start_x = iupAttribGetInt(ih, "_IUP_START_X");
-    int start_y = iupAttribGetInt(ih, "_IUP_START_Y");
-    int start_pos = iupAttribGetInt(ih, "_IUP_START_POS");
+    int start_x = iupAttribGetInt(ih, "_IUPGLSB_START_X");
+    int start_y = iupAttribGetInt(ih, "_IUPGLSB_START_Y");
+    int start_pos = iupAttribGetInt(ih, "_IUPGLSB_START_POS");
 
     if (iGLScrollbarsMove(ih, x - start_x, y - start_y, start_pos, handler))
     {
@@ -600,13 +602,13 @@ void iupGLScrollbarsEnterWindow(Ihandle* ih, int x, int y)
 {
   /* special highlight processing for scrollbar area */
   int handler = iGLScrollbarsIsInsideHandlers(ih, x, y);
-  iupAttribSetInt(ih, "_IUP_HIGHLIGHT_HANDLER", handler);
+  iupAttribSetInt(ih, "_IUPGLSB_HIGHLIGHT_HANDLER", handler);
 }
 
 void iupGLScrollbarsLeaveWindow(Ihandle* ih)
 {
-  iupAttribSet(ih, "_IUP_HIGHLIGHT_HANDLER", NULL);
-  iupAttribSet(ih, "_IUP_PRESSED_HANDLER", NULL);
+  iupAttribSet(ih, "_IUPGLSB_HIGHLIGHT_HANDLER", NULL);
+  iupAttribSet(ih, "_IUPGLSB_PRESSED_HANDLER", NULL);
 }
 
 void iupGLScrollbarsRegisterAttrib(Iclass* ic)
@@ -624,8 +626,11 @@ void iupGLScrollbarsRegisterAttrib(Iclass* ic)
 
   iupClassRegisterAttribute(ic, "SCROLLBARSIZE", NULL, NULL, IUPAF_SAMEASSYSTEM, "11", IUPAF_NO_INHERIT);
 
-  iupClassRegisterAttribute(ic, "HIGHCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "90 190 255", IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "FORECOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "110 210 230", IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "PRESSCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "50 150 255", IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "BACKCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "200 225 245", IUPAF_NO_INHERIT);
+  /* behave as AUTOHIDE is always Yes (unused) */
+  /* behave as SCROLLBAR is always Yes (unused) */
+
+  iupClassRegisterAttribute(ic, "SB_HIGHCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "90 190 255", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SB_FORECOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "110 210 230", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SB_PRESSCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "50 150 255", IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "SB_BACKCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "200 225 245", IUPAF_NO_INHERIT);
 }

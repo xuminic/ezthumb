@@ -38,12 +38,12 @@ void iupgtkUpdateMnemonic(Ihandle* ih)
 	UNIMPLEMENTED
 }
 
-void iupdrvActivate(Ihandle* ih)
+IUP_SDK_API void iupdrvActivate(Ihandle* ih)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvReparent(Ihandle* ih)
+IUP_SDK_API void iupdrvReparent(Ihandle* ih)
 {
 	UNIMPLEMENTED
 }
@@ -71,14 +71,14 @@ void iuphaikuBaseAddToParent(Ihandle* ih)
 	  debugger("Trying to add a control to a parent that has no BView");
 }
 
-void iupdrvBaseLayoutUpdateMethod(Ihandle *ih)
+IUP_SDK_API void iupdrvBaseLayoutUpdateMethod(Ihandle *ih)
 {
 	BView* view = (BView*)ih->handle;
 	view->MoveTo(ih->x, ih->y);
 	view->ResizeTo(ih->currentwidth, ih->currentheight);
 }
 
-void iupdrvBaseUnMapMethod(Ihandle* ih)
+IUP_SDK_API void iupdrvBaseUnMapMethod(Ihandle* ih)
 {
   BHandler* handler = (BHandler*)ih->handle;
   BView* view = dynamic_cast<BView*>(handler);
@@ -93,33 +93,33 @@ void iupdrvBaseUnMapMethod(Ihandle* ih)
     UNIMPLEMENTED
 }
 
-void iupdrvPostRedraw(Ihandle *ih)
+IUP_SDK_API void iupdrvPostRedraw(Ihandle *ih)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvRedrawNow(Ihandle *ih)
+IUP_SDK_API void iupdrvRedrawNow(Ihandle *ih)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvScreenToClient(Ihandle* ih, int *x, int *y)
+IUP_SDK_API void iupdrvScreenToClient(Ihandle* ih, int *x, int *y)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvClientToScreen(Ihandle* ih, int *x, int *y)
+IUP_SDK_API void iupdrvClientToScreen(Ihandle* ih, int *x, int *y)
 {
 	UNIMPLEMENTED
 }
 
-int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value)
 {
 	UNIMPLEMENTED
 	return 0;
 }
 
-void iupdrvSetVisible(Ihandle* ih, int visible)
+IUP_SDK_API void iupdrvSetVisible(Ihandle* ih, int visible)
 {
   BView* view = (BView*)ih->handle;
   if(visible && view->IsHidden())
@@ -128,13 +128,13 @@ void iupdrvSetVisible(Ihandle* ih, int visible)
 	view->Hide();
 }
 
-int iupdrvIsVisible(Ihandle* ih)
+IUP_SDK_API int iupdrvIsVisible(Ihandle* ih)
 {
   BView* view = (BView*)ih->handle;
   return !view->IsHidden();
 }
 
-int iupdrvIsActive(Ihandle *ih)
+IUP_SDK_API int iupdrvIsActive(Ihandle *ih)
 {
 	BHandler* handler = (BHandler*)ih->handle;
 
@@ -144,7 +144,7 @@ int iupdrvIsActive(Ihandle *ih)
 	return true;
 }
 
-void iupdrvSetActive(Ihandle* ih, int enable)
+IUP_SDK_API void iupdrvSetActive(Ihandle* ih, int enable)
 {
 	BHandler* handler = (BHandler*)ih->handle;
 
@@ -171,7 +171,7 @@ void iuphaikuBaseSetFgColor(InativeHandle* handle, unsigned char r, unsigned cha
   view->SetHighColor(r,g,b);
 }
 
-int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value)
 {
   unsigned char r, g, b;
   if (!iupStrToRGB(value, &r, &g, &b))
@@ -184,7 +184,7 @@ int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value)
 {
   unsigned char r, g, b;
   if (!iupStrToRGB(value, &r, &g, &b))
@@ -195,23 +195,23 @@ int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
-int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value)
 {
 	UNIMPLEMENTED
   return 0;
 }
 
-int iupdrvGetScrollbarSize(void)
+IUP_SDK_API int iupdrvGetScrollbarSize(void)
 {
   return (int)B_V_SCROLL_BAR_WIDTH;
 }
 
-void iupdrvDrawFocusRect(Ihandle* ih, void* _gc, int x, int y, int w, int h)
+IUP_SDK_API void iupdrvDrawFocusRect(Ihandle* ih, void* _gc, int x, int y, int w, int h)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvBaseRegisterCommonAttrib(Iclass* ic)
+IUP_SDK_API void iupdrvBaseRegisterCommonAttrib(Iclass* ic)
 {
   // Other drivers seems to register some info about fonts and tooltips here.
   // I'm not sure what is needed and there is no documentation...
@@ -270,22 +270,22 @@ char* iupgtkStrConvertFromFilename(const char* str)   /* From Filename to IUP */
   return (char*)str;
 }
 
-void iupdrvSendKey(int key, int press)
+IUP_SDK_API void iupdrvSendKey(int key, int press)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvWarpPointer(int x, int y)
+IUP_SDK_API void iupdrvWarpPointer(int x, int y)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvSendMouse(int x, int y, int bt, int status)
+IUP_SDK_API void iupdrvSendMouse(int x, int y, int bt, int status)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvSleep(int time)
+IUP_SDK_API void iupdrvSleep(int time)
 {
 	UNIMPLEMENTED
 }

@@ -30,9 +30,15 @@
 #include "iupmot_color.h"
 
 
-void iupdrvToggleAddCheckBox(int *x, int *y, const char* str)
+void iupdrvToggleAddBorders(Ihandle* ih, int *x, int *y)
+{
+  iupdrvButtonAddBorders(ih, x, y);
+}
+
+void iupdrvToggleAddCheckBox(Ihandle* ih, int *x, int *y, const char* str)
 {
   int check_box = 15;  /* See XmNindicatorSize */
+  (void)ih;
 
   /* has margins too */
   (*x) += 3 + check_box + 3;
@@ -112,7 +118,7 @@ static int motToggleSetBackgroundAttrib(Ihandle* ih, const char* value)
     }
     else
     {
-      Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0);
+      Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0, NULL);
       if (pixmap)
       {
         XtVaSetValues(ih->handle, XmNbackgroundPixmap, pixmap, NULL);
@@ -131,7 +137,7 @@ static int motToggleSetBackgroundAttrib(Ihandle* ih, const char* value)
         return 1;
       else
       {
-        Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0);
+        Pixmap pixmap = (Pixmap)iupImageGetImage(value, ih, 0, NULL);
         if (pixmap)
         {
           XtVaSetValues(ih->handle, XmNbackgroundPixmap, pixmap, NULL);
@@ -166,10 +172,10 @@ static int motToggleSetAlignmentAttrib(Ihandle* ih, const char* value)
 
   if (iupStrEqualNoCase(value1, "ARIGHT"))
     align = XmALIGNMENT_END;
-  else if (iupStrEqualNoCase(value1, "ACENTER"))
-    align = XmALIGNMENT_CENTER;
-  else /* "ALEFT" */
+  else if (iupStrEqualNoCase(value1, "ALEFT"))
     align = XmALIGNMENT_BEGINNING;
+  else /* "ACENTER" (default) */
+    align = XmALIGNMENT_CENTER;
 
   XtVaSetValues (ih->handle, XmNalignment, align, NULL);
   return 1;
@@ -284,6 +290,9 @@ static char* motToggleGetValueAttrib(Ihandle* ih)
 
 static int motToggleSetPaddingAttrib(Ihandle* ih, const char* value)
 {
+  if (iupStrEqual(value, "DEFAULTBUTTONPADDING"))
+    value = IupGetGlobal("DEFAULTBUTTONPADDING");
+
   iupStrToIntInt(value, &ih->data->horiz_padding, &ih->data->vert_padding, 'x');
   if (ih->handle && ih->data->type == IUP_TOGGLE_IMAGE)
   {

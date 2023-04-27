@@ -1,0 +1,76 @@
+$(OBJDIR)/iuplua_glcontrols.o: gl/iuplua_glcontrols.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupglcontrols.h \
+ ../include/iuplua.h ../include/iupluaglcontrols.h ../srclua5/il.h \
+ gl/il_glcontrols.h ../src/iup_attrib.h
+$(OBJDIR)/il_glcanvasbox.o: gl/il_glcanvasbox.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glcanvasbox.lh
+$(OBJDIR)/il_glsubcanvas.o: gl/il_glsubcanvas.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glsubcanvas.lh
+$(OBJDIR)/il_gllabel.o: gl/il_gllabel.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/gllabel.lh
+$(OBJDIR)/il_glbutton.o: gl/il_glbutton.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glbutton.lh
+$(OBJDIR)/il_glexpander.o: gl/il_glexpander.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glexpander.lh
+$(OBJDIR)/il_glframe.o: gl/il_glframe.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glframe.lh
+$(OBJDIR)/il_gllink.o: gl/il_gllink.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/gllink.lh
+$(OBJDIR)/il_glprogressbar.o: gl/il_glprogressbar.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glprogressbar.lh
+$(OBJDIR)/il_glseparator.o: gl/il_glseparator.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glseparator.lh
+$(OBJDIR)/il_gltoggle.o: gl/il_gltoggle.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/gltoggle.lh
+$(OBJDIR)/il_glval.o: gl/il_glval.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glval.lh
+$(OBJDIR)/il_glscrollbox.o: gl/il_glscrollbox.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glscrollbox.lh
+$(OBJDIR)/il_glsizebox.o: gl/il_glsizebox.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/glsizebox.lh
+$(OBJDIR)/il_gltext.o: gl/il_gltext.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupglcontrols.h ../srclua5/il.h lh/gltext.lh

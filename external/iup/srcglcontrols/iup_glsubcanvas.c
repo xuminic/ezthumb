@@ -150,6 +150,13 @@ int iupGLSubCanvasSetTransform(Ihandle* ih, Ihandle* gl_parent)
   glLoadIdentity();
   glTranslatef(0.375, 0.375, 0.0);  /* render all primitives at integer positions */
 
+  /* An optimum compromise that allows all primitives to be specified at integer positions, 
+     while still ensuring predictable rasterization, is to translate x and y by 0.375. 
+     Such a translation keeps polygon and pixel image edges safely away from the centers of pixels, 
+     while moving line vertices close enough to the pixel centers.
+     From: OpenGL Programming Guide (Red Book) - Appendix G "Programming Tips" - OpenGL Correctness Tips
+  */
+
   return 1;
 }
 
@@ -225,7 +232,7 @@ static void iGLSubCanvasRedrawFront(Ihandle* ih)
   IFn cb = (IFn)IupGetCallback(ih, "GL_ACTION");
   if (cb && iupAttribGetInt(ih, "VISIBLE"))
   {
-    Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+    Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
     IupGLMakeCurrent(gl_parent);
     glDrawBuffer(GL_FRONT);
     iupGLSubCanvasSaveState(gl_parent);
@@ -238,7 +245,7 @@ static void iGLSubCanvasRedrawFront(Ihandle* ih)
 
 int iupGLSubCanvasRedraw(Ihandle* ih)
 {
-  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
   if (iupAttribGetInt(ih, "REDRAWALL"))
     IupSetAttribute(gl_parent, "REDRAW", NULL);  /* redraw the whole box */
   else
@@ -248,8 +255,9 @@ int iupGLSubCanvasRedraw(Ihandle* ih)
 
 void iupGLSubCanvasStartMoving(Ihandle* ih, int x, int y)
 {
-  iupAttribSetInt(ih, "_IUP_START_X", ih->x + x);
-  iupAttribSetInt(ih, "_IUP_START_Y", ih->y + y);
+  /* Used for MOVABLE controls */
+  iupAttribSetInt(ih, "_IUP_GLSUBCANVAS_START_X", ih->x + x);
+  iupAttribSetInt(ih, "_IUP_GLSUBCANVAS_START_Y", ih->y + y);
 
   if (iupAttribGetInt(ih, "MOVETOTOP"))
     IupSetAttribute(ih, "ZORDER", "TOP");
@@ -257,16 +265,17 @@ void iupGLSubCanvasStartMoving(Ihandle* ih, int x, int y)
 
 int iupGLSubCanvasMove(Ihandle* ih, int x, int y)
 {
+  /* Used for MOVABLE controls */
   int moved = 0;
-  int start_x = iupAttribGetInt(ih, "_IUP_START_X");
-  int start_y = iupAttribGetInt(ih, "_IUP_START_Y");
+  int start_x = iupAttribGetInt(ih, "_IUP_GLSUBCANVAS_START_X");
+  int start_y = iupAttribGetInt(ih, "_IUP_GLSUBCANVAS_START_Y");
 
   x += ih->x;
   y += ih->y;
 
   if ((x != start_x) || (y != start_y))
   {
-    Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+    Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
     IFnii cb = (IFnii)IupGetCallback(ih, "MOVE_CB");
 
     /* clear canvas box alignment */
@@ -283,8 +292,8 @@ int iupGLSubCanvasMove(Ihandle* ih, int x, int y)
       cb(ih, ih->x, ih->y);
   }
 
-  iupAttribSetInt(ih, "_IUP_START_X", x);
-  iupAttribSetInt(ih, "_IUP_START_Y", y);
+  iupAttribSetInt(ih, "_IUP_GLSUBCANVAS_START_X", x);
+  iupAttribSetInt(ih, "_IUP_GLSUBCANVAS_START_Y", y);
   return moved;
 }
 
@@ -407,13 +416,13 @@ static int iGLSubCanvasSetZorder(Ihandle* parent, Ihandle* child, int top)
 
 static int iGLSubCanvasSetZorderAttrib(Ihandle* ih, const char* value)
 {
-  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
   int redraw = 0;
   int top = 1;
   if (iupStrEqualNoCase(value, "BOTTOM"))
     top = 0;
 
-  /* move everyone in the same hierachy */
+  /* move everyone in the same hierarchy */
   while (ih != gl_parent)
   {
     if (iGLSubCanvasSetZorder(ih->parent, ih, top))
@@ -444,7 +453,7 @@ static int iGLSubCanvasMapMethod(Ihandle* ih)
   if (!gl_parent || !iupClassMatch(gl_parent->iclass, "glcanvasbox"))
     return IUP_ERROR;
 
-  iupAttribSet(ih, "GL_CANVAS", (char*)gl_parent);
+  iupAttribSet(ih, "_IUP_GLCANVAS_PARENT", (char*)gl_parent);
 
   /* use the handle of the native parent */
   ih->handle = gl_parent->handle;
@@ -470,6 +479,7 @@ Iclass* iupGLSubCanvasNewClass(void)
   Iclass* ic = iupClassNew(NULL);
 
   ic->name = "glsubcanvas";
+  ic->cons = "GLSubCanvas";
   ic->format = NULL;  /* no parameters */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDNONE;
@@ -488,6 +498,9 @@ Iclass* iupGLSubCanvasNewClass(void)
   iupClassRegisterCallback(ic, "GL_LEAVEWINDOW_CB", "");
   iupClassRegisterCallback(ic, "GL_MOTION_CB", "iis");
   iupClassRegisterCallback(ic, "GL_WHEEL_CB", "fiis");
+
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
 
   /* Common */
   iupBaseRegisterCommonAttrib(ic);

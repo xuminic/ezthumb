@@ -81,14 +81,22 @@ int iupMatrixColResStart(Ihandle* ih, int x, int y)
 
 void iupMatrixColResFinish(Ihandle* ih, int x)
 {
+  int min_width = iupAttribGetIntId(ih, "MINCOLWIDTH", ih->data->colres_drag_col);
   int delta = x - ih->data->colres_drag_col_start_x;
   int width = ih->data->columns.dt[ih->data->colres_drag_col].size + delta;
-  if (width < 0)
-    width = 0;
+
+  if (min_width == 0)
+    min_width = iupAttribGetInt(ih, "MINCOLWIDTHDEF");
+
+  width -= IMAT_PADDING_W + IMAT_FRAME_W;
+
+  if (width < min_width)
+    width = min_width;
 
   ih->data->colres_dragging = 0;
+  ih->data->colres_feedback = 0;
 
-  iupAttribSetIntId(ih, "RASTERWIDTH", ih->data->colres_drag_col, width-IMAT_PADDING_W-IMAT_FRAME_W);
+  iupAttribSetIntId(ih, "RASTERWIDTH", ih->data->colres_drag_col, width);
   iupAttribSetId(ih, "WIDTH", ih->data->colres_drag_col, NULL);
 
   ih->data->need_calcsize = 1;
@@ -114,7 +122,6 @@ void iupMatrixColResFinish(Ihandle* ih, int x)
 void iupMatrixColResMove(Ihandle* ih, int x)
 {
   int y1, y2;
-  cdCanvas* cd_canvas_front = (cdCanvas*)IupGetAttribute(ih, "_CD_CANVAS");  /* front buffer canvas */
 
   int delta = x - ih->data->colres_drag_col_start_x;
   int width = ih->data->columns.dt[ih->data->colres_drag_col].size + delta;
@@ -122,13 +129,26 @@ void iupMatrixColResMove(Ihandle* ih, int x)
     return;
 
   y1 = ih->data->lines.dt[0].size;  /* from the bottom of the line of titles */
-  y2 = ih->data->h-1;             /* to the bottom of the matrix */
+  y2 = iupMatrixGetHeight(ih) - 1;             /* to the bottom of the matrix */
 
-  iupMatrixDrawUpdate(ih);
+  if (ih->data->colres_drag)
+  { 
+    iupMatrixColResFinish(ih, x);
 
-  cdCanvasForeground(cd_canvas_front, ih->data->colres_color);
-  cdCanvasLine(cd_canvas_front, x, iupMATRIX_INVERTYAXIS(ih, y1), 
-                                x, iupMATRIX_INVERTYAXIS(ih, y2));
+    iupMatrixDrawUpdate(ih);
+
+    ih->data->colres_dragging = 1; /* keep dragging */
+    ih->data->colres_drag_col_start_x = x;
+  }
+  else
+  {
+    ih->data->colres_feedback = 1;
+    ih->data->colres_x = x;
+    ih->data->colres_y1 = iupMATRIX_INVERTYAXIS(ih, y1);
+    ih->data->colres_y2 = iupMATRIX_INVERTYAXIS(ih, y2);
+
+    iupMatrixDrawUpdate(ih);
+  }
 }
 
 /* Change the cursor when it passes over a group of the column titles. */

@@ -22,18 +22,20 @@ typedef struct _IfontNameMap {
   const char* pango;
   const char* x;
   const char* win;
+  const char* mac; /* not sure if GNUStep uses same names as Apple. Mac & iOS are close, but may have slight differences. */
 } IfontNameMap;
 
 #define IFONT_NAME_MAP_SIZE 7
 
 static IfontNameMap ifont_name_map[IFONT_NAME_MAP_SIZE] = {
-  {"sans",      "helvetica",              "arial"},
-  {NULL,        "new century schoolbook", "century schoolbook"},
-  {"monospace", "courier",                "courier new"},
-  {NULL,        "lucida",                 "lucida sans unicode"},
-  {NULL,        "lucidabright",           "lucida bright"},
-  {NULL,        "lucidatypewriter",       "lucida console"},
-  {"serif",     "times",                  "times new roman"}
+/*  pango        X11                      Windows                Mac  */
+  {"sans",      "helvetica",              "arial",               "Helvetica Neue"},
+  {NULL,        "new century schoolbook", "century schoolbook",  "BiauKai"}, /* Century Schoolbook seems to be private/hidden on Mac. Trying BiauKai as substitute. */
+  {"monospace", "courier",                "courier new",         "Courier New"},
+  {NULL,        "lucida",                 "lucida sans unicode", "Lucida Grande"},
+  {NULL,        "lucidabright",           "lucida bright",       "Lucida Grande"},
+  {NULL,        "lucidatypewriter",       "lucida console",      "Menlo"},
+  {"serif",     "times",                  "times new roman",     "Times New Roman"}
 };
 
 const char* iupFontGetPangoName(const char* name)
@@ -46,6 +48,8 @@ const char* iupFontGetPangoName(const char* name)
     if (iupStrEqualNoCase(ifont_name_map[i].win, name))
       return ifont_name_map[i].pango;
     if (iupStrEqualNoCase(ifont_name_map[i].x, name))
+      return ifont_name_map[i].pango;
+    if (iupStrEqualNoCase(ifont_name_map[i].mac, name))
       return ifont_name_map[i].pango;
   }
 
@@ -63,6 +67,8 @@ const char* iupFontGetWinName(const char* name)
       return ifont_name_map[i].win;
     if (iupStrEqualNoCase(ifont_name_map[i].x, name))
       return ifont_name_map[i].win;
+    if (iupStrEqualNoCase(ifont_name_map[i].mac, name))
+      return ifont_name_map[i].win;
   }
 
   return NULL;
@@ -79,12 +85,32 @@ const char* iupFontGetXName(const char* name)
       return ifont_name_map[i].x;
     if (iupStrEqualNoCase(ifont_name_map[i].pango, name))
       return ifont_name_map[i].x;
+    if (iupStrEqualNoCase(ifont_name_map[i].mac, name))
+      return ifont_name_map[i].x;
   }
 
   return NULL;
 }
 
-char* iupGetFontValue(Ihandle* ih)
+const char* iupFontGetMacName(const char* name)
+{
+  int i;
+  if (!name)
+    return NULL;
+  for (i=0; i<IFONT_NAME_MAP_SIZE; i++)
+  {
+    if (iupStrEqualNoCase(ifont_name_map[i].win, name))
+      return ifont_name_map[i].mac;
+    if (iupStrEqualNoCase(ifont_name_map[i].pango, name))
+      return ifont_name_map[i].mac;
+	if (iupStrEqualNoCase(ifont_name_map[i].x, name))
+      return ifont_name_map[i].mac;
+  }
+
+  return NULL;
+}
+
+IUP_SDK_API char* iupGetFontValue(Ihandle* ih)
 {
   char* value = iupAttribGetStr(ih, "FONT");
 
@@ -104,14 +130,14 @@ void iupUpdateFontAttrib(Ihandle* ih)
   iupAttribSetClassObject(ih, "FONT", iupGetFontValue(ih));
 }
 
-int iupGetFontInfo(const char* font, char *typeface, int *size, int *is_bold, int *is_italic, int *is_underline, int *is_strikeout)
+IUP_SDK_API int iupGetFontInfo(const char* font, char *typeface, int *size, int *is_bold, int *is_italic, int *is_underline, int *is_strikeout)
 {
-  if (size) *size = 0;
-  if (is_bold) *is_bold = 0;
-  if (is_italic) *is_italic = 0; 
-  if (is_underline) *is_underline = 0;
-  if (is_strikeout) *is_strikeout = 0;
-  if (typeface) *typeface = 0;
+  *size = 0;
+  *is_bold = 0;
+  *is_italic = 0; 
+  *is_underline = 0;
+  *is_strikeout = 0;
+  *typeface = 0;
   
   /* parse the old Windows format first */
   if (!iupFontParseWin(font, typeface, size, is_bold, is_italic, is_underline, is_strikeout))
@@ -126,7 +152,7 @@ int iupGetFontInfo(const char* font, char *typeface, int *size, int *is_bold, in
   return 1;
 }
 
-char* iupGetFontFaceAttrib(Ihandle* ih)
+IUP_SDK_API char* iupGetFontFaceAttrib(Ihandle* ih)
 {
   int size = 0;
   int is_bold = 0,
@@ -144,7 +170,7 @@ char* iupGetFontFaceAttrib(Ihandle* ih)
   return iupStrReturnStr(typeface);
 }
 
-int iupSetFontFaceAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupSetFontFaceAttrib(Ihandle* ih, const char* value)
 {
   int size = 0;
   int is_bold = 0,
@@ -166,7 +192,7 @@ int iupSetFontFaceAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-char* iupGetFontSizeAttrib(Ihandle* ih)
+IUP_SDK_API char* iupGetFontSizeAttrib(Ihandle* ih)
 {
   int size = 0;
   int is_bold = 0,
@@ -184,7 +210,7 @@ char* iupGetFontSizeAttrib(Ihandle* ih)
   return iupStrReturnInt(size);
 }
 
-int iupSetFontSizeAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupSetFontSizeAttrib(Ihandle* ih, const char* value)
 {
   int size = 0;
   int is_bold = 0,
@@ -206,7 +232,7 @@ int iupSetFontSizeAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-char* iupGetFontStyleAttrib(Ihandle* ih)
+IUP_SDK_API char* iupGetFontStyleAttrib(Ihandle* ih)
 {
   int size = 0;
   int is_bold = 0,
@@ -222,7 +248,7 @@ char* iupGetFontStyleAttrib(Ihandle* ih)
   return iupStrReturnStrf("%s%s%s%s", is_bold ? "Bold " : "", is_italic ? "Italic " : "", is_underline ? "Underline " : "", is_strikeout ? "Strikeout " : "");
 }
 
-int iupSetFontStyleAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupSetFontStyleAttrib(Ihandle* ih, const char* value)
 {
   int size = 0;
   int is_bold = 0,
@@ -450,7 +476,7 @@ static const char * iFontGetStyleWord(const char *str, const char *last, int *wo
 }
 
 /* this code is shared between CD and IUP, must be updated on both libraries */
-int iupFontParsePango(const char *font, char *typeface, int *size, int *bold, int *italic, int *underline, int *strikeout)
+IUP_SDK_API int iupFontParsePango(const char *font, char *typeface, int *size, int *bold, int *italic, int *underline, int *strikeout)
 {
   const char *p, *last;
   int len, wordlen, style;
@@ -527,7 +553,7 @@ int iupFontParsePango(const char *font, char *typeface, int *size, int *bold, in
 }
 
 /* this code is shared between CD and IUP, must be updated on both libraries */
-int iupFontParseWin(const char *value, char *typeface, int *size, int *bold, int *italic, int *underline, int *strikeout)
+IUP_SDK_API int iupFontParseWin(const char *value, char *typeface, int *size, int *bold, int *italic, int *underline, int *strikeout)
 {
   int c;
 
@@ -597,14 +623,14 @@ int iupFontParseWin(const char *value, char *typeface, int *size, int *bold, int
   if (!iupStrToInt(value, size))
     return 0;
 
-  if (size == 0)
+  if (*size == 0)
     return 0;
 
   return 1;
 }
 
 /* this code is shared between CD and IUP, must be updated on both libraries */
-int iupFontParseX(const char *font, char *typeface, int *size, int *bold, int *italic, int *underline, int *strikeout)
+IUP_SDK_API int iupFontParseX(const char *font, char *typeface, int *size, int *bold, int *italic, int *underline, int *strikeout)
 {
   char style1[30], style2[30];
   char* token;

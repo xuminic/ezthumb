@@ -66,8 +66,8 @@ int iupEditCallActionCb(Ihandle* ih, IFnis cb, const char* insert_value, int sta
 
   if (mask && iupMaskCheck((Imask*)mask, new_value)==0)
   {
-    IFns cb = (IFns)IupGetCallback(ih, "MASKFAIL_CB");
-    if (cb) cb(ih, new_value);
+    IFns fail_cb = (IFns)IupGetCallback(ih, "MASKFAIL_CB");
+    if (fail_cb) fail_cb(ih, new_value);
     if (new_value != value) free(new_value);
     return 0; /* abort */
   }
@@ -383,6 +383,30 @@ static int iTextSetMaskRealAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
+static int iTextSetChangeCaseAttrib(Ihandle* ih, const char* value)
+{
+  int case_flag = -1;
+
+  if (iupStrEqualNoCase(value, "UPPER"))
+    case_flag = IUP_CASE_UPPER;
+  else if (iupStrEqualNoCase(value, "LOWER"))
+    case_flag = IUP_CASE_LOWER;
+  else if (iupStrEqualNoCase(value, "TOGGLE"))
+    case_flag = IUP_CASE_TOGGLE;
+  else if (iupStrEqualNoCase(value, "TITLE"))
+    case_flag = IUP_CASE_TITLE;
+
+  if (case_flag != -1)
+  {
+    int utf8 = IupGetInt(NULL, "UTF8MODE");
+    char* str = IupGetAttribute(ih, "VALUE");
+    iupStrChangeCase(str, str, case_flag, utf8);
+    IupSetStrAttribute(ih, "VALUE", str);
+  }
+
+  return 0;
+}
+
 static int iTextSetMultilineAttrib(Ihandle* ih, const char* value)
 {
   /* valid only before map */
@@ -503,10 +527,10 @@ static void iTextComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chil
 
   /* compute the borders space */
   if (iupAttribGetBoolean(ih, "BORDER"))
-    iupdrvTextAddBorders(&natural_w, &natural_h);
+    iupdrvTextAddBorders(ih, &natural_w, &natural_h);
 
   if (iupAttribGetBoolean(ih, "SPIN"))
-    iupdrvTextAddSpin(&natural_w, natural_h);
+    iupdrvTextAddSpin(ih, &natural_w, natural_h);
 
   natural_w += 2*ih->data->horiz_padding;
   natural_h += 2*ih->data->vert_padding;
@@ -539,7 +563,7 @@ static void iTextDestroyMethod(Ihandle* ih)
 typedef void (*Iconvertlincol2pos)(Ihandle* ih, int lin, int col, int *pos);
 typedef void (*Iconvertpos2lincol)(Ihandle* ih, int pos, int *lin, int *col);
 
-void IupTextConvertLinColToPos(Ihandle* ih, int lin, int col, int *pos)
+IUP_API void IupTextConvertLinColToPos(Ihandle* ih, int lin, int col, int *pos)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -563,7 +587,7 @@ void IupTextConvertLinColToPos(Ihandle* ih, int lin, int col, int *pos)
   }
 }
 
-void IupTextConvertPosToLinCol(Ihandle* ih, int pos, int *lin, int *col)
+IUP_API void IupTextConvertPosToLinCol(Ihandle* ih, int pos, int *lin, int *col)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -590,20 +614,12 @@ void IupTextConvertPosToLinCol(Ihandle* ih, int pos, int *lin, int *col)
   }
 }
 
-Ihandle* IupText(const char* action)
+IUP_API Ihandle* IupText(const char* action)
 {
   void *params[2];
   params[0] = (void*)action;
   params[1] = NULL;
   return IupCreatev("text", params);
-}
-
-Ihandle* IupMultiLine(const char* action)
-{
-  void *params[2];
-  params[0] = (void*)action;
-  params[1] = NULL;
-  return IupCreatev("multiline", params);
 }
 
 Iclass* iupTextNewClass(void)
@@ -649,6 +665,7 @@ Iclass* iupTextNewClass(void)
   iupClassRegisterAttribute(ic, "AUTOHIDE", NULL, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MULTILINE", iTextGetMultilineAttrib, iTextSetMultilineAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "APPENDNEWLINE", iTextGetAppendNewlineAttrib, iTextSetAppendNewlineAttrib, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CPADDING", iupBaseGetCPaddingAttrib, iupBaseSetCPaddingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
 
   iupClassRegisterAttribute(ic, "VALUEMASKED", NULL, iTextSetValueMaskedAttrib, NULL, NULL, IUPAF_WRITEONLY|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MASKCASEI", NULL, iTextSetMaskCaseIAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
@@ -667,10 +684,19 @@ Iclass* iupTextNewClass(void)
   iupClassRegisterAttribute(ic, "VISIBLECOLUMNS", NULL, NULL, IUPAF_SAMEASSYSTEM, "5", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "VISIBLELINES", NULL, NULL, IUPAF_SAMEASSYSTEM, "1", IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "WORDWRAP", NULL, NULL, NULL, NULL, IUPAF_DEFAULT);
+  iupClassRegisterAttribute(ic, "CHANGECASE", NULL, iTextSetChangeCaseAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupdrvTextInitClass(ic);
 
   return ic;
+}
+
+IUP_API Ihandle* IupMultiLine(const char* action)
+{
+  void *params[2];
+  params[0] = (void*)action;
+  params[1] = NULL;
+  return IupCreatev("multiline", params);
 }
 
 Iclass* iupMultilineNewClass(void)
@@ -678,6 +704,7 @@ Iclass* iupMultilineNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("text"));
 
   ic->name = "multiline";   /* register the multiline name, so LED will work */
+  ic->cons = "MultiLine";
   ic->format = "a"; /* one ACTION callback name */
   ic->nativetype = IUP_TYPECONTROL;
   ic->childtype = IUP_CHILDNONE;

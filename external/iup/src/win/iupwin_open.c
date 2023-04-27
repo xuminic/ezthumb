@@ -17,6 +17,7 @@
 #include "iup_str.h"
 #include "iup_drv.h"
 #include "iup_drvfont.h"
+#include "iup_drvinfo.h"
 #include "iup_globalattrib.h"
 
 #include "iupwin_drv.h"
@@ -33,18 +34,22 @@
 
 HINSTANCE iupwin_hinstance = 0;    
 int       iupwin_comctl32ver6 = 0;
+DWORD     iupwin_mainthreadid = 0;
+#ifdef USE_WINHOOKPOST
+HHOOK     iupwin_threadmsghook = 0;
+#endif
 
-void* iupdrvGetDisplay(void)
+IUP_SDK_API void* iupdrvGetDisplay(void)
 {
   return NULL;
 }
 
-void iupwinSetInstance(HINSTANCE hInstance)
+IUP_DRV_API void iupwinSetInstance(HINSTANCE hInstance)
 {
   iupwin_hinstance = hInstance;
 }
 
-void iupwinShowLastError(void)
+IUP_DRV_API void iupwinShowLastError(void)
 {
   DWORD error = GetLastError();
   if (error)
@@ -110,9 +115,13 @@ int iupdrvOpen(int *argc, char ***argv)
   }
 
   iupwin_comctl32ver6 = (iupwinGetComCtl32Version() >= 0x060000)? 1: 0;
-  if (iupwin_comctl32ver6 && !iupwinIsAppThemed())  /* When the user selected the Windows Classic theme */
+  if (iupwin_comctl32ver6 && !iupwinIsAppThemed())  /* When the user selected the Windows Classic theme or visual styles not active */
     iupwin_comctl32ver6 = 0;
 
+  iupwin_mainthreadid = GetCurrentThreadId();
+#ifdef USE_WINHOOKPOST
+  iupwin_threadmsghook = SetWindowsHookEx(WH_MSGFILTER, iupwinPostMessageFilterProc, NULL, iupwin_mainthreadid);
+#endif
   IupSetGlobal("SYSTEMLANGUAGE", iupwinGetSystemLanguage());
 
   /* default colors */
@@ -150,6 +159,7 @@ void iupdrvClose(void)
   iupwinHandleFinish();
   iupwinBrushFinish();
   iupwinStrRelease();
+  iupwinDrawFinish();
 
   if (IupGetGlobal("_IUPWIN_OLEINITIALIZE"))
 	  OleUninitialize();

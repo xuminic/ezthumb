@@ -1,0 +1,62 @@
+#!/bin/bash
+
+Copy_DLLs()
+{
+  PLAT=$1
+  SYS=$2
+  LUA_SFX=$3
+  
+  if [ $SYS == Win64 ]; then
+    SFX=_64
+    PLAT=$PLAT$SFX
+  fi
+  
+  BASE_TEC=../..
+  BASE_EXTRA=../..
+#  BASE_TEC=~tecgraf/lib
+#  BASE_EXTRA=~scuri/tecgraf
+  
+  echo $PLAT/$SYS/Lua$LUA_SFX
+  mkdir -p ../bin/$SYS/Lua$LUA_SFX
+  cp -f ../lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/cd/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/im/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/pdflib7/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/ftgl/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/freetype/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/zlib/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f ../lib/$PLAT/Lua$LUA_SFX/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/cd/lib/$PLAT/Lua$LUA_SFX/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/im/lib/$PLAT/Lua$LUA_SFX/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/lua$LUA_SFX/lib/$PLAT/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/lua$LUA_SFX/bin/$SYS.$PLAT/*ua5*.exe ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/luagl/lib/$PLAT/Lua$LUA_SFX/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_TEC/lfs/lib/$PLAT/Lua$LUA_SFX/*.dll ../bin/$SYS/Lua$LUA_SFX
+  cp -f $BASE_EXTRA/luacom/lib/$PLAT/Lua$LUA_SFX/*.dll ../bin/$SYS/Lua$LUA_SFX
+  
+  #Copy Run Time Libraries
+  if [ $1 == dll8 ]; then
+    cp -fr ../dist/Microsoft.VC80/$SYS/Microsoft.VC80.CRT ../bin/$SYS/Lua$LUA_SFX
+    cp -fr ../dist/Microsoft.VC80/$SYS/Microsoft.VC80.OPENMP ../bin/$SYS/Lua$LUA_SFX
+  fi
+  if [ $1 == dll10 ]; then
+    cp -f ../dist/Microsoft.VC100/$PLAT/* ../bin/$SYS/Lua$LUA_SFX
+  fi
+  if [ $1 == dll15 ]; then
+    cp -f ../dist/Microsoft.VC141/$PLAT/* ../bin/$SYS/Lua$LUA_SFX
+  fi
+}
+
+Copy_DLLs dll15 Win32 51
+Copy_DLLs dll15 Win64 51
+Copy_DLLs dll15 Win32 52
+Copy_DLLs dll15 Win64 52
+Copy_DLLs dll15 Win32 53
+Copy_DLLs dll15 Win64 53
+Copy_DLLs dll15 Win32 54
+Copy_DLLs dll15 Win64 54
+
+#Copy_DLLs cygw17 cygw17 51
+#Copy_DLLs cygw17 cygw17 52
+#Copy_DLLs cygw17 cygw17 53
+#Copy_DLLs cygw17 cygw17 54

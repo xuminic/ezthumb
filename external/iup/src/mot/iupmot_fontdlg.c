@@ -143,14 +143,14 @@ static void motFontDlgSelectFontFace(Ihandle* ih, char* fontface, int select)
   int size = IupGetInt(sample, "FONTSIZE");
   Ihandle* list1 = IupGetDialogChild(ih, "LIST1");
   Ihandle* list2 = IupGetDialogChild(ih, "LIST2");
-  int i, count, is_bold, is_italic;
+  int is_bold, is_italic;
 
   motFontDlgInitSizeList(ih, fontface, size);
 
   if (select)
   {
     /* find the fontface in the list and select it */
-    count = IupGetInt(list1, "COUNT");
+    int i, count = IupGetInt(list1, "COUNT");
     for (i=0; i<count; i++)
     {
       if (iupStrEqualNoCase(fontface, IupGetAttributeId(list1, "", i+1)))

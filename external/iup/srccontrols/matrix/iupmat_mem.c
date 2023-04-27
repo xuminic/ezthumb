@@ -124,11 +124,19 @@ void iupMatrixMemRelease(Ihandle* ih)
     free(ih->data->sort_line_index);
     ih->data->sort_line_index = NULL;
   }
+
+  if (ih->data->merge_info)
+  {
+    free(ih->data->merge_info);
+    ih->data->merge_info = NULL;
+    ih->data->merge_info_max = 0;
+    ih->data->merge_info_count = 0;
+  }
 }
 
 void iupMatrixMemReAllocLines(Ihandle* ih, int old_num, int num, int base)
 {
-  int lin, col, end, diff_num, shift_num;
+  int end, diff_num, shift_num, lin;
 
   if (ih->data->undo_redo) iupAttribSetClassObject(ih, "UNDOCLEAR", NULL);
 
@@ -191,6 +199,8 @@ void iupMatrixMemReAllocLines(Ihandle* ih, int old_num, int num, int base)
     /* release memory from the opened space */
     if (!ih->data->callback_mode)
     {
+      int col;
+	  
       for(lin = base; lin < end; lin++)   /* all columns, base-end lines */
       {
         for (col = 0; col < ih->data->columns.num_alloc; col++)
@@ -228,7 +238,7 @@ void iupMatrixMemReAllocLines(Ihandle* ih, int old_num, int num, int base)
 
 void iupMatrixMemReAllocColumns(Ihandle* ih, int old_num, int num, int base)
 {
-  int lin, col, end, diff_num, shift_num;
+  int lin, end, diff_num, shift_num;
 
   if (ih->data->undo_redo) iupAttribSetClassObject(ih, "UNDOCLEAR", NULL);
 
@@ -292,6 +302,8 @@ void iupMatrixMemReAllocColumns(Ihandle* ih, int old_num, int num, int base)
     /* release memory from the opened space */
     if (!ih->data->callback_mode)
     {
+      int col;
+
       for (lin = 0; lin < ih->data->lines.num_alloc; lin++)  /* all lines, base-end columns */
       {
         for(col = base; col < end; col++)

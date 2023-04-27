@@ -35,6 +35,7 @@ typedef struct _Iwin2iupkey
 
 static void winKeyInitXKey(Iwin2iupkey* map)
 {
+  map[VK_CANCEL].iupcode =    K_cPAUSE;
   map[VK_ESCAPE].iupcode =    K_ESC;
   map[VK_PAUSE].iupcode =     K_PAUSE;
   map[VK_SNAPSHOT].iupcode =  K_Print;
@@ -76,6 +77,14 @@ static void winKeyInitXKey(Iwin2iupkey* map)
   map[VK_F10].iupcode = K_F10;
   map[VK_F11].iupcode = K_F11;
   map[VK_F12].iupcode = K_F12;
+  map[VK_F13].iupcode = K_F13;
+  map[VK_F14].iupcode = K_F14;
+  map[VK_F15].iupcode = K_F15;
+  map[VK_F16].iupcode = K_F16;
+  map[VK_F17].iupcode = K_F17;
+  map[VK_F18].iupcode = K_F18;
+  map[VK_F19].iupcode = K_F19;
+  map[VK_F20].iupcode = K_F20;
 
   map[VK_OEM_PLUS].iupcode =   K_plus;
   map[VK_OEM_COMMA].iupcode =  K_comma;
@@ -101,12 +110,13 @@ static void winKeyInitXKey(Iwin2iupkey* map)
   map[VK_SEPARATOR].iupcode = LOWORD(MapVirtualKeyA(VK_SEPARATOR, MAPVK_VK_TO_CHAR));
 
   /* TODO: how to get the shift code? */
+
+  /* 
   map[VK_OEM_PLUS].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_PLUS, MAPVK_VK_TO_CHAR));
   map[VK_OEM_COMMA].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_COMMA, MAPVK_VK_TO_CHAR));
   map[VK_OEM_MINUS].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_MINUS, MAPVK_VK_TO_CHAR));
   map[VK_OEM_PERIOD].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_PERIOD, MAPVK_VK_TO_CHAR));
 
-  /*
   if (!map[VK_OEM_1].iupcode) map[VK_OEM_1].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_1, MAPVK_VK_TO_CHAR));
   if (!map[VK_OEM_2].iupcode) map[VK_OEM_2].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_2, MAPVK_VK_TO_CHAR));
   if (!map[VK_OEM_3].iupcode) map[VK_OEM_3].iupcode = LOWORD(MapVirtualKeyA(VK_OEM_3, MAPVK_VK_TO_CHAR));
@@ -244,17 +254,17 @@ static int winKeyMap2Iup(int wincode)
        and except when other modifiers are used */
     if ((wincode < K_exclam || wincode > K_tilde) ||
         (has_ctrl || has_alt || has_sys))
-      code |= iup_XkeyShift(code);  
+      code = iup_XkeyShift(code);  
   }
 
   if (has_ctrl)   /* Ctrl */
-    code |= iup_XkeyCtrl(code);
+    code = iup_XkeyCtrl(code);
 
   if (has_alt)    /* Alt */
-    code |= iup_XkeyAlt(code);
+    code = iup_XkeyAlt(code);
 
   if (has_sys)    /* Apple/Win */
-    code |= iup_XkeySys(code);
+    code = iup_XkeySys(code);
 
   return code;
 }
@@ -342,16 +352,16 @@ int iupwinKeyEvent(Ihandle* ih, int wincode, int press)
         else if (result == IUP_IGNORE)
           return 0;
       }
-    }
 
-    if ((GetKeyState(VK_MENU) & 0x8000) && wincode < 128) /* Alt + mnemonic */
-    {
-      if (iupKeyProcessMnemonic(ih, wincode))
+      if ((GetKeyState(VK_MENU) & 0x8000) && wincode < 128) /* Alt + mnemonic */
+      {
+        if (iupKeyProcessMnemonic(ih, wincode))
+          return 0;
+      }
+
+      if (iupKeyProcessNavigation(ih, code, (GetKeyState(VK_SHIFT) & 0x8000)))
         return 0;
     }
-
-    if (iupKeyProcessNavigation(ih, code, (GetKeyState(VK_SHIFT) & 0x8000)))
-      return 0;
   }
   else
   {

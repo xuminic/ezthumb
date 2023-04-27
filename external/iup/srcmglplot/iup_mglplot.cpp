@@ -4038,15 +4038,12 @@ void IupMglPlotAdd1D(Ihandle* ih, const char* inName, double inX)
 
   if (inName)
   {
-    Iarray* inNames = NULL;
-    if (sample_index == 0)
+    Iarray* inNames = (Iarray*)iupAttribGet(ih, "_IUP_MGLPLOT_NAMES");
+    if (!inNames)
     {
-      if (inNames) iupArrayDestroy(inNames);
       inNames =  iupArrayCreate(10, sizeof(char*));
       iupAttribSet(ih, "_IUP_MGLPLOT_NAMES", (char*)inNames);
     }
-    else
-      inNames = (Iarray*)iupAttribGet(ih, "_IUP_MGLPLOT_NAMES");
 
     if (inNames)
     {
@@ -4817,7 +4814,7 @@ static int iMglPlotWheel_CB(Ihandle* ih, float delta)
 
 static int iMglPlotKeyPress_CB(Ihandle* ih, int c, int press)
 {
-  if(!press)
+  if (!press)
     return IUP_DEFAULT;
 
   switch(c)
@@ -4886,7 +4883,7 @@ static int iMglPlotKeyPress_CB(Ihandle* ih, int c, int press)
   }
 
   iMglPlotRepaint(ih, 1, 1);
-  return IUP_DEFAULT;
+  return IUP_IGNORE;  /* ignore processed keys */
 } 
 
 /******************************************************************************
@@ -4945,6 +4942,7 @@ static Iclass* iMglPlotNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glcanvas"));
 
   ic->name = "mglplot";
+  ic->cons = "MglPlot";
   ic->format = NULL;  /* none */
   ic->nativetype = IUP_TYPECANVAS;
   ic->childtype = IUP_CHILDNONE;
@@ -5222,7 +5220,9 @@ static Iclass* iMglLabelNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("mglplot"));
 
   ic->name = "mgllabel";
+  ic->cons = "MglLabel";
   ic->format = "s"; /* one string */
+  ic->format_attr = "LABELTITLE";
   ic->nativetype = IUP_TYPECANVAS;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 0;
@@ -5247,6 +5247,9 @@ Ihandle* IupMglLabel(const char* title)
 
 void IupMglPlotOpen(void)
 {
+  if (!IupIsOpened())
+    return;
+
   IupGLCanvasOpen();
 
   if (!IupGetGlobal("_IUP_MGLPLOT_OPEN"))

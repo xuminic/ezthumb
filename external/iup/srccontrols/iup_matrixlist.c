@@ -329,6 +329,13 @@ static void iMatrixListUpdateItemBgColor(Ihandle* ih, int lin, const char* bgcol
 
 static void iMatrixListUpdateItemFgColor(Ihandle* ih, int lin, const char* fgcolor, int itemactive)
 {
+  if (lin == ih->data->lines.focus_cell)
+  {
+    char* focuscolor = IupGetAttribute(ih, "FOCUSFGCOLOR");
+    if (focuscolor)
+      fgcolor = focuscolor;
+  }
+
   if (!fgcolor)
     fgcolor = IupGetAttribute(ih, "FGCOLOR");
 
@@ -662,13 +669,25 @@ static int iMatrixListSetFocusColorAttrib(Ihandle* ih, const char* value)
   return 1;
 }
 
+static int iMatrixListSetFocusFgColorAttrib(Ihandle* ih, const char* value)
+{
+  int lin = ih->data->lines.focus_cell;
+  int itemactive = IupGetIntId(ih, "ITEMACTIVE", lin);
+  iupAttribSetStr(ih, "FOCUSFGCOLOR", value);
+  iMatrixListUpdateItemFgColor(ih, lin, iupAttribGetId(ih, "ITEMFGCOLOR", lin), itemactive);
+  return 1;
+}
+
 static int iMatrixListSetTitleAttrib(Ihandle* ih, const char* value)
 {
   ImatrixListData* mtxList = (ImatrixListData*)iupAttribGet(ih, "_IUPMTXLIST_DATA");
   if (!ih->handle)
-    iupAttribSetId2(ih, "", 0, mtxList->label_col, value);
+    iupAttribSetStrId2(ih, "", 0, mtxList->label_col, value);
   else
+  {
     iupMatrixSetValue(ih, 0, mtxList->label_col, value, 0);
+    IupSetfAttribute(ih, "REDRAW", "L%d", 0);
+  }
   return 0;
 }
 
@@ -686,7 +705,10 @@ static int iMatrixListSetIdValueAttrib(Ihandle* ih, int lin, const char* value)
   ImatrixListData* mtxList = (ImatrixListData*)iupAttribGet(ih, "_IUPMTXLIST_DATA");
 
   if (iupMatrixCheckCellPos(ih, lin, mtxList->label_col))
+  {
     iupMatrixSetValue(ih, lin, mtxList->label_col, value, 0);
+    IupSetfAttribute(ih, "REDRAW", "L%d", lin);
+  }
   return 0;
 }
 
@@ -711,8 +733,11 @@ static int iMatrixListSetValueAttrib(Ihandle* ih, const char* value)
 
   if (ih->data->editing)
     IupStoreAttribute(ih->data->datah, "VALUE", value);
-  else 
+  else
+  {
     iupMatrixSetValue(ih, ih->data->lines.focus_cell, mtxList->label_col, value, 0);
+    IupSetfAttribute(ih, "REDRAW", "L%d", ih->data->lines.focus_cell);
+  }
   return 0;
 }
 
@@ -954,7 +979,7 @@ static int iMatrixListDrawImageCol(Ihandle *ih, ImatrixListData* mtxList, int li
     image_name = iupAttribGetStr(ih, attrib_name);  /* this will check for the default values also */
   }
 
-  image = iupImageGetHandle(image_name);
+  image = IupImageGetHandle(image_name);
   if (image)
   {
     int width  = IupGetInt(image, "WIDTH");
@@ -1336,7 +1361,7 @@ static int iMatrixListKeyAny_CB(Ihandle *ih, int key)
 ******************************************************************************/
 
 
-static void iMatrixListUnMapMethod(Ihandle* ih)
+static void iMatrixListDestroyMethod(Ihandle* ih)
 {
   ImatrixListData* mtxList = (ImatrixListData*)iupAttribGet(ih, "_IUPMTXLIST_DATA");
   free(mtxList);
@@ -1387,6 +1412,7 @@ Iclass* iupMatrixListNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("matrix"));
   
   ic->name = "matrixlist";
+  ic->cons = "MatrixList";
   ic->format = NULL; /* no parameters */
   ic->nativetype = IUP_TYPECANVAS;
   ic->childtype = IUP_CHILDNONE;
@@ -1396,8 +1422,8 @@ Iclass* iupMatrixListNewClass(void)
   /* Class functions */
   ic->New    = iupMatrixListNewClass;
   ic->Create = iMatrixListCreateMethod;
-  ic->Map    = iMatrixListMapMethod;
-  ic->UnMap  = iMatrixListUnMapMethod;
+  ic->Destroy = iMatrixListDestroyMethod;
+  ic->Map = iMatrixListMapMethod;
 
   /* IupMatrixList Callbacks */
   iupClassRegisterCallback(ic, "IMAGEVALUECHANGED_CB", "ii");
@@ -1406,7 +1432,7 @@ Iclass* iupMatrixListNewClass(void)
   iupClassRegisterCallback(ic, "LISTINSERT_CB", "i");
   iupClassRegisterCallback(ic, "LISTREMOVE_CB", "i");
   iupClassRegisterCallback(ic, "LISTEDITION_CB", "iiii");
-  iupClassRegisterCallback(ic, "LISTDRAW_CB", "iiiiiiv");
+  iupClassRegisterCallback(ic, "LISTDRAW_CB", "iiiiiiC");
   iupClassRegisterCallback(ic, "LISTACTION_CB", "ii");
 
   iupClassRegisterReplaceAttribDef(ic, "CURSOR", IUPAF_SAMEASSYSTEM, "ARROW");
@@ -1439,6 +1465,7 @@ Iclass* iupMatrixListNewClass(void)
   iupClassRegisterAttribute(ic, "IMAGEDEL",     NULL, NULL, IUPAF_SAMEASSYSTEM, "MTXLIST_IMG_DEL",     IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "IMAGEADD",     NULL, NULL, IUPAF_SAMEASSYSTEM, "MTXLIST_IMG_ADD",     IUPAF_IHANDLENAME|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "FOCUSCOLOR",   NULL, iMatrixListSetFocusColorAttrib, IUPAF_SAMEASSYSTEM, "255 235 155", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "FOCUSFGCOLOR", NULL, iMatrixListSetFocusFgColorAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "EDITABLE",   iMatrixListGetEditableAttrib, iMatrixListSetEditableAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHOWDELETE",   NULL, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

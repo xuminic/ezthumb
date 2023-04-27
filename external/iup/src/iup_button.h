@@ -1,5 +1,5 @@
 /** \file
- * \brief Button Controls Private Declarations
+ * \brief Button Control (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -13,7 +13,7 @@ extern "C" {
 
 
 void iupdrvButtonInitClass(Iclass* ic);
-void iupdrvButtonAddBorders(int *x, int *y);
+void iupdrvButtonAddBorders(Ihandle* ih, int *x, int *y);
 
 char* iupButtonGetPaddingAttrib(Ihandle* ih);
 

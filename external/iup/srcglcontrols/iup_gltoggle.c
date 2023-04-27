@@ -25,7 +25,7 @@
 
 
 /* from IupRadio implementation */
-Ihandle *iupRadioFindToggleParent(Ihandle* ih_toggle);
+IUP_SDK_API Ihandle *iupRadioFindToggleParent(Ihandle* ih_toggle);
 
 /* from IupGLButton implementation */
 void iupGLButtonDraw(Ihandle* ih);
@@ -290,7 +290,9 @@ Iclass* iupGLToggleNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glbutton"));
 
   ic->name = "gltoggle";
+  ic->cons = "GLToggle";
   ic->format = "s"; /* one string */
+  ic->format_attr = "TITLE";
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 0;

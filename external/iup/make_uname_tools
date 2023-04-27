@@ -1,0 +1,37 @@
+#This builds all the libraries for 1 uname
+
+cd srcledc
+./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+cd ..
+
+cd srcview
+./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+cd ..
+
+cd srcvled
+./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+cd ..
+
+cd srcluaconsole
+#./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA51=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA52=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA53=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA54=Yes $1 $2 $3 $4 $5 $6 $7 $8
+cd ..
+
+cd srcluascripter
+#./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA51=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA52=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA53=Yes $1 $2 $3 $4 $5 $6 $7 $8
+./make_uname USE_LUA54=Yes $1 $2 $3 $4 $5 $6 $7 $8
+cd ..
+
+cd html/examples/tests
+./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+cd ../../..
+
+cd html/examples/tutorial/simple_paint2
+./make_uname $1 $2 $3 $4 $5 $6 $7 $8
+cd ../../../..

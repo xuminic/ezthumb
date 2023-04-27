@@ -1,5 +1,5 @@
 /** \file
- * \brief Standard Controls Class Initialization functions.
+ * \brief Standard Controls Class Initialization functions (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -35,9 +35,19 @@ Iclass* iupSpinboxNewClass(void);
 Iclass* iupListNewClass(void);
 Iclass* iupTreeNewClass(void);
 Iclass* iupLinkNewClass(void);
+Iclass* iupFlatLabelNewClass(void);
 Iclass* iupFlatButtonNewClass(void);
+Iclass* iupFlatToggleNewClass(void);
+Iclass* iupDropButtonNewClass(void);
+Iclass* iupFlatSeparatorNewClass(void);
 Iclass* iupFlatFrameNewClass(void);
 Iclass* iupFlatTabsNewClass(void);
+Iclass* iupDialNewClass(void);
+Iclass* iupGaugeNewClass(void);
+Iclass* iupColorbarNewClass(void);
+Iclass* iupColorBrowserNewClass(void);
+Iclass* iupSpaceNewClass(void);
+Iclass* iupThreadNewClass(void);
 
 Iclass* iupMenuNewClass(void);
 Iclass* iupItemNewClass(void);
@@ -53,6 +63,7 @@ Iclass* iupSboxNewClass(void);
 Iclass* iupNormalizerNewClass(void);
 Iclass* iupSplitNewClass(void);
 Iclass* iupScrollBoxNewClass(void);
+Iclass* iupFlatScrollBoxNewClass(void);
 Iclass* iupGridBoxNewClass(void);
 Iclass* iupExpanderNewClass(void);
 Iclass* iupDetachBoxNewClass(void);
@@ -62,6 +73,10 @@ Iclass* iupCalendarNewClass(void);
 Iclass* iupDatePickNewClass(void);
 Iclass* iupParamBoxNewClass(void);
 Iclass* iupParamNewClass(void);
+Iclass* iupMultiBoxNewClass(void);
+Iclass* iupFlatListNewClass(void);
+Iclass* iupFlatValNewClass(void);
+Iclass* iupFlatTreeNewClass(void);
 
 Iclass* iupTimerNewClass(void);
 Iclass* iupImageNewClass(void);
@@ -79,12 +94,12 @@ void iupdrvFileDlgInitClass(Iclass* ic);
 
 /************************************************/
 
-Iclass* iupBackgroundBoxNewBaseClass(const char* name, const char* base_name);
+IUP_SDK_API Iclass* iupBackgroundBoxNewBaseClass(Iclass* ic_base);
 
 /* Common definition of the canvas class */
 typedef struct _iupCanvas {
   int sb;    /* scrollbar configuration, valid only after map, use iupBaseGetScrollbar before map */
-  float posx, posy;
+  double posx, posy;
   int inside_resize;
 } iupCanvas;
 

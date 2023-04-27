@@ -12,17 +12,20 @@ extern "C" {
 #endif
 
 
-Ihandle* IupLoadImage(const char* file_name);
-int IupSaveImage(Ihandle* ih, const char* file_name, const char* format);
+void IupImOpen(void);  /* optional */
 
-Ihandle* IupLoadAnimation(const char* file_name);
-Ihandle* IupLoadAnimationFrames(const char** file_name_list, int file_count);
+Ihandle* IupLoadImage(const char* filename);
+int IupSaveImage(Ihandle* ih, const char* filename, const char* format);
+
+Ihandle* IupLoadAnimation(const char* filename);
+Ihandle* IupLoadAnimationFrames(const char** filename_list, int file_count);
 
 #ifdef __IM_IMAGE_H
 imImage* IupGetNativeHandleImage(void* handle);
 void* IupGetImageNativeHandle(const imImage* image);
 
 Ihandle* IupImageFromImImage(const imImage* image);
+imImage* IupImageToImImage(Ihandle* iup_image);
 #endif
 
 

@@ -1,0 +1,7 @@
+$(OBJDIR)/iuplua_im.o: iuplua_im.c /tecgraf/im/include/im.h \
+ /tecgraf/im/include/im_image.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupim.h \
+ /tecgraf/lua5.1/include/lua.h /tecgraf/lua5.1/include/luaconf.h \
+ /tecgraf/lua5.1/include/lauxlib.h /tecgraf/lua5.1/include/lua.h \
+ ../include/iuplua.h ../include/iupluaim.h /tecgraf/im/include/imlua.h \
+ il.h

@@ -17,6 +17,7 @@
 #include "iup_drvfont.h"
 #include "iup_stdcontrols.h"
 #include "iup_layout.h"
+#include "iup_varg.h"
 
 
 static int iCboxCreateMethod(Ihandle* ih, void** params)
@@ -90,23 +91,24 @@ static void iCboxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 /******************************************************************************/
 
 
-Ihandle *IupCboxv(Ihandle** children)
+IUP_API Ihandle* IupCboxv(Ihandle** children)
 {
   return IupCreatev("cbox", (void**)children);
 }
 
-Ihandle *IupCbox (Ihandle * child,...)
+IUP_API Ihandle* IupCboxV(Ihandle* child, va_list arglist)
 {
-  Ihandle **children;
+  return IupCreateV("cbox", child, arglist);
+}
+
+IUP_API Ihandle* IupCbox (Ihandle * child,...)
+{
   Ihandle *ih;
 
   va_list arglist;
   va_start(arglist, child);
-  children = (Ihandle **)iupObjectGetParamList(child, arglist);
+  ih = IupCreateV("cbox", child, arglist);
   va_end(arglist);
-
-  ih = IupCreatev("cbox", (void**)children);
-  free(children);
 
   return ih;
 }
@@ -118,7 +120,7 @@ Iclass* iupCboxNewClass(void)
   ic->name = "cbox";
   ic->format = "g"; /* array of Ihandle */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype = IUP_CHILDMANY;
+  ic->childtype = IUP_CHILDMANY;  /* can have children */
   ic->is_interactive = 0;
 
   /* Class functions */
@@ -130,12 +132,15 @@ Iclass* iupCboxNewClass(void)
   ic->SetChildrenCurrentSize = iCboxSetChildrenCurrentSizeMethod;
   ic->SetChildrenPosition = iCboxSetChildrenPositionMethod;
 
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
+
   /* Common */
   iupBaseRegisterCommonAttrib(ic);
 
   /* Base Container */
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetCurrentSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetClientSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   return ic;

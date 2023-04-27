@@ -148,7 +148,7 @@ static char* iFillGetExpandAttrib(Ihandle* ih)
   if (iFillGetDir(ih) == IUP_FILL_NONE) /* if Fill is not yet a child of a Vbox or Hbox */
     return "NO";
 
-  /* if size is not defined, then expansion on that direction is permited */
+  /* if size is not defined, then expansion on that direction is permitted */
   if (iFillGetDir(ih) == IUP_FILL_HORIZ)
   {
     if (ih->userwidth <= 0)
@@ -196,7 +196,7 @@ static void iFillComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chil
   if (iFillGetDir(ih) == IUP_FILL_NONE) /* if Fill is not a child of a Vbox or Hbox */
     return;
 
-  /* If size is NOT defined, then expansion on that direction is permited.
+  /* If size is NOT defined, then expansion on that direction is permitted.
      This type of expansion works only when inside a vbox, hbox or gridbox. */
   if (iFillGetDir(ih) == IUP_FILL_HORIZ)
   {
@@ -222,7 +222,7 @@ static int iFillCreateMethod(Ihandle* ih, void** params)
 
 /******************************************************************************/
 
-Ihandle* IupFill(void)
+IUP_API Ihandle* IupFill(void)
 {
   return IupCreate("fill");
 }
@@ -243,6 +243,9 @@ Iclass* iupFillNewClass(void)
   ic->Map = iFillMapMethod;
   ic->UnMap = iFillUnMapMethod;
   ic->ComputeNaturalSize = iFillComputeNaturalSizeMethod;
+
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
 
   /* Common */
   iupBaseRegisterCommonAttrib(ic);

@@ -23,6 +23,9 @@
 #include "iup_str.h"
 #include "iup_drv.h"
 #include "iup_drvfont.h"
+#include "iup_mask.h"
+#include "iup_array.h"
+#include "iup_text.h"
 
 #include "iupwin_drv.h"
 #include "iupwin_handle.h"
@@ -141,8 +144,6 @@ static char* winCalendarGetTodayAttrib(Ihandle* ih)
   return iupStrReturnStrf("%d/%d/%d", st.wYear, st.wMonth, st.wDay);
 }
 
-void iupdrvTextAddBorders(int *w, int *h);
-
 static void winCalendarComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   (void)children_expand; /* unset if not a container */
@@ -165,7 +166,7 @@ static void winCalendarComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int
 
     *h += 2;
 
-    iupdrvTextAddBorders(w, h);
+    iupdrvTextAddBorders(ih, w, h);
   }
 }
 
@@ -251,10 +252,12 @@ Iclass* iupCalendarNewClass(void)
   iupClassRegisterAttribute(ic, "BORDER", winCalendarGetBorderAttrib, winCalendarSetBorderAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_NO_INHERIT);
 #endif
 
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
+
   return ic;
 }
 
-Ihandle *IupCalendar(void)
+IUP_API Ihandle* IupCalendar(void)
 {
   return IupCreate("calendar");
 }

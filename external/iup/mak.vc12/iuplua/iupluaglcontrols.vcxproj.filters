@@ -101,6 +101,48 @@
     <None Include="..\..\srclua5\gl\gltext.lua">
       <Filter>Lua</Filter>
     </None>
+    <None Include="..\..\srclua5\lh\glval.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glbutton.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glcanvasbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glexpander.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glframe.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\gllabel.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\gllink.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glprogressbar.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glscrollbox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glseparator.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glsizebox.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glsubcanvas.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\gltext.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\gltoggle.lh">
+      <Filter>Includes\controls</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Lua">
@@ -111,6 +153,9 @@
     </Filter>
     <Filter Include="Includes">
       <UniqueIdentifier>{b691f52b-76e1-42a1-b9d8-612a0fa2876c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Includes\controls">
+      <UniqueIdentifier>{2acbf2ec-efe8-4990-9fe9-8e1cde0dfb40}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

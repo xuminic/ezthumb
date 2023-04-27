@@ -24,7 +24,8 @@
     <UseOfMfc>false</UseOfMfc>
     <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" /> <Import Project="lua_version.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="lua_version.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
@@ -100,6 +101,8 @@
     <None Include="..\..\srclua5\ctrl\iuplua_mglplot.def" />
     <None Include="..\..\srclua5\ctrl\mgllabel.lua" />
     <None Include="..\..\srclua5\ctrl\mglplot.lua" />
+    <None Include="..\..\srclua5\lh\mgllabel.lh" />
+    <None Include="..\..\srclua5\lh\mglplot.lh" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\iuplua_mglplot.h" />

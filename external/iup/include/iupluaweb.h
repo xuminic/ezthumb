@@ -11,13 +11,29 @@
 extern "C" {
 #endif
 
-#ifdef LUA_NOOBJECT  /* Lua 3 */
-int iupweblua_open(void);
-#endif
+#ifndef DOXYGEN_SHOULD_IGNORE_THIS
+/** @cond DOXYGEN_SHOULD_IGNORE_THIS */
+#ifndef IUPLUAWEB_API
+#ifdef IUPLUAWEB_BUILD_LIBRARY
+  #ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+    #define IUPLUAWEB_API EMSCRIPTEN_KEEPALIVE
+  #elif WIN32
+    #define IUPLUAWEB_API __declspec(dllexport)
+  #elif defined(__GNUC__) && __GNUC__ >= 4
+    #define IUPLUAWEB_API __attribute__ ((visibility("default")))
+  #else
+    #define IUPLUAWEB_API
+  #endif
+#else
+  #define IUPLUAWEB_API
+#endif /* IUPLUAWEB_BUILD_LIBRARY */
+#endif /* IUPLUAWEB_API */
+/** @endcond DOXYGEN_SHOULD_IGNORE_THIS */
+#endif /* DOXYGEN_SHOULD_IGNORE_THIS */
 
-#ifdef LUA_TNONE  /* Lua 5 */
-int iupweblua_open (lua_State * L);
-#endif
+
+IUPLUAWEB_API int iupweblua_open (lua_State * L);
 
 #ifdef __cplusplus
 }

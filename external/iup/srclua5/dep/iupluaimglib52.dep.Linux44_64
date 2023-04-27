@@ -1,0 +1,5 @@
+$(OBJDIR)/iuplua_imglib.o: iuplua_imglib.c /tecgraf/lua52/include/lua.h \
+ /tecgraf/lua52/include/luaconf.h /tecgraf/lua52/include/lauxlib.h \
+ /tecgraf/lua52/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupcontrols.h il.h

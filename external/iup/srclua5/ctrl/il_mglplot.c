@@ -13,15 +13,15 @@
 #include "il.h"
 
 
-static int mglplot_predraw_cb(Ihandle *self)
-{
-  lua_State *L = iuplua_call_start(self, "predraw_cb");
-  return iuplua_call(L, 0);
-}
-
 static int mglplot_postdraw_cb(Ihandle *self)
 {
   lua_State *L = iuplua_call_start(self, "postdraw_cb");
+  return iuplua_call(L, 0);
+}
+
+static int mglplot_predraw_cb(Ihandle *self)
+{
+  lua_State *L = iuplua_call_start(self, "predraw_cb");
   return iuplua_call(L, 0);
 }
 
@@ -39,8 +39,8 @@ int iupmglplotlua_open(lua_State * L)
 {
   iuplua_register(L, MglPlot, "MglPlot");
 
-  iuplua_register_cb(L, "PREDRAW_CB", (lua_CFunction)mglplot_predraw_cb, NULL);
   iuplua_register_cb(L, "POSTDRAW_CB", (lua_CFunction)mglplot_postdraw_cb, NULL);
+  iuplua_register_cb(L, "PREDRAW_CB", (lua_CFunction)mglplot_predraw_cb, NULL);
 
   iuplua_mglplotfuncs_open(L);
 

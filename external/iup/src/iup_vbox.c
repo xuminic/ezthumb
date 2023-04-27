@@ -19,6 +19,7 @@
 #include "iup_layout.h"
 #include "iup_box.h"
 #include "iup_normalizer.h"
+#include "iup_varg.h"
 
 
 static int iVboxSetRasterSizeAttrib(Ihandle* ih, const char* value)
@@ -83,6 +84,12 @@ static char* iVboxGetAlignmentAttrib(Ihandle* ih)
   return iupStrReturnStr(align2str[ih->data->alignment]);
 }
 
+static char* iVboxGetOrientationAttrib(Ihandle* ih)
+{
+  (void)ih;
+  return "VERTICAL";
+}
+
 static void iVboxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   Ihandle* child;
@@ -128,8 +135,8 @@ static void iVboxComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *chil
     children_natural_height = children_natural_maxheight*children_count;
 
   /* compute the Vbox contents natural size */
-  total_natural_width  = children_natural_maxwidth + 2*ih->data->margin_x;
-  total_natural_height = children_natural_height + (children_count-1)*ih->data->gap + 2*ih->data->margin_y;
+  total_natural_width  = children_natural_maxwidth + 2*ih->data->margin_horiz;
+  total_natural_height = children_natural_height + (children_count-1)*ih->data->gap + 2*ih->data->margin_vert;
 
   /* Store to be used in iVboxCalcEmptyHeight */
   ih->data->total_natural_size = total_natural_height;
@@ -153,7 +160,7 @@ static int iHboxCalcHomogeneousHeight(Ihandle *ih)
     return 0;
 
   /* equal spaces for all elements */
-  homogeneous_height = (ih->currentheight - (children_count-1)*ih->data->gap - 2*ih->data->margin_y)/children_count;
+  homogeneous_height = (ih->currentheight - (children_count-1)*ih->data->gap - 2*ih->data->margin_vert)/children_count;
   if (homogeneous_height < 0) homogeneous_height = 0;
   return homogeneous_height;
 }
@@ -199,7 +206,7 @@ static void iVboxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
       empty_h0 = iVboxCalcEmptyHeight(ih, IUP_EXPAND_H0);
   }
 
-  client_width = ih->currentwidth - 2*ih->data->margin_x;
+  client_width = ih->currentwidth - 2*ih->data->margin_horiz;
   if (client_width<0) client_width=0;
 
   for (child = ih->firstchild; child; child = child->brother)
@@ -214,8 +221,8 @@ static void iVboxSetChildrenCurrentSizeMethod(Ihandle* ih, int shrink)
         char* weight_str = iupAttribGet(child, "EXPANDWEIGHT");
         if (weight_str)
         {
-          float weight; 
-          if (iupStrToFloat(weight_str, &weight))
+          double weight; 
+          if (iupStrToDouble(weight_str, &weight))
             empty = iupRound(empty * weight);
         }
         iupBaseSetCurrentSize(child, client_width, child->naturalheight+empty, shrink);
@@ -234,10 +241,10 @@ static void iVboxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
   int dx, client_width;
   Ihandle* child;
 
-  x += ih->data->margin_x;
-  y += ih->data->margin_y;
+  x += ih->data->margin_horiz;
+  y += ih->data->margin_vert;
 
-  client_width = ih->currentwidth - 2*ih->data->margin_x;
+  client_width = ih->currentwidth - 2*ih->data->margin_horiz;
   if (client_width<0) client_width=0;
 
   for (child = ih->firstchild; child; child = child->brother)
@@ -268,23 +275,24 @@ static void iVboxSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 /******************************************************************************/
 
 
-Ihandle *IupVboxv(Ihandle **children)
+IUP_API Ihandle* IupVboxv(Ihandle **children)
 {
   return IupCreatev("vbox", (void**)children);
 }
 
-Ihandle *IupVbox(Ihandle* child, ...)
+IUP_API Ihandle* IupVboxV(Ihandle* child, va_list arglist)
 {
-  Ihandle **children;
+  return IupCreateV("vbox", child, arglist);
+}
+
+IUP_API Ihandle* IupVbox(Ihandle* child, ...)
+{
   Ihandle *ih;
 
   va_list arglist;
   va_start(arglist, child);
-  children = (Ihandle **)iupObjectGetParamList(child, arglist);
+  ih = IupCreateV("vbox", child, arglist);
   va_end(arglist);
-
-  ih = IupCreatev("vbox", (void**)children);
-  free(children);
 
   return ih;
 }
@@ -304,6 +312,8 @@ Iclass* iupVboxNewClass(void)
   /* Overwrite Common */
   iupClassRegisterAttribute(ic, "SIZE", iupBaseGetSizeAttrib, iVboxSetSizeAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "RASTERSIZE", iupBaseGetRasterSizeAttrib, iVboxSetRasterSizeAttrib, NULL, NULL, IUPAF_NO_SAVE|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "ORIENTATION", iVboxGetOrientationAttrib, NULL, IUPAF_SAMEASSYSTEM, "VERTICAL", IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   /* Vbox only */
   iupClassRegisterAttribute(ic, "ALIGNMENT", iVboxGetAlignmentAttrib, iVboxSetAlignmentAttrib, IUPAF_SAMEASSYSTEM, "ALEFT", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);

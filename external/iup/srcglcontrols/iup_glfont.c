@@ -167,12 +167,13 @@ static int iGLGetFontFilenameFromSystem(const char *font_name, int is_bold, int 
   FcPattern *pat;
   int bResult = 0;
 
+  /* Use "fc-match monospace|sans|serif" in Lunux to find a match */
   if (iupStrEqualNoCase(font_name, "Courier") || iupStrEqualNoCase(font_name, "Courier New") || iupStrEqualNoCase(font_name, "Monospace"))
-    font_name = "freemono";
+    font_name = "DejaVu Sans Mono";
   else if (iupStrEqualNoCase(font_name, "Times") || iupStrEqualNoCase(font_name, "Times New Roman") || iupStrEqualNoCase(font_name, "Serif"))
-    font_name = "freeserif";
+    font_name = "DejaVu Serif";
   else if (iupStrEqualNoCase(font_name, "Helvetica") || iupStrEqualNoCase(font_name, "Arial") || iupStrEqualNoCase(font_name, "Sans"))
-    font_name = "freesans";
+    font_name = "DejaVu Sans";
 
   if (is_bold && is_italic)
   {
@@ -198,7 +199,8 @@ static int iGLGetFontFilenameFromSystem(const char *font_name, int is_bold, int 
     strcpy(styles[0], "Regular");
     strcpy(styles[1], "Normal");
     strcpy(styles[2], "Medium");
-    style_size = 3;
+    strcpy(styles[3], "Book");
+    style_size = 4;
   }
 
   pat = FcPatternCreate();
@@ -213,33 +215,35 @@ static int iGLGetFontFilenameFromSystem(const char *font_name, int is_bold, int 
 
     for (j = 0; j < fs->nfont; j++)
     {
-      FcChar8 *file;
-      FcChar8 *style;
       FcChar8 *family;
 
-      FcPatternGetString(fs->fonts[j], FC_FILE, 0, &file);
-      FcPatternGetString(fs->fonts[j], FC_STYLE, 0, &style);
       FcPatternGetString(fs->fonts[j], FC_FAMILY, 0, &family);
 
-      if (iupStrEqualNoCasePartial((char*)family, font_name))
+      if (iupStrEqualNoCase((char*)family, font_name))
       {
-        /* check if the font is of the correct type. */
+        FcChar8 *file;
+        FcChar8 *style;
+
+        FcPatternGetString(fs->fonts[j], FC_FILE, 0, &file);
+        FcPatternGetString(fs->fonts[j], FC_STYLE, 0, &style);
+
         for (s = 0; s < style_size; s++)
         {
           if (iupStrEqualNoCase(styles[s], (char*)style))
           {
             strcpy(fileName, (char*)file);
-            bResult = 1;
             FcFontSetDestroy(fs);
-            return bResult;
+            return 1;
           }
-
-          /* set value to use if no more correct font of same family is found. */
-          strcpy(fileName, (char*)file);
-          bResult = 1;
         }
+
+        /* set a value to be used if the style is not found. 
+           the last family found will be used */
+        strcpy(fileName, (char*)file);
+        bResult = 1;
       }
     }
+
     FcFontSetDestroy(fs);
   }
 
@@ -430,7 +434,7 @@ static IglFont* iGLFindFont(Ihandle* ih, Ihandle* gl_parent, const char *font)
   iGLGetFontFilename(filename, typeface, is_bold, is_italic);
 
   if (size < 0)
-    size = (int)((-size*72.0) / res + 0.5);  /* convert to points */
+    size = iupRound((-size*72.0) / res);  /* convert to points */
 
   /* Check if the filename already exists in cache */
   fonts = (IglFont*)iupArrayGetData(gl_fonts);
@@ -466,7 +470,7 @@ static IglFont* iGLFindFont(Ihandle* ih, Ihandle* gl_parent, const char *font)
 static IglFont* iGLFontCreateNativeFont(Ihandle *ih, const char* value)
 {
   IglFont* glfont;
-  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "GL_CANVAS");
+  Ihandle* gl_parent = (Ihandle*)iupAttribGet(ih, "_IUP_GLCANVAS_PARENT");
   IupGLMakeCurrent(gl_parent);
 
   glfont = iGLFindFont(ih, gl_parent, value);
@@ -488,7 +492,7 @@ static IglFont* iGLFontGet(Ihandle *ih)
   return glfont;
 }
 
-char* iupStrConvertToUTF8(const char* str, int len, char* utf8_buffer, int *utf8_buffer_max, int utf8mode);
+IUP_SDK_API char* iupStrConvertToUTF8(const char* str, int len, char* utf8_buffer, int *utf8_buffer_max, int utf8mode);
 
 static void iGLFontConvertToUTF8(const char* str, int len)
 {
@@ -540,7 +544,7 @@ int iupGLFontGetStringWidth(Ihandle* ih, const char* str, int len)
 
 void iupGLFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *h)
 {
-  int max_w = 0;
+  int max_w = 0, line_count = 1;
   IglFont* glfont;
 
   if (!ih->handle)
@@ -574,6 +578,7 @@ void iupGLFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *
     do
     {
       nextstr = iupStrNextLine(curstr, &len);
+
       if (len)
       {
         iGLFontConvertToUTF8(curstr, len);
@@ -581,12 +586,15 @@ void iupGLFontGetMultiLineStringSize(Ihandle* ih, const char* str, int *w, int *
         max_w = iupMAX(max_w, size);
       }
 
+      if (*nextstr)
+        line_count++;
+
       curstr = nextstr;
     } while (*nextstr);
   }
 
   if (w) *w = max_w;
-  if (h) *h = glfont->charheight * iupStrLineCount(str);
+  if (h) *h = glfont->charheight * line_count;
 }
 
 int iupGLFontSetFontAttrib(Ihandle* ih, const char* value)
@@ -596,18 +604,19 @@ int iupGLFontSetFontAttrib(Ihandle* ih, const char* value)
   if (!ih->handle)
     return iupdrvSetFontAttrib(ih, value);
 
+  if (!iupdrvSetFontAttrib(ih, value))
+    return 0;
+
   glfont = iGLFontCreateNativeFont(ih, value);
   if (glfont)
   {
     /* If FONT is changed, must update the SIZE attribute */
-    char* value = iupAttribGet(ih, "SIZE");
-    if (!value)
-      return 1;
+    iupBaseUpdateAttribFromFont(ih);
 
-    IupSetStrAttribute(ih, "SIZE", value);
+    return 1;
   }
 
-  return 1;
+  return 0;
 }
 
 void iupGLFontGetCharSize(Ihandle* ih, int *charwidth, int *charheight)

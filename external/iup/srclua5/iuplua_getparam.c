@@ -17,8 +17,8 @@
 
 
 /* Used only by the Lua binding */
-int iupGetParamCount(const char *format, int *param_extra);
-char iupGetParamType(const char* format, int *line_size);
+IUP_SDK_API int iupGetParamCount(const char *format, int *param_extra);
+IUP_SDK_API char iupGetParamType(const char* format, int *line_size);
 
 
 typedef struct _getparam_data
@@ -47,6 +47,8 @@ static int param_action(Ihandle* dialog, int param_index, void* user_data)
   return ret;
 }
 
+#define LUA_MAX_PARAM 100
+
 static int GetParam(lua_State *L)
 {
   getparam_data gp;
@@ -58,17 +60,20 @@ static int GetParam(lua_State *L)
       line_size = 0, lua_param_start = 4;
   const char* f = format;
   const char* s;
-  void* param_data[50];
-  char param_type[50];
+  void* param_data[LUA_MAX_PARAM];
+  char param_type[LUA_MAX_PARAM];
 
   gp.L = L;
   gp.has_func = 0;
   gp.func_ref = 0;
 
-  memset(param_data, 0, sizeof(void*)*50);
-  memset(param_type, 0, sizeof(char)*50);
+  memset(param_data, 0, sizeof(void*)*LUA_MAX_PARAM);
+  memset(param_type, 0, sizeof(char)*LUA_MAX_PARAM);
 
   param_count = iupGetParamCount(format, &param_extra);
+
+  if (param_count > LUA_MAX_PARAM)
+    return 0;
 
   for (i = 0; i < param_count; i++)
   {
@@ -108,8 +113,7 @@ static int GetParam(lua_State *L)
       *(double*)(param_data[i]) = (double)luaL_checknumber(L, lua_param_start); lua_param_start++;
       break;
     case 'h':
-      param_data[i] = malloc(sizeof(Ihandle*));
-      *(Ihandle**)(param_data[i]) = iuplua_checkihandle(L, lua_param_start); lua_param_start++;
+      param_data[i] = iuplua_checkihandle(L, lua_param_start); lua_param_start++;  /* no malloc here */
       break;
     case 'd':
     case 'f':
@@ -180,7 +184,8 @@ static int GetParam(lua_State *L)
 
   for (i = 0; i < param_count; i++)
   {
-    free(param_data[i]);
+    if (param_type[i] != 'h')
+      free(param_data[i]);
   }
 
   if (gp.has_func)

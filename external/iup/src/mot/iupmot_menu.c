@@ -38,9 +38,30 @@ static int mot_menu_exitloop = 0;
 
 int iupdrvMenuPopup(Ihandle* ih, int x, int y)
 {
+  char* value = iupAttribGet(ih, "POPUPALIGN");
   XButtonEvent ev;
   ev.x_root = x;
   ev.y_root = y;
+
+  if (value)
+  {
+    int width, height;
+    char value1[30], value2[30];
+    iupStrToStrStr(value, value1, value2, ':');
+
+    iupmotGetWindowSize(ih, &width, &height); /* Have to ideia if this is going to work */
+
+    if (iupStrEqualNoCase(value1, "ARIGHT"))
+      ev.x_root -= width;
+    else if (iupStrEqualNoCase(value1, "ACENTER"))
+      ev.x_root -= width / 2;
+
+    if (iupStrEqualNoCase(value2, "ABOTTOM"))
+      ev.y_root -= height;
+    else if (iupStrEqualNoCase(value2, "ACENTER"))
+      ev.y_root -= height / 2;
+  }
+
   XmMenuPosition(ih->handle, &ev);
 
   XtManageChild(ih->handle);
@@ -53,7 +74,7 @@ int iupdrvMenuPopup(Ihandle* ih, int x, int y)
   return IUP_NOERROR;
 }
 
-int iupdrvMenuGetMenuBarSize(Ihandle* ih)
+IUP_SDK_API int iupdrvMenuGetMenuBarSize(Ihandle* ih)
 {
   int ch;
   iupdrvFontGetCharSize(ih, NULL, &ch);
@@ -245,7 +266,7 @@ static int motItemSetTitleAttrib(Ihandle* ih, const char* value)
     char *p = strchr(str, '\t');
     if (p)
     {
-      int offset = (p-str);
+      int offset = (int)(p-str);
       char* new_value = iupStrDup(str);
       char* acc_value = new_value + offset + 1;
       new_value[offset] = 0;

@@ -12,103 +12,28 @@
 
 #include <windows.h>
 
+#include "iup_export.h"
 #include "iup_str.h"
 #include "iup_drvinfo.h"
+#include "iup_varg.h"
 
 
-char* iupdrvLocaleInfo(void)
+#ifdef _MSC_VER
+/* warning C4996: 'GetVersionExW': was declared deprecated */
+#pragma warning( disable : 4996 )
+#endif
+
+IUP_SDK_API char* iupdrvLocaleInfo(void)
 {
   CPINFOEXA info;
   GetCPInfoExA(CP_ACP, 0, &info);
   return iupStrReturnStr(info.CodePageName);
 }
 
-void iupdrvGetScreenSize(int *width, int *height)
-{
-  RECT area;
-  SystemParametersInfoA(SPI_GETWORKAREA, 0, &area, 0);
-  *width = (int)(area.right - area.left);
-  *height =  (int)(area.bottom - area.top);
-}
-
-void iupdrvAddScreenOffset(int *x, int *y, int add)
-{
-  RECT area;
-  SystemParametersInfoA(SPI_GETWORKAREA, 0, &area, 0);
-  if (add==1)
-  {
-    if (x) *x += area.left;
-    if (y) *y += area.top;
-  }
-  else
-  {
-    if (x) *x -= area.left;
-    if (y) *y -= area.top;
-  }
-}
-
-void iupdrvGetFullSize(int *width, int *height)
-{
-  RECT rect;
-  GetWindowRect(GetDesktopWindow(), &rect);
-  *width = rect.right - rect.left;
-  *height = rect.bottom - rect.top;
-}
-
-int iupdrvGetScreenDepth(void)
-{
-  int bpp;
-  HDC hDCDisplay = GetDC(NULL);
-  bpp = GetDeviceCaps(hDCDisplay, BITSPIXEL);
-  ReleaseDC(NULL, hDCDisplay);
-  return bpp;
-}
-
-float iupdrvGetScreenDpi(void)
-{
-  float dpi;
-  HDC hDCDisplay = GetDC(NULL);
-  dpi = (float)GetDeviceCaps(hDCDisplay, LOGPIXELSY);
-  ReleaseDC(NULL, hDCDisplay);
-  return dpi;
-}
-
-void iupdrvGetCursorPos(int *x, int *y)
-{
-  POINT CursorPoint;
-  GetCursorPos(&CursorPoint);
-  *x = (int)CursorPoint.x;
-  *y = (int)CursorPoint.y;
-
-  iupdrvAddScreenOffset(x, y, -1);
-}
-
-void iupdrvGetKeyState(char* key)
-{
-  if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-    key[0] = 'S';
-  else
-    key[0] = ' ';
-  if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
-    key[1] = 'C';
-  else
-    key[1] = ' ';
-  if (GetAsyncKeyState(VK_MENU) & 0x8000)
-    key[2] = 'A';
-  else
-    key[2] = ' ';
-  if ((GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000))
-    key[3] = 'Y';
-  else
-    key[3] = ' ';
-  
-  key[4] = 0;
-}
-
 /* TODO: Since Windows 8.1/Visual Studio 2013 GetVersionEx is deprecated. 
          We can replace it using GetProductInfo. But for now leave it. */
 
-char *iupdrvGetSystemName(void)
+IUP_SDK_API char *iupdrvGetSystemName(void)
 {
   OSVERSIONINFOA osvi;
   osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
@@ -147,7 +72,7 @@ char *iupdrvGetSystemName(void)
   return "Windows";
 }
 
-char *iupdrvGetSystemVersion(void)
+IUP_SDK_API char *iupdrvGetSystemVersion(void)
 {
   char *str = iupStrGetMemory(256);
   OSVERSIONINFOEXA osvi;
@@ -163,7 +88,7 @@ char *iupdrvGetSystemVersion(void)
   sprintf(str, "%d.%d.%d", (int)osvi.dwMajorVersion, (int)osvi.dwMinorVersion, (int)osvi.dwBuildNumber);
 
   /* Display service pack (if any). */
-  if (osvi.szCSDVersion && osvi.szCSDVersion[0]!=0)
+  if (osvi.szCSDVersion[0] != 0)
   {
     strcat(str, " ");
     strcat(str, osvi.szCSDVersion);
@@ -179,18 +104,3 @@ char *iupdrvGetSystemVersion(void)
   return str;
 }
 
-char *iupdrvGetComputerName(void)
-{
-  DWORD size = MAX_COMPUTERNAME_LENGTH + 1;
-  char* str = iupStrGetMemory(size);
-  GetComputerNameA((LPSTR)str, &size);
-  return str;
-}
-
-char *iupdrvGetUserName(void)
-{
-  DWORD size = 256;
-  char* str = iupStrGetMemory(size);
-  GetUserNameA((LPSTR)str, &size);
-  return (char*)str;
-}

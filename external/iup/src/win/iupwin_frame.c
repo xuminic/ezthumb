@@ -29,8 +29,9 @@
 #include "iupwin_str.h"
 
 
-void iupdrvFrameGetDecorOffset(int *x, int *y)
+void iupdrvFrameGetDecorOffset(Ihandle* ih, int *x, int *y)
 {
+  (void)ih;
   /* LAYOUT_DECORATION_ESTIMATE */
   if (iupwin_comctl32ver6)
   {
@@ -44,9 +45,25 @@ void iupdrvFrameGetDecorOffset(int *x, int *y)
   }
 }
 
-int iupdrvFrameHasClientOffset(void)
+int iupdrvFrameHasClientOffset(Ihandle* ih)
 {
+  (void)ih;
   return 1;
+}
+
+int iupdrvFrameGetTitleHeight(Ihandle* ih, int *h)
+{
+  (void)ih;
+  (void)h;
+  return 0;
+}
+
+int iupdrvFrameGetDecorSize(Ihandle* ih, int *w, int *h)
+{
+  (void)ih;
+  (void)w;
+  (void)h;
+  return 0;
 }
 
 static int winFrameSetBgColorAttrib(Ihandle* ih, const char* value)
@@ -242,4 +259,6 @@ void iupdrvFrameInitClass(Iclass* ic)
   /* Special */
   iupClassRegisterAttribute(ic, "FGCOLOR", NULL, NULL, IUPAF_SAMEASSYSTEM, "DLGFGCOLOR", IUPAF_NOT_MAPPED);
   iupClassRegisterAttribute(ic, "TITLE", NULL, winFrameSetTitleAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE|IUPAF_NO_INHERIT);
+
+  iupClassRegisterAttribute(ic, "CONTROLID", NULL, NULL, NULL, NULL, IUPAF_NO_INHERIT);
 }

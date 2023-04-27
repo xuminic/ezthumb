@@ -267,7 +267,7 @@ int iupListSetIdValueAttrib(Ihandle* ih, int pos, const char* value)
 
 static int iListSetAppendItemAttrib(Ihandle* ih, const char* value)
 {
-  if (!ih->handle)  /* do not do the action before map */
+  if (!ih->handle)  /* do not do the action before map, and ignore the call */
     return 0;
   if (value)
     iupdrvListAppendItem(ih, value);
@@ -276,7 +276,7 @@ static int iListSetAppendItemAttrib(Ihandle* ih, const char* value)
 
 static int iListSetInsertItemAttrib(Ihandle* ih, int id, const char* value)
 {
-  if (!ih->handle)  /* do not do the action before map */
+  if (!ih->handle)  /* do not do the action before map, and ignore the call */
     return 0;
   if (value)
   {
@@ -291,7 +291,7 @@ static int iListSetInsertItemAttrib(Ihandle* ih, int id, const char* value)
 
 static int iListSetRemoveItemAttrib(Ihandle* ih, const char* value)
 {
-  if (!ih->handle)  /* do not do the action before map */
+  if (!ih->handle)  /* do not do the action before map, and ignore the call */
     return 0;
   if (!value || iupStrEqualNoCase(value, "ALL"))
   {
@@ -692,55 +692,60 @@ static int iListDropData_CB(Ihandle *ih, char* type, void* data, int len, int x,
 
   /* Data is not the pointer, it contains the pointer */
   Ihandle* ih_source;
-  memcpy((void*)&ih_source, data, len);
+  memcpy((void*)&ih_source, data, len);  /* but ih_source can be IupList or IupFlatList, can NOT use ih_source->data here */
 
-  /* A copy operation is enabled with the CTRL key pressed, or else a move operation will occour.
+  if (!IupClassMatch(ih_source, "list") && !IupClassMatch(ih_source, "flatlist"))
+    return IUP_DEFAULT;
+
+  /* A copy operation is enabled with the CTRL key pressed, or else a move operation will occur.
      A move operation will be possible only if the attribute DRAGSOURCEMOVE is Yes.
      When no key is pressed the default operation is copy when DRAGSOURCEMOVE=No and move when DRAGSOURCEMOVE=Yes. */
   iupdrvGetKeyState(key);
   if (key[1] == 'C')
     is_ctrl = 1;
 
-  if (ih_source->data->is_multiple)
+  if (IupGetInt(ih_source, "MULTIPLE"))
   {
     char *buffer = IupGetAttribute(ih_source, "VALUE");
 
     /* Copy all selected items */
-    int i = 1;  /* IUP starts at 1 */
-    while(buffer[i-1] != '\0')
+    int src_pos = 1;  /* IUP starts at 1 */
+    while (buffer[src_pos - 1] != '\0')
     {
-      if(buffer[i-1] == '+')
+      if (buffer[src_pos - 1] == '+')
       {
-        iupdrvListInsertItem(ih, pos, IupGetAttribute(ih_source, iupStrReturnInt(i)));
-        iupdrvListSetImageHandle(ih, ++pos, iupdrvListGetImageHandle(ih_source, i));
+        iupdrvListInsertItem(ih, pos, IupGetAttributeId(ih_source, "", src_pos));
+        iupdrvListSetImageHandle(ih, pos, IupGetAttributeId(ih_source, "IMAGENATIVEHANDLE", src_pos));     /* works for IupList and IupFlatList */
+        pos++;
       }
 
-      i++;
+      src_pos++;
     }
 
     if (IupGetInt(ih_source, "DRAGSOURCEMOVE") && !is_ctrl)
     {
       /* Remove all item from source if MOVE */
-      i = 1;  /* IUP starts at 1 */
+      src_pos = 1;  /* IUP starts at 1 */
       while(*buffer != '\0')
       {
         if (*buffer == '+')
-          iupdrvListRemoveItem(ih_source, --i);  /* update index in the source */
+          IupSetInt(ih_source, "REMOVEITEM", src_pos);  /* update index in the source */
 
-        i++;
+        src_pos++;
         buffer++;
       }
     }
   }
   else
   {
-    iupdrvListInsertItem(ih, pos, IupGetAttribute(ih_source, IupGetAttribute(ih_source, "VALUE")));
-    iupdrvListSetImageHandle(ih, ++pos, iupdrvListGetImageHandle(ih_source, IupGetInt(ih_source, "VALUE")));
+    int src_pos = IupGetInt(ih_source, "VALUE");
+    iupdrvListInsertItem(ih, pos, IupGetAttributeId(ih_source, "", src_pos));
+    iupdrvListSetImageHandle(ih, pos, IupGetAttributeId(ih_source, "IMAGENATIVEHANDLE", src_pos));    /* works for IupList and IupFlatList */
 
-    if(IupGetInt(ih_source, "DRAGSOURCEMOVE") && !is_ctrl)
+    if (IupGetInt(ih_source, "DRAGSOURCEMOVE") && !is_ctrl)
     {
-      int srcPos = iupAttribGetInt(ih_source, "_IUP_LIST_SOURCEPOS");
-      iupdrvListRemoveItem(ih_source, --srcPos);  /* IUP starts at 1 */
+      src_pos = iupAttribGetInt(ih_source, "_IUP_LIST_SOURCEPOS");
+      IupSetInt(ih_source, "REMOVEITEM", src_pos);
     }
   }
 
@@ -763,9 +768,9 @@ static int iListDragData_CB(Ihandle *ih, char* type, void *data, int len)
        In this case, unmark all and mark only this item.  */
     if(buffer[pos-1] == '-')
     {
-      int len = (int)strlen(buffer);
+      int buf_len = (int)strlen(buffer);
       IupSetAttribute(ih, "SELECTION", "NONE");
-      memset(buffer, '-', len);
+      memset(buffer, '-', buf_len);
       buffer[pos-1] = '+';
       IupSetAttribute(ih, "VALUE", buffer);
     }
@@ -897,9 +902,8 @@ static void iListGetItemImageInfo(Ihandle *ih, int id, int *img_w, int *img_h)
 
 static void iListGetNaturalItemsSize(Ihandle *ih, int *w, int *h)
 {
-  char *value;
-  int max_w = 0, max_h = 0;
   int visiblecolumns, i, 
+      max_h = 0,
       count = iListGetCount(ih);
 
   *w = 0;
@@ -915,6 +919,7 @@ static void iListGetNaturalItemsSize(Ihandle *ih, int *w, int *h)
   }
   else
   {
+    char *value;
     int item_w;
 
     for (i=1; i<=count; i++)
@@ -935,6 +940,7 @@ static void iListGetNaturalItemsSize(Ihandle *ih, int *w, int *h)
 
   if (ih->data->show_image)
   {
+    int max_w = 0;
     for (i=1; i<=count; i++)
     {
       int img_w, img_h;
@@ -1037,7 +1043,7 @@ static void iListDestroyMethod(Ihandle* ih)
 /******************************************************************************/
 
 
-Ihandle* IupList(const char* action)
+IUP_API Ihandle* IupList(const char* action)
 {
   void *params[2];
   params[0] = (void*)action;
@@ -1099,10 +1105,12 @@ Iclass* iupListNewClass(void)
   iupClassRegisterAttribute(ic, "EDITBOX", iListGetEditboxAttrib, iListSetEditboxAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "COUNT", iListGetCountAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "VALUESTRING", iListGetValueStringAttrib, iListSetValueStringAttrib, NULL, NULL, IUPAF_NO_DEFAULTVALUE | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CPADDING", iupBaseGetCPaddingAttrib, iupBaseSetCPaddingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
+  iupClassRegisterAttribute(ic, "CSPACING", iupBaseGetCSpacingAttrib, iupBaseSetCSpacingAttrib, NULL, NULL, IUPAF_NO_SAVE | IUPAF_NOT_MAPPED);
 
-  iupClassRegisterAttributeId(ic, "INSERTITEM", NULL, iListSetInsertItemAttrib, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "APPENDITEM", NULL, iListSetAppendItemAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "REMOVEITEM", NULL, iListSetRemoveItemAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttributeId(ic, "INSERTITEM", NULL, iListSetInsertItemAttrib, IUPAF_WRITEONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "APPENDITEM", NULL, iListSetAppendItemAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "REMOVEITEM", NULL, iListSetRemoveItemAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
 
   iupClassRegisterAttribute(ic, "VALUEMASKED", NULL, iListSetValueMaskedAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "MASKCASEI", NULL, iListSetMaskCaseIAttrib, NULL, NULL, IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
@@ -1118,7 +1126,7 @@ Iclass* iupListNewClass(void)
 
   iupClassRegisterAttribute(ic, "SHOWIMAGE", iListGetShowImageAttrib, iListSetShowImageAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "SHOWDRAGDROP", iListGetShowDragDropAttrib, iListSetShowDragDropAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "DRAGDROPLIST", NULL, iListSetDragDropListAttrib, NULL, NULL, IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "DRAGDROPLIST", NULL, iListSetDragDropListAttrib, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   iupdrvListInitClass(ic);
 

@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{446e1fb6-95d4-4468-9723-1146cb9052f6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\html\examples\tests\dial.led">
+      <Filter>Resources</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\html\examples\tests\iuptest.rc">
+      <Filter>Resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\html\examples\tests\bigtest.c" />
+    <ClCompile Include="..\html\examples\tests\button.c" />
+    <ClCompile Include="..\html\examples\tests\canvas.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_cddbuffer.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_cdsimple.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_scrollbar.c" />
+    <ClCompile Include="..\html\examples\tests\cells_checkboard.c" />
+    <ClCompile Include="..\html\examples\tests\cells_degrade.c" />
+    <ClCompile Include="..\html\examples\tests\cells_numbering.c" />
+    <ClCompile Include="..\html\examples\tests\charac.c" />
+    <ClCompile Include="..\html\examples\tests\class_conf.c" />
+    <ClCompile Include="..\html\examples\tests\clipboard.c" />
+    <ClCompile Include="..\html\examples\tests\colorbar.c" />
+    <ClCompile Include="..\html\examples\tests\colorbrowser.c" />
+    <ClCompile Include="..\html\examples\tests\dial.c" />
+    <ClCompile Include="..\html\examples\tests\dialog.c" />
+    <ClCompile Include="..\html\examples\tests\frame.c" />
+    <ClCompile Include="..\html\examples\tests\gauge.c" />
+    <ClCompile Include="..\html\examples\tests\getcolor.c" />
+    <ClCompile Include="..\html\examples\tests\getparam.c" />
+    <ClCompile Include="..\html\examples\tests\glcanvas.c" />
+    <ClCompile Include="..\html\examples\tests\glcanvas_cube.c" />
+    <ClCompile Include="..\html\examples\tests\hbox.c" />
+    <ClCompile Include="..\html\examples\tests\idle.c" />
+    <ClCompile Include="..\html\examples\tests\label.c" />
+    <ClCompile Include="..\html\examples\tests\list.c" />
+    <ClCompile Include="..\html\examples\tests\matrix.c" />
+    <ClCompile Include="..\html\examples\tests\matrix_cbmode.c" />
+    <ClCompile Include="..\html\examples\tests\matrix_cbs.c" />
+    <ClCompile Include="..\html\examples\tests\mdi.c" />
+    <ClCompile Include="..\html\examples\tests\menu.c" />
+    <ClCompile Include="..\html\examples\tests\mglplot.c" />
+    <ClCompile Include="..\html\examples\tests\ole.cpp" />
+    <ClCompile Include="..\html\examples\tests\predialogs.c" />
+    <ClCompile Include="..\html\examples\tests\progressbar.c" />
+    <ClCompile Include="..\html\examples\tests\sample.c" />
+    <ClCompile Include="..\html\examples\tests\sbox.c" />
+    <ClCompile Include="..\html\examples\tests\scanf.c" />
+    <ClCompile Include="..\html\examples\tests\scrollbox.c" />
+    <ClCompile Include="..\html\examples\tests\spin.c" />
+    <ClCompile Include="..\html\examples\tests\split.c" />
+    <ClCompile Include="..\html\examples\tests\sysinfo.c" />
+    <ClCompile Include="..\html\examples\tests\tabs.c" />
+    <ClCompile Include="..\html\examples\tests\text.c" />
+    <ClCompile Include="..\html\examples\tests\text_spin.c" />
+    <ClCompile Include="..\html\examples\tests\timer.c" />
+    <ClCompile Include="..\html\examples\tests\toggle.c" />
+    <ClCompile Include="..\html\examples\tests\tray.c" />
+    <ClCompile Include="..\html\examples\tests\tree.c" />
+    <ClCompile Include="..\html\examples\tests\val.c" />
+    <ClCompile Include="..\html\examples\tests\vbox.c" />
+    <ClCompile Include="..\html\examples\tests\zbox.c" />
+    <ClCompile Include="..\html\examples\tests\link.c" />
+    <ClCompile Include="..\html\examples\tests\gridbox.c" />
+    <ClCompile Include="..\html\examples\tests\expander.c" />
+    <ClCompile Include="..\html\examples\tests\progressdlg.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_scrollbar2.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_scrollbar3.c" />
+    <ClCompile Include="..\html\examples\tests\plot.c" />
+    <ClCompile Include="..\html\examples\tests\flatbutton.c" />
+    <ClCompile Include="..\html\examples\tests\calendar.c" />
+    <ClCompile Include="..\html\examples\tests\scintilla.c" />
+    <ClCompile Include="..\html\examples\tests\cbox.c" />
+    <ClCompile Include="..\html\examples\tests\detachbox.c" />
+    <ClCompile Include="..\html\examples\tests\mathglsamples.c" />
+    <ClCompile Include="..\html\examples\tests\matrixlist.c" />
+    <ClCompile Include="..\html\examples\tests\mgllabel.c" />
+    <ClCompile Include="..\html\examples\tests\webbrowser.c" />
+    <ClCompile Include="..\html\examples\tests\dial_led.c" />
+    <ClCompile Include="..\html\examples\tests\dropbutton.c" />
+    <ClCompile Include="..\html\examples\tests\flatframe.c" />
+    <ClCompile Include="..\html\examples\tests\flatlabel.c" />
+    <ClCompile Include="..\html\examples\tests\flatsample.c" />
+    <ClCompile Include="..\html\examples\tests\flatscrollbox.c" />
+    <ClCompile Include="..\html\examples\tests\flattabs.c" />
+    <ClCompile Include="..\html\examples\tests\flattoggle.c" />
+    <ClCompile Include="..\html\examples\tests\multibox.c" />
+    <ClCompile Include="..\html\examples\tests\flatlist.c" />
+    <ClCompile Include="..\html\examples\tests\flatval.c" />
+    <ClCompile Include="..\html\examples\tests\flattree.c" />
+    <ClCompile Include="..\html\examples\tests\webbrowser_editor.c" />
+    <ClCompile Include="..\html\examples\tests\rt_editor_images.c" />
+  </ItemGroup>
+</Project>

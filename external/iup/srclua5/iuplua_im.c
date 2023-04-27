@@ -46,6 +46,14 @@ static int ImageFromImImage(lua_State *L)
   return 1;
 }
 
+static int ImageToImImage(lua_State *L)
+{
+  Ihandle *image = iuplua_checkihandle(L, 1);
+  imImage* im_image = IupImageToImImage(image);
+  imlua_pushimage(L, im_image);
+  return 1;
+}
+
 static int SaveImage(lua_State *L)
 {
   Ihandle *image = iuplua_checkihandle(L,1);
@@ -82,7 +90,10 @@ static int LoadAnimationFrames(lua_State *L)
 
 int iupimlua_open(lua_State *L)
 {
+  IupImOpen();
+
   iuplua_get_env(L);
+  iuplua_register(L, LoadImage, "LoadImage");
   iuplua_register(L, LoadImage, "LoadImage");
   iuplua_register(L, SaveImage, "SaveImage");
   iuplua_register(L, LoadAnimation, "LoadAnimation");
@@ -90,6 +101,7 @@ int iupimlua_open(lua_State *L)
   iuplua_register(L, GetNativeHandleImage, "GetNativeHandleImage");
   iuplua_register(L, GetImageNativeHandle, "GetImageNativeHandle");
   iuplua_register(L, ImageFromImImage, "ImageFromImImage");
+  iuplua_register(L, ImageToImImage, "ImageToImImage");
   return 0; /* nothing in stack */
 }
 

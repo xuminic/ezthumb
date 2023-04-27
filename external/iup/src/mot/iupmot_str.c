@@ -118,7 +118,8 @@ static char* iupStrCopyToUtf8Buffer(const char* str, int len, char* utf8_buffer,
   return utf8_buffer;
 }
 
-char* iupStrConvertToUTF8(const char* str, int len, char* utf8_buffer, int *utf8_buffer_max, int utf8mode)
+/* Used in glfont */
+IUP_SDK_API char* iupStrConvertToUTF8(const char* str, int len, char* utf8_buffer, int *utf8_buffer_max, int utf8mode)
 {
   if (utf8mode || iupStrIsAscii(str)) /* string is already utf8 or is ascii */
     return iupStrCopyToUtf8Buffer(str, len, utf8_buffer, utf8_buffer_max);

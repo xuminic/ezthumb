@@ -8,6 +8,8 @@ local ctrl = {
   funcname = "MatrixEx",
   subdir = "ctrl",
   callback = {
+    action_cb = "nnnns", -- must repeat this callback because of its non-exclusive name
+    mousemove_cb = "nn", -- must repeat this callback because of its non-exclusive name
     pastesize_cb = "nn",
     busy_cb = "nns",
     numericgetvalue_cb = {"nn", ret = "d"},
@@ -16,9 +18,7 @@ local ctrl = {
     menucontext_cb = "inn",
     menucontextclose_cb = "inn",
   },
-  include = "iupmatrixex.h",
-  extrafuncs = 1,
-  openfuncname = "_matrixex",
+  include = "iupcontrols.h",
 }
 
 function ctrl.createElement(class, param)

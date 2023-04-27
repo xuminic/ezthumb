@@ -1,5 +1,5 @@
 /** \file
- * \brief Frame Control Private Declarations
+ * \brief Frame Control (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -11,11 +11,13 @@
 extern "C" {
 #endif
 
-int iupdrvFrameHasClientOffset(void);
+int iupdrvFrameHasClientOffset(Ihandle* ih);
 void iupdrvFrameInitClass(Iclass* ic);
-void iupdrvFrameGetDecorOffset(int *x, int *y);
+void iupdrvFrameGetDecorOffset(Ihandle* ih, int *x, int *y);
 int iupFrameGetTitleHeight(Ihandle* ih);
 char* iupFrameGetBgColorAttrib(Ihandle* ih);
+int iupdrvFrameGetDecorSize(Ihandle* ih, int *w, int *h);
+int iupdrvFrameGetTitleHeight(Ihandle* ih, int *h);
 
 #ifdef __cplusplus
 }

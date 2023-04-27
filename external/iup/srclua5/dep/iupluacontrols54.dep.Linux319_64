@@ -1,0 +1,36 @@
+$(OBJDIR)/iuplua_controls.o: ctrl/iuplua_controls.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lauxlib.h \
+ /tecgraf/lua54/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcontrols.h \
+ ../include/iuplua.h ../include/iupluacontrols.h ../srclua5/il.h \
+ ctrl/il_controls.h
+$(OBJDIR)/iuplua_matrix_aux.o: ctrl/iuplua_matrix_aux.c \
+ /tecgraf/lua54/include/lua.h /tecgraf/lua54/include/luaconf.h \
+ /tecgraf/lua54/include/lualib.h /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/lauxlib.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupcontrols.h \
+ ../include/iupcbs.h /tecgraf/cd/include/cd.h /tecgraf/cd/include/cdlua.h \
+ ../include/iuplua.h ../srclua5/il.h ctrl/il_controls.h \
+ ../src/iup_attrib.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_assert.h \
+ ../src/iup_predialogs.h ../src/iup_str.h
+$(OBJDIR)/il_matrix.o: ctrl/il_matrix.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lauxlib.h \
+ /tecgraf/lua54/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupcontrols.h ../srclua5/il.h lh/matrix.lh
+$(OBJDIR)/il_matrixlist.o: ctrl/il_matrixlist.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lauxlib.h \
+ /tecgraf/lua54/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupcontrols.h ../srclua5/il.h lh/matrixlist.lh
+$(OBJDIR)/il_matrixex.o: ctrl/il_matrixex.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lauxlib.h \
+ /tecgraf/lua54/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupcontrols.h ../srclua5/il.h lh/matrixex.lh
+$(OBJDIR)/il_cells.o: ctrl/il_cells.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lauxlib.h \
+ /tecgraf/lua54/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupcontrols.h ../srclua5/il.h lh/cells.lh

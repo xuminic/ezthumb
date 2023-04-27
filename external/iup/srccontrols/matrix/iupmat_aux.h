@@ -16,7 +16,7 @@ int   iupMatrixAuxIsFullVisibleLast(ImatLinColData *p);
 int   iupMatrixAuxIsCellStartVisible(Ihandle* ih, int lin, int col);
 int   iupMatrixAuxIsCellVisible(Ihandle* ih, int lin, int col);
 
-void  iupMatrixAuxCalcSizes(Ihandle* ih);
+int   iupMatrixAuxCalcSizes(Ihandle* ih);
 
 void  iupMatrixAuxAdjustFirstFromLast(ImatLinColData* p);
 void  iupMatrixAuxAdjustFirstFromScrollPos(ImatLinColData* p, int scroll_pos);

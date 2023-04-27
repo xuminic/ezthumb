@@ -9,6 +9,7 @@
 #include <memory.h>
 #include <string.h>
 
+#include "iup_export.h"
 #include "iup_linefile.h"
 
 #define LINEFILE_STRING_BLOCK 80
@@ -20,17 +21,17 @@ struct _IlineFile
   int buffer_maxsize;
 };
 
-const char* iupLineFileGetBuffer(IlineFile* line_file)
+IUP_SDK_API const char* iupLineFileGetBuffer(IlineFile* line_file)
 {
   return line_file->line_buffer;
 }
 
-int iupLineFileEOF(IlineFile* line_file)
+IUP_SDK_API int iupLineFileEOF(IlineFile* line_file)
 {
   return feof(line_file->file);
 }
 
-IlineFile* iupLineFileOpen(const char* filename)
+IUP_SDK_API IlineFile* iupLineFileOpen(const char* filename)
 {
   FILE* file = fopen(filename, "rb");
   if (!file)
@@ -48,14 +49,14 @@ IlineFile* iupLineFileOpen(const char* filename)
   }
 }
 
-void iupLineFileClose(IlineFile* line_file)
+IUP_SDK_API void iupLineFileClose(IlineFile* line_file)
 {
   fclose(line_file->file);
   free(line_file->line_buffer);  /* use free because of realloc */
   free(line_file);
 }
 
-int iupLineFileReadLine(IlineFile* line_file)
+IUP_SDK_API int iupLineFileReadLine(IlineFile* line_file)
 {
   char char_buffer[1];
   int ret, count = 0;

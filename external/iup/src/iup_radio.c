@@ -19,7 +19,7 @@
 #include "iup_layout.h"
 
 
-Ihandle *iupRadioFindToggleParent(Ihandle* ih_toggle)
+IUP_SDK_API Ihandle *iupRadioFindToggleParent(Ihandle* ih_toggle)
 {
   Ihandle *p;
 
@@ -56,6 +56,7 @@ static int iRadioChildIsToggle(Ihandle* child)
 {
   if (IupClassMatch(child, "toggle") || 
       IupClassMatch(child, "gltoggle") ||
+      IupClassMatch(child, "flattoggle") ||
       (IupClassMatch(child, "flatbutton") && iupAttribGetBoolean(child, "TOGGLE")))
     return 1;
   else
@@ -121,7 +122,7 @@ static int iRadioSetValueAttrib(Ihandle* ih, const char* value)
 static char* iRadioGetValueAttrib(Ihandle* ih)
 {
   Ihandle *ih_toggle = (Ihandle*)iRadioGetValueHandleAttrib(ih);
-  return IupGetName(ih_toggle);
+  return IupGetName(ih_toggle);  /* Name is guarantied at Toggle MapMethod */
 }
 
 /******************************************************************************/
@@ -168,7 +169,7 @@ static void iRadioSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 /******************************************************************************/
 
 
-Ihandle* IupRadio(Ihandle* child)
+IUP_API Ihandle* IupRadio(Ihandle* child)
 {
   void *children[2];
   children[0] = (void*)child;
@@ -183,7 +184,7 @@ Iclass* iupRadioNewClass(void)
   ic->name = "radio";
   ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype = IUP_CHILDMANY+1;  /* one child */
+  ic->childtype = IUP_CHILDMANY+1;  /* 1 child */
   ic->is_interactive = 0;
 
   /* Class functions */
@@ -194,12 +195,15 @@ Iclass* iupRadioNewClass(void)
   ic->SetChildrenCurrentSize = iRadioSetChildrenCurrentSizeMethod;
   ic->SetChildrenPosition = iRadioSetChildrenPositionMethod;
 
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
+
   /* Common */
   iupBaseRegisterCommonAttrib(ic);
 
   /* Base Container */
   iupClassRegisterAttribute(ic, "EXPAND", iupBaseContainerGetExpandAttrib, NULL, IUPAF_SAMEASSYSTEM, "YES", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
-  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetCurrentSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "CLIENTSIZE", iupBaseGetClientSizeAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "CLIENTOFFSET", iupBaseGetClientOffsetAttrib, NULL, NULL, NULL, IUPAF_READONLY|IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
 
   /* Radio only */

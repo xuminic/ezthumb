@@ -1,5 +1,5 @@
 /** \file
- * \brief Dialog Public and Private Declarations
+ * \brief Dialog (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -38,7 +38,7 @@ char* iupDialogGetChildIdStr(Ihandle* ih);
 void iupdrvDialogGetDecoration(Ihandle* ih, int *border, int *caption, int *menu);
 
 /* Returns the native parent. Can be PARENTDIALOG or NATIVEPARENT attributes. Parent must be mapped. */
-InativeHandle* iupDialogGetNativeParent(Ihandle* ih);
+IUP_SDK_API InativeHandle* iupDialogGetNativeParent(Ihandle* ih);
 
 /* Changes the parent dialog (works only if already set at map) */
 void iupdrvDialogSetParent(Ihandle* ih, InativeHandle* native_parent);
@@ -52,7 +52,6 @@ void iupDialogLeaveModal(int popup_level);
 void iupDialogEnterModal(Ihandle* ih_popup, int popup_level);
 
 
-
 /*********************************************************************/
                         /* PRIVATE */
 /*********************************************************************/
@@ -61,6 +60,10 @@ void iupDialogEnterModal(Ihandle* ih_popup, int popup_level);
 
 /* retrieve the decorations size that offsets the window size of the client size. */
 void iupDialogGetDecorSize(Ihandle* ih, int *decorwidth, int *decorheight);
+
+void iupDialogCustomFrameSimulateCheckCallbacks(Ihandle* ih);
+int  iupDialogCustomFrameRestore(Ihandle* ih);
+void iupDialogCustomFrameMaximize(Ihandle* ih);
 
 struct _IcontrolData 
 {
@@ -87,6 +90,7 @@ void iupdrvDialogSetPosition(Ihandle *ih, int x, int y);
 void iupdrvDialogGetSize(Ihandle* ih, InativeHandle* handle, int *w, int *h);
 int iupdrvDialogIsVisible(Ihandle* ih);
 int iupDialogSetClientSizeAttrib(Ihandle* ih, const char* value);
+char* iupDialogGetClientSizeAttrib(Ihandle *ih);
 
 
 #endif

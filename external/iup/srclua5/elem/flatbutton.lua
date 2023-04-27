@@ -10,6 +10,7 @@ local ctrl = {
   callback = {
     flat_action = "", 
     flat_button_cb = "nnnns",
+    flat_motion_cb = "nns",
     flat_enterwindow_cb = "",
     flat_leavewindow_cb = "",
     flat_focus_cb = "n",

@@ -24,6 +24,9 @@
     <None Include="..\..\srclua5\ctrl\plot.lua">
       <Filter>Lua</Filter>
     </None>
+    <None Include="..\..\srclua5\lh\plot.lh">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\iuplua_plot.h">

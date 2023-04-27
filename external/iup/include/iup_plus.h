@@ -13,7 +13,6 @@
 #include "iupdraw.h"
 #include "iup_class_cbs.hpp"
 #include "iupcontrols.h"
-#include "iupmatrixex.h"
 #include "iupgl.h"
 #include "iupglcontrols.h"
 #include "iupim.h"
@@ -55,6 +54,7 @@ namespace Iup
   inline int PlayInput(const char* filename) { return IupPlayInput(filename); }
 
   inline int Help(const char* url) { return IupHelp(url); }
+  inline void Log(const char* type, const char* str) { IupLog(type, "%s", str); }
   inline const char* Load(const char *filename) { return IupLoad(filename); }
   inline const char* LoadBuffer(const char *buffer) { return IupLoadBuffer(buffer); }
 
@@ -124,6 +124,8 @@ namespace Iup
     double GetNumber(const char* name) { return IupGetDouble(ih, name); }
     void SetRGB(const char* name, unsigned char r, unsigned char g, unsigned char b) { IupSetRGB(ih, name, r, g, b); }
     void GetRGB(const char* name, unsigned char &r, unsigned char &g, unsigned char &b) { IupGetRGB(ih, name, &r, &g, &b); }
+    void SetRGBA(const char* name, unsigned char r, unsigned char g, unsigned char b, unsigned char a) { IupSetRGBA(ih, name, r, g, b, a); }
+    void GetRGBA(const char* name, unsigned char &r, unsigned char &g, unsigned char &b, unsigned char &a) { IupGetRGBA(ih, name, &r, &g, &b, &a); }
 
     void SetAttributeId(const char* name, int id, const char* value) { IupSetAttributeId(ih, name, id, value); }
     char* GetAttributeId(const char* name, int id) { return IupGetAttributeId(ih, name, id); }
@@ -154,6 +156,7 @@ namespace Iup
     Element SetAttributes(const char* str) { return IupSetAttributes(ih, str); }
     void ResetAttribute(const char* name) { IupResetAttribute(ih, name); }
     int GetAllAttributes(char** names, int n) { return IupGetAllAttributes(ih, names, n); }
+    void CopyAttributes(Ihandle* dst_ih) { IupCopyAttributes(ih, dst_ih); }
     void SetAttributeHandle(const char* name, const  Element& elem) { IupSetAttributeHandle(ih, name, elem.GetHandle()); }
     Element GetAttributeHandle(const char* name) { return IupGetAttributeHandle(ih, name); }
     void SetAttributeHandleId(const char* name, int id, const Element& elem) { IupSetAttributeHandleId(ih, name, id, elem.GetHandle()); }
@@ -277,9 +280,17 @@ namespace Iup
 
   inline Dialog Control::GetDialog() { return Dialog(IupGetDialog(ih)); }
   inline Dialog LayoutDialog(const Dialog& dialog) { return Dialog(IupLayoutDialog(dialog.GetHandle())); }
-  inline Dialog ElementPropertiesDialog(const Control& control) { return Dialog(IupElementPropertiesDialog(control.GetHandle())); }
+  inline Dialog GlobalsDialog() { return Dialog(IupGlobalsDialog()); }
+  inline Dialog ElementPropertiesDialog(const Dialog& parent, const Control& control) { return Dialog(IupElementPropertiesDialog(parent.GetHandle(), control.GetHandle())); }
+  inline Dialog ElementPropertiesDialog(const Control& control) { return Dialog(IupElementPropertiesDialog(0, control.GetHandle())); }
+  inline Dialog ClassInfoDialog(const Dialog& parent) { return Dialog(IupClassInfoDialog(parent.GetHandle())); }
   inline Container Control::GetParent() { return Container(IupGetParent(ih)); }
   inline int Control::Reparent(const Container& new_parent, const Control& ref_child) { return IupReparent(ih, new_parent.GetHandle(), ref_child.GetHandle()); }
+
+  void MessageError(const Dialog& parent, const char* message)
+    { IupMessageError(parent.GetHandle(), message); }
+  int MessageAlarm(const Dialog& parent, const char* title, const char* message, const char* buttons)
+    { return IupMessageAlarm(parent.GetHandle(), title, message, buttons); }
 
   class Menu : public Container
   {
@@ -294,17 +305,21 @@ namespace Iup
     int Popup(int x, int y) { return IupPopup(ih, x, y); }
   };
 
-#ifdef __IM_PLUS_H
   class Image : public Element
   {
   public:
-    Image(const char* filename) : Element(IupLoadImage(filename)) {}
-    Image(const im::Image& image) : Element(IupImageFromImImage(image.GetHandle())) {}
     Image(Ihandle* _ih) : Element(_ih) {}
     Image(const Element& elem) : Element(elem.GetHandle()) {}
+    Image(const char* name) : Element(IupImageGetHandle(name)) {}
 
-    int Save(const char* filename, const char* im_format) { return IupSaveImage(ih, filename, im_format); }
     int SaveAsText(const char* filename, const char* iup_format, const char* name) { return IupSaveImageAsText(ih, filename, iup_format, name); }
+
+#ifdef __IM_PLUS_H
+    Image(const im::Image& image) : Element(IupImageFromImImage(image.GetHandle())) {}
+    Image Load(const char* filename) { return Image(IupLoadImage(filename)); }
+    int Save(const char* filename, const char* im_format) { return IupSaveImage(ih, filename, im_format); }
+    im::Image ToImImage() { return im::Image(IupImageToImImage(GetHandle())); }
+#endif
   };
   class Clipboard : public Element
   {
@@ -313,17 +328,24 @@ namespace Iup
     Clipboard(Ihandle* _ih) : Element(_ih) {}
     Clipboard(const Element& elem) : Element(elem.GetHandle()) {}
 
+#ifdef __IM_PLUS_H
     void SetImage(const im::Image& image) { SetUserData("NATIVEIMAGE", IupGetImageNativeHandle(image.GetHandle())); }
-
     im::Image GetImage(void) { return im::Image(IupGetNativeHandleImage(GetUserData("NATIVEIMAGE"))); }
-  };
 #endif
+  };
   class User : public Element
   {
   public:
     User() : Element(IupUser()) {}
     User(Ihandle* _ih) : Element(_ih) {}
     User(const Element& elem) : Element(elem.GetHandle()) {}
+  };
+  class Thread : public Element
+  {
+  public:
+    Thread() : Element(IupThread()) {}
+    Thread(Ihandle* _ih) : Element(_ih) {}
+    Thread(const Element& elem) : Element(elem.GetHandle()) {}
   };
   class Param : public Element
   {
@@ -363,18 +385,19 @@ namespace Iup
     void DrawBegin() { IupDrawBegin(ih); }
     void DrawEnd() { IupDrawEnd(ih); }
     void DrawSetClipRect(int x1, int y1, int x2, int y2) { IupDrawSetClipRect(ih, x1, y1, x2, y2); }
+    void DrawGetClipRect(int *x1, int *y1, int *x2, int *y2) { IupDrawGetClipRect(ih, x1, y1, x2, y2); }
     void DrawResetClip() { IupDrawResetClip(ih); }
     void DrawParentBackground() { IupDrawParentBackground(ih); }
     void DrawLine(int x1, int y1, int x2, int y2) { IupDrawLine(ih, x1, y1, x2, y2); }
     void DrawRectangle(int x1, int y1, int x2, int y2) { IupDrawRectangle(ih, x1, y1, x2, y2); }
     void DrawArc(int x1, int y1, int x2, int y2, double a1, double a2) { IupDrawArc(ih, x1, y1, x2, y2, a1, a2); }
     void DrawPolygon(int* points, int count) { IupDrawPolygon(ih, points, count); }
-    void DrawText(const char* text, int len, int x, int y) { IupDrawText(ih, text, len, x, y); }
-    void DrawImage(const char* name, int make_inactive, int x, int y) { IupDrawImage(ih, name, make_inactive, x, y); }
+    void DrawText(const char* text, int len, int x, int y, int w, int h) { IupDrawText(ih, text, len, x, y, w, h); }
+    void DrawImage(const char* name, int x, int y, int w, int h) { IupDrawImage(ih, name, x, y, w, h); }
     void DrawSelectRect(int x1, int y1, int x2, int y2) { IupDrawSelectRect(ih, x1, y1, x2, y2); }
     void DrawFocusRect(int x1, int y1, int x2, int y2) { IupDrawFocusRect(ih, x1, y1, x2, y2); }
     void DrawGetSize(int &w, int &h) { IupDrawGetSize(ih, &w, &h); }
-    void DrawGetTextSize(const char* str, int &w, int &h) { IupDrawGetTextSize(ih, str, &w, &h); }
+    void DrawGetTextSize(const char* str, int len, int &w, int &h) { IupDrawGetTextSize(ih, str, len, &w, &h); }
     void DrawGetImageInfo(const char* name, int &w, int &h, int &bpp) { IupDrawGetImageInfo(name, &w, &h, &bpp); }
   };
   class Link : public Control
@@ -405,6 +428,42 @@ namespace Iup
     FlatButton(const char* title = 0) : Control(IupFlatButton(title)) {}
     FlatButton(Ihandle* _ih) : Control(_ih) {}
     FlatButton(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class FlatToggle : public Control
+  {
+  public:
+    FlatToggle(const char* title = 0) : Control(IupFlatToggle(title)) {}
+    FlatToggle(Ihandle* _ih) : Control(_ih) {}
+    FlatToggle(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class FlatSeparator : public Control
+  {
+  public:
+    FlatSeparator() : Control(IupFlatSeparator()) {}
+    FlatSeparator(Ihandle* _ih) : Control(_ih) {}
+    FlatSeparator(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class Space : public Control
+  {
+  public:
+    Space() : Control(IupSpace()) {}
+    Space(Ihandle* _ih) : Control(_ih) {}
+    Space(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class DropButton : public Control
+  {
+  public:
+    DropButton() : Control(IupDropButton(0)) {}
+    DropButton(Control child) : Control(IupDropButton(child.GetHandle())) {}
+    DropButton(Ihandle* _ih) : Control(_ih) {}
+    DropButton(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class FlatLabel : public Control
+  {
+  public:
+    FlatLabel(const char* title = 0) : Control(IupFlatLabel(title)) {}
+    FlatLabel(Ihandle* _ih) : Control(_ih) {}
+    FlatLabel(const Element& elem) : Control(elem.GetHandle()) {}
   };
   class AnimatedLabel : public Control
   {
@@ -452,7 +511,21 @@ namespace Iup
     Val(Ihandle* _ih) : Control(_ih) {}
     Val(const Element& elem) : Control(elem.GetHandle()) {}
   };
-  class ProgressBar: public Control
+  class FlatVal : public Control
+  {
+  public:
+    FlatVal(const char* orientation = 0) : Control(IupFlatVal(orientation)) {}
+    FlatVal(Ihandle* _ih) : Control(_ih) {}
+    FlatVal(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class FlatTree : public Control
+  {
+  public:
+    FlatTree() : Control(IupFlatTree()) {}
+    FlatTree(Ihandle* _ih) : Control(_ih) {}
+    FlatTree(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class ProgressBar : public Control
   {
   public:
     ProgressBar() : Control(IupProgressBar()) {}
@@ -465,6 +538,13 @@ namespace Iup
     List() : Control(IupList(0)) {}
     List(Ihandle* _ih) : Control(_ih) {}
     List(const Element& elem) : Control(elem.GetHandle()) {}
+  };
+  class FlatList : public Control
+  {
+  public:
+    FlatList() : Control(IupFlatList()) {}
+    FlatList(Ihandle* _ih) : Control(_ih) {}
+    FlatList(const Element& elem) : Control(elem.GetHandle()) {}
   };
   class Text : public Control
   {
@@ -515,6 +595,14 @@ namespace Iup
     ScrollBox(const ScrollBox& container) : Container(container.GetHandle()) {}
     ScrollBox(Ihandle* _ih) : Container(_ih) {}
   };
+  class FlatScrollBox : public Container
+  {
+  public:
+    FlatScrollBox() : Container(IupFlatScrollBox(0)) {}
+    FlatScrollBox(Control child) : Container(IupFlatScrollBox(child.GetHandle())) {}
+    FlatScrollBox(const FlatScrollBox& container) : Container(container.GetHandle()) {}
+    FlatScrollBox(Ihandle* _ih) : Container(_ih) {}
+  };
   class Expander : public Container
   {
   public:
@@ -542,18 +630,19 @@ namespace Iup
     void DrawBegin() { IupDrawBegin(ih); }
     void DrawEnd() { IupDrawEnd(ih); }
     void DrawSetClipRect(int x1, int y1, int x2, int y2) { IupDrawSetClipRect(ih, x1, y1, x2, y2); }
+    void DrawGetClipRect(int *x1, int *y1, int *x2, int *y2) { IupDrawGetClipRect(ih, x1, y1, x2, y2); }
     void DrawResetClip() { IupDrawResetClip(ih); }
     void DrawParentBackground() { IupDrawParentBackground(ih); }
     void DrawLine(int x1, int y1, int x2, int y2) { IupDrawLine(ih, x1, y1, x2, y2); }
     void DrawRectangle(int x1, int y1, int x2, int y2) { IupDrawRectangle(ih, x1, y1, x2, y2); }
     void DrawArc(int x1, int y1, int x2, int y2, double a1, double a2) { IupDrawArc(ih, x1, y1, x2, y2, a1, a2); }
     void DrawPolygon(int* points, int count) { IupDrawPolygon(ih, points, count); }
-    void DrawText(const char* text, int len, int x, int y) { IupDrawText(ih, text, len, x, y); }
-    void DrawImage(const char* name, int make_inactive, int x, int y) { IupDrawImage(ih, name, make_inactive, x, y); }
+    void DrawText(const char* text, int len, int x, int y, int w, int h) { IupDrawText(ih, text, len, x, y, w, h); }
+    void DrawImage(const char* name, int x, int y, int w, int h) { IupDrawImage(ih, name, x, y, w, h); }
     void DrawSelectRect(int x1, int y1, int x2, int y2) { IupDrawSelectRect(ih, x1, y1, x2, y2); }
     void DrawFocusRect(int x1, int y1, int x2, int y2) { IupDrawFocusRect(ih, x1, y1, x2, y2); }
     void DrawGetSize(int &w, int &h) { IupDrawGetSize(ih, &w, &h); }
-    void DrawGetTextSize(const char* str, int &w, int &h) { IupDrawGetTextSize(ih, str, &w, &h); }
+    void DrawGetTextSize(const char* str, int len, int &w, int &h) { IupDrawGetTextSize(ih, str, len, &w, &h); }
     void DrawGetImageInfo(const char* name, int &w, int &h, int &bpp) { IupDrawGetImageInfo(name, &w, &h, &bpp); }
   };
 
@@ -652,6 +741,16 @@ namespace Iup
     GridBox(const GridBox& box) : Container(box.GetHandle()) {}
     GridBox(Ihandle* _ih) : Container(_ih) {}
   };
+  class MultiBox : public Container
+  {
+  public:
+    MultiBox() : Container(IupMultiBox(0)) {}
+    MultiBox(Control child0, Control child1 = (Ihandle*)0, Control child2 = (Ihandle*)0, Control child3 = (Ihandle*)0, Control child4 = (Ihandle*)0, Control child5 = (Ihandle*)0, Control child6 = (Ihandle*)0, Control child7 = (Ihandle*)0, Control child8 = (Ihandle*)0, Control child9 = (Ihandle*)0)
+      : Container(IupMultiBox(0), child0, child1, child2, child3, child4, child5, child6, child7, child8, child9) {}
+    MultiBox(const Control *child_array, int count) : Container(IupMultiBox(0), child_array, count) {}
+    MultiBox(const MultiBox& box) : Container(box.GetHandle()) {}
+    MultiBox(Ihandle* _ih) : Container(_ih) {}
+  };
   class ParamBox : public Container
   {
   public:
@@ -699,6 +798,17 @@ namespace Iup
   public:
     ProgressDlg() : Dialog(IupProgressDlg()) {}
   };
+  class ScintillaDlg : public Dialog
+  {
+  public:
+    ScintillaDlg() : Dialog(IupScintillaDlg()) {}
+  };
+#ifdef LUA_VERSION
+  public:
+    LuaScripterDlg(lua_State *L) : Dialog(IupLuaScripterDlg(L)) {}
+  };
+#endif
+
   class GLCanvas : public Control
   {
   public:
@@ -788,8 +898,6 @@ namespace Iup
     MatrixEx() : Control(IupMatrixEx()) {}
     MatrixEx(Ihandle* _ih) : Control(_ih) {}
     MatrixEx(const Element& elem) : Control(elem.GetHandle()) {}
-
-    static void Open() { IupMatrixExOpen(); }
   };
   class GLControls
   {
@@ -1056,6 +1164,10 @@ namespace Iup
     char* GetVariableStrIdDef(const char* group, const char* key, int id, const char* def) { return (char*)IupConfigGetVariableStrIdDef(ih, group, key, id, def); }
     int GetVariableIntIdDef(const char* group, const char* key, int id, int def) { return IupConfigGetVariableIntIdDef(ih, group, key, id, def); }
     double GetVariableDoubleIdDef(const char* group, const char* key, int id, double def) { return IupConfigGetVariableDoubleIdDef(ih, group, key, id, def); }
+
+    void Copy(const Config& config2, const char* exclude_prefix) { IupConfigCopy(ih, config2.GetHandle(), exclude_prefix); }
+
+    void SetListVariable(const char *group, const char* key, const char* value, int add) { IupConfigSetListVariable(ih, group, key, value, add); }
 
     void RecentInit(Menu menu, Icallback recent_cb, int max_recent) { IupConfigRecentInit(ih, menu.GetHandle(), recent_cb, max_recent); }
     void RecentUpdate(const char* filename) { IupConfigRecentUpdate(ih, filename); }

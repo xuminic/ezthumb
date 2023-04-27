@@ -20,35 +20,35 @@ extern "C" {
 
 /** Adds a dialog to the list. Used only in IupDialog.
  * \ingroup dlglist */
-void iupDlgListAdd(Ihandle *ih);
+IUP_SDK_API void iupDlgListAdd(Ihandle *ih);
 
 /** Removes a dialog from the list. Used only in IupDestroy.
  * \ingroup dlglist */
-void iupDlgListRemove(Ihandle *ih);
+IUP_SDK_API void iupDlgListRemove(Ihandle *ih);
 
 /** Returns the number of dialogs.
  * \ingroup dlglist */
-int iupDlgListCount(void);
+IUP_SDK_API int iupDlgListCount(void);
 
 /** Starts a loop for all the created dialogs. 
  * \ingroup dlglist */
-Ihandle* iupDlgListFirst(void);
+IUP_SDK_API Ihandle* iupDlgListFirst(void);
 
 /** Retrieve the next dialog on the list. Must call iupDlgListFirst first.
  * \ingroup dlglist */
-Ihandle* iupDlgListNext(void);
+IUP_SDK_API Ihandle* iupDlgListNext(void);
 
 /** Increments the number of visible dialogs. 
  * \ingroup dlglist */
-void iupDlgListVisibleInc(void);
+IUP_SDK_API void iupDlgListVisibleInc(void);
 
 /** Decrements the number of visible dialogs.
  * \ingroup dlglist */
-void iupDlgListVisibleDec(void);
+IUP_SDK_API void iupDlgListVisibleDec(void);
 
 /** Returns the number of visible dialogs.
  * \ingroup dlglist */
-int iupDlgListVisibleCount(void);
+IUP_SDK_API int iupDlgListVisibleCount(void);
 
 /* Destroy all dialogs and the list.
    Called only from IupClose. */

@@ -30,12 +30,12 @@ static int iup_opened = 0;
 static int iup_dummy_argc = 0;
 static char** iup_dummy_argv = {0};
 
-int iupIsOpened(void)
+IUP_API int IupIsOpened(void)
 {
   return iup_opened;
 }
 
-int IupOpen(int *argc, char ***argv)
+IUP_API int IupOpen(int *argc, char ***argv)
 {
   if (iup_opened)
     return IUP_OPENED;
@@ -72,7 +72,7 @@ int IupOpen(int *argc, char ***argv)
 
     IupSetGlobal("DEFAULTFONT", iupdrvGetSystemFont());  /* Use SetGlobal because iupdrvGetSystemFont returns a static string */
     IupSetGlobal("DEFAULTPRECISION", "2");
-    IupSetGlobal("DEFAULTBUTTONPADDING", "12x4");
+    IupSetGlobal("DEFAULTBUTTONPADDING", "12x4");  /* used by pre-defined dialogs */
 
     iupRegisterInternalClasses();
 
@@ -82,7 +82,7 @@ int IupOpen(int *argc, char ***argv)
 
     value = getenv("IUP_VERSION");
     if (iupStrBoolean(value))
-      iupShowVersion();
+      IupVersionShow();
 
     return IUP_NOERROR;
   }
@@ -96,7 +96,7 @@ int IupOpen(int *argc, char ***argv)
   }
 }
 
-void IupClose(void)
+IUP_API void IupClose(void)
 {
   if (!iup_opened)
     return;

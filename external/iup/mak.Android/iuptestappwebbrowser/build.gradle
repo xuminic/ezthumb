@@ -1,0 +1,88 @@
+apply plugin: 'com.android.application'
+
+android {
+	compileSdkVersion rootProject.ext.compileSdkVersion
+
+	defaultConfig {
+		applicationId "br.pucrio.tecgraf.iuptestappwebbrowser"
+		minSdkVersion rootProject.ext.minSdkVersion
+		targetSdkVersion rootProject.ext.targetSdkVersion
+		versionCode rootProject.ext.versionCode
+		versionName rootProject.ext.versionName
+
+//		testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+		sourceSets {
+			main {
+				// Our CMake process will copy asset files from other directories to this temporary/staging directory. (Do not check in files in this directory.)
+				assets.srcDirs = ['build/tmp/assets']
+			}
+		}
+
+		externalNativeBuild {
+			cmake {
+				arguments "-DIUP_ANDROID_BUILD_IUPWEB=1", "-DIUPWEB_ANDROID_BUILD_TEST_LIBRARY=1"
+				cFlags ""
+				cppFlags ""
+			}
+		}
+
+		ndk {
+			// Specifies the ABI configurations of your native
+			// libraries Gradle should build and package with your APK.
+//			abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+//			abiFilters 'arm64-v8a', 'x86_64'
+//			abiFilters 'armeabi-v7a', 'x86'
+//			abiFilters 'armeabi-v7a'
+//			abiFilters 'x86'
+//			abiFilters 'arm64-v8a'
+			abiFilters rootProject.ext.abiFilters
+		}
+	}
+	buildTypes {
+		release {
+			minifyEnabled false
+			proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+		}
+	}
+	externalNativeBuild {
+		cmake {
+			path "../../CMakeLists.txt"
+		}
+	}
+}
+
+dependencies {
+
+	implementation project(':iup')
+	implementation project(':iupweb')
+
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+	implementation rootProject.ext.appCompat
+	implementation rootProject.ext.designSupport
+	//	implementation rootProject.ext.constraintSupport
+
+
+	//	androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+//		exclude group: 'com.android.support', module: 'support-annotations'
+//	})
+//	testCompile 'junit:junit:4.12'
+}
+// needed to find local .aar's
+repositories {
+	flatDir{
+		dirs 'libs'
+	}
+}
+
+// We are using CMake to specify what files are assets. But Gradle normally runs CMake too late in the entire build process to pick up the assets that CMake copies to the target directory.
+// So this will force Android Studio to run CMake earlier in its build process.
+project.afterEvaluate {
+	// Drat: The direct approach doesn't work because only one task variant (Debug or Release) is defined at any time. So the other (e.g. Release) triggers an error of not existing and breaking the build.
+	//      checkDebugManifest.dependsOn externalNativeBuildDebug
+	//      checkReleaseManifest.dependsOn externalNativeBuildRelease
+	// This findByName with the optional ? seems to work around the problem. try/catch might also work if this is a problem.
+	tasks.findByName('checkDebugManifest')?.dependsOn tasks.findByName('externalNativeBuildDebug')
+	tasks.findByName('checkReleaseManifest')?.dependsOn tasks.findByName('externalNativeBuildRelease')
+}

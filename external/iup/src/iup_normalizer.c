@@ -15,6 +15,7 @@
 #include "iup_array.h"
 #include "iup_stdcontrols.h"
 #include "iup_normalizer.h"
+#include "iup_varg.h"
 
 
 enum {NORMALIZE_NONE, NORMALIZE_WIDTH, NORMALIZE_HEIGHT};
@@ -22,6 +23,7 @@ enum {NORMALIZE_NONE, NORMALIZE_WIDTH, NORMALIZE_HEIGHT};
 struct _IcontrolData 
 {
   Iarray* ih_array;
+  int ret_control;  /* for first/next attributes */
 };
 
 int iupNormalizeGetNormalizeSize(const char* value)
@@ -141,6 +143,33 @@ static int iNormalizerSetDelControlAttrib(Ihandle* ih, const char* value)
   return iNormalizerSetDelControlHandleAttrib(ih, (char*)IupGetHandle(value));
 }
 
+static char* iNormalizerGetFirstControlHandleAttrib(Ihandle* ih)
+{
+  int count = iupArrayCount(ih->data->ih_array);
+  Ihandle** ih_list = (Ihandle**)iupArrayGetData(ih->data->ih_array);
+
+  if (count == 0)
+    return NULL;
+
+  ih->data->ret_control = 0;
+  return (char*)ih_list[ih->data->ret_control];
+}
+
+static char* iNormalizerGetNextControlHandleAttrib(Ihandle* ih)
+{
+  int count = iupArrayCount(ih->data->ih_array);
+  Ihandle** ih_list = (Ihandle**)iupArrayGetData(ih->data->ih_array);
+
+  if (count == 0 || ih->data->ret_control >= count - 1)
+    return NULL;
+
+  ih->data->ret_control++;
+  return (char*)ih_list[ih->data->ret_control];
+}
+
+/*******************************************************************************/
+
+
 static void iNormalizerComputeNaturalSizeMethod(Ihandle* ih, int *w, int *h, int *children_expand)
 {
   (void)w;
@@ -193,32 +222,38 @@ Iclass* iupNormalizerNewClass(void)
   ic->ComputeNaturalSize = iNormalizerComputeNaturalSizeMethod;
   ic->Destroy = iNormalizerDestroy;
 
+  /* Base Callbacks */
+  iupBaseRegisterBaseCallbacks(ic);
+
   iupClassRegisterAttribute(ic, "NORMALIZE", NULL, iNormalizerSetNormalizeAttrib, IUPAF_SAMEASSYSTEM, "HORIZONTAL", IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "ADDCONTROL_HANDLE", NULL, iNormalizerSetAddControlHandleAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_IHANDLE | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "ADDCONTROL", NULL, iNormalizerSetAddControlAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_IHANDLENAME | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DELCONTROL_HANDLE", NULL, iNormalizerSetDelControlHandleAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_IHANDLE | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
   iupClassRegisterAttribute(ic, "DELCONTROL", NULL, iNormalizerSetDelControlAttrib, NULL, NULL, IUPAF_WRITEONLY | IUPAF_IHANDLENAME | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT);
+  iupClassRegisterAttribute(ic, "FIRST_CONTROL_HANDLE", iNormalizerGetFirstControlHandleAttrib, NULL, NULL, NULL, IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
+  iupClassRegisterAttribute(ic, "NEXT_CONTROL_HANDLE", iNormalizerGetNextControlHandleAttrib, NULL, NULL, NULL, IUPAF_READONLY | IUPAF_NOT_MAPPED | IUPAF_NO_INHERIT | IUPAF_IHANDLE | IUPAF_NO_STRING);
 
   return ic;
 }
 
-Ihandle *IupNormalizerv(Ihandle **ih_list)
+IUP_API Ihandle* IupNormalizerv(Ihandle **ih_list)
 {
   return IupCreatev("normalizer", (void**)ih_list);
 }
 
-Ihandle *IupNormalizer(Ihandle* ih_first, ...)
+IUP_API Ihandle* IupNormalizerV(Ihandle* ih_first, va_list arglist)
 {
-  Ihandle **ih_list;
+  return IupCreateV("normalizer", ih_first, arglist);
+}
+
+IUP_API Ihandle* IupNormalizer(Ihandle* ih_first, ...)
+{
   Ihandle *ih;
 
   va_list arglist;
   va_start(arglist, ih_first);
-  ih_list = (Ihandle **)iupObjectGetParamList(ih_first, arglist);
+  ih = IupCreateV("normalizer", ih_first, arglist);
   va_end(arglist);
-
-  ih = IupCreatev("normalizer", (void**)ih_list);
-  free(ih_list);
 
   return ih;
 }

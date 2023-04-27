@@ -58,7 +58,7 @@ static void iGdkEventFunc(GdkEvent *evt, gpointer	data)
         if (doubleclick)
         {
           /* Must compensate the fact that in GTK there is an extra button press event 
-             when occours a double click, we compensate that completing the event 
+             when occurs a double click, we compensate that completing the event 
              with a button release before the double click. */
           status[5] = ' '; /* clear double click */
           cb(b, 0, x, y, status);  /* release */
@@ -114,7 +114,7 @@ static void iGdkEventFunc(GdkEvent *evt, gpointer	data)
   gtk_main_do_event(evt);
 }
 
-int iupdrvSetGlobal(const char *name, const char *value)
+IUP_SDK_API int iupdrvSetGlobal(const char *name, const char *value)
 {
   if (iupStrEqual(name, "INPUTCALLBACKS"))
   {
@@ -149,22 +149,7 @@ int iupdrvSetGlobal(const char *name, const char *value)
   return 1;
 }
 
-int iupdrvCheckMainScreen(int *w, int *h)
-{
-  GdkScreen *screen = gdk_screen_get_default();
-  int monitors_count = gdk_screen_get_n_monitors(screen);
-  if (monitors_count > 1)
-  {
-    GdkRectangle rect;
-    gdk_screen_get_monitor_geometry(screen, gdk_screen_get_monitor_at_point(screen, 0, 0), &rect);
-    *w = rect.width;
-    *h = rect.height;
-    return 1;
-  }
-  return 0;
-}
-
-char *iupdrvGetGlobal(const char *name)
+IUP_SDK_API char *iupdrvGetGlobal(const char *name)
 {
   if (iupStrEqual(name, "VIRTUALSCREEN"))
   {
@@ -180,15 +165,25 @@ char *iupdrvGetGlobal(const char *name)
   if (iupStrEqual(name, "MONITORSINFO"))
   {
     int i;
+#if GTK_CHECK_VERSION(3, 22, 0)
+    GdkDisplay *display = gdk_display_get_default();
+    int monitors_count = gdk_display_get_n_monitors(display);
+#else
     GdkScreen *screen = gdk_screen_get_default();
     int monitors_count = gdk_screen_get_n_monitors(screen);
+#endif
     char *str = iupStrGetMemory(monitors_count * 50);
     char* pstr = str;
     GdkRectangle rect;
 
     for (i = 0; i < monitors_count; i++)
     {
+#if GTK_CHECK_VERSION(3, 22, 0)
+      GdkMonitor* monitor = gdk_display_get_monitor(display, i);
+      gdk_monitor_get_geometry(monitor, &rect);
+#else
       gdk_screen_get_monitor_geometry(screen, i, &rect);
+#endif
       pstr += sprintf(pstr, "%d %d %d %d\n", rect.x, rect.y, rect.width, rect.height);
     }
 
@@ -196,8 +191,13 @@ char *iupdrvGetGlobal(const char *name)
   }
   if (iupStrEqual(name, "MONITORSCOUNT"))
   {
+#if GTK_CHECK_VERSION(3, 22, 0)
+    GdkDisplay *display = gdk_display_get_default();
+    int monitors_count = gdk_display_get_n_monitors(display);
+#else
     GdkScreen *screen = gdk_screen_get_default();
     int monitors_count = gdk_screen_get_n_monitors(screen);
+#endif
     return iupStrReturnInt(monitors_count);
   }
   if (iupStrEqual(name, "TRUECOLORCANVAS"))

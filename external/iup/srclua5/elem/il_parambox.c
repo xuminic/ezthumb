@@ -22,7 +22,7 @@ static int parambox_param_cb(Ihandle *self, int p0, void* p1)
 
 static int ParamBoxv(lua_State *L)
 {
-  Ihandle *ih = IupParamBoxv(iuplua_checkihandle_array(L, 1,0));
+  Ihandle *ih = IupParamBoxv(iuplua_checkihandle_array(L, 1, -1));
   iuplua_plugstate(L, ih);
   iuplua_pushihandle_raw(L, ih);
   return 1;

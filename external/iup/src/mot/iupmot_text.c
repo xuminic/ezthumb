@@ -62,16 +62,18 @@ void iupdrvTextAddFormatTag(Ihandle* ih, Ihandle* formattag, int bulk)
    (void)bulk;
  }
 
-void iupdrvTextAddSpin(int *w, int h)
+void iupdrvTextAddSpin(Ihandle* ih, int *w, int h)
 {
   *w += h/2;
+  (void)ih;
 }
 
-void iupdrvTextAddBorders(int *w, int *h)
+void iupdrvTextAddBorders(Ihandle* ih, int *w, int *h)
 {
   int border_size = 2*5;
   (*w) += border_size;
   (*h) += border_size;
+  (void)ih;
 }
 
 static void motTextGetLinColFromPosition(const char *str, int pos, int *lin, int *col )
@@ -602,11 +604,11 @@ static int motTextSetBgColorAttrib(Ihandle* ih, const char* value)
   {
     Pixel color;
 
-    /* ignore given value for the scrollbars, must use only from parent */
+    /* ignore given value, must use only from parent for the scrollbars */
     char* parent_value = iupBaseNativeParentGetBgColor(ih);
 
     color = iupmotColorGetPixelStr(parent_value);
-    if (color != (Pixel)-1)
+    if (color != (Pixel)-1 && iupStrBoolean(IupGetGlobal("SB_BGCOLOR")))
     {
       Widget sb = NULL;
 
@@ -679,7 +681,7 @@ static int motTextSetSpinValueAttrib(Ihandle* ih, const char* value)
     int pos;
     if (iupStrToInt(value, &pos))
     {
-      char* value = NULL;
+      char* text = NULL;
       int min, max;
       ih->data->disable_callbacks = 1;
       XtVaGetValues(ih->handle, XmNminimumValue, &min, 
@@ -687,14 +689,14 @@ static int motTextSetSpinValueAttrib(Ihandle* ih, const char* value)
       if (pos < min) pos = min;
       if (pos > max) pos = max;
       if (iupAttribGet(ih, "_IUPMOT_SPIN_NOAUTO"))
-        value = XmTextGetString(ih->handle);
+        text = XmTextGetString(ih->handle);
 
       XtVaSetValues(ih->handle, XmNposition, pos, NULL);
 
-      if (value)
+      if (text)
       {
-        iupmotTextSetString(ih->handle, value);
-        XtFree(value);
+        iupmotTextSetString(ih->handle, text);
+        XtFree(text);
       }
       ih->data->disable_callbacks = 0;
       return 1;

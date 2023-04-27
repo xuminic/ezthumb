@@ -18,11 +18,17 @@ DEF_FILE = iup_plot.def
 
 INCLUDES = ../include ../src ../srccd
 LDIR = ../lib/$(TEC_UNAME)  
-LIBS = iup iupgl iupcd cdgl cdcontextplus
+LIBS = iup iupgl iupcd cdgl 
 
 DEFINES = CD_NO_OLD_INTERFACE
 
-SRC = iup_plot.cpp  iupPlotCalc.cpp iupPlot.cpp iupPlotDraw.cpp iupPlotTick.cpp iup_plot_attrib.cpp
+USE_CONTEXTPLUS = Yes
+ifdef USE_CONTEXTPLUS
+  LIBS += cdcontextplus
+  DEFINES += USE_CONTEXTPLUS
+endif
+
+SRC = iup_plot_ctrl.cpp iup_plot_attrib.cpp iupPlot.cpp iupPlotCalc.cpp iupPlotDraw.cpp iupPlotAxis.cpp iupPlotData.cpp iupPlotTick.cpp
 
 ifneq ($(findstring MacOS, $(TEC_UNAME)), )
   INCLUDES += $(X11_INC)

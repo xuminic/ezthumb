@@ -27,13 +27,6 @@ static XtEventDispatchProc motButtonPressEventDispatchProc_OLD = NULL;
 static XtEventDispatchProc motButtonReleaseEventDispatchProc_OLD = NULL;
 
 
-int iupdrvCheckMainScreen(int *w, int *h)
-{
-  (void)w;
-  (void)h;
-  return 0;
-}
-
 static Boolean motKeyEventDispatchProc(XEvent* evt)
 {
   IFii cb = (IFii)IupGetFunction("GLOBALKEYPRESS_CB");
@@ -79,7 +72,6 @@ static Boolean motButtonEventDispatchProc(XEvent* evt)
   if (cb)
   {
     XButtonEvent *evt_button = (XButtonEvent*)evt;
-    unsigned long elapsed;
     static Time last = 0;
     char status[IUPKEY_STATUS_SIZE] = IUPKEY_STATUS_INIT;
     int x = (int)evt_button->x;
@@ -107,7 +99,7 @@ static Boolean motButtonEventDispatchProc(XEvent* evt)
     /* Double/Single Click */
     if (evt_button->type==ButtonPress)
     {
-      elapsed = evt_button->time - last;
+      unsigned long elapsed = evt_button->time - last;
       last = evt_button->time;
       if ((int)elapsed <= XtGetMultiClickTime(iupmot_display))
         doubleclick = 1;
@@ -124,7 +116,7 @@ static Boolean motButtonEventDispatchProc(XEvent* evt)
     return motButtonReleaseEventDispatchProc_OLD(evt);
 }
 
-int iupdrvSetGlobal(const char *name, const char *value)
+IUP_SDK_API int iupdrvSetGlobal(const char *name, const char *value)
 {
   if (iupStrEqual(name, "INPUTCALLBACKS"))
   {
@@ -164,7 +156,7 @@ int iupdrvSetGlobal(const char *name, const char *value)
   return 1;
 }
 
-char* iupdrvGetGlobal(const char *name)
+IUP_SDK_API char* iupdrvGetGlobal(const char *name)
 {
   (void)name;
   return NULL;

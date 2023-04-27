@@ -55,8 +55,8 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;d:\lng\gtk2\include\atk-1.0;d:\lng\gtk2\include\cairo;d:\lng\gtk2\include\glib-2.0;d:\lng\gtk2\include\gtk-2.0;d:\lng\gtk2\include\gdk-pixbuf-2.0;d:\lng\gtk2\include\pango-1.0;d:\lng\gtk2\lib\gtk-2.0\include;d:\lng\gtk2\lib\glib-2.0\include;..\..\cd\include;d:\lng\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;BIG_TEST;USE_OPENGL;PPLOT_TEST;MGLPLOT_TEST;USE_GDK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include;\lng\gtk2\include\atk-1.0;\lng\gtk2\include\cairo;\lng\gtk2\include\glib-2.0;\lng\gtk2\include\gtk-2.0;\lng\gtk2\include\gdk-pixbuf-2.0;\lng\gtk2\include\pango-1.0;\lng\gtk2\lib\gtk-2.0\include;\lng\gtk2\lib\glib-2.0\include;..\..\cd\include;\lng\vld\include;..\..\im\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;BIG_TEST;USE_OPENGL;MGLPLOT_TEST;PLOT_TEST;NO_WEBBROWSER_TEST;NO_SCINTILLA_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -76,9 +76,9 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;gtk-win32-2.0.lib;gdk-win32-2.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_mglplot.lib;cdgdk.lib;ftgl.lib;freetype6.lib;zlib1.lib;iupcd.lib;cdgl.lib;iupmatrixex.lib;im.lib;iup_plot.lib;cdcontextplus.lib;gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;gtk-win32-2.0.lib;gdk-win32-2.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_mglplot.lib;cdgdk.lib;ftgl.lib;freetype6.lib;zlib1.lib;iupcd.lib;cdgl.lib;im.lib;iup_plot.lib;cdcontextplus.lib;gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>..\lib\Debug;d:\lng\gtk2\lib;..\..\cd\lib\Debug;..\..\im\lib\Debug;d:\lng\vld\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\lib\Debug;\lng\gtk2\lib;..\..\cd\lib\Debug;..\..\im\lib\Debug;\lng\vld\lib;..\..\freetype\lib\Debug;..\..\ftgl\lib\Debug;..\..\zlib\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
@@ -93,8 +93,8 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;d:\lng\gtk2_x64\include\atk-1.0;d:\lng\gtk2_x64\include\cairo;d:\lng\gtk2_x64\include\glib-2.0;d:\lng\gtk2_x64\include\gtk-2.0;d:\lng\gtk2_x64\include\gdk-pixbuf-2.0;d:\lng\gtk2_x64\include\pango-1.0;d:\lng\gtk2_x64\lib\gtk-2.0\include;d:\lng\gtk2_x64\lib\glib-2.0\include;..\..\cd\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;BIG_TEST;USE_OPENGL;PPLOT_TEST;MGLPLOT_TEST;USE_GDK;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\include;\lng\gtk2_x64\include\atk-1.0;\lng\gtk2_x64\include\cairo;\lng\gtk2_x64\include\glib-2.0;\lng\gtk2_x64\include\gtk-2.0;\lng\gtk2_x64\include\gdk-pixbuf-2.0;\lng\gtk2_x64\include\pango-1.0;\lng\gtk2_x64\lib\gtk-2.0\include;\lng\gtk2_x64\lib\glib-2.0\include;..\..\cd\include;..\..\im\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;BIG_TEST;USE_OPENGL;MGLPLOT_TEST;PLOT_TEST;NO_WEBBROWSER_TEST;NO_SCINTILLA_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -114,9 +114,9 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;gtk-win32-2.0.lib;gdk-win32-2.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_plot.lib;iup_mglplot.lib;iupmatrixex.lib;cdgdk.lib;ftgl.lib;freetype6.lib;zlib1.lib;iupcd.lib;cdgl.lib;im.lib;cairo.lib;pangocairo-1.0.lib;cdcontextplus.lib;gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;gtk-win32-2.0.lib;gdk-win32-2.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_plot.lib;iup_mglplot.lib;cdgdk.lib;ftgl.lib;freetype6.lib;zlib1.lib;iupcd.lib;cdgl.lib;im.lib;cairo.lib;pangocairo-1.0.lib;cdcontextplus.lib;gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>..\lib\Debug_64;d:\lng\gtk2_x64\lib;..\..\cd\lib\Debug_64;..\..\im\lib\Debug_64;d:\lng\vld\lib\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\lib\Debug_64;\lng\gtk2_x64\lib;..\..\cd\lib\Debug_64;..\..\im\lib\Debug_64;\lng\vld\lib\Win64;..\..\freetype\lib\Debug_64;..\..\ftgl\lib\Debug_64;..\..\zlib\lib\Debug_64;\lng\vld\lib\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
@@ -138,6 +138,7 @@
     <ClCompile Include="..\html\examples\tests\canvas_scrollbar.c" />
     <ClCompile Include="..\html\examples\tests\canvas_scrollbar2.c" />
     <ClCompile Include="..\html\examples\tests\canvas_scrollbar3.c" />
+    <ClCompile Include="..\html\examples\tests\cbox.c" />
     <ClCompile Include="..\html\examples\tests\cells_checkboard.c" />
     <ClCompile Include="..\html\examples\tests\cells_degrade.c" />
     <ClCompile Include="..\html\examples\tests\cells_numbering.c" />
@@ -146,10 +147,19 @@
     <ClCompile Include="..\html\examples\tests\clipboard.c" />
     <ClCompile Include="..\html\examples\tests\colorbar.c" />
     <ClCompile Include="..\html\examples\tests\colorbrowser.c" />
+    <ClCompile Include="..\html\examples\tests\detachbox.c" />
     <ClCompile Include="..\html\examples\tests\dial.c" />
     <ClCompile Include="..\html\examples\tests\dialog.c" />
+    <ClCompile Include="..\html\examples\tests\dial_led.c" />
+    <ClCompile Include="..\html\examples\tests\dropbutton.c" />
     <ClCompile Include="..\html\examples\tests\expander.c" />
     <ClCompile Include="..\html\examples\tests\flatbutton.c" />
+    <ClCompile Include="..\html\examples\tests\flatframe.c" />
+    <ClCompile Include="..\html\examples\tests\flatlabel.c" />
+    <ClCompile Include="..\html\examples\tests\flatsample.c" />
+    <ClCompile Include="..\html\examples\tests\flatscrollbox.c" />
+    <ClCompile Include="..\html\examples\tests\flattabs.c" />
+    <ClCompile Include="..\html\examples\tests\flattoggle.c" />
     <ClCompile Include="..\html\examples\tests\frame.c" />
     <ClCompile Include="..\html\examples\tests\gauge.c" />
     <ClCompile Include="..\html\examples\tests\getcolor.c" />
@@ -162,14 +172,16 @@
     <ClCompile Include="..\html\examples\tests\label.c" />
     <ClCompile Include="..\html\examples\tests\link.c" />
     <ClCompile Include="..\html\examples\tests\list.c" />
+    <ClCompile Include="..\html\examples\tests\mathglsamples.c" />
     <ClCompile Include="..\html\examples\tests\matrix.c" />
+    <ClCompile Include="..\html\examples\tests\matrixlist.c" />
     <ClCompile Include="..\html\examples\tests\matrix_cbmode.c" />
     <ClCompile Include="..\html\examples\tests\matrix_cbs.c" />
     <ClCompile Include="..\html\examples\tests\mdi.c" />
     <ClCompile Include="..\html\examples\tests\menu.c" />
+    <ClCompile Include="..\html\examples\tests\mgllabel.c" />
     <ClCompile Include="..\html\examples\tests\mglplot.c" />
     <ClCompile Include="..\html\examples\tests\plot.c" />
-    <ClCompile Include="..\html\examples\tests\pplot.c" />
     <ClCompile Include="..\html\examples\tests\predialogs.c" />
     <ClCompile Include="..\html\examples\tests\progressbar.c" />
     <ClCompile Include="..\html\examples\tests\progressdlg.c" />

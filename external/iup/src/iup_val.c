@@ -152,6 +152,7 @@ Iclass* iupValNewClass(void)
 
   ic->name = "val";
   ic->format = "s"; /* one string */
+  ic->format_attr = "ORIENTATION";
   ic->nativetype = IUP_TYPECONTROL;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 1;
@@ -164,6 +165,9 @@ Iclass* iupValNewClass(void)
 
   /* Callbacks */
   iupClassRegisterCallback(ic, "VALUECHANGED_CB", "");
+  iupClassRegisterCallback(ic, "MOUSEMOVE_CB", "d");
+  iupClassRegisterCallback(ic, "BUTTON_PRESS_CB", "d");
+  iupClassRegisterCallback(ic, "BUTTON_RELEASE_CB", "d");
 
   /* Common Callbacks */
   iupBaseRegisterCommonCallbacks(ic);
@@ -186,7 +190,7 @@ Iclass* iupValNewClass(void)
   return ic;
 }
 
-Ihandle *IupVal(const char *orientation)
+IUP_API Ihandle* IupVal(const char *orientation)
 {
   void *params[2];
   params[0] = (void*)orientation;

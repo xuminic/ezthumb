@@ -39,7 +39,7 @@ static Tlist* all_late;
 
 static int nerrors = 0;
 
-#define nheaders 11
+#define nheaders 9
 
 static struct {
   char* name;
@@ -52,10 +52,8 @@ static struct {
   { "iupole",     0 },
   { "iupweb",     0 },
   { "iup_plot",  0 },
-  { "iup_pplot",  0 },
   { "iup_mglplot",  0 },
-  { "iup_scintilla",  0 },
-  { "iupmatrixex",  0 }
+  { "iup_scintilla",  0 }
 };
 
 enum headers { 
@@ -66,10 +64,8 @@ enum headers {
   IUPOLE_H,
   IUPWEB_H,
   IUPPLOT_H,
-  IUPPPLOT_H,
   IUPMGLPLOT_H,
-  IUPSCINTILLA_H,
-  IUPMATRIXEX_H 
+  IUPSCINTILLA_H
 };
 
 static void check_empty( Telem* elem );
@@ -85,10 +81,10 @@ static void check_elemlist2( Telem* elem );
 static void check_elemlist_rep( Telem* elem );
 static void check_string_cb( Telem* elem );
 static void check_string_elem( Telem* elem );
-static void check_iupCpi( Telem* elem );
+static void check_unknown(Telem* elem);
 
 static void code_image( Telem* elem );
-static void code_iupCpi( Telem* elem );
+static void code_unknown(Telem* elem);
 static void code_empty( Telem* elem );
 static void code_string( Telem* elem );
 static void code_string2( Telem* elem );
@@ -119,6 +115,7 @@ elems[] =
   { "Button",       code_string2,      check_string_cb,   0  },
   { "Canvas",       code_string,       check_cb,          0  },
   { "FlatButton",   code_string,       check_string,      0  },
+  { "FlatToggle",   code_string,       check_string,      0  },
   { "Dialog",       code_elem,         check_elem,        0  },
   { "Fill",         code_empty,        check_empty,       0  },
   { "FileDlg",      code_empty,        check_empty,       0  },
@@ -127,15 +124,20 @@ elems[] =
   { "FontDlg",      code_empty,        check_empty,       0  },
   { "ProgressBar",  code_empty,        check_empty,       0  },
   { "Frame",        code_elem,         check_elem,        0  },
+  { "FlatFrame",    code_elem,         check_elem,        0  },
   { "Hbox",         code_elemlist,     check_elemlist,    0  },
   { "Item",         code_string2,      check_string_cb,   0  },
   { "Label",        code_string,       check_string,      0  },
+  { "FlatLabel",    code_string,       check_string,      0  },
   { "List",         code_string,       check_cb,          0  },
+  { "FlatList",     code_empty,        check_empty,       0  },
   { "Sbox",         code_elem,         check_elem,        0  },
   { "ScrollBox",    code_elem,         check_elem,        0  },
+  { "FlatScrollBox",code_elem,         check_elem,        0  },
   { "DetachBox",    code_elem,         check_elem,        0  },
-  { "BackgroundBox", code_elem,        check_elem,        0  },
+  { "BackgroundBox",code_elem,         check_elem,        0  },
   { "Expander",     code_elem,         check_elem,        0  },
+  { "DropButton",   code_elem,         check_elem,        0  },
   { "Menu",         code_elemlist,     check_elemlist,    0  },
   { "MultiLine",    code_string,       check_cb,          0  },
   { "Radio",        code_elem,         check_elem,        0  },
@@ -143,30 +145,37 @@ elems[] =
   { "Submenu",      code_string_elem,  check_string_elem, 0  },
   { "Text",         code_string,       check_cb,          0  },
   { "Val",          code_string,       check_string,      0  },
+  { "FlatVal",      code_string,       check_string,      0  },
+  { "FlatTree",     code_empty,        check_empty,       0  },
   { "Tree",         code_empty,        check_empty,       0  },
   { "Tabs",         code_elemlist,     check_elemlist,    0  },
+  { "FlatTabs",     code_elemlist,     check_elemlist,    0  },
   { "Toggle",       code_string2,      check_string_cb,   0  },
   { "Vbox",         code_elemlist,     check_elemlist,    0  },
   { "Zbox",         code_elemlist,     check_elemlist,    0  },
   { "GridBox",      code_elemlist,     check_elemlist,    0  },
+  { "MultiBox",     code_elemlist,     check_elemlist,    0  },
   { "Normalizer",   code_elemlist,     check_elemlist_rep,0  },
   { "Link",         code_string2,      check_string2,     0  },
   { "Cbox",         code_elemlist,     check_elemlist,    0  },
+  { "FlatSeparator",code_empty,        check_empty,       0  },
+  { "Space",        code_empty,        check_empty,       0  },
   { "Spin",         code_empty,        check_empty,       0  },
   { "Spinbox",      code_elem,         check_elem,        0  },
   { "Split",        code_elemlist2,    check_elemlist2,   0  },
+  { "Gauge",        code_empty,        check_empty,       0  },
+  { "Colorbar",     code_empty,        check_empty,       0  },
+  { "ColorBrowser", code_empty,        check_empty,       0  },
+  { "Dial",         code_string,       check_string,      0  },
+  { "AnimatedLabel",code_elem,         check_elem,        0  },
   { "Cells",        code_empty,        check_empty,       IUPCONTROLS_H },
-  { "Gauge",        code_empty,        check_empty,       IUPCONTROLS_H },
-  { "Colorbar",     code_empty,        check_empty,       IUPCONTROLS_H },
-  { "ColorBrowser", code_empty,        check_empty,       IUPCONTROLS_H },
-  { "Dial",         code_string,       check_string,      IUPCONTROLS_H },
   { "Matrix",       code_string,       check_cb,          IUPCONTROLS_H },
   { "MatrixList",   code_empty,        check_empty,       IUPCONTROLS_H },
+  { "MatrixEx",     code_empty,        check_empty,       IUPCONTROLS_H },
   { "GLCanvas",     code_string,       check_cb,          IUPGL_H },
-  { "MatrixEx",     code_empty,        check_empty,       IUPMATRIXEX_H },
+  { "GLBackgroundBox", code_elem,      check_elem,        IUPGL_H  },
   { "OleControl",   code_string,       check_cb,          IUPOLE_H },
   { "Plot",         code_empty,        check_empty,       IUPPLOT_H },
-  { "PPlot",        code_empty,        check_empty,       IUPPPLOT_H },
   { "MglPlot",      code_empty,        check_empty,       IUPMGLPLOT_H },
   { "Scintilla",    code_empty,        check_empty,       IUPSCINTILLA_H },
   { "WebBrowser",   code_empty,        check_empty,       IUPWEB_H },
@@ -176,6 +185,7 @@ elems[] =
   { "GLSeparator",  code_empty,        check_empty,       IUPGLCONTROLS_H },
   { "GLButton",     code_string,       check_string,      IUPGLCONTROLS_H },
   { "GLToggle",     code_string,       check_string,      IUPGLCONTROLS_H },
+  { "GLText",       code_string,       check_empty,       IUPGLCONTROLS_H  },
   { "GLProgressBar",code_empty,        check_empty,       IUPGLCONTROLS_H },
   { "GLVal",        code_empty,        check_empty,       IUPGLCONTROLS_H },
   { "GLLink",       code_string2,      check_string2,     IUPGLCONTROLS_H },
@@ -183,8 +193,7 @@ elems[] =
   { "GLExpander",   code_elem,         check_elem,        IUPGLCONTROLS_H },
   { "GLScrollBox",  code_elem,         check_elem,        IUPGLCONTROLS_H },
   { "GLSizeBox",    code_elem,         check_elem,        IUPGLCONTROLS_H },
-  { "GLBackgroundBox", code_elem,      check_elem,        IUPGL_H  },
-  { "@@@",          code_iupCpi,       check_iupCpi,      0  }
+  { "@@@",          code_unknown,      check_unknown,     0 }
 };
 #define nelems (sizeof(elems)/sizeof(elems[0]))
 
@@ -418,14 +427,15 @@ static void check_cb( Telem* elem )
 
 static void check_elem( Telem* elem )
 {
-  if (!verify_nparams( 1, 1, elem )) return;
-  param_elem( elem->params, 1, 0 );
+  if (!verify_nparams( -1, 1, elem )) return;
+  if (elem->nparams == 1)
+    param_elem( elem->params, 1, 0 );
 }
 
 static void check_elemlist( Telem* elem )
 {
   int i;
-  if (!verify_nparams( 1, -1, elem )) return;
+  if (!verify_nparams( -1, -1, elem )) return;
   for (i=0; i<elem->nparams; i++)
     param_elem( elem->params, i+1, 0 );
 }
@@ -433,7 +443,7 @@ static void check_elemlist( Telem* elem )
 static void check_elemlist_rep( Telem* elem )
 {
   int i;
-  if (!verify_nparams( 1, -1, elem )) return;
+  if (!verify_nparams( -1, -1, elem )) return;
   for (i=0; i<elem->nparams; i++)
     param_elem( elem->params, i+1, 1);
 }
@@ -441,7 +451,7 @@ static void check_elemlist_rep( Telem* elem )
 static void check_elemlist2( Telem* elem )
 {
   int i;
-  if (!verify_nparams( 1, 2, elem )) return;
+  if (!verify_nparams( -1, 2, elem )) return;
   for (i=0; i<elem->nparams; i++)
     param_elem( elem->params, i+1, 0 );
 }
@@ -467,7 +477,7 @@ static void check_string_elem( Telem* elem )
   param_elem( elem->params, 2, 0 );
 }
 
-static void check_iupCpi( Telem* elem )
+static void check_unknown(Telem* elem)
 {
   warning( "Unknown control %s used", elem->elemname );
 }
@@ -651,7 +661,7 @@ static void codeelemparam( Tparam* param )
 
 /****************************************************************/
 
-static void code_iupCpi( Telem* elem )
+static void code_unknown(Telem* elem)
 {
   int i=0;
   indent();
@@ -725,13 +735,18 @@ static void code_elem( Telem* elem )
 {
   fprintf( outfile, "(\n" );
   indent();
-  codeelemparam( elem->params[0] );
-  fprintf( outfile, "\n" );
+  if (elem->nparams == 1)
+  {
+    codeelemparam( elem->params[0] );
+    fprintf( outfile, "\n" ); 
+  }
   unindent();
   codeindent();
-  fprintf( outfile, ")" );
+  if (elem->nparams == 1)
+    fprintf( outfile, ")" );
+  else
+    fprintf( outfile, "NULL)" );
 }
-
 
 static void code_elemlist( Telem* elem )
 {
@@ -832,7 +847,7 @@ Telem* elem( char* name, Tlist* attrs, Tlist* params )
   if (params)
   {
     ret->nparams = params->size;
-    ret->params = list2paramvector( params );
+    ret->params = list2param( params );
   }
   else
   {
@@ -912,7 +927,7 @@ Tlist* revertlist( Tlist* l )
   return l;
 }
 
-Tparam** list2paramvector( Tlist* params )
+Tparam** list2param( Tlist* params )
 {
   int i = params->size;
   if (i)
@@ -942,7 +957,7 @@ void init(void)
   if (nocode) return;
   outfile = stdout;
 
-  outfile = fopen( outname, "w" );
+  outfile = fopen( outname, "wb" );
   if (!outfile) 
   {
     perror( outname );

@@ -1,0 +1,29 @@
+$(OBJDIR)/iupluascripterdlg.o: scripter/iupluascripterdlg.c \
+ /tecgraf/lua53/include/lua.h /tecgraf/lua53/include/luaconf.h \
+ /tecgraf/lua53/include/lauxlib.h /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/lualib.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iup_scintilla.h \
+ ../include/iup_config.h ../include/iuplua.h ../srclua5/il.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h \
+ ../src/iup_strmessage.h ../src/iup_register.h ../src/iup_childtree.h \
+ ../src/iup_drvinfo.h lh/debugger.lh lh/console.lh
+$(OBJDIR)/iupluascripter_debugger.o: scripter/iupluascripter_debugger.c \
+ /tecgraf/lua53/include/lua.h /tecgraf/lua53/include/luaconf.h \
+ /tecgraf/lua53/include/lauxlib.h /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/lualib.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iup_scintilla.h \
+ ../include/iup_config.h ../include/iuplua.h ../srclua5/il.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_attrib.h ../src/iup_str.h \
+ ../src/iup_strmessage.h ../src/iup_register.h ../src/iup_childtree.h \
+ ../src/iup_drvinfo.h
+$(OBJDIR)/iupluascripterdlg_images.o: scripter/iupluascripterdlg_images.c \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../include/iup_export.h
+$(OBJDIR)/il_luascripterdlg.o: scripter/il_luascripterdlg.c \
+ /tecgraf/lua53/include/lua.h /tecgraf/lua53/include/luaconf.h \
+ /tecgraf/lua53/include/lauxlib.h /tecgraf/lua53/include/lua.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupluascripterdlg.h ../srclua5/il.h lh/luascripterdlg.lh

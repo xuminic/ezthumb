@@ -30,7 +30,7 @@
 #define IUP_MAC_ERROR -1
 #define UNIMPLEMENTED printf("%s (%s %d) UNIMPLEMENTED\n",__func__,__FILE__,__LINE__);
 
-int iupdrvMakeDirectory(const char* name) 
+IUP_SDK_API int iupdrvMakeDirectory(const char* name)
 {
   mode_t oldmask = umask((mode_t)0);
   int fail =  mkdir(name, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP |
@@ -41,17 +41,17 @@ int iupdrvMakeDirectory(const char* name)
   return 1;
 }
 
-int iupdrvIsFile(const char* name)
+IUP_SDK_API int iupdrvIsFile(const char* name)
 {
   return BEntry(name).IsFile();
 }
 
-int iupdrvIsDirectory(const char* name)
+IUP_SDK_API int iupdrvIsDirectory(const char* name)
 {
   return BEntry(name).IsDirectory();
 }            
 
-char* iupdrvGetCurrentDirectory(void)
+IUP_SDK_API char* iupdrvGetCurrentDirectory(void)
 {
   size_t size = 256;
   char *buffer = (char *)malloc(size);
@@ -74,12 +74,12 @@ char* iupdrvGetCurrentDirectory(void)
   return NULL;
 }
 
-int iupdrvSetCurrentDirectory(const char* dir)
+IUP_SDK_API int iupdrvSetCurrentDirectory(const char* dir)
 {
   return chdir(dir) == 0? 1: 0;
 }
 
-int iupdrvGetWindowDecor(void* wnd, int *border, int *caption)
+IUP_SDK_API int iupdrvGetWindowDecor(void* wnd, int *border, int *caption)
 {
 	UNIMPLEMENTED
 
@@ -89,7 +89,7 @@ int iupdrvGetWindowDecor(void* wnd, int *border, int *caption)
   return 0;
 }
 
-void iupdrvGetScreenSize(int *width, int *height)
+IUP_SDK_API void iupdrvGetScreenSize(int *width, int *height)
 {
 	BScreen screen;
 	BRect frame = screen.Frame();
@@ -98,13 +98,13 @@ void iupdrvGetScreenSize(int *width, int *height)
 	if(height) *height = (int)frame.bottom + 1;
 }
 
-void iupdrvGetFullSize(int *width, int *height)
+IUP_SDK_API void iupdrvGetFullSize(int *width, int *height)
 {
 	// TODO is this only useful in mutli-monitor situations ?
 	iupdrvGetScreenSize(width, height);
 }
 
-int iupdrvGetScreenDepth(void)
+IUP_SDK_API int iupdrvGetScreenDepth(void)
 {
 	BScreen screen;
 
@@ -119,29 +119,29 @@ int iupdrvGetScreenDepth(void)
 	}
 }
 
-float iupdrvGetScreenDpi(void)
+IUP_SDK_API float iupdrvGetScreenDpi(void)
 {
 	UNIMPLEMENTED
 		return 0;
 }
 
-void iupdrvGetCursorPos(int *x, int *y)
+IUP_SDK_API void iupdrvGetCursorPos(int *x, int *y)
 {
 	UNIMPLEMENTED
 }
 
-void iupdrvGetKeyState(char* key)
+IUP_SDK_API void iupdrvGetKeyState(char* key)
 {
 	UNIMPLEMENTED
 }
 
-char* iupdrvLocaleInfo(void)
+IUP_SDK_API char* iupdrvLocaleInfo(void)
 {
   return iupStrGetMemoryCopy(nl_langinfo(CODESET));
 }
 
 /* Everything below is copypasted from mot/iupunix.c, but that one depends on X11 :( */
-char *iupdrvGetSystemName(void)
+IUP_SDK_API char *iupdrvGetSystemName(void)
 {
   struct utsname un;
   char *str = iupStrGetMemory(50); 
@@ -155,7 +155,7 @@ char *iupdrvGetSystemName(void)
   return str;
 }
 
-char *iupdrvGetSystemVersion(void)
+IUP_SDK_API char *iupdrvGetSystemVersion(void)
 {
   struct utsname un;
   char *str = iupStrGetMemory(100); 
@@ -176,15 +176,32 @@ char *iupdrvGetSystemVersion(void)
   return str;
 }
 
-char *iupdrvGetComputerName(void)
+IUP_SDK_API char *iupdrvGetComputerName(void)
 {
   char* str = iupStrGetMemory(50);
   gethostname(str, 50);
   return str;
 }
 
-char *iupdrvGetUserName(void)
+IUP_SDK_API char *iupdrvGetUserName(void)
 {
   return (char*)getlogin();
 }
 
+IUP_SDK_API int iupdrvGetPreferencePath(char *filename, int use_system)
+{
+  char* home = getenv("HOME");
+  if (home)
+  {
+    (void)use_system; /* unused */
+    /* UNIX format */
+    strcpy(filename, home);
+    strcat(filename, "/");
+    return 1;
+  }
+  else
+  {
+    filename[0] = '\0';
+    return 0;
+  }
+}

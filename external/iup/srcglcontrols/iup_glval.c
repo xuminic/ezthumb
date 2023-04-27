@@ -293,18 +293,18 @@ static int iGLValBUTTON_CB(Ihandle* ih, int button, int pressed, int x, int y, c
         iupAttribSet(ih, "PRESSED", NULL);
       else
       {
-        iupAttribSetInt(ih, "_IUP_START_X", x);
-        iupAttribSetInt(ih, "_IUP_START_Y", y);
+        iupAttribSetInt(ih, "_IUP_GLVAL_START_X", x);
+        iupAttribSetInt(ih, "_IUP_GLVAL_START_Y", y);
       }
     }
     else
     {
-      if (iupAttribGet(ih, "_IUP_DRAG"))
+      if (iupAttribGet(ih, "_IUP_GLVAL_DRAG"))
       {
         IFni cb = (IFni)IupGetCallback(ih, "VALUECHANGING_CB");
         if (cb) cb(ih, 0);
 
-        iupAttribSet(ih, "_IUP_DRAG", NULL);
+        iupAttribSet(ih, "_IUP_GLVAL_DRAG", NULL);
       }
     }
 
@@ -340,15 +340,15 @@ static int iGLValMOTION_CB(Ihandle* ih, int x, int y, char* status)
 
   if (pressed)
   {
-    int start_x = iupAttribGetInt(ih, "_IUP_START_X");
-    int start_y = iupAttribGetInt(ih, "_IUP_START_Y");
+    int start_x = iupAttribGetInt(ih, "_IUP_GLVAL_START_X");
+    int start_y = iupAttribGetInt(ih, "_IUP_GLVAL_START_Y");
 
     if (iGLValMoveHandler(ih, x - start_x, y - start_y))
     {
       iupGLSubCanvasRedraw(ih);
       redraw = 0;
 
-      if (!iupAttribGet(ih, "_IUP_DRAG"))
+      if (!iupAttribGet(ih, "_IUP_GLVAL_DRAG"))
       {
         IFni cb = (IFni)IupGetCallback(ih, "VALUECHANGING_CB");
         if (cb) cb(ih, 1);
@@ -356,11 +356,11 @@ static int iGLValMOTION_CB(Ihandle* ih, int x, int y, char* status)
 
       iupBaseCallValueChangedCb(ih);
 
-      iupAttribSet(ih, "_IUP_DRAG", "1");
+      iupAttribSet(ih, "_IUP_GLVAL_DRAG", "1");
     }
 
-    iupAttribSetInt(ih, "_IUP_START_X", x);
-    iupAttribSetInt(ih, "_IUP_START_Y", y);
+    iupAttribSetInt(ih, "_IUP_GLVAL_START_X", x);
+    iupAttribSetInt(ih, "_IUP_GLVAL_START_Y", y);
   }
 
   if (redraw)
@@ -493,9 +493,10 @@ Iclass* iupGLValNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glsubcanvas"));
 
   ic->name = "glval";
+  ic->cons = "GLVal";
   ic->format = NULL; /* no parameters */
   ic->nativetype = IUP_TYPEVOID;
-  ic->childtype   = IUP_CHILDNONE;
+  ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 0;
 
   /* Class functions */

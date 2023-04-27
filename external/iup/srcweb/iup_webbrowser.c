@@ -25,11 +25,23 @@
 #include "iup_layout.h"
 #include "iup_webbrowser.h"
 
+#ifdef IUPWEB_USE_DLOPEN
+extern int IupGtkWebBrowserDLOpen(void);
+#endif
 
-int IupWebBrowserOpen(void)
+IUPWEB_API int IupWebBrowserOpen(void)
 {
+  if (!IupIsOpened())
+    return IUP_ERROR;
+
 #ifdef WIN32
-  IupOleControlOpen();
+  if (IupOleControlOpen() == IUP_ERROR)
+    return IUP_ERROR;
+#endif
+
+#ifdef IUPWEB_USE_DLOPEN
+  if (IupGtkWebBrowserDLOpen() == IUP_ERROR)
+	  return IUP_ERROR;
 #endif
 
   if (IupGetGlobal("_IUP_WEBBROWSER_OPEN"))
@@ -41,7 +53,7 @@ int IupWebBrowserOpen(void)
   return IUP_NOERROR;
 }
 
-Ihandle *IupWebBrowser(void)
+IUPWEB_API Ihandle *IupWebBrowser(void)
 {
   return IupCreate("webbrowser");
 }

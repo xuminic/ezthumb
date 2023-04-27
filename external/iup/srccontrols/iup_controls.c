@@ -8,6 +8,8 @@
 #include "iup.h"
 #include "iupcontrols.h"
 
+#include <cd.h>
+
 #include "iup_object.h"
 #include "iup_childtree.h"
 #include "iup_register.h"
@@ -17,19 +19,22 @@
 
 int IupControlsOpen(void)
 {
+  if (!IupIsOpened())
+    return IUP_ERROR;
+
   if (IupGetGlobal("_IUP_CONTROLS_OPEN"))
     return IUP_OPENED;
 
-  iupRegisterClass(iupDialNewClass());
   iupRegisterClass(iupCellsNewClass());
-  iupRegisterClass(iupColorbarNewClass());
-  iupRegisterClass(iupColorBrowserNewClass());
   iupRegisterClass(iupMatrixNewClass());
-  iupRegisterClass(iupGaugeNewClass());
-  iupRegisterClass(iupColorBrowserDlgNewClass());
   iupRegisterClass(iupMatrixListNewClass());
+  iupRegisterClass(iupMatrixExNewClass());
 
   IupSetGlobal("_IUP_CONTROLS_OPEN", "1");
+
+  IupSetGlobal("CD_NAME", CD_NAME);
+  IupSetGlobal("CD_VERSION", cdVersion());
+  IupSetGlobal("CD_VERSIONDATE", cdVersionDate());
 
   return IUP_NOERROR;
 }

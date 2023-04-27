@@ -1,0 +1,384 @@
+$(OBJDIR)/iuplua.o: iuplua.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../src/iup_str.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iuplua.h il.h lh/iuplua.lh \
+ lh/constants.lh
+$(OBJDIR)/iuplua_api.o: iuplua_api.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupkey.h \
+ /tecgraf/lua53/include/lua.h /tecgraf/lua53/include/luaconf.h \
+ /tecgraf/lua53/include/lauxlib.h /tecgraf/lua53/include/lua.h \
+ ../include/iuplua.h il.h ../src/iup_attrib.h ../src/iup_globalattrib.h \
+ ../src/iup_object.h ../src/iup_class.h ../src/iup_table.h \
+ ../src/iup_classbase.h ../src/iup_str.h
+$(OBJDIR)/iuplua_draw.o: iuplua_draw.c ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupkey.h \
+ ../include/iupdraw.h /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iuplua.h il.h \
+ ../src/iup_attrib.h ../src/iup_globalattrib.h ../src/iup_object.h \
+ ../src/iup_class.h ../src/iup_table.h ../src/iup_classbase.h \
+ ../src/iup_str.h
+$(OBJDIR)/iuplua_tree_aux.o: iuplua_tree_aux.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h il.h
+$(OBJDIR)/iuplua_scanf.o: iuplua_scanf.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h il.h \
+ ../src/iup_str.h ../src/iup_predialogs.h
+$(OBJDIR)/iuplua_getparam.o: iuplua_getparam.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h il.h
+$(OBJDIR)/iuplua_getcolor.o: iuplua_getcolor.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h il.h
+$(OBJDIR)/iuplua_config.o: iuplua_config.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iup_config.h \
+ ../include/iuplua.h il.h lh/iup_config.lh
+$(OBJDIR)/il_button.o: elem/il_button.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/button.lh
+$(OBJDIR)/il_canvas.o: elem/il_canvas.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/canvas.lh
+$(OBJDIR)/il_dialog.o: elem/il_dialog.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/dialog.lh
+$(OBJDIR)/il_colordlg.o: elem/il_colordlg.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/colordlg.lh
+$(OBJDIR)/il_clipboard.o: elem/il_clipboard.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/clipboard.lh
+$(OBJDIR)/il_filedlg.o: elem/il_filedlg.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/filedlg.lh
+$(OBJDIR)/il_fill.o: elem/il_fill.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/fill.lh
+$(OBJDIR)/il_frame.o: elem/il_frame.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/frame.lh
+$(OBJDIR)/il_hbox.o: elem/il_hbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/hbox.lh
+$(OBJDIR)/il_normalizer.o: elem/il_normalizer.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/normalizer.lh
+$(OBJDIR)/il_gridbox.o: elem/il_gridbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/gridbox.lh
+$(OBJDIR)/il_item.o: elem/il_item.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/item.lh
+$(OBJDIR)/il_image.o: elem/il_image.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/image.lh
+$(OBJDIR)/il_imagergb.o: elem/il_imagergb.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/imagergb.lh
+$(OBJDIR)/il_imagergba.o: elem/il_imagergba.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/imagergba.lh
+$(OBJDIR)/il_label.o: elem/il_label.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/label.lh
+$(OBJDIR)/il_expander.o: elem/il_expander.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/expander.lh
+$(OBJDIR)/il_link.o: elem/il_link.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/link.lh
+$(OBJDIR)/il_menu.o: elem/il_menu.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/menu.lh
+$(OBJDIR)/il_multiline.o: elem/il_multiline.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/multiline.lh
+$(OBJDIR)/il_list.o: elem/il_list.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/list.lh
+$(OBJDIR)/il_separator.o: elem/il_separator.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/separator.lh
+$(OBJDIR)/il_user.o: elem/il_user.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/user.lh
+$(OBJDIR)/il_submenu.o: elem/il_submenu.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/submenu.lh
+$(OBJDIR)/il_text.o: elem/il_text.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/text.lh
+$(OBJDIR)/il_toggle.o: elem/il_toggle.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/toggle.lh
+$(OBJDIR)/il_vbox.o: elem/il_vbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/vbox.lh
+$(OBJDIR)/il_zbox.o: elem/il_zbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/zbox.lh
+$(OBJDIR)/il_timer.o: elem/il_timer.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/timer.lh
+$(OBJDIR)/il_sbox.o: elem/il_sbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/sbox.lh
+$(OBJDIR)/il_scrollbox.o: elem/il_scrollbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/scrollbox.lh
+$(OBJDIR)/il_split.o: elem/il_split.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/split.lh
+$(OBJDIR)/il_spin.o: elem/il_spin.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/spin.lh
+$(OBJDIR)/il_spinbox.o: elem/il_spinbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/spinbox.lh
+$(OBJDIR)/il_cbox.o: elem/il_cbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/cbox.lh
+$(OBJDIR)/il_radio.o: elem/il_radio.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/radio.lh
+$(OBJDIR)/il_val.o: elem/il_val.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/val.lh
+$(OBJDIR)/il_tabs.o: elem/il_tabs.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/tabs.lh
+$(OBJDIR)/il_fontdlg.o: elem/il_fontdlg.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/fontdlg.lh
+$(OBJDIR)/il_tree.o: elem/il_tree.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/tree.lh
+$(OBJDIR)/il_progressbar.o: elem/il_progressbar.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/progressbar.lh
+$(OBJDIR)/il_messagedlg.o: elem/il_messagedlg.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/messagedlg.lh
+$(OBJDIR)/il_progressdlg.o: elem/il_progressdlg.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/progressdlg.lh
+$(OBJDIR)/il_backgroundbox.o: elem/il_backgroundbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/backgroundbox.lh
+$(OBJDIR)/il_flatbutton.o: elem/il_flatbutton.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatbutton.lh
+$(OBJDIR)/il_animatedlabel.o: elem/il_animatedlabel.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/animatedlabel.lh
+$(OBJDIR)/il_calendar.o: elem/il_calendar.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/calendar.lh
+$(OBJDIR)/il_datepick.o: elem/il_datepick.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/datepick.lh
+$(OBJDIR)/il_param.o: elem/il_param.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/param.lh
+$(OBJDIR)/il_parambox.o: elem/il_parambox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/parambox.lh
+$(OBJDIR)/il_detachbox.o: elem/il_detachbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/detachbox.lh
+$(OBJDIR)/il_flatframe.o: elem/il_flatframe.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatframe.lh
+$(OBJDIR)/il_flattabs.o: elem/il_flattabs.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flattabs.lh
+$(OBJDIR)/il_flatscrollbox.o: elem/il_flatscrollbox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatscrollbox.lh
+$(OBJDIR)/il_dial.o: elem/il_dial.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/dial.lh
+$(OBJDIR)/il_colorbar.o: elem/il_colorbar.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/colorbar.lh
+$(OBJDIR)/il_gauge.o: elem/il_gauge.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/gauge.lh
+$(OBJDIR)/il_colorbrowser.o: elem/il_colorbrowser.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/colorbrowser.lh
+$(OBJDIR)/il_flatlabel.o: elem/il_flatlabel.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatlabel.lh
+$(OBJDIR)/il_dropbutton.o: elem/il_dropbutton.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/dropbutton.lh
+$(OBJDIR)/il_flattoggle.o: elem/il_flattoggle.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flattoggle.lh
+$(OBJDIR)/il_flatseparator.o: elem/il_flatseparator.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatseparator.lh
+$(OBJDIR)/il_space.o: elem/il_space.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/space.lh
+$(OBJDIR)/il_multibox.o: elem/il_multibox.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/multibox.lh
+$(OBJDIR)/il_flatlist.o: elem/il_flatlist.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatlist.lh
+$(OBJDIR)/il_flatval.o: elem/il_flatval.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flatval.lh
+$(OBJDIR)/il_thread.o: elem/il_thread.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/thread.lh
+$(OBJDIR)/il_flattree.o: elem/il_flattree.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../srclua5/il.h lh/flattree.lh

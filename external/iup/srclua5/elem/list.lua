@@ -9,7 +9,7 @@ local ctrl = {
   callback = {
      action = "snn", 
      multiselect_cb = "s",
-     edit_cb = "ns",
+     edit_cb = "ns", 
      dropdown_cb = "n",
      dblclick_cb = "ns",
    }

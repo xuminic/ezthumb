@@ -12,15 +12,15 @@
 #include "il.h"
 
 
-static int menu_open_cb(Ihandle *self)
-{
-  lua_State *L = iuplua_call_start(self, "open_cb");
-  return iuplua_call(L, 0);
-}
-
 static int menu_menuclose_cb(Ihandle *self)
 {
   lua_State *L = iuplua_call_start(self, "menuclose_cb");
+  return iuplua_call(L, 0);
+}
+
+static int menu_open_cb(Ihandle *self)
+{
+  lua_State *L = iuplua_call_start(self, "open_cb");
   return iuplua_call(L, 0);
 }
 
@@ -36,8 +36,8 @@ int iupmenulua_open(lua_State * L)
 {
   iuplua_register(L, Menu, "Menu");
 
-  iuplua_register_cb(L, "OPEN_CB", (lua_CFunction)menu_open_cb, NULL);
   iuplua_register_cb(L, "MENUCLOSE_CB", (lua_CFunction)menu_menuclose_cb, NULL);
+  iuplua_register_cb(L, "OPEN_CB", (lua_CFunction)menu_open_cb, NULL);
 
 #ifdef IUPLUA_USELOH
 #include "menu.loh"

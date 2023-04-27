@@ -1,0 +1,5 @@
+$(OBJDIR)/il_tuioclient.o: ctrl/il_tuioclient.c /tecgraf/lua53/include/lua.h \
+ /tecgraf/lua53/include/luaconf.h /tecgraf/lua53/include/lauxlib.h \
+ /tecgraf/lua53/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iuptuio.h ../srclua5/il.h lh/tuioclient.lh

@@ -12,27 +12,16 @@
 #include "il.h"
 
 
-static int flattabs_tabchange_cb(Ihandle *self, Ihandle * p0, Ihandle * p1)
+static int flattabs_flat_getfocus_cb(Ihandle *self)
 {
-  lua_State *L = iuplua_call_start(self, "tabchange_cb");
-  iuplua_pushihandle(L, p0);
-  iuplua_pushihandle(L, p1);
-  return iuplua_call(L, 2);
+  lua_State *L = iuplua_call_start(self, "flat_getfocus_cb");
+  return iuplua_call(L, 0);
 }
 
-static int flattabs_tabchangepos_cb(Ihandle *self, int p0, int p1)
+static int flattabs_flat_killfocus_cb(Ihandle *self)
 {
-  lua_State *L = iuplua_call_start(self, "tabchangepos_cb");
-  lua_pushinteger(L, p0);
-  lua_pushinteger(L, p1);
-  return iuplua_call(L, 2);
-}
-
-static int flattabs_tabclose_cb(Ihandle *self, int p0)
-{
-  lua_State *L = iuplua_call_start(self, "tabclose_cb");
-  lua_pushinteger(L, p0);
-  return iuplua_call(L, 1);
+  lua_State *L = iuplua_call_start(self, "flat_killfocus_cb");
+  return iuplua_call(L, 0);
 }
 
 static int FlatTabs(lua_State *L)
@@ -47,9 +36,8 @@ int iupflattabslua_open(lua_State * L)
 {
   iuplua_register(L, FlatTabs, "FlatTabs");
 
-  iuplua_register_cb(L, "TABCHANGE_CB", (lua_CFunction)flattabs_tabchange_cb, NULL);
-  iuplua_register_cb(L, "TABCHANGEPOS_CB", (lua_CFunction)flattabs_tabchangepos_cb, NULL);
-  iuplua_register_cb(L, "TABCLOSE_CB", (lua_CFunction)flattabs_tabclose_cb, NULL);
+  iuplua_register_cb(L, "FLAT_GETFOCUS_CB", (lua_CFunction)flattabs_flat_getfocus_cb, NULL);
+  iuplua_register_cb(L, "FLAT_KILLFOCUS_CB", (lua_CFunction)flattabs_flat_killfocus_cb, NULL);
 
 #ifdef IUPLUA_USELOH
 #include "flattabs.loh"

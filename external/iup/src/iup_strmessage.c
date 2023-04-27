@@ -21,15 +21,11 @@
 #include "iup_register.h"
 
 
-static void iStrMessageRegisterInternal(int lng, int utf8mode);
-
 static Itable *istrmessage_table = NULL;   /* the message hash table indexed by the name string */
 
 void iupStrMessageInit(void)
 {
   istrmessage_table = iupTableCreate(IUPTABLE_STRINGINDEXED);
-
-  iStrMessageRegisterInternal(0, 0);
 }
 
 void iupStrMessageFinish(void)
@@ -38,7 +34,7 @@ void iupStrMessageFinish(void)
   istrmessage_table = NULL;
 }
 
-char* IupGetLanguageString(const char* name)
+IUP_API char* IupGetLanguageString(const char* name)
 {
   char* value;
   if (!name) return NULL;
@@ -48,17 +44,17 @@ char* IupGetLanguageString(const char* name)
   return value;
 }
 
-void IupSetLanguageString(const char* name, const char* str)
+IUP_API void IupSetLanguageString(const char* name, const char* str)
 {
   iupTableSet(istrmessage_table, name, (char*)str, IUPTABLE_POINTER);
 }
 
-void IupStoreLanguageString(const char* name, const char* str)
+IUP_API void IupStoreLanguageString(const char* name, const char* str)
 {
   iupTableSet(istrmessage_table, name, (char*)str, IUPTABLE_STRING);
 }
 
-void IupSetLanguagePack(Ihandle* ih)
+IUP_API void IupSetLanguagePack(Ihandle* ih)
 {
   if (!ih)
     iupTableClear(istrmessage_table);
@@ -81,12 +77,12 @@ void IupSetLanguagePack(Ihandle* ih)
   }
 }
 
-void IupSetLanguage(const char *language)
+IUP_API void IupSetLanguage(const char *language)
 {
   IupStoreGlobal("LANGUAGE", language);
 }
 
-char *IupGetLanguage(void)
+IUP_API char *IupGetLanguage(void)
 {
   return IupGetGlobal("LANGUAGE");
 }
@@ -94,86 +90,118 @@ char *IupGetLanguage(void)
 
 /**********************************************************************************/
 
-
-#define ISRTMSG_NUM_LNG 4    /* 3+1 for expansion */
-                             /* ENGLISH, PORTUGUESE, PORTUGUESE(UTF-8), NULL */
-
-typedef struct _IstdMessage
+static void iupSetLngAttV(const char* first, va_list arglist)
 {
-  const char* name;
-  const char* lng_str[ISRTMSG_NUM_LNG];
-} IstdMessage;
-
-
-/* When seeing this file assuming ISO8859-1 encoding, lng=1 will appear correct.
-   When seeing this file assuming UTF-8 encoding, lng=2 will appear correct. */
-
-static IstdMessage iStdMessages[] =
-{
-  {"IUP_ERROR", {"Error", "Erro", NULL, NULL}},
-  {"IUP_YES", {"Yes", "Sim", NULL, NULL}},
-  {"IUP_NO", {"No", "Não", "NÃ£o", NULL}},
-  {"IUP_INVALIDDIR", {"Invalid directory.", "Diretório inválido.", "DiretÃ³rio invÃ¡lido.", NULL}},
-  {"IUP_FILEISDIR", {"The selected name is a directory.", "O nome selecionado é um diretório.", "O nome selecionado Ã© um diretÃ³rio.", NULL}},
-  {"IUP_FILENOTEXIST", {"File does not exist.", "Arquivo inexistente.", NULL, NULL}},
-  {"IUP_FILEOVERWRITE", {"Overwrite existing file?", "Sobrescrever arquivo?", NULL, NULL}},
-  {"IUP_CREATEFOLDER", {"Create Folder", "Criar Diretório", "Criar DiretÃ³rio", NULL}},
-  {"IUP_NAMENEWFOLDER", {"Name of the new folder:", "Nome do novo diretório:", "Nome do novo diretÃ³rio:", NULL}},
-  {"IUP_SAVEAS", {"Save As", "Salvar Como", NULL, NULL}},
-  {"IUP_OPEN", {"Open", "Abrir", NULL, NULL}},
-  {"IUP_SELECTDIR", {"Select Directory", "Selecionar Diretório", "Selecionar DiretÃ³rio", NULL}},
-  {"IUP_OK", {"OK", "OK", NULL, NULL}},
-  {"IUP_CANCEL", {"Cancel", "Cancelar", NULL, NULL}},
-  {"IUP_RETRY", {"Retry", "Tentar Novamente", NULL, NULL}},
-  {"IUP_APPLY", {"Apply", "Aplicar", NULL, NULL}},
-  {"IUP_RESET", {"Reset", "Reinicializar", NULL, NULL}},
-  {"IUP_GETCOLOR", {"Color Selection", "Seleção de Cor", "SeleÃ§Ã£o de Cor", NULL}},
-  {"IUP_HELP", {"Help", "Ajuda", NULL, NULL}},
-  {"IUP_RED", {"&Red:", "&Vermelho:", NULL, NULL}},
-  {"IUP_GREEN", {"&Green:", "V&erde:", NULL, NULL}},
-  {"IUP_BLUE", {"&Blue:", "&Azul:", NULL, NULL}},
-  {"IUP_HUE", {"&Hue:", "&Matiz:", NULL, NULL}},
-  {"IUP_SATURATION", {"&Saturation:", "&Saturação:", "&SaturaÃ§Ã£o:", NULL}},
-  {"IUP_INTENSITY", {"&Intensity:", NULL, "&Intensidade:", NULL}},
-  {"IUP_OPACITY", {"&Opacity:", "&Opacidade:", NULL, NULL}},
-  {"IUP_PALETTE", {"&Palette:", "&Paleta:", NULL, NULL}},
-  {"IUP_TRUE", {"True", "Verdadeiro", NULL, NULL}},
-  {"IUP_FALSE", {"False", "Falso", NULL, NULL}},
-  {"IUP_FAMILY", {"Family:", "Família:", "FamÃ­lia:", NULL}},
-  {"IUP_STYLE", {"Style:", "Estilo:", NULL, NULL}},
-  {"IUP_SIZE", {"Size:", "Tamanho:", NULL, NULL}},
-  {"IUP_SAMPLE", {"Sample:", "Exemplo:", NULL, NULL}},
-  {NULL, {NULL, NULL, NULL}}
-};
-
-static void iStrMessageRegisterInternal(int lng, int utf8mode)
-{
-  IstdMessage* messages = iStdMessages;
-  while (messages->name)
+  const char *name, *str;
+  name = first;
+  while (name)
   {
-    if (utf8mode && !(messages->lng_str[lng]))
-      IupSetLanguageString(messages->name, messages->lng_str[lng-1]);
-    else
-      IupSetLanguageString(messages->name, messages->lng_str[lng]);
-    messages++;
+    str = va_arg(arglist, const char*);
+
+    IupSetLanguageString(name, str);
+
+    name = va_arg(arglist, const char*);
   }
 }
 
+static void iupSetLngAtt(const char* first, ...)
+{
+  va_list arglist;
+  va_start(arglist, first);
+  iupSetLngAttV(first, arglist);
+  va_end(arglist);
+}
+
+#include "iup_lng_english.h"
+#include "iup_lng_portuguese.h"
+#include "iup_lng_portuguese_utf8.h"
+#include "iup_lng_spanish.h"
+#include "iup_lng_spanish_utf8.h"
+#ifdef IUP_CZECH
+#include "iup_lng_czech_utf8.h"
+#endif
+#ifdef IUP_RUSSIAN
+#include "iup_lng_russian_utf8.h"
+#endif
+
+static void iStrMessageRegisterInternal(const char* language)
+{
+  Ihandle* lng = NULL;
+
+  if (iupStrEqualNoCase(language, "ENGLISH"))
+  {
+    lng = iup_load_lng_english();
+  }
+  else if (iupStrEqualNoCase(language, "PORTUGUESE"))
+  {
+    if (IupGetInt(NULL, "UTF8MODE"))
+      lng = iup_load_lng_portuguese_utf8();
+    else
+      lng = iup_load_lng_portuguese();
+  }
+  else if (iupStrEqualNoCase(language, "SPANISH"))
+  {
+    if (IupGetInt(NULL, "UTF8MODE"))
+      lng = iup_load_lng_spanish_utf8();
+    else
+      lng = iup_load_lng_spanish();
+  }
+  /* To add a custom language */
+#ifdef IUP_CZECH
+  else if (iupStrEqualNoCase(language, "CZECH"))
+  {
+    if (IupGetInt(NULL, "UTF8MODE"))
+      lng = iup_load_lng_czech_utf8();
+  }
+#endif
+#ifdef IUP_RUSSIAN
+  else if (iupStrEqualNoCase(language, "RUSSIAN"))
+  {
+    if (IupGetInt(NULL, "UTF8MODE"))
+      lng = iup_load_lng_russian_utf8();
+  }
+#endif
+
+  if (lng)
+  {
+    IupSetLanguagePack(lng);
+    IupDestroy(lng);
+  }
+}
 
 void iupStrMessageUpdateLanguage(const char* language)
 {
   /* called after the global attribute is changed */
 
-  int lng = 0;  /* ENGLISH */
-  int utf8mode = IupGetInt(NULL, "UTF8MODE");
-  if (iupStrEqualNoCase(language, "PORTUGUESE"))
-  {
-    if (utf8mode)
-      lng = 2;
-    else
-      lng = 1;
-  }
+  iStrMessageRegisterInternal(language);
 
-  iStrMessageRegisterInternal(lng, utf8mode);
   iupRegisterUpdateClasses();
 }
+
+#if 0
+void iupSaveLanguagePack(const char* filename)
+{
+  char *name, *value;
+  int utf8mode = IupGetInt(NULL, "UTF8MODE");
+  char* lng = IupGetLanguage();
+
+  FILE* file = fopen(filename, "wb");
+
+  fprintf(file, "%s%s = user[\n", lng, utf8mode? "_UTF8": "");
+
+  name = iupTableFirst(istrmessage_table);
+  while (name)
+  {
+    value = (char*)iupTableGetCurr(istrmessage_table);
+
+    fprintf(file, "  %s = \"%s\",\n", name, value);
+
+    name = iupTableNext(istrmessage_table);
+  }
+
+  fprintf(file, "NULL = NULL\n");
+  fprintf(file, "]()\n");
+
+  fclose(file);
+}
+#endif

@@ -26,16 +26,16 @@ EchoDownloadTip()
 Copy_Dev_Extra_CD()
 {
   # Do NOT overwrite for FreeType
-  cp -fn $1libfreetype.a $TEC_SYSTEM_LIB
+  #cp -fn $1libfreetype.a $TEC_SYSTEM_LIB
   
   cp -fv $1libpdflib.a $TEC_SYSTEM_LIB
-  cp -fv $1libftgl.a $TEC_SYSTEM_LIB
+  #cp -fv $1libftgl.a $TEC_SYSTEM_LIB
 }
 
 Copy_Dev_To_System()
 {
   mkdir -p $TEC_SYSTEM_INC/$1
-  cp -fv include/*.h $TEC_SYSTEM_INC/$1
+  cp -fv include/*.h include/*.hpp $TEC_SYSTEM_INC/$1
   cp -fv $2lib$1*.a $TEC_SYSTEM_LIB
   
   if [ $1 == cd ]; then

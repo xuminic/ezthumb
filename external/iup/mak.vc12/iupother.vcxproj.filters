@@ -1,0 +1,656 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="cocoa">
+      <UniqueIdentifier>{dec0bd71-1a99-4169-9241-fff611ceb16a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="android">
+      <UniqueIdentifier>{ea454449-ad4f-47d9-a6b8-6f815d40f7c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cocoatouch">
+      <UniqueIdentifier>{363655c5-c3b8-4dd9-9ba9-b874959c53ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="emscripten">
+      <UniqueIdentifier>{30460eac-85f0-4214-a874-d270ae2a38d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="haiku">
+      <UniqueIdentifier>{b317cd37-a3be-4329-ab53-ef9cfc597a10}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\cocoa\iupcocoa_canvas.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\iupcocoa_dragdrop.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\iupcocoa_draw.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\iupcocoa_drv.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\IupCocoaFont.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\IupCocoaTreeToggleTableCellView.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\IUPCocoaVerticalAlignmentTextFieldCell.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\iupmac_keycodes.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\IUPTextSpinnerFilesOwner.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoa\IupAppDelegate.h">
+      <Filter>cocoa</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\android\iupandroid_jnicacheglobals.h">
+      <Filter>android</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\android\iupandroid_jnimacros.h">
+      <Filter>android</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\android\iupandroid_drv.h">
+      <Filter>android</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoatouch\IupLaunchViewController.h">
+      <Filter>cocoatouch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoatouch\IupNavigationController.h">
+      <Filter>cocoatouch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoatouch\IupViewController.h">
+      <Filter>cocoatouch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoatouch\IupAppDelegate.h">
+      <Filter>cocoatouch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoatouch\IupAppDelegateProtocol.h">
+      <Filter>cocoatouch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\cocoatouch\iupcocoatouch_drv.h">
+      <Filter>cocoatouch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\emscripten\iupemscripten_drv.h">
+      <Filter>emscripten</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\haiku\iuphaiku_drv.h">
+      <Filter>haiku</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\cocoa\iupcocoa_canvas.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_clipboard.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_colordlg.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_common.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_dialog.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_dragdrop.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_draw.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_filedlg.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_focus.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_font.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_fontdlg.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_frame.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_image.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_info.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_label.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_list.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_loop.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_menu.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_messagedlg.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_open.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_progressbar.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_tabs.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_text.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_timer.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_tips.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_toggle.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_tree.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_val.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\IupCocoaTreeToggleTableCellView.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\IUPCocoaVerticalAlignmentTextFieldCell.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupmac_globalattrib.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupmac_help.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupmac_info.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupmac_key.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\IUPTextSpinnerFilesOwner.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\IupAppDelegate.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_button.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoa\iupcocoa_calendar.m">
+      <Filter>cocoa</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_menu.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_messagedlg.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_open.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_progressbar.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_tabs.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_text.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_timer.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_tips.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_toggle.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_tree.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_val.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\IupLaunchViewController.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\IupNavigationController.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\IupViewController.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\IupAppDelegate.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_button.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_calendar.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_canvas.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_clipboard.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_colordlg.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_common.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_dialog.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_dragdrop.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_draw.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_filedlg.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_focus.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_font.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_fontdlg.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_frame.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_globalattrib.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_image.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_info.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_key.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_label.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_list.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\cocoatouch\iupcocoatouch_loop.m">
+      <Filter>cocoatouch</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_font.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_frame.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_label.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_list.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_progressbar.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_text.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_timer.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_button.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_common.js">
+      <Filter>emscripten</Filter>
+    </None>
+    <None Include="..\src\emscripten\iupemscripten_dialog.js">
+      <Filter>emscripten</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\android\iupandroid_key.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_label.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_list.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_loop.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_menu.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_messagedlg.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_open.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_progressbar.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_tabs.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_text.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_timer.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_tips.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_toggle.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_tree.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_val.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\main_c.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_button.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_calendar.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_canvas.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_clipboard.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_colordlg.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_common.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_dialog.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_dragdrop.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_draw.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_filedlg.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_focus.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_font.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_fontdlg.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_frame.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_globalattrib.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_help.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_image.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_info.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_jni_IupActivity.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_jni_IupApplication.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_jni_IupCommon.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_jni_IupLaunchActivity.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_jni_IupPostMessage.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\android\iupandroid_jnicacheglobals.c">
+      <Filter>android</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\cocoatouch\iupcocoatouch_help.c">
+      <Filter>cocoatouch</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_draw.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_filedlg.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_focus.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_font.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_fontdlg.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_frame.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_globalattrib.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_help.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_image.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_info.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_key.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_label.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_list.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_loop.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_menu.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_messagedlg.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_open.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_progressbar.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_tabs.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_text.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_timer.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_tips.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_toggle.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_tree.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_val.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_button.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_calendar.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_canvas.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_clipboard.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_colordlg.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_common.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_dialog.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\emscripten\iupemscripten_dragdrop.c">
+      <Filter>emscripten</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_filedlg.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_focus.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_font.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_fontdlg.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_frame.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_globalattrib.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_help.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_image.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_info.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_label.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_list.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_loop.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_menu.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_messagedlg.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_open.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_progressbar.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_tabs.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_text.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_timer.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_tips.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_toggle.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_tree.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_val.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iupmac_help.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_button.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_canvas.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_clipboard.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_common.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_dialog.cpp">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_dragdrop.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\haiku\iuphaiku_draw.c">
+      <Filter>haiku</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

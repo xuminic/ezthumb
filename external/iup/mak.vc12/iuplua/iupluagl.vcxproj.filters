@@ -30,6 +30,12 @@
     <None Include="..\..\srclua5\ctrl\glbackgroundbox.lua">
       <Filter>Lua</Filter>
     </None>
+    <None Include="..\..\srclua5\lh\glbackgroundbox.lh">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\srclua5\lh\glcanvas.lh">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\iupluagl.h">

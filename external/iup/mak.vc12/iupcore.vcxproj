@@ -96,21 +96,42 @@
     <ClCompile Include="..\src\iup_class.c" />
     <ClCompile Include="..\src\iup_classattrib.c" />
     <ClCompile Include="..\src\iup_classbase.c" />
+    <ClCompile Include="..\src\iup_classinfo.c" />
+    <ClCompile Include="..\src\iup_colorbar.c" />
+    <ClCompile Include="..\src\iup_colorbrowser.c" />
+    <ClCompile Include="..\src\iup_colorhsi.c" />
     <ClCompile Include="..\src\iup_config.c" />
     <ClCompile Include="..\src\iup_detachbox.c" />
+    <ClCompile Include="..\src\iup_dial.c" />
     <ClCompile Include="..\src\iup_dlglist.c" />
     <ClCompile Include="..\src\iup_draw.c" />
+    <ClCompile Include="..\src\iup_dropbutton.c" />
+    <ClCompile Include="..\src\iup_elempropdlg.c" />
     <ClCompile Include="..\src\iup_expander.c" />
+    <ClCompile Include="..\src\iup_export.c" />
     <ClCompile Include="..\src\iup_flatbutton.c" />
     <ClCompile Include="..\src\iup_flatframe.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\iup_flatlabel.c" />
+    <ClCompile Include="..\src\iup_flatlist.c" />
+    <ClCompile Include="..\src\iup_flatscrollbar.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\src\iup_flatscrollbox.c" />
+    <ClCompile Include="..\src\iup_flatseparator.c" />
     <ClCompile Include="..\src\iup_flattabs.c" />
+    <ClCompile Include="..\src\iup_flattoggle.c" />
+    <ClCompile Include="..\src\iup_flattree.c" />
+    <ClCompile Include="..\src\iup_flatval.c" />
     <ClCompile Include="..\src\iup_focus.c" />
     <ClCompile Include="..\src\iup_font.c" />
     <ClCompile Include="..\src\iup_func.c" />
+    <ClCompile Include="..\src\iup_gauge.c" />
     <ClCompile Include="..\src\iup_globalattrib.c" />
+    <ClCompile Include="..\src\iup_globalsdlg.c" />
     <ClCompile Include="..\src\iup_gridbox.c" />
     <ClCompile Include="..\src\iup_key.c" />
     <ClCompile Include="..\src\iup_layout.c" />
@@ -118,9 +139,11 @@
     <ClCompile Include="..\src\iup_ledparse.c" />
     <ClCompile Include="..\src\iup_linefile.c" />
     <ClCompile Include="..\src\iup_link.c" />
+    <ClCompile Include="..\src\iup_loop.c" />
     <ClCompile Include="..\src\iup_mask.c" />
     <ClCompile Include="..\src\iup_maskmatch.c" />
     <ClCompile Include="..\src\iup_maskparse.c" />
+    <ClCompile Include="..\src\iup_multibox.c" />
     <ClCompile Include="..\src\iup_names.c" />
     <ClCompile Include="..\src\iup_object.c" />
     <ClCompile Include="..\src\iup_open.c" />
@@ -128,9 +151,11 @@
     <ClCompile Include="..\src\iup_recplay.c" />
     <ClCompile Include="..\src\iup_register.c" />
     <ClCompile Include="..\src\iup_show.c" />
+    <ClCompile Include="..\src\iup_space.c" />
     <ClCompile Include="..\src\iup_str.c" />
     <ClCompile Include="..\src\iup_strmessage.c" />
     <ClCompile Include="..\src\iup_table.c" />
+    <ClCompile Include="..\src\iup_thread.c" />
     <ClCompile Include="..\src\win\iupwindows_info.c" />
     <ClCompile Include="..\src\win\iupwindows_main.c" />
     <ClCompile Include="..\src\iup_box.c" />
@@ -174,18 +199,24 @@
     <ClInclude Include="..\include\iupdraw.h" />
     <ClInclude Include="..\include\iup_class_cbs.hpp" />
     <ClInclude Include="..\include\iup_config.h" />
+    <ClInclude Include="..\include\iup_export.h" />
     <ClInclude Include="..\include\iup_plus.h" />
+    <ClInclude Include="..\include\iup_varg.h" />
     <ClInclude Include="..\src\iup_array.h" />
     <ClInclude Include="..\src\iup_assert.h" />
     <ClInclude Include="..\src\iup_attrib.h" />
     <ClInclude Include="..\src\iup_childtree.h" />
     <ClInclude Include="..\src\iup_class.h" />
     <ClInclude Include="..\src\iup_classbase.h" />
+    <ClInclude Include="..\src\iup_colorhsi.h" />
     <ClInclude Include="..\src\iup_dlglist.h" />
+    <ClInclude Include="..\src\iup_draw.h" />
     <ClInclude Include="..\src\iup_drv.h" />
     <ClInclude Include="..\src\iup_drvdraw.h" />
     <ClInclude Include="..\src\iup_drvfont.h" />
     <ClInclude Include="..\src\iup_drvinfo.h" />
+    <ClInclude Include="..\src\iup_flatscrollbar.h" />
+    <ClInclude Include="..\src\iup_flattree.h" />
     <ClInclude Include="..\src\iup_focus.h" />
     <ClInclude Include="..\src\iup_func.h" />
     <ClInclude Include="..\src\iup_globalattrib.h" />
@@ -193,6 +224,7 @@
     <ClInclude Include="..\src\iup_layout.h" />
     <ClInclude Include="..\src\iup_ledlex.h" />
     <ClInclude Include="..\src\iup_linefile.h" />
+    <ClInclude Include="..\src\iup_loop.h" />
     <ClInclude Include="..\src\iup_mask.h" />
     <ClInclude Include="..\src\iup_maskmatch.h" />
     <ClInclude Include="..\src\iup_maskparse.h" />

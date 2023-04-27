@@ -83,7 +83,9 @@ Iclass* iupGLLinkNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("gllabel"));
 
   ic->name = "gllink";
+  ic->cons = "GLLink";
   ic->format = "ss"; /* two strings */
+  ic->format_attr = "URL";  /* must handle TITLE manually */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDNONE;
   ic->is_interactive = 0;

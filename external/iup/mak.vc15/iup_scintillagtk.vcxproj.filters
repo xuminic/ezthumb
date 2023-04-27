@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\srcscintilla\scintilla$(SCINTILLA_NUMBER)\gtk\PlatGTK.cxx">
+      <Filter>Scintilla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srcscintilla\scintilla$(SCINTILLA_NUMBER)\gtk\scintilla-marshal.c">
+      <Filter>Scintilla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srcscintilla\scintilla$(SCINTILLA_NUMBER)\gtk\ScintillaGTK.cxx">
+      <Filter>Scintilla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\srcscintilla\iup_scintilla_gtk.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Scintilla">
+      <UniqueIdentifier>{1f863d28-5e81-4960-82a4-c059cf0809c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scintilla\inc">
+      <UniqueIdentifier>{45152954-9029-4d77-b508-5c9882cfde56}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\srcscintilla\scintilla$(SCINTILLA_NUMBER)\gtk\Converter.h">
+      <Filter>Scintilla\inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\srcscintilla\scintilla$(SCINTILLA_NUMBER)\gtk\scintilla-marshal.h">
+      <Filter>Scintilla\inc</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

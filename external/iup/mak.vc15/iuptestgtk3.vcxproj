@@ -1,0 +1,236 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{2F92EC58-ABBB-40B2-5258-716DB872E1E3}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\bin\Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\bin\Debug_64\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\obj\Debug\$(ProjectName)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\obj\Debug_64\$(ProjectName)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</GenerateManifest>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Midl>
+      <TypeLibraryName>..\bin\$(ProjectName).tlb</TypeLibraryName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;\lng\gtk3\include\atk-1.0;\lng\gtk3\include\cairo;\lng\gtk3\include\glib-2.0;\lng\gtk3\include\gtk-3.0;\lng\gtk3\include\gdk-pixbuf-2.0;\lng\gtk3\include\pango-1.0;\lng\gtk3\lib\glib-2.0\include;..\..\cd\include;\lng\vld\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;BIG_TEST;USE_OPENGL;PLOT_TEST;MGLPLOT_TEST;GTK_DISABLE_DEPRECATED;GDK_DISABLE_DEPRECATED;GSEAL_ENABLE;USE_GDK;USE_GTK3;inline=;NO_WEBBROWSER_TEST;NO_SCINTILLA_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0416</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;gtk-win32-3.0.lib;gdk-win32-3.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk3.lib;iupgl.lib;iupcontrols.lib;iupimglib.lib;iup_mglplot.lib;cdgdk3.lib;ftgl.lib;zlib1.lib;iupcd.lib;cdgl.lib;cairo.lib;pangocairo-1.0.lib;freetype6.lib;im.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>..\lib\Debug;\lng\gtk3\lib;..\..\cd\lib\Debug;..\..\im\lib\Debug;..\..\freetype\lib\Debug;..\..\ftgl\lib\Debug;..\..\zlib\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TypeLibraryName>..\bin\$(ProjectName).tlb</TypeLibraryName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\include;\lng\gtk3_x64\include\atk-1.0;\lng\gtk3_x64\include\cairo;\lng\gtk3_x64\include\glib-2.0;\lng\gtk3_x64\include\gtk-3.0;\lng\gtk3_x64\include\gdk-pixbuf-2.0;\lng\gtk3_x64\include\pango-1.0;\lng\gtk3_x64\lib\glib-2.0\include;..\..\cd\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CRT_SECURE_NO_DEPRECATE;BIG_TEST;USE_OPENGL;PLOT_TEST;MGLPLOT_TEST;GTK_DISABLE_DEPRECATED;GDK_DISABLE_DEPRECATED;GSEAL_ENABLE;USE_GDK;USE_GTK3;inline=;NO_WEBBROWSER_TEST;NO_SCINTILLA_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level4</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0416</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/MACHINE:X64 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>comctl32.lib;ole32.lib;opengl32.lib;glu32.lib;gtk-3.0.lib;gdk-3.0.lib;gdk_pixbuf-2.0.lib;pango-1.0.lib;pangowin32-1.0.lib;gobject-2.0.lib;gmodule-2.0.lib;glib-2.0.lib;iupgtk3.lib;iupgl.lib;iupcontrols.lib;iupglcontrols.lib;iupimglib.lib;iup_plot.lib;iup_mglplot.lib;cdgdk3.lib;ftgl.lib;zlib1.lib;iupcd.lib;cdgl.lib;cairo.lib;pangocairo-1.0.lib;freetype6.lib;im.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>..\lib\Debug_64;\lng\vcpkg\installed\x64-windows\lib;..\..\cd\lib\Debug_64;..\..\im\lib\Debug_64;..\..\freetype\lib\Debug_64;..\..\ftgl\lib\Debug_64;..\..\zlib\lib\Debug_64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="..\html\examples\tests\dial.led" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\html\examples\tests\bigtest.c" />
+    <ClCompile Include="..\html\examples\tests\button.c" />
+    <ClCompile Include="..\html\examples\tests\calendar.c" />
+    <ClCompile Include="..\html\examples\tests\canvas.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_cddbuffer.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_cdsimple.c" />
+    <ClCompile Include="..\html\examples\tests\canvas_scrollbar.c" />
+    <ClCompile Include="..\html\examples\tests\cbox.c" />
+    <ClCompile Include="..\html\examples\tests\cells_checkboard.c" />
+    <ClCompile Include="..\html\examples\tests\cells_degrade.c" />
+    <ClCompile Include="..\html\examples\tests\cells_numbering.c" />
+    <ClCompile Include="..\html\examples\tests\charac.c" />
+    <ClCompile Include="..\html\examples\tests\class_conf.c" />
+    <ClCompile Include="..\html\examples\tests\clipboard.c" />
+    <ClCompile Include="..\html\examples\tests\colorbar.c" />
+    <ClCompile Include="..\html\examples\tests\colorbrowser.c" />
+    <ClCompile Include="..\html\examples\tests\detachbox.c" />
+    <ClCompile Include="..\html\examples\tests\dial.c" />
+    <ClCompile Include="..\html\examples\tests\dialog.c" />
+    <ClCompile Include="..\html\examples\tests\dial_led.c" />
+    <ClCompile Include="..\html\examples\tests\dropbutton.c" />
+    <ClCompile Include="..\html\examples\tests\expander.c" />
+    <ClCompile Include="..\html\examples\tests\flatbutton.c" />
+    <ClCompile Include="..\html\examples\tests\flatframe.c" />
+    <ClCompile Include="..\html\examples\tests\flatlabel.c" />
+    <ClCompile Include="..\html\examples\tests\flatlist.c" />
+    <ClCompile Include="..\html\examples\tests\flatsample.c" />
+    <ClCompile Include="..\html\examples\tests\flatscrollbox.c" />
+    <ClCompile Include="..\html\examples\tests\flattabs.c" />
+    <ClCompile Include="..\html\examples\tests\flattoggle.c" />
+    <ClCompile Include="..\html\examples\tests\flatval.c" />
+    <ClCompile Include="..\html\examples\tests\frame.c" />
+    <ClCompile Include="..\html\examples\tests\gauge.c" />
+    <ClCompile Include="..\html\examples\tests\getcolor.c" />
+    <ClCompile Include="..\html\examples\tests\getparam.c" />
+    <ClCompile Include="..\html\examples\tests\glcanvas.c" />
+    <ClCompile Include="..\html\examples\tests\glcanvas_cube.c" />
+    <ClCompile Include="..\html\examples\tests\gridbox.c" />
+    <ClCompile Include="..\html\examples\tests\hbox.c" />
+    <ClCompile Include="..\html\examples\tests\idle.c" />
+    <ClCompile Include="..\html\examples\tests\label.c" />
+    <ClCompile Include="..\html\examples\tests\link.c" />
+    <ClCompile Include="..\html\examples\tests\list.c" />
+    <ClCompile Include="..\html\examples\tests\mathglsamples.c" />
+    <ClCompile Include="..\html\examples\tests\matrix.c" />
+    <ClCompile Include="..\html\examples\tests\matrixlist.c" />
+    <ClCompile Include="..\html\examples\tests\matrix_cbmode.c" />
+    <ClCompile Include="..\html\examples\tests\matrix_cbs.c" />
+    <ClCompile Include="..\html\examples\tests\mdi.c" />
+    <ClCompile Include="..\html\examples\tests\menu.c" />
+    <ClCompile Include="..\html\examples\tests\mgllabel.c" />
+    <ClCompile Include="..\html\examples\tests\mglplot.c" />
+    <ClCompile Include="..\html\examples\tests\multibox.c" />
+    <ClCompile Include="..\html\examples\tests\plot.c" />
+    <ClCompile Include="..\html\examples\tests\predialogs.c" />
+    <ClCompile Include="..\html\examples\tests\progressbar.c" />
+    <ClCompile Include="..\html\examples\tests\progressdlg.c" />
+    <ClCompile Include="..\html\examples\tests\sample.c" />
+    <ClCompile Include="..\html\examples\tests\sbox.c" />
+    <ClCompile Include="..\html\examples\tests\scanf.c" />
+    <ClCompile Include="..\html\examples\tests\scrollbox.c" />
+    <ClCompile Include="..\html\examples\tests\spin.c" />
+    <ClCompile Include="..\html\examples\tests\split.c" />
+    <ClCompile Include="..\html\examples\tests\sysinfo.c" />
+    <ClCompile Include="..\html\examples\tests\tabs.c" />
+    <ClCompile Include="..\html\examples\tests\text.c" />
+    <ClCompile Include="..\html\examples\tests\text_spin.c" />
+    <ClCompile Include="..\html\examples\tests\timer.c" />
+    <ClCompile Include="..\html\examples\tests\toggle.c" />
+    <ClCompile Include="..\html\examples\tests\tray.c" />
+    <ClCompile Include="..\html\examples\tests\tree.c" />
+    <ClCompile Include="..\html\examples\tests\val.c" />
+    <ClCompile Include="..\html\examples\tests\vbox.c" />
+    <ClCompile Include="..\html\examples\tests\zbox.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="iupcd.vcxproj">
+      <Project>{be7472e1-e76e-4969-a35f-054614f5884e}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="iupcontrols.vcxproj">
+      <Project>{5eefe977-c56d-462f-bdee-12a5452eb8cc}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="iupcore.vcxproj">
+      <Project>{2c7e83b9-7fe8-432a-97ba-fcf4d0728408}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="iupgl.vcxproj">
+      <Project>{e251b4f4-0b0a-482b-ba18-2509adc4b6aa}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="iupgtk3.vcxproj">
+      <Project>{2c7e83b9-12e8-abc5-97ba-a5d8d0728408}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="iupim.vcxproj">
+      <Project>{e251b4f4-0b0a-482b-ba18-1234adc4b6aa}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

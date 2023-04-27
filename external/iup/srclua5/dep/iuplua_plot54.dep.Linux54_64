@@ -1,0 +1,14 @@
+$(OBJDIR)/iuplua_plot.o: ctrl/iuplua_plot.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lualib.h \
+ /tecgraf/lua54/include/lua.h /tecgraf/lua54/include/lauxlib.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../include/iup_export.h ../include/iup_plot.h /tecgraf/cd/include/cd.h \
+ /tecgraf/cd/include/cdlua.h ../include/iuplua.h ../include/iuplua_plot.h \
+ ../srclua5/il.h ../src/iup_object.h ../src/iup_class.h \
+ ../src/iup_table.h ../src/iup_classbase.h ../src/iup_assert.h \
+ ../src/iup_predialogs.h ../src/iup_str.h
+$(OBJDIR)/il_plot.o: ctrl/il_plot.c /tecgraf/lua54/include/lua.h \
+ /tecgraf/lua54/include/luaconf.h /tecgraf/lua54/include/lauxlib.h \
+ /tecgraf/lua54/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iup_plot.h ../srclua5/il.h lh/plot.lh

@@ -27,13 +27,19 @@
 
 #include "iupgtk_drv.h"
 
+void iupdrvLabelAddExtraPadding(Ihandle* ih, int *x, int *y)
+{
+  (void)ih;
+  (void)x;
+  (void)y;
+}
 
 static int gtkLabelSetBgColorAttrib(Ihandle* ih, const char* value)
 {
   GtkWidget* eventbox = (GtkWidget*)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   unsigned char r, g, b;
 
-  /* ignore given value, must use only from parent for the scrollbars */
+  /* ignore given value, must use only from parent */
   char* parent_value = iupBaseNativeParentGetBgColor(ih);
 
   if (iupStrToRGB(parent_value, &r, &g, &b))
@@ -116,7 +122,7 @@ static int gtkLabelSetAlignmentAttrib(Ihandle* ih, const char* value)
       xalign = 0.5f;
       alignment = PANGO_ALIGN_CENTER;
     }
-    else /* "ALEFT" */
+    else /* "ALEFT" (default) */
     {
       xalign = 0;
       alignment = PANGO_ALIGN_LEFT;
@@ -147,11 +153,8 @@ static int gtkLabelSetPaddingAttrib(Ihandle* ih, const char* value)
 
   if (ih->handle && ih->data->type != IUP_LABEL_SEP_HORIZ && ih->data->type != IUP_LABEL_SEP_VERT)
   {
-#if GTK_CHECK_VERSION(3, 14, 0)
-    g_object_set(G_OBJECT(ih->handle), "margin-bottom", ih->data->vert_padding, NULL);
-    g_object_set(G_OBJECT(ih->handle), "margin-top", ih->data->vert_padding, NULL);
-    g_object_set(G_OBJECT(ih->handle), "margin-left", ih->data->horiz_padding, NULL);
-    g_object_set(G_OBJECT(ih->handle), "margin-right", ih->data->horiz_padding, NULL);
+#if GTK_CHECK_VERSION(3, 4, 0)
+    iupgtkSetMargin(ih->handle, ih->data->horiz_padding, ih->data->vert_padding, 1);
 #else
     GtkMisc* misc = (GtkMisc*)ih->handle;
     gtk_misc_set_padding(misc, ih->data->horiz_padding, ih->data->vert_padding);
@@ -168,7 +171,7 @@ static void gtkLabelSetPixbuf(Ihandle* ih, const char* name, int make_inactive)
 
   if (name)
   {
-    GdkPixbuf* pixbuf = iupImageGetImage(name, ih, make_inactive);
+    GdkPixbuf* pixbuf = iupImageGetImage(name, ih, make_inactive, NULL);
     GdkPixbuf* old_pixbuf = gtk_image_get_pixbuf(image_label);
     if (pixbuf != old_pixbuf)
       gtk_image_set_from_pixbuf(image_label, pixbuf);

@@ -19,6 +19,29 @@
 #include "il.h"
 
 
+static int CopyUserData2String(lua_State *L)
+{
+  void* udata = lua_touserdata(L, 1);
+  size_t size = luaL_checkinteger(L, 2);
+  char* str = malloc(size);
+  memcpy(str, udata, size);  /* buffer must contain the terminator */
+  lua_pushlstring(L, str, size - 1); /* len */
+  free(str);
+  return 1;
+}
+
+static int CopyString2UserData(lua_State *L)
+{
+  size_t len;
+  const char* str = luaL_checklstring(L, 1, &len);
+  void* udata = lua_touserdata(L, 2);
+  size_t size = luaL_checkinteger(L, 3);
+  if (len >= size) len = size-1;
+  memcpy(udata, str, len);
+  ((char*)udata)[len] = 0;
+  return 0;
+}
+
 static int StringCompare(lua_State *L)
 {
   const char* str1 = luaL_optstring(L, 1, NULL);
@@ -30,6 +53,32 @@ static int StringCompare(lua_State *L)
   return 1;
 }
 
+static int StringChangeCase(lua_State *L)
+{
+  int utf8 = IupGetInt(NULL, "UTF8MODE");
+  const char* str = luaL_checkstring(L, 1);
+  char* dst_str = iupStrDup(str);
+  const char* flag = luaL_checkstring(L, 2);
+  int case_flag = IUP_CASE_UPPER;
+  if (iupStrEqualNoCase(flag, "UPPER"))
+    case_flag = IUP_CASE_UPPER;
+  else if (iupStrEqualNoCase(flag, "LOWER"))
+    case_flag = IUP_CASE_LOWER;
+  else if (iupStrEqualNoCase(flag, "TOGGLE"))
+    case_flag = IUP_CASE_TOGGLE;
+  else if (iupStrEqualNoCase(flag, "TITLE"))
+    case_flag = IUP_CASE_TITLE;
+  iupStrChangeCase(dst_str, str, case_flag, utf8);
+  lua_pushstring(L, dst_str);
+  free(dst_str);
+  return 1;
+}
+
+
+
+/*******************************  Error Handling *****************************************/
+
+
 static int show_error_continue_action(Ihandle* ih)
 {
   (void)ih;
@@ -38,7 +87,7 @@ static int show_error_continue_action(Ihandle* ih)
 
 static int show_error_exit_action(Ihandle* ih)
 {
-  if (ih) /* just to avoid a warning */
+  if (ih) /* just to avoid a warning at return */
     exit(EXIT_FAILURE);
   return IUP_DEFAULT;
 }
@@ -51,26 +100,27 @@ static int show_error_copy_action(Ihandle* ih)
   return IUP_DEFAULT;
 }
 
-void iuplua_show_error_message(const char *pname, const char* msg)
+IUPLUA_API void iuplua_show_error_message(const char *pname, const char* msg)
 {
   Ihandle *multi_text, *lbl, *copy, *button, *box, *dlg, *abort, *buttonbox;
   char* value = IupGetGlobal("LUA_ERROR_LABEL");
 
-  if (!pname) pname = "Lua Error!";
+  if (!pname) pname = "_@IUP_ERROR";
 
-  lbl = IupLabel("Internal error.");
+  lbl = IupLabel("_@IUP_LUAERROR");
   IupSetAttribute(lbl, "EXPAND", "HORIZONTAL");
   if (value) IupSetStrAttribute(lbl, "TITLE", value);
 
-  copy = IupButton("Copy", NULL);
+  copy = IupButton("_@IUP_COPY", NULL);
+  IupSetStrAttribute(copy, "TIP", "_@IUP_COPYTOCLIPBOARD");
   IupSetStrAttribute(copy, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(copy, "ACTION", show_error_copy_action);
 
-  button = IupButton("Continue", NULL);
+  button = IupButton("_@IUP_CONTINUE", NULL);
   IupSetStrAttribute(button, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(button, "ACTION", show_error_continue_action);
 
-  abort = IupButton("Exit", NULL);
+  abort = IupButton("_@IUP_EXIT", NULL);
   IupSetStrAttribute(abort, "PADDING", IupGetGlobal("DEFAULTBUTTONPADDING"));
   IupSetCallback(abort, "ACTION", show_error_exit_action);
 
@@ -117,10 +167,7 @@ static int il_error_message(lua_State *L)
 
 static void show_error(lua_State *L, const char *msg)
 {
-  iuplua_get_env(L);
-  lua_pushstring(L, "_ERRORMESSAGE");
-  lua_gettable(L, -2);
-  lua_remove(L, -2);  /* remove global table from stack */
+  iuplua_push_name(L, "_ERRORMESSAGE");
 
   if (lua_isnil(L, -1))
   {
@@ -151,6 +198,21 @@ static int report (lua_State *L, int status)
 }
 
 #if LUA_VERSION_NUM	> 501
+#if LUA_VERSION_NUM	> 502
+static int traceback (lua_State *L) {
+  const char *msg = lua_tostring(L, 1);
+  if (msg == NULL) {  /* is error object not a string? */
+    if (luaL_callmeta(L, 1, "__tostring") &&  /* does it have a metamethod */
+        lua_type(L, -1) == LUA_TSTRING)  /* that produces a string? */
+        return 1;  /* that is the message */
+    else
+      msg = lua_pushfstring(L, "(error object is a %s value)",
+      luaL_typename(L, 1));
+  }
+  luaL_traceback(L, L, msg, 1);  /* append a standard traceback */
+  return 1;  /* return the traceback */
+}
+#else
 static int traceback(lua_State *L) {
   const char *msg = lua_tostring(L, 1);
   if (msg)
@@ -161,6 +223,7 @@ static int traceback(lua_State *L) {
   }
   return 1;
 }
+#endif
 #else
 static int traceback(lua_State *L) {
   if (!lua_isstring(L, 1))  /* 'message' not a string? */
@@ -182,11 +245,25 @@ static int traceback(lua_State *L) {
 }
 #endif
 
+static void push_tracefunc(lua_State *L)
+{
+  iuplua_get_env(L);
+  lua_pushstring(L, "_TRACEBACK");
+  lua_gettable(L, -2);
+  lua_remove(L, -2);  /* remove global table from stack */
+
+  if (lua_isnil(L, -1))
+  {
+    lua_pop(L, 1);
+    lua_pushcfunction(L, traceback);  /* push traceback function */
+  }
+}
+
 static int docall (lua_State *L, int narg, int nret) 
 {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
-  lua_pushcfunction(L, traceback);  /* push traceback function */
+  push_tracefunc(L);  /* push traceback function */
   lua_insert(L, base);  /* put it under chunk and args */
   status = lua_pcall(L, narg, nret, base);
   lua_remove(L, base);  /* remove traceback function */
@@ -198,7 +275,16 @@ static int docall (lua_State *L, int narg, int nret)
              /*************************************/
              /*              Utilities            */
 
-int iuplua_dofile(lua_State *L, const char *filename)
+IUPLUA_SDK_API void iuplua_push_name(lua_State *L, const char* name)
+{
+  /* push iup.name in stack */
+  iuplua_get_env(L);
+  lua_pushstring(L, name);
+  lua_gettable(L, -2);
+  lua_remove(L, -2);  /* remove global table from stack */
+}
+
+IUPLUA_API int iuplua_dofile(lua_State *L, const char *filename)
 {
   int status = luaL_loadfile(L, filename);
   if (status == LUA_OK)
@@ -224,17 +310,17 @@ int iuplua_dofile(lua_State *L, const char *filename)
   return report(L, status);
 }
 
-int iuplua_dostring(lua_State *L, const char *s, const char *name)
+IUPLUA_API int iuplua_dostring(lua_State *L, const char *s, const char *chunk_name)
 {
-  int status = luaL_loadbuffer(L, s, strlen(s), name);
+  int status = luaL_loadbuffer(L, s, strlen(s), chunk_name);
   if (status == LUA_OK)
     status = docall(L, 0, LUA_MULTRET);
   return report(L, status);
 }
 
-int iuplua_dobuffer(lua_State *L, const char *s, int len, const char *name)
+IUPLUA_API int iuplua_dobuffer(lua_State *L, const char *s, int len, const char *chunk_name)
 {
-  int status = luaL_loadbuffer(L, s, len, name);
+  int status = luaL_loadbuffer(L, s, len, chunk_name);
   if (status == LUA_OK)
     status = docall(L, 0, LUA_MULTRET);
   return report(L, status);
@@ -259,7 +345,7 @@ static int il_dostring(lua_State *L)
   int old_top = lua_gettop(L);
   size_t size;
   const char* str = luaL_checklstring(L, 1, &size);
-  int status = iuplua_dobuffer(L, str, (int)size, "iup.dostring");
+  int status = iuplua_dobuffer(L, str, (int)size, "=iup.dostring");
   if (status == LUA_OK)
   {
     int top = lua_gettop(L);
@@ -269,7 +355,7 @@ static int il_dostring(lua_State *L)
     return 0;
 }
 
-Ihandle *iuplua_checkihandleornil(lua_State *L, int pos)
+IUPLUA_SDK_API Ihandle *iuplua_checkihandleornil(lua_State *L, int pos)
 {
   if (lua_isnoneornil(L, pos))
     return NULL;
@@ -277,7 +363,7 @@ Ihandle *iuplua_checkihandleornil(lua_State *L, int pos)
     return iuplua_checkihandle(L, pos);
 }
 
-int iuplua_isihandle(lua_State *L, int pos)
+IUPLUA_API int iuplua_isihandle(lua_State *L, int pos)
 {
   int ret = 0;
   if (lua_getmetatable(L, pos))   /* t2 = metatable(stack(pos)) */
@@ -295,7 +381,7 @@ int iuplua_isihandle(lua_State *L, int pos)
   return ret;
 }
 
-Ihandle* iuplua_checkihandle(lua_State *L, int pos)
+IUPLUA_API Ihandle* iuplua_checkihandle(lua_State *L, int pos)
 {
   Ihandle* *ih = (Ihandle**)luaL_checkudata(L, pos, "iupHandle");
 
@@ -335,7 +421,7 @@ Ihandle* iuplua_checkihandle_OLD(lua_State *L, int pos)
 }
 #endif
 
-void iuplua_pushihandle_raw(lua_State *L, Ihandle *ih)
+IUPLUA_SDK_API void iuplua_pushihandle_raw(lua_State *L, Ihandle *ih)
 {
   if (ih) 
   {
@@ -346,7 +432,7 @@ void iuplua_pushihandle_raw(lua_State *L, Ihandle *ih)
     lua_pushnil(L);
 }
 
-void iuplua_pushihandle(lua_State *L, Ihandle *ih)
+IUPLUA_API void iuplua_pushihandle(lua_State *L, Ihandle *ih)
 {
   if (ih) 
   {
@@ -357,13 +443,8 @@ void iuplua_pushihandle(lua_State *L, Ihandle *ih)
 
       iuplua_plugstate(L, ih);
 
-      /* get the function iup.RegisterHandle */
-      iuplua_get_env(L);
-      lua_pushstring(L,"RegisterHandle");
-      lua_gettable(L, -2);
-      lua_remove(L, -2);  /* remove global table from stack */
-
-      /* call the function iup.RegisterHandle */
+      /* push iup.RegisterHandle */
+      iuplua_push_name(L, "RegisterHandle");
       iuplua_pushihandle_raw(L, ih);
       lua_pushstring(L, IupGetClassName(ih));
       lua_call(L, 2, 1);  /* iup.RegisterHandle(ih, type) */
@@ -399,7 +480,7 @@ static int il_destroy_cb(Ihandle* ih)
     lua_pushstring(L, "ihandle");
     lua_pushnil(L);
     lua_settable(L, -3);
-    lua_pop(L,1);
+    lua_pop(L, 1);
 
     /* removes the association of the Ihandle* with the lua object */
     luaL_unref(L, LUA_REGISTRYINDEX, ref);  /* this is the complement of SetWidget */
@@ -419,13 +500,13 @@ static int il_destroy_cb(Ihandle* ih)
   return IUP_DEFAULT;
 }
 
-char** iuplua_checkstring_array(lua_State *L, int pos, int n)
+IUPLUA_SDK_API char** iuplua_checkstring_array(lua_State *L, int pos, int n)
 {
   int i;
   char **v;
 
   luaL_checktype(L, pos, LUA_TTABLE);
-  if (n==0) 
+  if (n == -1) 
     n = iuplua_getn(L, pos);
   else if (n != iuplua_getn(L, pos))
     luaL_argerror(L, pos, "Invalid number of elements (n!=count).");
@@ -437,18 +518,18 @@ char** iuplua_checkstring_array(lua_State *L, int pos, int n)
     lua_pushinteger(L,i);
     lua_gettable(L,pos);
     v[i-1] = (char*)lua_tostring(L, -1);
-    lua_pop(L,1);
+    lua_pop(L, 1);
   }
   return v;
 }
 
-int* iuplua_checkint_array(lua_State *L, int pos, int n)
+IUPLUA_SDK_API int* iuplua_checkint_array(lua_State *L, int pos, int n)
 {
   int i;
   int *v;
 
   luaL_checktype(L, pos, LUA_TTABLE);
-  if (n==0) 
+  if (n == -1) 
     n = iuplua_getn(L, pos);
   else if (n != iuplua_getn(L, pos))
     luaL_argerror(L, pos, "Invalid number of elements (n!=count).");
@@ -460,18 +541,18 @@ int* iuplua_checkint_array(lua_State *L, int pos, int n)
     lua_pushinteger(L,i);
     lua_gettable(L,pos);
     v[i - 1] = (int)lua_tointeger(L, -1);
-    lua_pop(L,1);
+    lua_pop(L, 1);
   }
   return v;
 }
 
-float* iuplua_checkfloat_array(lua_State *L, int pos, int n)
+IUPLUA_SDK_API float* iuplua_checkfloat_array(lua_State *L, int pos, int n)
 {
   int i;
   float* v;
 
   luaL_checktype(L, pos, LUA_TTABLE);
-  if (n==0) 
+  if (n == -1)
     n = iuplua_getn(L, pos);
   else if (n != iuplua_getn(L, pos))
     luaL_argerror(L, pos, "Invalid number of elements (n!=count).");
@@ -483,18 +564,18 @@ float* iuplua_checkfloat_array(lua_State *L, int pos, int n)
     lua_pushinteger(L,i);
     lua_gettable(L,pos);
     v[i-1] = (float)lua_tonumber(L, -1);
-    lua_pop(L,1);
+    lua_pop(L, 1);
   }
   return v;
 }
 
-double* iuplua_checkdouble_array(lua_State *L, int pos, int n)
+IUPLUA_SDK_API double* iuplua_checkdouble_array(lua_State *L, int pos, int n)
 {
   int i;
   double* v;
 
   luaL_checktype(L, pos, LUA_TTABLE);
-  if (n == 0)
+  if (n == -1)
     n = iuplua_getn(L, pos);
   else if (n != iuplua_getn(L, pos))
     luaL_argerror(L, pos, "Invalid number of elements (n!=count).");
@@ -511,13 +592,13 @@ double* iuplua_checkdouble_array(lua_State *L, int pos, int n)
   return v;
 }
 
-unsigned char* iuplua_checkuchar_array(lua_State *L, int pos, int n)
+IUPLUA_SDK_API unsigned char* iuplua_checkuchar_array(lua_State *L, int pos, int n)
 {
   int i;
   unsigned char *v;
 
   luaL_checktype(L, pos, LUA_TTABLE);
-  if (n==0) 
+  if (n == -1)
     n = iuplua_getn(L, pos);
   else if (n != iuplua_getn(L, pos))
     luaL_argerror(L, pos, "Invalid number of elements (n!=count).");
@@ -529,18 +610,18 @@ unsigned char* iuplua_checkuchar_array(lua_State *L, int pos, int n)
     lua_pushinteger(L,i);
     lua_gettable(L,pos);
     v[i-1] = (unsigned char)lua_tointeger(L, -1);
-    lua_pop(L,1);
+    lua_pop(L, 1);
   }
   return v;
 }
 
-Ihandle ** iuplua_checkihandle_array(lua_State *L, int pos, int n)
+IUPLUA_SDK_API Ihandle ** iuplua_checkihandle_array(lua_State *L, int pos, int n)
 {
   int i;
   Ihandle **v;
 
   luaL_checktype(L, pos, LUA_TTABLE);
-  if (n==0) 
+  if (n == -1)
     n = iuplua_getn(L, pos);
   else if (n != iuplua_getn(L, pos))
     luaL_argerror(L, pos, "Invalid number of elements (n!=count).");
@@ -552,7 +633,7 @@ Ihandle ** iuplua_checkihandle_array(lua_State *L, int pos, int n)
     lua_pushinteger(L,i);
     lua_gettable(L,pos);
     v[i-1] = iuplua_checkihandle(L, -1);
-    lua_pop(L,1);
+    lua_pop(L, 1);
   }
   v[i-1] = NULL;
   return v;
@@ -561,7 +642,7 @@ Ihandle ** iuplua_checkihandle_array(lua_State *L, int pos, int n)
              /*************************************/
              /*         used by callbacks         */
 
-void iuplua_plugstate(lua_State *L, Ihandle *ih)
+IUPLUA_SDK_API void iuplua_plugstate(lua_State *L, Ihandle *ih)
 {
   IupSetAttribute(ih, "_IUPLUA_STATE_CONTEXT",(char *) L);
 
@@ -574,21 +655,18 @@ void iuplua_plugstate(lua_State *L, Ihandle *ih)
   }
 }
 
-lua_State* iuplua_getstate(Ihandle *ih)
+IUPLUA_SDK_API lua_State* iuplua_getstate(Ihandle *ih)
 {
   return (lua_State *) IupGetAttribute(ih, "_IUPLUA_STATE_CONTEXT");
 }
 
-lua_State* iuplua_call_start(Ihandle *ih, const char* name)
+IUPLUA_SDK_API lua_State* iuplua_call_start(Ihandle *ih, const char* name)
 {
   lua_State *L = iuplua_getstate(ih);
 
   /* prepare to call iup.CallMethod(name, ih, ...) */
-  iuplua_get_env(L);
-  lua_pushstring(L,"CallMethod");
-  lua_gettable(L, -2);
-  lua_remove(L, -2);  /* remove global table from stack */
 
+  iuplua_push_name(L, "CallMethod");
   lua_pushstring(L, name);
   iuplua_pushihandle(L, ih);
 
@@ -602,16 +680,14 @@ static lua_State* iuplua_call_global_start(const char* name)
   lua_State *L = (lua_State *) IupGetGlobal("_IUP_LUA_DEFAULT_STATE");
 
   /* prepare to call iup.CallGlobalMethod(name, ...) */
-  iuplua_get_env(L);
-  lua_pushstring(L,"CallGlobalMethod");
-  lua_gettable(L, -2);
-  lua_remove(L, -2);  /* remove global table from stack */
 
+  iuplua_push_name(L, "CallGlobalMethod");
   lua_pushstring(L, name);
+
   return L;
 }
 
-int iuplua_call(lua_State* L, int nargs)
+IUPLUA_SDK_API int iuplua_call(lua_State* L, int nargs)
 {
   int status = docall(L, nargs + 2, 1);  /* always 1 result */
   report(L, status);
@@ -631,7 +707,7 @@ int iuplua_call_global(lua_State* L, int nargs)
   return iuplua_call(L, nargs-1); /* remove the ih from the parameter count */
 }
 
-char* iuplua_call_ret_s(lua_State *L, int nargs)
+IUPLUA_SDK_API char* iuplua_call_ret_s(lua_State *L, int nargs)
 {
   int status = docall(L, nargs + 2, 1);  /* always 1 result */
   report(L, status);
@@ -646,7 +722,7 @@ char* iuplua_call_ret_s(lua_State *L, int nargs)
   }
 }
 
-double iuplua_call_ret_d(lua_State *L, int nargs)
+IUPLUA_SDK_API double iuplua_call_ret_d(lua_State *L, int nargs)
 {
   int status = docall(L, nargs + 2, 1);  /* always 1 result */
   report(L, status);
@@ -661,19 +737,16 @@ double iuplua_call_ret_d(lua_State *L, int nargs)
   }
 }
 
-int iuplua_call_raw(lua_State* L, int nargs, int nresults)
+IUPLUA_SDK_API int iuplua_call_raw(lua_State* L, int nargs, int nresults)
 {
   int status = docall(L, nargs, nresults);  /* always n results, or LUA_MULTRET */
   report(L, status);
   return status;
 }
 
-void iuplua_register_cb(lua_State *L, const char* name, lua_CFunction func, const char* type)
+IUPLUA_SDK_API void iuplua_register_cb(lua_State *L, const char* name, lua_CFunction func, const char* type)
 {
-  iuplua_get_env(L);
-  lua_pushstring(L,"RegisterCallback");
-  lua_gettable(L, -2);
-  lua_remove(L, -2);  /* remove global table from stack */
+  iuplua_push_name(L, "RegisterCallback");
 
   lua_pushstring(L, name);
   lua_pushcfunction(L, func);
@@ -863,7 +936,7 @@ static int SetWidget(lua_State *L)
              /*************************************/
              /*          registration             */
 
-int iuplua_opencall_internal(lua_State * L)
+IUPLUA_SDK_API int iuplua_opencall_internal(lua_State * L)
 {
   int ret = 0;
   const char* s;
@@ -873,19 +946,19 @@ int iuplua_opencall_internal(lua_State * L)
   s = lua_tostring(L, -1);
   if (s && strcmp(s, "INTERNAL")==0)
     ret = 1;
-  lua_pop(L,2);  /* remove global table and <global table>._IUPOPEN_CALL from stack */
+  lua_pop(L, 2);  /* remove global table and <global table>._IUPOPEN_CALL from stack */
   return ret;
 }
 
 /* iup[name] = func */ 
-void iuplua_register(lua_State *L, lua_CFunction func, const char* name)
+IUPLUA_SDK_API void iuplua_register(lua_State *L, lua_CFunction func, const char* name)
 {
   lua_pushcfunction(L, func);
   lua_setfield(L, -2, name);
 }
 
 /* iup[name] = s */ 
-void iuplua_regstring(lua_State *L, const char* s, const char* name)
+IUPLUA_SDK_API void iuplua_regstring(lua_State *L, const char* s, const char* name)
 {
   lua_pushstring(L, s); 
   lua_setfield(L, -2, name);
@@ -894,12 +967,12 @@ void iuplua_regstring(lua_State *L, const char* s, const char* name)
 /* global table */
 static const char* iup_globaltable = "iup";
 
-void iuplua_get_env(lua_State *L)
+IUPLUA_SDK_API void iuplua_get_env(lua_State *L)
 {
   lua_getglobal(L, iup_globaltable);
 }
 
-void iuplua_register_lib(lua_State *L, const luaL_Reg* funcs)
+IUPLUA_SDK_API void iuplua_register_lib(lua_State *L, const luaL_Reg* funcs)
 {
 #if LUA_VERSION_NUM < 502
   luaL_register(L, iup_globaltable, funcs);
@@ -912,14 +985,15 @@ void iuplua_register_lib(lua_State *L, const luaL_Reg* funcs)
     if (!lua_isnil(L, -1))
       luaL_error(L, "name conflict for module \"%s\"", iup_globaltable);
 
-    luaL_newlib(L, funcs);
+    lua_newtable(L);
+    luaL_setfuncs(L, funcs, 0);
     lua_pushvalue(L, -1);
     lua_setglobal(L, iup_globaltable);
   }
 #endif
 }
 
-void iuplua_register_funcs(lua_State *L, const luaL_Reg* funcs)
+IUPLUA_SDK_API void iuplua_register_funcs(lua_State *L, const luaL_Reg* funcs)
 {
 #if LUA_VERSION_NUM < 502
   luaL_register(L, NULL, funcs);
@@ -998,6 +1072,32 @@ static int multitouch_cb(Ihandle *ih, int count, int* pid, int* px, int* py, int
   }
   
   return iuplua_call(L, 5);
+}
+
+static int attribchanged_cb(Ihandle *self, char * p0)
+{
+  lua_State *L = iuplua_call_start(self, "attribchanged_cb");
+  lua_pushstring(L, p0);
+  return iuplua_call(L, 1);
+}
+
+static int layoutchanged_cb(Ihandle *self, Ihandle* elem)
+{
+  lua_State *L = iuplua_call_start(self, "layoutchanged_cb");
+  iuplua_pushihandle(L, elem);
+  return iuplua_call(L, 1);
+}
+
+static void entry_point(void)
+{
+  lua_State *L = iuplua_call_global_start("entry_point");
+  iuplua_call_global(L, 0);
+}
+
+static void exit_cb(void)
+{
+  lua_State *L = iuplua_call_global_start("exit_cb");
+  iuplua_call_global(L, 0);
 }
 
 static void globalwheel_cb(float delta, int x, int y, char* status)
@@ -1125,7 +1225,7 @@ static void register_key(char *name, int code, void* user_data)
 /* from iupkey.c */
 void iupKeyForEach(void (*func)(char *name, int code, void* user_data), void* user_data);
 
-int iupkey_open(lua_State *L)
+IUPLUA_API int iupkey_open(lua_State *L)
 {
   (void)L;
   /* does nothing, kept for backward compatibility */
@@ -1154,7 +1254,7 @@ static int il_open(lua_State * L)
       lua_pushinteger(L,i);
       lua_gettable(L,-2);
       argv[i-1] = (char*)lua_tostring(L, -1);
-      lua_pop(L,1);
+      lua_pop(L, 1);
     }
   }
   lua_pop(L, 1);
@@ -1173,7 +1273,7 @@ static int il_open(lua_State * L)
   return 1;
 }
 
-int iuplua_close(lua_State * L)
+IUPLUA_API int iuplua_close(lua_State * L)
 {
   if (iuplua_opencall_internal(L))
     IupClose();
@@ -1203,7 +1303,7 @@ static void setinfo (lua_State *L)
   lua_setfield(L, -2, "_VERSION_NUMBER");
 }
 
-int iuplua_open(lua_State * L)
+IUPLUA_API int iuplua_open(lua_State * L)
 {
   int ret;
 
@@ -1228,6 +1328,9 @@ int iuplua_open(lua_State * L)
     {"dostring", il_dostring},
     {"dofile", il_dofile},
     { "StringCompare", StringCompare },
+    { "StringChangeCase", StringChangeCase },
+    { "CopyUserData2String", CopyUserData2String },
+    { "CopyString2UserData", CopyString2UserData },
 
     { NULL, NULL },
   };
@@ -1277,12 +1380,18 @@ int iuplua_open(lua_State * L)
   iuplua_register_cb(L, "MULTITOUCH_CB", (lua_CFunction)multitouch_cb, NULL);
 
   /* Register global callbacks */
+  iuplua_register_cb(L, "ENTRY_POINT", (lua_CFunction)entry_point, NULL);
+  iuplua_register_cb(L, "EXIT_CB", (lua_CFunction)exit_cb, NULL);
   iuplua_register_cb(L, "GLOBALWHEEL_CB", (lua_CFunction)globalwheel_cb, NULL);
   iuplua_register_cb(L, "GLOBALBUTTON_CB", (lua_CFunction)globalbutton_cb, NULL);
   iuplua_register_cb(L, "GLOBALMOTION_CB", (lua_CFunction)globalmotion_cb, NULL);
   iuplua_register_cb(L, "GLOBALKEYPRESS_CB", (lua_CFunction)globalkeypress_cb, NULL);
   iuplua_register_cb(L, "GLOBALCTRLFUNC_CB", (lua_CFunction)globalctrlfunc_cb, NULL);
   iuplua_register_cb(L, "IDLE_ACTION", (lua_CFunction)globalidle_cb, NULL);
+
+  /* Other callbacks */
+  iuplua_register_cb(L, "ATTRIBCHANGED_CB", (lua_CFunction)attribchanged_cb, NULL);
+  iuplua_register_cb(L, "LAYOUTCHANGED_CB", (lua_CFunction)layoutchanged_cb, NULL);
 
   /* Register Keys */
   iupKeyForEach(register_key, (void*)L);
@@ -1316,6 +1425,7 @@ int iuplua_open(lua_State * L)
   iupspinboxlua_open(L);
   iupscrollboxlua_open(L);
   iupgridboxlua_open(L);
+  iupmultiboxlua_open(L);
   iupexpanderlua_open(L);
   iuplinklua_open(L);
   iupcboxlua_open(L);
@@ -1333,22 +1443,36 @@ int iuplua_open(lua_State * L)
   iupprogressbarlua_open(L);
   iupnormalizerlua_open(L);
   iupuserlua_open(L);
+  iupthreadlua_open(L);
   iuptreelua_open(L);
   iupclipboardlua_open(L);
   iupprogressdlglua_open(L);
+  iupflatlabellua_open(L);
   iupflatbuttonlua_open(L);
+  iupflattogglelua_open(L);
+  iupdropbuttonlua_open(L);
   iupflatframelua_open(L);
+  iupflatseparatorlua_open(L);
+  iupflatlistlua_open(L);
+  iupflatvallua_open(L);
+  iupflattreelua_open(L);
+  iupspacelua_open(L);
   iupconfiglua_open(L);
   iupanimatedlabellua_open(L);
   iupcalendarlua_open(L);
   iupdatepicklua_open(L);
   iupflattabslua_open(L);
+  iupflatscrollboxlua_open(L);
+  iupgaugelua_open(L);
+  iupdiallua_open(L);
+  iupcolorbarlua_open(L);
+  iupcolorbrowserlua_open(L);
 
   return 0; /* nothing in stack */
 }
 
 /* obligatory to use require"iuplua" */
-int luaopen_iuplua(lua_State* L)
+IUPLUA_SDK_API int luaopen_iuplua(lua_State* L)
 {
   return iuplua_open(L);
 }

@@ -35,7 +35,7 @@
 
 
 
-void iupdrvActivate(Ihandle* ih)
+IUP_SDK_API void iupdrvActivate(Ihandle* ih)
 {
   XtCallActionProc(ih->handle, "ArmAndActivate", 0, 0, 0 );
 }
@@ -50,7 +50,7 @@ static void motSaveAttributesRec(Ihandle* ih)
     motSaveAttributesRec(child);
 }
 
-void iupdrvReparent(Ihandle* ih)
+IUP_SDK_API void iupdrvReparent(Ihandle* ih)
 {
   /* Intrinsics and Motif do NOT support reparent. 
      XReparentWindow can NOT be used because will reparent only the X-Windows windows.
@@ -85,7 +85,7 @@ void iupmotSetPosition(Widget widget, int x, int y)
     XmNy, (XtArgVal)y,
     NULL);
 
-  /* to position ouside parent area */
+  /* to position outside parent area */
   {
     int new_x, new_y;
     XtVaGetValues(widget,
@@ -97,7 +97,7 @@ void iupmotSetPosition(Widget widget, int x, int y)
   }
 }
 
-void iupdrvBaseLayoutUpdateMethod(Ihandle *ih)
+IUP_SDK_API void iupdrvBaseLayoutUpdateMethod(Ihandle *ih)
 {
   Widget widget = (Widget)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   if (!widget) widget = ih->handle;
@@ -113,7 +113,7 @@ void iupdrvBaseLayoutUpdateMethod(Ihandle *ih)
   iupmotSetPosition(widget, ih->x, ih->y);
 }
 
-void iupdrvBaseUnMapMethod(Ihandle* ih)
+IUP_SDK_API void iupdrvBaseUnMapMethod(Ihandle* ih)
 {
   Widget widget = (Widget)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   if (!widget) widget = ih->handle;
@@ -122,7 +122,7 @@ void iupdrvBaseUnMapMethod(Ihandle* ih)
   XtDestroyWidget(widget);   /* To match the call to XtCreateManagedWidget */
 }
 
-void iupdrvPostRedraw(Ihandle *ih)
+IUP_SDK_API void iupdrvPostRedraw(Ihandle *ih)
 {
   XExposeEvent evt;
   Dimension w, h;
@@ -147,7 +147,7 @@ void iupdrvPostRedraw(Ihandle *ih)
   XSendEvent(iupmot_display, XtWindow(ih->handle), False, ExposureMask, (XEvent*)&evt);
 }
 
-void iupdrvRedrawNow(Ihandle *ih)
+IUP_SDK_API void iupdrvRedrawNow(Ihandle *ih)
 {
   Widget w;
 
@@ -169,7 +169,7 @@ void iupdrvRedrawNow(Ihandle *ih)
   XmUpdateDisplay(ih->handle);
 }
 
-void iupdrvScreenToClient(Ihandle* ih, int *x, int *y)
+IUP_SDK_API void iupdrvScreenToClient(Ihandle* ih, int *x, int *y)
 {
   Window child;
   XTranslateCoordinates(iupmot_display, RootWindow(iupmot_display, iupmot_screen),
@@ -177,7 +177,7 @@ void iupdrvScreenToClient(Ihandle* ih, int *x, int *y)
                                         *x, *y, x, y, &child);
 }
 
-void iupdrvClientToScreen(Ihandle* ih, int *x, int *y)
+IUP_SDK_API void iupdrvClientToScreen(Ihandle* ih, int *x, int *y)
 {
   Window child;
   XTranslateCoordinates(iupmot_display, XtWindow(ih->handle),
@@ -218,12 +218,12 @@ void iupmotEnterLeaveWindowEvent(Widget w, Ihandle *ih, XEvent *evt, Boolean *co
     cb(ih);
 }
 
-int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value)
 {
   if (iupdrvIsVisible(ih))
   {
     Widget widget = (Widget)iupAttribGet(ih, "_IUP_EXTRAPARENT");
-  if (!widget) widget = ih->handle;
+    if (!widget) widget = ih->handle;
 
     if (iupStrEqualNoCase(value, "TOP"))
       XRaiseWindow(iupmot_display, XtWindow(widget));
@@ -234,7 +234,7 @@ int iupdrvBaseSetZorderAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-void iupdrvSetVisible(Ihandle* ih, int visible)
+IUP_SDK_API void iupdrvSetVisible(Ihandle* ih, int visible)
 {
   Widget widget = (Widget)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   if (!widget) widget = ih->handle;
@@ -245,19 +245,19 @@ void iupdrvSetVisible(Ihandle* ih, int visible)
     XtUnmapWidget(widget);
 }
 
-int iupdrvIsVisible(Ihandle* ih)
+IUP_SDK_API int iupdrvIsVisible(Ihandle* ih)
 {
   XWindowAttributes wa;
   XGetWindowAttributes(iupmot_display, XtWindow(ih->handle), &wa);
   return (wa.map_state == IsViewable);
 }
 
-int iupdrvIsActive(Ihandle* ih)
+IUP_SDK_API int iupdrvIsActive(Ihandle* ih)
 {
   return XtIsSensitive(ih->handle);
 }
 
-void iupdrvSetActive(Ihandle* ih, int enable)
+IUP_SDK_API void iupdrvSetActive(Ihandle* ih, int enable)
 {
   Widget widget = (Widget)iupAttribGet(ih, "_IUP_EXTRAPARENT");
   if (!widget) widget = ih->handle;
@@ -282,16 +282,11 @@ void iupmotSetBgColor(Widget w, Pixel color)
   XtVaSetValues(w, XmNbackgroundPixmap, XmUNSPECIFIED_PIXMAP, NULL);
 }
 
-int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetBgColorAttrib(Ihandle* ih, const char* value)
 {
   Pixel color = iupmotColorGetPixelStr(value);
   if (color != (Pixel)-1)
-  {
     iupmotSetBgColor(ih->handle, color);
-
-    /* update internal image cache for controls that have the IMAGE attribute */
-    iupImageUpdateParent(ih);
-  }
   return 1;
 }
 
@@ -304,7 +299,7 @@ char* iupmotGetBgColorAttrib(Ihandle* ih)
   return iupStrReturnStrf("%d %d %d", (int)r, (int)g, (int)b);
 }
 
-int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetFgColorAttrib(Ihandle* ih, const char* value)
 {
   Pixel color = iupmotColorGetPixelStr(value);
   if (color != (Pixel)-1)
@@ -413,7 +408,7 @@ static Cursor motGetCursor(Ihandle* ih, const char* name)
   return cur;
 }
 
-int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value)
+IUP_SDK_API int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value)
 {
   Cursor cur = motGetCursor(ih, value);
   if (cur)
@@ -424,29 +419,19 @@ int iupdrvBaseSetCursorAttrib(Ihandle* ih, const char* value)
   return 0;
 }
 
-#include <Xm/XmP.h>
-#include <Xm/DrawP.h>
-
-void iupdrvPaintFocusRect(Ihandle* ih, void* _gc, int x, int y, int w, int h)
-{
-  Drawable wnd = (Drawable)IupGetAttribute(ih, "XWINDOW");  /* Use IupGetAttribute to consult the native implemetation */
-  GC gc = (GC)_gc;
-  XmeDrawHighlight(iupmot_display, wnd, gc, x, y, w, h, 1);
-}
-
-void iupdrvBaseRegisterCommonAttrib(Iclass* ic)
+IUP_SDK_API void iupdrvBaseRegisterCommonAttrib(Iclass* ic)
 {
   iupClassRegisterAttribute(ic, "XMFONTLIST", iupmotGetFontListAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT|IUPAF_NO_STRING);
   iupClassRegisterAttribute(ic, "XFONTSTRUCT", iupmotGetFontStructAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT|IUPAF_NO_STRING);
   iupClassRegisterAttribute(ic, "XFONTID", iupmotGetFontIdAttrib, NULL, NULL, NULL, IUPAF_NOT_MAPPED|IUPAF_NO_INHERIT|IUPAF_NO_STRING);
 }
 
-void iupdrvBaseRegisterVisualAttrib(Iclass* ic)
+IUP_SDK_API void iupdrvBaseRegisterVisualAttrib(Iclass* ic)
 {
   (void)ic;
 }
 
-int iupdrvGetScrollbarSize(void)
+IUP_SDK_API int iupdrvGetScrollbarSize(void)
 {
   return 15;
 }
@@ -456,7 +441,7 @@ void iupmotSetPixmap(Ihandle* ih, const char* name, const char* prop, int make_i
   if (name)
   {
     Pixmap old_pixmap;
-    Pixmap pixmap = (Pixmap)iupImageGetImage(name, ih, make_inactive);
+    Pixmap pixmap = (Pixmap)iupImageGetImage(name, ih, make_inactive, NULL);
     if (!pixmap) 
       pixmap = XmUNSPECIFIED_PIXMAP;
     XtVaGetValues(ih->handle, prop, &old_pixmap, NULL);
@@ -471,9 +456,6 @@ void iupmotSetPixmap(Ihandle* ih, const char* name, const char* prop, int make_i
 
 void iupmotButtonPressReleaseEvent(Widget w, Ihandle* ih, XEvent* evt, Boolean* cont)
 {
-  unsigned long elapsed;
-  static Time last = 0;
-  char status[IUPKEY_STATUS_SIZE] = IUPKEY_STATUS_INIT;
   IFniiiis cb;
 
   XButtonEvent *but_evt = (XButtonEvent*)evt;
@@ -489,11 +471,13 @@ void iupmotButtonPressReleaseEvent(Widget w, Ihandle* ih, XEvent* evt, Boolean* 
   {
     int ret, doubleclick = 0;
     int b = IUP_BUTTON1+(but_evt->button-1);
+    char status[IUPKEY_STATUS_SIZE] = IUPKEY_STATUS_INIT;
 
     /* Double/Single Click */
     if (but_evt->type==ButtonPress)
     {
-      elapsed = but_evt->time - last;
+      static Time last = 0;
+      unsigned long elapsed = but_evt->time - last;
       last = but_evt->time;
       if ((int)elapsed <= XtGetMultiClickTime(iupmot_display))
         doubleclick = 1;
@@ -535,7 +519,7 @@ void iupmotPointerMotionEvent(Widget w, Ihandle *ih, XEvent *evt, Boolean *cont)
   (void)cont;
 }
 
-void iupdrvSendKey(int key, int press)
+IUP_SDK_API void iupdrvSendKey(int key, int press)
 {
   Window focus;
 	int revert_to;
@@ -565,13 +549,13 @@ void iupdrvSendKey(int key, int press)
   }
 }
 
-void iupdrvWarpPointer(int x, int y)
+IUP_SDK_API void iupdrvWarpPointer(int x, int y)
 {
   /* VirtualBox does not reproduce the mouse move visually, but it is working. */
   XWarpPointer(iupmot_display,None,RootWindow(iupmot_display, iupmot_screen),0,0,0,0,x,y);
 }
 
-void iupdrvSendMouse(int x, int y, int bt, int status)
+IUP_SDK_API void iupdrvSendMouse(int x, int y, int bt, int status)
 {
   /* always update cursor */
   /* must be before sending the message because the cursor position will be used */
@@ -690,14 +674,20 @@ void iupdrvSendMouse(int x, int y, int bt, int status)
 
 #ifndef WIN32
 #include <unistd.h>
-void iupdrvSleep(int time)
+IUP_SDK_API void iupdrvSleep(int time)
 {
   usleep(time*1000);  /* mili to micro */
 }
 #else
-void iupdrvSleep(int time)
+IUP_SDK_API void iupdrvSleep(int time)
 {
   clock_t goal = (clock_t)(time*CLOCKS_PER_SEC)/1000 + clock();
   while(goal > clock());     
 }
 #endif
+
+IUP_SDK_API void iupdrvSetAccessibleTitle(Ihandle *ih, const char* title)
+{
+  (void)title;
+  (void)ih;
+}

@@ -43,11 +43,11 @@ ifdef USE_IM
   else
     ifdef USE_STATIC
       ifdef DBG_DIR
-        IUPLIB = $(IUP)/lib/$(TEC_UNAME)d
+        IUP_LIB = $(IUP)/lib/$(TEC_UNAME)d
       else
-        IUPLIB = $(IUP)/lib/$(TEC_UNAME)
+        IUP_LIB = $(IUP)/lib/$(TEC_UNAME)
       endif  
-      SLIB = $(IUPLIB)/libiupim.a $(IUPLIB)/libiupimglib.a
+      SLIB = $(IUP_LIB)/libiupim.a $(IUP_LIB)/libiupimglib.a
     else
       LIBS = iupim iupimglib
     endif             

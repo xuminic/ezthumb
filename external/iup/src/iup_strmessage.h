@@ -13,13 +13,6 @@ extern "C" {
 #endif
 
 
-/** \defgroup strmessage Language Dependent String Messages
- * \par
- * String database that is dependend of the selected language.
- * \par
- * See \ref iup_strmessage.h
- * \ingroup util */
-
 /* Called from iup_global */
 void iupStrMessageUpdateLanguage(const char* language);
 

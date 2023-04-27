@@ -15,7 +15,14 @@
 #include "iup_config.h"
 #include "iup_linefile.h"
 #include "iup_str.h"
+#include "iup_attrib.h"
+#include "iup_assert.h"
 
+#include "iup_drvinfo.h"
+
+#if defined(__APPLE__)
+#import <TargetConditionals.h>
+#endif
 
 #define GROUPKEYSIZE 100
 #define MAX_LINES 500
@@ -41,7 +48,7 @@ static char* strSetGroupKeyName(const char* groupkey, char* group)
   return (char*)(key + 1);
 }
 
-Ihandle* IupConfig(void)
+IUP_API Ihandle* IupConfig(void)
 {
   return IupUser();
 }
@@ -50,8 +57,7 @@ static char* iConfigSetFilename(Ihandle* ih)
 {
   char* app_name;
   char* app_path;
-  int app_config;
-  char* home;
+  int app_config, app_system;
   
   char filename[10240] = "";
   char* app_filename = IupGetAttribute(ih, "APP_FILENAME");
@@ -61,52 +67,44 @@ static char* iConfigSetFilename(Ihandle* ih)
   app_name = IupGetAttribute(ih, "APP_NAME");
   app_path = IupGetAttribute(ih, "APP_PATH");
   app_config = IupGetInt(ih, "APP_CONFIG");
+  app_system = IupGetInt(ih, "APP_SYSTEMPATH");
 
   if (!app_name)
     return NULL;
 
-  home = getenv("HOME");
-  if (home && !app_config)
+  if (!app_config && iupdrvGetPreferencePath(filename, app_system))
   {
-    /* UNIX format */
-    strcat(filename, home);
-    strcat(filename, "/.");
+#if defined(__ANDROID__) || defined(__APPLE__) || defined(WIN32) || defined(__EMSCRIPTEN__)
     strcat(filename, app_name);
+    strcat(filename, ".cfg");
+#else
+    /* UNIX format */
+    strcat(filename, ".");
+    strcat(filename, app_name);
+#endif
   }
   else
   {
-    /* Windows format */
-    char* homedrive = getenv("HOMEDRIVE");
-    char* homepath = getenv("HOMEPATH");
-    if (homedrive && homepath && !app_config)
-    {
-      strcat(filename, homedrive);
-      strcat(filename, homepath);
-      strcat(filename, "\\");
-      strcat(filename, app_name);
-      strcat(filename, ".cfg");
-    }
-    else
-    {
-      if (!app_path)
-        return NULL;
+    if (!app_path)
+      return NULL;
 
-      strcat(filename, app_path);
-#ifndef WIN32
-      strcat(filename, ".");
+    strcat(filename, app_path);
+#if defined(__ANDROID__) || defined(__APPLE__) || defined(WIN32) || defined(__EMSCRIPTEN__)
+    /* these platforms shouldn't use a .dot file */
+#else
+    /* Unix generic hidden dot prefix */
+    strcat(filename, ".");
 #endif
-      strcat(filename, app_name);
-#ifdef WIN32
-      strcat(filename, ".cfg");
+    strcat(filename, app_name);
+#if defined(__ANDROID__) || defined(__APPLE__) || defined(WIN32) || defined(__EMSCRIPTEN__)
+    strcat(filename, ".cfg");
 #endif
-    }
   }
 
   IupSetStrAttribute(ih, "FILENAME", filename);
 
   return IupGetAttribute(ih, "FILENAME");
 }
-
 
 static int sort_names_cb(const void* elem1, const void* elem2)
 {
@@ -115,7 +113,7 @@ static int sort_names_cb(const void* elem1, const void* elem2)
   return strcmp(str1, str2);
 }
 
-int IupConfigLoad(Ihandle* ih)
+IUP_API int IupConfigLoad(Ihandle* ih)
 {
   char group[GROUPKEYSIZE] = "";
   char key[GROUPKEYSIZE];
@@ -135,7 +133,10 @@ int IupConfigLoad(Ihandle* ih)
 
     int line_len = iupLineFileReadLine(line_file);
     if (line_len == -1)
+    {
+      iupLineFileClose(line_file);
       return -2;
+    }
 
     line_buffer = iupLineFileGetBuffer(line_file);
 
@@ -161,7 +162,7 @@ int IupConfigLoad(Ihandle* ih)
       if (!value)                    
         value = line_buffer;
       else
-        value++;  // Skip =
+        value++;  /* Skip '=' */
 
       IupConfigSetVariableStr(ih, group, key, value);
     }
@@ -171,7 +172,7 @@ int IupConfigLoad(Ihandle* ih)
   return 0;
 }
 
-int IupConfigSave(Ihandle* ih)
+IUP_API int IupConfigSave(Ihandle* ih)
 {
   char* names[MAX_LINES];
   FILE* file;
@@ -216,61 +217,69 @@ int IupConfigSave(Ihandle* ih)
   }
 
   fclose(file);
+#if defined(__EMSCRIPTEN__)
+  EM_ASM(
+	FS.syncfs(function(err) {
+        if(err) console.log('Error: FS.syncfs failed', err);
+	  }
+	);
+  );
+#endif
   return 0;
 }
 
-void IupConfigSetVariableStrId(Ihandle* ih, const char* group, const char* key, int id, const char* value)
+IUP_API void IupConfigSetVariableStrId(Ihandle* ih, const char* group, const char* key, int id, const char* value)
 {
   char key_id[GROUPKEYSIZE];
   sprintf(key_id, "%s%d", key, id);
   IupConfigSetVariableStr(ih, group, key_id, value);
 }
 
-void IupConfigSetVariableIntId(Ihandle* ih, const char* group, const char* key, int id, int value)
+IUP_API void IupConfigSetVariableIntId(Ihandle* ih, const char* group, const char* key, int id, int value)
 {
   char key_id[GROUPKEYSIZE];
   sprintf(key_id, "%s%d", key, id);
   IupConfigSetVariableInt(ih, group, key_id, value);
 }
 
-void IupConfigSetVariableDoubleId(Ihandle* ih, const char* group, const char* key, int id, double value)
+IUP_API void IupConfigSetVariableDoubleId(Ihandle* ih, const char* group, const char* key, int id, double value)
 {
   char key_id[GROUPKEYSIZE];
   sprintf(key_id, "%s%d", key, id);
   IupConfigSetVariableDouble(ih, group, key_id, value);
 }
 
-void IupConfigSetVariableStr(Ihandle* ih, const char* group, const char* key, const char* value)
+IUP_API void IupConfigSetVariableStr(Ihandle* ih, const char* group, const char* key, const char* value)
 {
   IupSetStrAttribute(ih, strGetGroupKeyName(group, key), value);
 }
 
-void IupConfigSetVariableInt(Ihandle* ih, const char* group, const char* key, int value)
+IUP_API void IupConfigSetVariableInt(Ihandle* ih, const char* group, const char* key, int value)
 {
   IupSetInt(ih, strGetGroupKeyName(group, key), value);
 }
 
-void IupConfigSetVariableDouble(Ihandle* ih, const char* group, const char* key, double value)
+IUP_API void IupConfigSetVariableDouble(Ihandle* ih, const char* group, const char* key, double value)
 {
   IupSetDouble(ih, strGetGroupKeyName(group, key), value);
 }
 
-const char* IupConfigGetVariableStr(Ihandle* ih, const char* group, const char* key)
+IUP_API const char* IupConfigGetVariableStr(Ihandle* ih, const char* group, const char* key)
 {
   return IupGetAttribute(ih, strGetGroupKeyName(group, key));
 }
 
-int IupConfigGetVariableInt(Ihandle* ih, const char* group, const char* key)
+IUP_API int IupConfigGetVariableInt(Ihandle* ih, const char* group, const char* key)
 {
   return IupGetInt(ih, strGetGroupKeyName(group, key));
 }
 
-double IupConfigGetVariableDouble(Ihandle* ih, const char* group, const char* key)
+IUP_API double IupConfigGetVariableDouble(Ihandle* ih, const char* group, const char* key)
 {
   return IupGetDouble(ih, strGetGroupKeyName(group, key));
 }
 
-const char* IupConfigGetVariableStrDef(Ihandle* ih, const char* group, const char* key, const char* def)
+IUP_API const char* IupConfigGetVariableStrDef(Ihandle* ih, const char* group, const char* key, const char* def)
 {
   if (!IupGetAttribute(ih, strGetGroupKeyName(group, key)))
     return def;
@@ -278,7 +287,7 @@ const char* IupConfigGetVariableStrDef(Ihandle* ih, const char* group, const cha
     return IupConfigGetVariableStr(ih, group, key);
 }
 
-const char* IupConfigGetVariableStrIdDef(Ihandle* ih, const char* group, const char* key, int id, const char* def)
+IUP_API const char* IupConfigGetVariableStrIdDef(Ihandle* ih, const char* group, const char* key, int id, const char* def)
 {
   if (!IupGetAttributeId(ih, strGetGroupKeyName(group, key), id))
     return def;
@@ -286,7 +295,7 @@ const char* IupConfigGetVariableStrIdDef(Ihandle* ih, const char* group, const c
     return IupConfigGetVariableStrId(ih, group, key, id);
 }
 
-int IupConfigGetVariableIntDef(Ihandle* ih, const char* group, const char* key, int def)
+IUP_API int IupConfigGetVariableIntDef(Ihandle* ih, const char* group, const char* key, int def)
 {
   if (!IupGetAttribute(ih, strGetGroupKeyName(group, key)))
     return def;
@@ -294,7 +303,7 @@ int IupConfigGetVariableIntDef(Ihandle* ih, const char* group, const char* key, 
     return IupConfigGetVariableInt(ih, group, key);
 }
 
-int IupConfigGetVariableIntIdDef(Ihandle* ih, const char* group, const char* key, int id, int def)
+IUP_API int IupConfigGetVariableIntIdDef(Ihandle* ih, const char* group, const char* key, int id, int def)
 {
   if (!IupGetAttributeId(ih, strGetGroupKeyName(group, key), id))
     return def;
@@ -302,7 +311,7 @@ int IupConfigGetVariableIntIdDef(Ihandle* ih, const char* group, const char* key
     return IupConfigGetVariableIntId(ih, group, key, id);
 }
 
-double IupConfigGetVariableDoubleDef(Ihandle* ih, const char* group, const char* key, double def)
+IUP_API double IupConfigGetVariableDoubleDef(Ihandle* ih, const char* group, const char* key, double def)
 {
   if (!IupGetAttribute(ih, strGetGroupKeyName(group, key)))
     return def;
@@ -310,7 +319,7 @@ double IupConfigGetVariableDoubleDef(Ihandle* ih, const char* group, const char*
     return IupConfigGetVariableDouble(ih, group, key);
 }
 
-double IupConfigGetVariableDoubleIdDef(Ihandle* ih, const char* group, const char* key, int id, double def)
+IUP_API double IupConfigGetVariableDoubleIdDef(Ihandle* ih, const char* group, const char* key, int id, double def)
 {
   if (!IupGetAttributeId(ih, strGetGroupKeyName(group, key), id))
     return def;
@@ -318,57 +327,168 @@ double IupConfigGetVariableDoubleIdDef(Ihandle* ih, const char* group, const cha
     return IupConfigGetVariableDoubleId(ih, group, key, id);
 }
 
-const char* IupConfigGetVariableStrId(Ihandle* ih, const char* group, const char* key, int id)
+IUP_API const char* IupConfigGetVariableStrId(Ihandle* ih, const char* group, const char* key, int id)
 {
   char key_id[GROUPKEYSIZE];
   sprintf(key_id, "%s%d", key, id);
   return IupConfigGetVariableStr(ih, group, key_id);
 }
 
-int IupConfigGetVariableIntId(Ihandle* ih, const char* group, const char* key, int id)
+IUP_API int IupConfigGetVariableIntId(Ihandle* ih, const char* group, const char* key, int id)
 {
   char key_id[GROUPKEYSIZE];
   sprintf(key_id, "%s%d", key, id);
   return IupConfigGetVariableInt(ih, group, key_id);
 }
 
-double IupConfigGetVariableDoubleId(Ihandle* ih, const char* group, const char* key, int id)
+IUP_API double IupConfigGetVariableDoubleId(Ihandle* ih, const char* group, const char* key, int id)
 {
   char key_id[GROUPKEYSIZE];
   sprintf(key_id, "%s%d", key, id);
   return IupConfigGetVariableDouble(ih, group, key_id);
 }
 
+IUP_API void IupConfigCopy(Ihandle* ih1, Ihandle* ih2, const char* exclude_prefix)
+{
+  char *name;
+
+  iupASSERT(iupObjectCheck(ih1));
+  if (!iupObjectCheck(ih1))
+    return;
+
+  iupASSERT(iupObjectCheck(ih2));
+  if (!iupObjectCheck(ih2))
+    return;
+
+  name = iupTableFirst(ih1->attrib);
+  while (name)
+  {
+    if (!iupATTRIB_ISINTERNAL(name) && !iupStrEqualPartial(name, exclude_prefix))
+      iupTableSet(ih2->attrib, name, iupTableGet(ih1->attrib, name), IUPTABLE_STRING);
+
+    name = iupTableNext(ih1->attrib);
+  }
+}
 
 /******************************************************************/
 
 
+IUP_API void IupConfigSetListVariable(Ihandle* ih, const char *group, const char* key, const char* value, int add)
+{
+  const char* value_id;
+  int last_id, found_id = 0;
+
+  /* First search for the value in the list */
+  int i = 1;
+  do
+  {
+    value_id = IupConfigGetVariableStrId(ih, group, key, i);
+
+    if (value_id && iupStrEqual(value_id, value))
+    {
+      found_id = i;
+      if (add)
+        return; /* nothing to do */
+      else
+        break;  /* remove later */
+    }
+
+    i++;
+  } while (value_id);
+
+  last_id = i - 2;
+
+  if (found_id)
+  {
+    /* remove found_id by moving last item to replace old item */
+    value_id = IupConfigGetVariableStrId(ih, group, key, last_id);
+    IupConfigSetVariableStrId(ih, group, key, found_id, value_id);
+    IupConfigSetVariableStrId(ih, group, key, last_id, NULL);
+  }
+  else
+  {
+    if (add)
+    {
+      /* add new item at the end */
+      IupConfigSetVariableStrId(ih, group, key, last_id + 1, value);
+    }
+    /* if remove, nothing to do */
+  }
+}
+
+
+/******************************************************************/
+
+/* macOS/Cocoa needs a completely different implementation, so exclude Mac/Cocoa from compiling this. */
+#if !defined(__APPLE__) || !defined(TARGET_OS_OSX)
+
+static const char* iConfigGetRecentAttribName(const char* recent_name, const char* base_name)
+{
+  if (recent_name)
+  {
+    static char name[100];
+    sprintf(name, "%s%s", recent_name, base_name);
+    return name;
+  }
+  else
+    return base_name;
+}
+
 static int iConfigItemRecent_CB(Ihandle* ih_item)
 {
-  Ihandle* ih = (Ihandle*)IupGetAttribute(ih_item, "_IUP_CONFIG");
-  Icallback recent_cb = IupGetCallback(ih, "RECENT_CB");
+  Icallback recent_cb = IupGetCallback(ih_item, "RECENT_CB");
   if (recent_cb)
   {
-    IupSetStrAttribute(ih, "TITLE", IupGetAttribute(ih_item, "TITLE"));
+    Ihandle* ih = (Ihandle*)IupGetAttribute(ih_item, "_IUP_CONFIG");
+    IupSetStrAttribute(ih, "TITLE", IupGetAttribute(ih_item, "RECENTFILENAME"));  /* backward compatibility */
     ih->parent = ih_item;
+
     recent_cb(ih);
+
     ih->parent = NULL;
+    IupSetAttribute(ih, "TITLE", NULL);
   }
   return IUP_DEFAULT;
 }
 
-static void iConfigBuildRecent(Ihandle* ih)
+static int iConfigListRecent_CB(Ihandle* list, char *text, int item, int state)
+{
+  (void)item;
+
+  if (state == 1)
+  {
+    Ihandle* drop_button = IupGetAttributeHandle(IupGetDialog(list), "DROPBUTTON");
+    Icallback recent_cb = IupGetCallback(list, "RECENT_CB");
+
+    if (recent_cb)
+    {
+      Ihandle* ih = (Ihandle*)IupGetAttribute(list, "_IUP_CONFIG");
+      IupSetStrAttribute(ih, "RECENTFILENAME", text);
+      ih->parent = list;
+
+      recent_cb(ih);
+
+      ih->parent = NULL;
+      IupSetAttribute(ih, "RECENTFILENAME", NULL);
+    }
+
+    if (drop_button)
+      IupSetAttribute(drop_button, "SHOWDROPDOWN", "NO");
+  }
+  return IUP_DEFAULT;
+}
+
+static void iConfigBuildRecentMenu(Ihandle* ih, Ihandle* menu, int max_recent, const char* group_name, Icallback recent_cb)
 {
   /* add the new items, reusing old ones */
-  int max_recent = IupGetInt(ih, "RECENTMAX");
-  Ihandle* menu = (Ihandle*)IupGetAttribute(ih, "RECENTMENU");
-
+  int i;
   int mapped = IupGetAttribute(menu, "WID") != NULL ? 1 : 0;
   const char* value;
-  int i = 1;
+
+  i = 1;
   do
   {
-    value = IupConfigGetVariableStrId(ih, "Recent", "File", i);
+    value = IupConfigGetVariableStrId(ih, group_name, "File", i);
     if (value)
     {
       Ihandle* item = IupGetChild(menu, i - 1);
@@ -379,37 +499,88 @@ static void iConfigBuildRecent(Ihandle* ih)
         item = IupItem(value, NULL);
         IupSetAttribute(item, "_IUP_CONFIG", (char*)ih);
         IupSetCallback(item, "ACTION", iConfigItemRecent_CB);
+        IupSetCallback(item, "RECENT_CB", recent_cb);
         IupAppend(menu, item);
         if (mapped) IupMap(item);
       }
+
+      IupSetStrAttribute(item, "RECENTFILENAME", value); /* TITLE will convert the string to a native representation, so RECENTFILENAME will keep the original value */
     }
     i++;
   } while (value && i <= max_recent);
 }
 
-void IupConfigRecentInit(Ihandle* ih, Ihandle* menu, Icallback recent_cb, int max_recent)
+static void iConfigBuildRecentList(Ihandle* ih, Ihandle* list, int max_recent, const char* group_name, Icallback recent_cb)
 {
-  IupSetAttribute(ih, "RECENTMENU", (char*)menu);
-  IupSetCallback(ih, "RECENT_CB", recent_cb);
-  IupSetInt(ih, "RECENTMAX", max_recent);
+  /* add the new items, reusing old ones */
+  int i;
+  const char* value;
 
-  iConfigBuildRecent(ih);
+  IupSetAttribute(list, "1", NULL);
+
+  i = 1;
+  do
+  {
+    value = IupConfigGetVariableStrId(ih, group_name, "File", i);
+    if (value)
+      IupSetStrAttributeId(list, "", i, value);
+    i++;
+  } while (value && i <= max_recent);
+
+
+  IupSetCallback(list, "RECENT_CB", recent_cb);
+  IupSetAttribute(list, "_IUP_CONFIG", (char*)ih);
+
+  if (iupStrEqual(IupGetClassName(list), "flatlist"))
+    IupSetCallback(list, "FLAT_ACTION", (Icallback)iConfigListRecent_CB);
+  else
+    IupSetCallback(list, "ACTION", (Icallback)iConfigListRecent_CB);
 }
 
-void IupConfigRecentUpdate(Ihandle* ih, const char* filename)
+IUP_API void IupConfigRecentInit(Ihandle* ih, Ihandle* menu_list, Icallback recent_cb, int max_recent)
 {
-  int max_recent = IupGetInt(ih, "RECENTMAX");
-  const char* value = IupConfigGetVariableStr(ih, "Recent", "File1");
+
+  char* recent_name = IupGetAttribute(ih, "RECENTNAME");
+  const char* group_name = recent_name;
+  if (!group_name) group_name = "Recent";
+
+  IupSetCallback(ih, iConfigGetRecentAttribName(recent_name, "RECENT_CB"), recent_cb);
+  IupSetInt(ih, iConfigGetRecentAttribName(recent_name, "RECENTMAX"), max_recent);
+
+  if (iupStrEqual(IupGetClassName(menu_list), "menu"))
+  {
+    IupSetAttribute(ih, iConfigGetRecentAttribName(recent_name, "RECENTMENU"), (char*)menu_list);
+    iConfigBuildRecentMenu(ih, menu_list, max_recent, group_name, recent_cb);
+  }
+  else
+  {
+    IupSetAttribute(ih, iConfigGetRecentAttribName(recent_name, "RECENTLIST"), (char*)menu_list);
+    iConfigBuildRecentList(ih, menu_list, max_recent, group_name, recent_cb);
+  }
+}
+
+IUP_API void IupConfigRecentUpdate(Ihandle* ih, const char* filename)
+{
+  const char* value;
+  char* recent_name = IupGetAttribute(ih, "RECENTNAME");
+  Ihandle* menu = (Ihandle*)IupGetAttribute(ih, iConfigGetRecentAttribName(recent_name, "RECENTMENU"));
+  Ihandle* list = (Ihandle*)IupGetAttribute(ih, iConfigGetRecentAttribName(recent_name, "RECENTLIST"));
+  Icallback recent_cb = IupGetCallback(ih, iConfigGetRecentAttribName(recent_name, "RECENT_CB"));
+  int max_recent = IupGetInt(ih, iConfigGetRecentAttribName(recent_name, "RECENTMAX"));
+  const char* group_name = recent_name;
+  if (!group_name) group_name = "Recent";
+
+  value = IupConfigGetVariableStr(ih, group_name, "File1");
   if (value && !iupStrEqual(value, filename))
   {
     /* must update the stack */
     int found = 0;
 
-    // First search for the new filename to avoid duplicates
+    /* First search for the new filename to avoid duplicates */
     int i = 1;
     do
     {
-      value = IupConfigGetVariableStrId(ih, "Recent", "File", i);
+      value = IupConfigGetVariableStrId(ih, group_name, "File", i);
 
       if (value && iupStrEqual(value, filename))
       {
@@ -420,31 +591,48 @@ void IupConfigRecentUpdate(Ihandle* ih, const char* filename)
       i++;
     } while (value && i <= max_recent);
 
-    // simply open space for the new filename
     if (found)
       i = found;
     else
       i = max_recent;
+
+    /* simply open space for the new filename */
     do
     {
-      value = IupConfigGetVariableStrId(ih, "Recent", "File", i - 1);
-      IupConfigSetVariableStrId(ih, "Recent", "File", i, value);
+      value = IupConfigGetVariableStrId(ih, group_name, "File", i - 1);
+      IupConfigSetVariableStrId(ih, group_name, "File", i, value);
 
       i--;
     } while (i > 1);
   }
 
   /* push new at start always */
-  IupConfigSetVariableStr(ih, "Recent", "File1", filename);
+  IupConfigSetVariableStr(ih, group_name, "File1", filename);
 
-  iConfigBuildRecent(ih);
+  if (menu)
+    iConfigBuildRecentMenu(ih, menu, max_recent, group_name, recent_cb);
+  else
+    iConfigBuildRecentList(ih, list, max_recent, group_name, recent_cb);
 }
+#else
+
+/* NOT supported in MacOS for now */
+
+IUP_API void IupConfigRecentInit(Ihandle* ih, Ihandle* menu_list, Icallback recent_cb, int max_recent)
+{
+}
+
+IUP_API void IupConfigRecentUpdate(Ihandle* ih, const char* filename)
+{
+}
+
+#endif /* macOS/Cocoa */
 
 
 /*******************************************************************/
 
 
-void IupConfigDialogShow(Ihandle* ih, Ihandle* dialog, const char* name)
+IUP_API void IupConfigDialogShow(Ihandle* ih, Ihandle* dialog, const char* name)
 {
   int shown = 0;
   int set_size = 0;
@@ -456,37 +644,37 @@ void IupConfigDialogShow(Ihandle* ih, Ihandle* dialog, const char* name)
     return;
   }
 
+  /* set size only if dialog is resizable */
+  if (IupGetInt(dialog, "RESIZE"))
+  {
+    /* dialog size from Config */
+    int width = IupConfigGetVariableInt(ih, name, "Width");
+    int height = IupConfigGetVariableInt(ih, name, "Height");
+    if (width != 0 || height != 0)
+    {
+      int screen_width = 0, screen_height = 0;
+      IupGetIntInt(NULL, "SCREENSIZE", &screen_width, &screen_height);
+      if (width == 0)
+        width = screen_width;
+      if (height == 0)
+        height = screen_height;
+
+#ifdef WIN32
+      IupSetfAttribute(dialog, "RASTERSIZE", "%dx%d", width, height);
+#else
+      IupMap(dialog);
+      IupSetfAttribute(dialog, "CLIENTSIZE", "%dx%d", width, height);
+#endif
+      set_size = 1;
+    }
+  }
+
   if (IupConfigGetVariableIntDef(ih, name, "Maximized", 1) && IupGetInt(dialog, "RESIZE"))
   {
     IupSetAttribute(dialog, "PLACEMENT", "MAXIMIZED");
   }
   else
   {
-    /* set size only if dialog is resizable */
-    if (IupGetInt(dialog, "RESIZE"))
-    {
-      /* dialog size from Config */
-      int width = IupConfigGetVariableInt(ih, name, "Width");
-      int height = IupConfigGetVariableInt(ih, name, "Height");
-      if (width != 0 || height != 0)
-      {
-        int screen_width = 0, screen_height = 0;
-        IupGetIntInt(NULL, "SCREENSIZE", &screen_width, &screen_height);
-        if (width == 0)
-          width = screen_width;
-        if (height == 0)
-          height = screen_height;
-
-#ifdef WIN32
-        IupSetfAttribute(dialog, "RASTERSIZE", "%dx%d", width, height);
-#else
-        IupMap(dialog);
-        IupSetfAttribute(dialog, "CLIENTSIZE", "%dx%d", width, height);
-#endif
-        set_size = 1;
-      }
-    }
-
     /* dialog position from Config */
     if (IupConfigGetVariableStr(ih, name, "X"))
     {
@@ -523,20 +711,24 @@ void IupConfigDialogShow(Ihandle* ih, Ihandle* dialog, const char* name)
     IupSetAttribute(dialog, "USERSIZE", NULL);  /* clear minimum restriction without reseting the current size */
 }
 
-void IupConfigDialogClosed(Ihandle* ih, Ihandle* dialog, const char* name)
+IUP_API void IupConfigDialogClosed(Ihandle* ih, Ihandle* dialog, const char* name)
 {
-  int x, y;
-  int width, height;
-  int maximized;
-  int screen_width = 0, screen_height = 0;
-  
-  IupGetIntInt(dialog, "SCREENPOSITION", &x, &y);
-  IupConfigSetVariableInt(ih, name, "X", x);
-  IupConfigSetVariableInt(ih, name, "Y", y);
+  int x = 0, y = 0;
+
+  if (dialog->handle)
+  {
+    IupGetIntInt(dialog, "SCREENPOSITION", &x, &y);
+    IupConfigSetVariableInt(ih, name, "X", x);
+    IupConfigSetVariableInt(ih, name, "Y", y);
+  }
 
   /* save size only if dialog is resizable */
   if (IupGetInt(dialog, "RESIZE"))
   {
+    int width, height;
+    int maximized;
+    int screen_width = 0, screen_height = 0;
+
 #ifdef WIN32
     IupGetIntInt(dialog, "RASTERSIZE", &width, &height);
 #else
@@ -545,10 +737,10 @@ void IupConfigDialogClosed(Ihandle* ih, Ihandle* dialog, const char* name)
     IupConfigSetVariableInt(ih, name, "Width", width);
     IupConfigSetVariableInt(ih, name, "Height", height);
 
-    maximized = IupGetInt(dialog, "MAXIMIZED"); // Windows Only
+    maximized = IupGetInt(dialog, "MAXIMIZED"); /* Windows Only */
     IupGetIntInt(NULL, "SCREENSIZE", &screen_width, &screen_height);
     if (maximized ||
-        ((x < 0 && (2 * x + width == screen_width)) &&    // Works only for the main screen
+        ((x < 0 && (2 * x + width == screen_width)) &&    /* Works only for the main screen */
         (y < 0 && (2 * y + height == screen_height))))
         IupConfigSetVariableInt(ih, name, "Maximized", 1);
     else

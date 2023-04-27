@@ -21,7 +21,7 @@
 #include "iup_drvfont.h"
 
 
-void IupUnmap(Ihandle *ih)
+IUP_API void IupUnmap(Ihandle *ih)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -53,7 +53,7 @@ void IupUnmap(Ihandle *ih)
   ih->handle = NULL;
 }
 
-int IupMap(Ihandle* ih)
+IUP_API int IupMap(Ihandle* ih)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -138,7 +138,7 @@ int IupMap(Ihandle* ih)
   return IUP_NOERROR;
 }
 
-int IupPopup(Ihandle *ih, int x, int y)
+IUP_API int IupPopup(Ihandle *ih, int x, int y)
 {
   int ret;
 
@@ -171,7 +171,7 @@ int IupPopup(Ihandle *ih, int x, int y)
   return IUP_NOERROR;
 }
 
-int IupShowXY(Ihandle *ih, int x, int y)
+IUP_API int IupShowXY(Ihandle *ih, int x, int y)
 {
   int ret;
 
@@ -199,7 +199,7 @@ int IupShowXY(Ihandle *ih, int x, int y)
   return IUP_NOERROR;
 }
 
-int IupShow(Ihandle* ih)
+IUP_API int IupShow(Ihandle* ih)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))
@@ -224,7 +224,7 @@ int IupShow(Ihandle* ih)
   return IUP_NOERROR;
 }
 
-int IupHide(Ihandle* ih)
+IUP_API int IupHide(Ihandle* ih)
 {
   iupASSERT(iupObjectCheck(ih));
   if (!iupObjectCheck(ih))

@@ -1,0 +1,15 @@
+$(OBJDIR)/iuplua_mglplot.o: ctrl/iuplua_mglplot.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iup_mglplot.h \
+ ../include/iuplua.h ../include/iuplua_mglplot.h ../srclua5/il.h
+$(OBJDIR)/il_mglplot.o: ctrl/il_mglplot.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iup_mglplot.h ../srclua5/il.h lh/mglplot.lh
+$(OBJDIR)/il_mgllabel.o: ctrl/il_mgllabel.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iup_mglplot.h ../srclua5/il.h lh/mgllabel.lh

@@ -62,7 +62,7 @@ static int DrawArc(lua_State *L)
 
 static int DrawPolygon(lua_State *L)
 {
-  int* points = iuplua_checkint_array(L, 2, 0);
+  int* points = iuplua_checkint_array(L, 2, -1);
   IupDrawPolygon(iuplua_checkihandle(L, 1), points, iuplua_getn(L, 2));
   free(points);
   return 0;
@@ -70,8 +70,9 @@ static int DrawPolygon(lua_State *L)
 
 static int DrawText(lua_State *L)
 {
-  size_t len = 0;
-  IupDrawText(iuplua_checkihandle(L, 1), luaL_checklstring(L, 2, &len), (int)len, (int)luaL_checkinteger(L, 3), (int)luaL_checkinteger(L, 4));
+  size_t size;
+  const char* str = luaL_checklstring(L, 2, &size);
+  IupDrawText(iuplua_checkihandle(L, 1), str, (int)size, (int)luaL_checkinteger(L, 3), (int)luaL_checkinteger(L, 4), (int)luaL_optinteger(L, 5, -1), (int)luaL_optinteger(L, 6, -1));
   return 0;
 }
 
@@ -91,7 +92,7 @@ static int DrawImage(lua_State *L)
   else
     name = luaL_checkstring(L, 2);
 
-  IupDrawImage(iuplua_checkihandle(L, 1), name, (int)luaL_checkinteger(L, 3), (int)luaL_checkinteger(L, 4), (int)luaL_checkinteger(L, 5));
+  IupDrawImage(iuplua_checkihandle(L, 1), name, (int)luaL_checkinteger(L, 3), (int)luaL_checkinteger(L, 4), (int)luaL_optinteger(L, 5, -1), (int)luaL_optinteger(L, 6, -1));
   return 0;
 }
 
@@ -105,6 +106,17 @@ static int DrawResetClip(lua_State *L)
 {
   IupDrawResetClip(iuplua_checkihandle(L, 1));
   return 0;
+}
+
+static int DrawGetClipRect(lua_State *L)
+{
+  int x1, y1, x2, y2;
+  IupDrawGetClipRect(iuplua_checkihandle(L, 1), &x1, &y1, &x2, &y2);
+  lua_pushinteger(L, x1);
+  lua_pushinteger(L, y1);
+  lua_pushinteger(L, x2);
+  lua_pushinteger(L, y2);
+  return 4;
 }
 
 static int DrawSelectRect(lua_State *L)
@@ -131,7 +143,9 @@ static int DrawGetSize(lua_State *L)
 static int DrawGetTextSize(lua_State *L)
 {
   int w, h;
-  IupDrawGetTextSize(iuplua_checkihandle(L, 1), luaL_checkstring(L, 2), &w, &h);
+  size_t len;
+  const char* text = luaL_checklstring(L, 2, &len);
+  IupDrawGetTextSize(iuplua_checkihandle(L, 1), text, (int)len, &w, &h);
   lua_pushinteger(L, w);
   lua_pushinteger(L, h);
   return 2;
@@ -174,6 +188,7 @@ void iupluadraw_open(lua_State * L)
     { "DrawText", DrawText },
     { "DrawImage", DrawImage },
     { "DrawSetClipRect", DrawSetClipRect },
+    { "DrawGetClipRect", DrawGetClipRect },
     { "DrawResetClip", DrawResetClip },
     { "DrawSelectRect", DrawSelectRect },
     { "DrawFocusRect", DrawFocusRect },

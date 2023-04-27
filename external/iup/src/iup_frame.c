@@ -22,14 +22,20 @@
 
 int iupFrameGetTitleHeight(Ihandle* ih)
 {
-  int charheight;
-  iupdrvFontGetCharSize(ih, NULL, &charheight);
-  return charheight;
+  int height;
+  if (iupdrvFrameGetTitleHeight(ih, &height))
+    return height;
+
+  iupdrvFontGetCharSize(ih, NULL, &height);
+  return height;
 }
 
 static void iFrameGetDecorSize(Ihandle* ih, int *width, int *height)
 {
-  *width  = 5;
+  if (iupdrvFrameGetDecorSize(ih, width, height))
+    return;
+
+  *width = 5;
   *height = 5;
 
   if (iupAttribGet(ih, "_IUPFRAME_HAS_TITLE") || iupAttribGet(ih, "TITLE"))
@@ -64,9 +70,11 @@ static char* iFrameGetClientOffsetAttrib(Ihandle* ih)
   /* In Windows the position of the child is still
   relative to the top-left corner of the frame.
   So we must manually add the decorations. */
-  if (!iupdrvFrameHasClientOffset())
+  if (!iupdrvFrameHasClientOffset(ih))
   {
-    iupdrvFrameGetDecorOffset(&dx, &dy);
+    /* GTK and Motif Only */
+
+    iupdrvFrameGetDecorOffset(ih, &dx, &dy);
 
     if (iupAttribGet(ih, "_IUPFRAME_HAS_TITLE") || iupAttribGet(ih, "TITLE"))
       dy += iupFrameGetTitleHeight(ih);
@@ -137,10 +145,11 @@ static void iFrameSetChildrenPositionMethod(Ihandle* ih, int x, int y)
     /* In Windows the position of the child is still
     relative to the top-left corner of the frame.
     So we must manually add the decorations. */
-    if (iupdrvFrameHasClientOffset())
+    if (iupdrvFrameHasClientOffset(ih))
     {
+      /* Windows Only */
       int dx = 0, dy = 0;
-      iupdrvFrameGetDecorOffset(&dx, &dy);
+      iupdrvFrameGetDecorOffset(ih, &dx, &dy);
 
       if (iupAttribGet(ih, "_IUPFRAME_HAS_TITLE") || iupAttribGet(ih, "TITLE"))
         dy += iupFrameGetTitleHeight(ih);
@@ -158,7 +167,7 @@ static void iFrameSetChildrenPositionMethod(Ihandle* ih, int x, int y)
 /******************************************************************************/
 
 
-Ihandle* IupFrame(Ihandle* child)
+IUP_API Ihandle* IupFrame(Ihandle* child)
 {
   void *children[2];
   children[0] = (void*)child;
@@ -173,7 +182,7 @@ Iclass* iupFrameNewClass(void)
   ic->name = "frame";
   ic->format = "h"; /* one Ihandle* */
   ic->nativetype = IUP_TYPECONTROL;
-  ic->childtype = IUP_CHILDMANY+1;   /* one child */
+  ic->childtype = IUP_CHILDMANY+1;   /* 1 child */
   ic->is_interactive = 0;
 
   /* Class functions */
@@ -190,6 +199,7 @@ Iclass* iupFrameNewClass(void)
   /* Common Callbacks */
   iupClassRegisterCallback(ic, "MAP_CB", "");
   iupClassRegisterCallback(ic, "UNMAP_CB", "");
+  iupClassRegisterCallback(ic, "FOCUS_CB", "i");
 
   /* Common */
   iupBaseRegisterCommonAttrib(ic);

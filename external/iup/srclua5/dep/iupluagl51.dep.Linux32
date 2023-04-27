@@ -1,0 +1,16 @@
+$(OBJDIR)/iuplua_glcanvas.o: ctrl/iuplua_glcanvas.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iupgl.h \
+ ../include/iuplua.h ../include/iupluagl.h ../srclua5/il.h
+$(OBJDIR)/il_glcanvas.o: ctrl/il_glcanvas.c /tecgraf/lua5.1/include/lua.h \
+ /tecgraf/lua5.1/include/luaconf.h /tecgraf/lua5.1/include/lauxlib.h \
+ /tecgraf/lua5.1/include/lua.h ../include/iup.h ../include/iupkey.h \
+ ../include/iupdef.h ../include/iup_export.h ../include/iuplua.h \
+ ../include/iupgl.h ../srclua5/il.h lh/glcanvas.lh
+$(OBJDIR)/il_glbackgroundbox.o: ctrl/il_glbackgroundbox.c \
+ /tecgraf/lua5.1/include/lua.h /tecgraf/lua5.1/include/luaconf.h \
+ /tecgraf/lua5.1/include/lauxlib.h /tecgraf/lua5.1/include/lua.h \
+ ../include/iup.h ../include/iupkey.h ../include/iupdef.h \
+ ../include/iup_export.h ../include/iuplua.h ../include/iupgl.h \
+ ../srclua5/il.h lh/glbackgroundbox.lh

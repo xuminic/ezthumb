@@ -11,31 +11,31 @@
 extern "C" {
 #endif
 
-#define iupCOLORDoubleTO8(_x) ((unsigned char)(_x*255))  /* 1.0*255 = 255 */
-#define iupCOLOR8ToDouble(_x) ((double)_x/255.0)
-
+#define iupgtkColorFromDouble(_x) ((unsigned char)(_x*255))  /* 1.0*255 = 255 */
+#define iupgtkColorToDouble(_x) ((double)_x/255.0)
 
 
 /* common */
-gboolean iupgtkEnterLeaveEvent(GtkWidget *widget, GdkEventCrossing *evt, Ihandle* ih);
+IUP_DRV_API gboolean iupgtkEnterLeaveEvent(GtkWidget *widget, GdkEventCrossing *evt, Ihandle* ih);
 gboolean iupgtkMotionNotifyEvent(GtkWidget *widget, GdkEventMotion *evt, Ihandle *ih);
-gboolean iupgtkButtonEvent(GtkWidget *widget, GdkEventButton *evt, Ihandle *ih);
-gboolean iupgtkShowHelp(GtkWidget *widget, GtkWidgetHelpType *arg1, Ihandle* ih);
+IUP_DRV_API gboolean iupgtkButtonEvent(GtkWidget *widget, GdkEventButton *evt, Ihandle *ih);
+IUP_DRV_API gboolean iupgtkShowHelp(GtkWidget *widget, GtkWidgetHelpType *arg1, Ihandle* ih);
 
 int iupgtkSetMnemonicTitle(Ihandle* ih, GtkLabel* label, const char* value);
 void iupgtkUpdateMnemonic(Ihandle* ih);
 
-void iupgdkColorSet(GdkColor* color, unsigned char r, unsigned char g, unsigned char b);
+void iupgdkColorSetRGB(GdkColor* color, unsigned char r, unsigned char g, unsigned char b);
 void iupgtkSetBgColor(InativeHandle* handle, unsigned char r, unsigned char g, unsigned char b);
 void iupgtkSetFgColor(InativeHandle* handle, unsigned char r, unsigned char g, unsigned char b);
 
-void iupgtkAddToParent(Ihandle* ih);
+IUP_DRV_API void iupgtkAddToParent(Ihandle* ih);
 const char* iupgtkGetWidgetClassName(GtkWidget* widget);
 void iupgtkSetPosSize(GtkContainer* parent, GtkWidget* widget, int x, int y, int width, int height);
 GdkWindow* iupgtkGetWindow(GtkWidget *widget);
 void iupgtkWindowGetPointer(GdkWindow *window, int *x, int *y, GdkModifierType *mask);
 int iupgtkIsVisible(GtkWidget* widget);
 void iupgtkClearSizeStyleCSS(GtkWidget* widget);
+void iupgtkSetMargin(GtkWidget* widget, int horiz_padding, int vert_padding, int mandatory_gtk3);
 
 GtkWidget* iupgtkNativeContainerNew(int has_window);
 void iupgtkNativeContainerAdd(GtkWidget* container, GtkWidget* widget);
@@ -43,7 +43,7 @@ void iupgtkNativeContainerMove(GtkWidget* container, GtkWidget* widget, int x, i
 
 /* str */
 void  iupgtkStrRelease(void);
-char* iupgtkStrConvertToSystem(const char* str);
+IUP_DRV_API char* iupgtkStrConvertToSystem(const char* str);
 char* iupgtkStrConvertToSystemLen(const char* str, int *len);
 char* iupgtkStrConvertFromSystem(const char* str);
 char* iupgtkStrConvertFromFilename(const char* str);
@@ -53,12 +53,12 @@ int   iupgtkStrGetUTF8Mode(void);
 
 
 /* focus */
-gboolean iupgtkFocusInOutEvent(GtkWidget *widget, GdkEventFocus *evt, Ihandle* ih);
-void iupgtkSetCanFocus(GtkWidget *widget, int can);
+IUP_DRV_API gboolean iupgtkFocusInOutEvent(GtkWidget *widget, GdkEventFocus *evt, Ihandle* ih);
+IUP_DRV_API void iupgtkSetCanFocus(GtkWidget *widget, int can);
 
 
 /* key */
-gboolean iupgtkKeyPressEvent(GtkWidget *widget, GdkEventKey *evt, Ihandle* ih);
+IUP_DRV_API gboolean iupgtkKeyPressEvent(GtkWidget *widget, GdkEventKey *evt, Ihandle* ih);
 gboolean iupgtkKeyReleaseEvent(GtkWidget *widget, GdkEventKey *evt, Ihandle* ih);
 void iupgtkButtonKeySetStatus(guint state, unsigned int but, char* status, int doubleclick);
 int iupgtkKeyDecode(GdkEventKey *evt);
@@ -81,10 +81,13 @@ PangoLayout* iupgtkGetPangoLayout(const char* value);
 
 
 /* open */
-char* iupgtkGetNativeWindowHandle(Ihandle* ih);
-void iupgtkPushVisualAndColormap(void* visual, void* colormap);
-void* iupgtkGetNativeGraphicsContext(GtkWidget* widget);
-void iupgtkReleaseNativeGraphicsContext(GtkWidget* widget, void* gc);
+char* iupgtkGetNativeWidgetHandle(GtkWidget *widget);  /* Used only in Canvas, Dialog and FileDlg - for drawing with CD/GDK or OpenGL (not used for IupDraw) */
+char* iupgtkGetNativeWindowHandleAttrib(Ihandle* ih);  /* Used only in Canvas and Dialog - for drawing with CD/GDK or OpenGL (not used for IupDraw) */
+const char* iupgtkGetNativeWindowHandleName(void);  /* Used only in Canvas, Dialog and FileDlg - for drawing with CD/GDK or OpenGL (not used for IupDraw) */
+const char* iupgtkGetNativeFontIdName(void); /* Attribute available for IupGLUseFont - for drawing with OpenGL */
+void iupgtkPushVisualAndColormap(void* visual, void* colormap); /* Used in Canvas, for GLCanvas VISUAL attribute (GTK 2 Only) - for drawing with OpenGL */
+void* iupgtkGetNativeGraphicsContext(GtkWidget* widget); /* Used in FileDlg PREVIEWDC attribute - for drawing with CD/GDK */
+void iupgtkReleaseNativeGraphicsContext(GtkWidget* widget, void* gc); /* Used in FileDlg PREVIEWDC attribute - for drawing with CD/GDK */
 
 
 /* dialog */

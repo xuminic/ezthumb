@@ -13,9 +13,11 @@
 #include "iup.h"
 #include "iupcontrols.h"
 #include "iupgl.h"
+#include "iupim.h"
 
 #include "iup_str.h"
 #include "iup_object.h"
+#include "iup_image.h"
 
 
 /* #define STOCK_TEST "24" */
@@ -27,12 +29,6 @@
 #ifdef USE_IM
 #include "iupim.h"
 #endif
-
-/* IupImage internal function, used only here */
-int iupSaveImageAsText(Ihandle* ih, FILE* packfile, const char* format, const char* name);
-
-/* IupImage internal function, used only here */
-void iupImageStockLoadAll(void);
 
 static int close_cb(void)
 {
@@ -69,14 +65,13 @@ static int imagebutton_cb(Ihandle* self)
   return IUP_DEFAULT;
 }
 
-static int is_image(const char* type)
+static int compare_image_names(const void* i1, const void* i2)
 {
-  if (iupStrEqual(type, "image") ||
-      iupStrEqual(type, "imagergb") ||
-      iupStrEqual(type, "imagergba"))
-    return 1;
-  else
-    return 0;
+  Ihandle* ih1 = *((Ihandle**)i1);
+  Ihandle* ih2 = *((Ihandle**)i2);
+  char* name1 = IupGetName(ih1);
+  char* name2 = IupGetName(ih2);
+  return strcmp(name1, name2);
 }
 
 static int showallimages_cb(Ihandle* ih)
@@ -84,62 +79,82 @@ static int showallimages_cb(Ihandle* ih)
   Ihandle *dialog, *box, *files, *tabs, *toggle, *label;
   Ihandle* params[500];
   char *names[MAX_NAMES];
-  int i, n = 0, num_names = IupGetAllNames(names, MAX_NAMES); 
+  Ihandle* images[MAX_NAMES];
+  int i, n = 0, num_images, num_names = IupGetAllNames(names, MAX_NAMES);
   files = IupUser();
+
+  num_images = 0;
   for (i = 0; i < num_names; i++)
   {
     Ihandle* elem = IupGetHandle(names[i]);
-    char* type = IupGetClassType(elem);
 
-    if (is_image(type))
+    if (elem->iclass->nativetype == IUP_TYPEIMAGE)
     {
-      Ihandle *tbox, *lbox, *button;
-
       /* show only loaded images */
       char* file_title = IupGetAttribute(elem, "_FILE_TITLE");
       if (!file_title)
         continue;
 
-      tbox = (Ihandle*)IupGetAttribute(files, file_title);
-      if (!tbox)
-      {
-        tbox = IupVbox(NULL);
-        IupSetAttribute(files, file_title, (char*)tbox);
-        IupSetAttribute(tbox, "TABTITLE", file_title);
-#ifdef STOCK_TEST
-        params[n] = IupBackgroundBox(tbox);
-        IupSetStrAttribute(params[n], "BGCOLOR", IupGetAttribute(IupGetDialog(ih), "BGCOLOR"));
-#else
-        params[n] = tbox;
-#endif
-        n++;
-      }
-
-      lbox = (Ihandle*)IupGetAttribute(tbox, file_title);
-      if (!lbox || IupGetInt(lbox, "LINE_COUNT") == 10)
-      {
-        lbox = IupHbox(NULL);
-        IupAppend(tbox, lbox);
-        IupSetAttribute(tbox, file_title, (char*)lbox);
-        IupSetAttribute(lbox, "LINE_COUNT", "0");
-      }
-
-      button = IupButton("", NULL);
-#ifdef STOCK_TEST
-      IupSetAttribute(button, "FLAT", "Yes");
-#endif
-      IupSetAttribute(button, "IMAGE", names[i]);
-      IupSetfAttribute(button, "_INFO", "%s [%d,%d]", names[i], IupGetInt(elem, "WIDTH"), IupGetInt(elem, "HEIGHT"));
-      IupSetCallback(button, "ACTION", (Icallback)imagebutton_cb);
-      IupAppend(lbox, button);
-      IupSetfAttribute(lbox, "LINE_COUNT", "%d", IupGetInt(lbox, "LINE_COUNT")+1);
+      images[num_images] = elem;
+      num_images++;
     }
   }
 
-  if (n == 0)
+  if (num_images == 0)
   {
     IupMessage("Error", "No images.");
     return IUP_DEFAULT;
+  }
+
+  qsort(images, num_images, sizeof(Ihandle*), compare_image_names);
+
+  for (i = 0; i < num_images; i++)
+  {
+    Ihandle *tbox, *lbox, *button, *elem;
+    char* name;
+    char* file_title;
+
+    elem = images[i];
+    name = IupGetName(elem);
+
+    /* show only loaded images */
+    file_title = IupGetAttribute(elem, "_FILE_TITLE");
+    if (!file_title)
+      continue;
+
+    tbox = (Ihandle*)IupGetAttribute(files, file_title);
+    if (!tbox)
+    {
+      tbox = IupVbox(NULL);
+      IupSetAttribute(files, file_title, (char*)tbox);
+      IupSetAttribute(tbox, "TABTITLE", file_title);
+#ifdef STOCK_TEST
+      params[n] = IupBackgroundBox(tbox);
+      IupSetStrAttribute(params[n], "BGCOLOR", IupGetAttribute(IupGetDialog(ih), "BGCOLOR"));
+#else
+      params[n] = tbox;
+#endif
+      n++;
+    }
+
+    lbox = (Ihandle*)IupGetAttribute(tbox, file_title);
+    if (!lbox || IupGetInt(lbox, "LINE_COUNT") == 10)
+    {
+      lbox = IupHbox(NULL);
+      IupAppend(tbox, lbox);
+      IupSetAttribute(tbox, file_title, (char*)lbox);
+      IupSetAttribute(lbox, "LINE_COUNT", "0");
+    }
+
+    button = IupButton("", NULL);
+#ifdef STOCK_TEST
+    IupSetAttribute(button, "FLAT", "Yes");
+#endif
+    IupSetStrAttribute(button, "IMAGE", name);
+    IupSetfAttribute(button, "_INFO", "%s [%d,%d]", name, IupGetInt(elem, "WIDTH"), IupGetInt(elem, "HEIGHT"));
+    IupSetCallback(button, "ACTION", (Icallback)imagebutton_cb);
+    IupAppend(lbox, button);
+    IupSetfAttribute(lbox, "LINE_COUNT", "%d", IupGetInt(lbox, "LINE_COUNT")+1);
   }
 
   params[n] = NULL;
@@ -160,6 +175,7 @@ static int showallimages_cb(Ihandle* ih)
   IupSetAttribute(dialog, "TITLE", "All Images");
   IupSetCallback(dialog, "CLOSE_CB", (Icallback)close_cb);
   IupSetAttribute(dialog, "_INFO_LABEL", (char*)label);
+  IupSetAttributeHandle(dialog, "PARENTDIALOG", IupGetDialog(ih));
 
   IupPopup(dialog, IUP_CENTER, IUP_CENTER);
 
@@ -238,29 +254,28 @@ static int saveallimages_cb(void)
   for (i = 0; i < num_names; i++)
   {
     Ihandle* elem = IupGetHandle(names[i]);
-    char* type = IupGetClassType(elem);
 
-    if (is_image(type))
+    if (elem->iclass->nativetype == IUP_TYPEIMAGE)
     {
-      char file_name[10240] = "";
+      char filename[10240] = "";
 
       /* save only loaded images */
       char* file_title = IupGetAttribute(elem, "_FILE_TITLE");
       if (!file_title)
         continue;
 
-      strcpy(file_name, folder);
-      strcat(file_name, "/");
-      strcat(file_name, file_title);
-      strcat(file_name, "_");
-      strcat(file_name, names[i]);
-      strcat(file_name, ".");
-      strcat(file_name, StrLower(imgtype));
+      strcpy(filename, folder);
+      strcat(filename, "/");
+      strcat(filename, file_title);
+      strcat(filename, "_");
+      strcat(filename, names[i]);
+      strcat(filename, ".");
+      strcat(filename, StrLower(imgtype));
 
-      if (!IupSaveImageAsText(elem, file_name, imgtype, names[i]))
+      if (!IupSaveImageAsText(elem, filename, imgtype, names[i]))
       {
 #ifdef USE_IM
-        if (!IupSaveImage(elem, file_name, imgtype))
+        if (!IupSaveImage(elem, filename, imgtype))
         {
           char* err_msg = IupGetGlobal("IUPIM_LASTERROR");
           if (err_msg)
@@ -308,18 +323,18 @@ static int GetSaveAsFile(char* file, const char* imgtype)
   return ret;
 }
 
-static void replaceDot(char* file_name)
+static void replaceDot(char* filename)
 {
   /* replace all "." by "_" */
   /* replace all "-" by "_" */
-  while(*file_name)
+  while(*filename)
   {
-    if (*file_name == '.') 
-      *file_name = '_';
-    if (*file_name == '-') 
-      *file_name = '_';
+    if (*filename == '.') 
+      *filename = '_';
+    if (*filename == '-') 
+      *filename = '_';
 
-    file_name++;
+    filename++;
   }
 }
 
@@ -332,13 +347,13 @@ static char* strdup_free(const char* str, char* str_ptr)
   return tmp;
 }
 
-static char* mainGetFileTitle(const char* file_name)
+static char* mainGetFileTitle(const char* filename)
 {
-  int i, last = 1, len = (int)strlen(file_name);
+  int i, last = 1, len = (int)strlen(filename);
   char* file_title = malloc(len+1);
   char* dot, *ft_str = file_title;
 
-  memcpy(file_title, file_name, len+1);
+  memcpy(file_title, filename, len+1);
   
   dot = strchr(file_title, '.');
   if (dot) *dot = 0;
@@ -363,9 +378,17 @@ static char* mainGetFileTitle(const char* file_name)
   return strdup_free(file_title, ft_str);
 }
 
+static char* iStrGetNoReserved(const char* p_name)
+{
+  static char name[128];
+  strcpy(name, p_name);
+  iupStrReplaceReserved(name, '_');
+  return name;
+}
+
 static int saveallimagesone_cb(void)
 {
-  char file_name[10240] = "*.";
+  char filename[10240] = "*.";
   char *names[MAX_NAMES];
   int i, n = 0, num_names = IupGetAllNames(names, MAX_NAMES); 
   FILE* packfile = NULL;
@@ -374,16 +397,15 @@ static int saveallimagesone_cb(void)
   if (!imgtype)
     return IUP_DEFAULT;
 
-  strcat(file_name, imgtype);
-  if (GetSaveAsFile(file_name, imgtype) == -1)
+  strcat(filename, StrLower(imgtype));
+  if (GetSaveAsFile(filename, imgtype) == -1)
     return IUP_DEFAULT;
 
   for (i = 0; i < num_names; i++)
   {
     Ihandle* elem = IupGetHandle(names[i]);
-    char* type = IupGetClassType(elem);
 
-    if (is_image(type))
+    if (elem->iclass->nativetype == IUP_TYPEIMAGE)
     {
       /* save only loaded images */
       char* file_title = IupGetAttribute(elem, "_FILE_TITLE");
@@ -394,15 +416,33 @@ static int saveallimagesone_cb(void)
       }
 
       if (!packfile)
-        packfile = fopen(file_name, "wb");
-
-      if (!packfile)
       {
-        IupMessage("Error", "Failed to open the file.");
-        return IUP_DEFAULT;
+        packfile = fopen(filename, "wb");
+
+        if (!packfile)
+        {
+          IupMessage("Error", "Failed to open the file.");
+          return IUP_DEFAULT;
+        }
+
+        if (iupStrEqualNoCase(imgtype, "C"))
+        {
+          fprintf(packfile, "/*   Generated by IupView export to C.   */\n\n");
+
+          fprintf(packfile, "#include <stdlib.h>\n");
+          fprintf(packfile, "#include <iup.h>\n\n");
+        }
+        else if (iupStrEqualNoCase(imgtype, "LUA"))
+        {
+          fprintf(packfile, "--   Generated by IupView export to Lua.\n\n");
+        }
+        else
+        {
+          fprintf(packfile, "#   Generated by IupView export to LED.\n\n");
+        }
       }
 
-      if (!iupSaveImageAsText(elem, packfile, imgtype, names[i]))
+      if (!iupImageExportToFile(elem, packfile, imgtype, names[i]))
       {
         fclose(packfile);
         IupMessage("Error", "Failed to write to the file.");
@@ -417,18 +457,33 @@ static int saveallimagesone_cb(void)
 
   if (packfile)
   {
-    if (iupStrEqualNoCase(imgtype, "C"))  /* only for C files */
+    if (iupStrEqualNoCase(imgtype, "C"))
     {
-      char* title = mainGetFileTitle(file_name);
-      fprintf(packfile, "void load_all_images_%s(void)\n{\n", title);
+      char* title = mainGetFileTitle(filename);
+      iupStrReplaceReserved(title, '_');
+      fprintf(packfile, "void create_images_%s(void)\n{\n", title);
       free(title);
 
       for (i = 0; i < num_names; i++)
       {
         if (names[i])
-          fprintf(packfile, "  IupSetHandle(\"IUP_%s\", load_image_%s());\n", names[i], names[i]);
+          fprintf(packfile, "  IupSetHandle(\"%s\", create_image_%s());\n", names[i], iStrGetNoReserved(names[i]));
       }
       fprintf(packfile, "}\n\n");
+    }
+    else if (iupStrEqualNoCase(imgtype, "LUA"))
+    {
+      char* title = mainGetFileTitle(filename);
+      iupStrReplaceReserved(title, '_');
+      fprintf(packfile, "function create_images_%s()\n\n", title);
+      free(title);
+
+      for (i = 0; i < num_names; i++)
+      {
+        if (names[i])
+          fprintf(packfile, "  iup.SetHandle(\"%s\", create_image_%s())\n", names[i], iStrGetNoReserved(names[i]));
+      }
+      fprintf(packfile, "end\n\n");
     }
 
     fclose(packfile);
@@ -451,23 +506,22 @@ static int saveimage_cb(Ihandle* self)
   if (name) /* the list may be empty */
   {
     Ihandle* elem = IupGetHandle(name);
-    char* type = IupGetClassType(elem);
 
-    if (is_image(type))
+    if (elem->iclass->nativetype == IUP_TYPEIMAGE)
     {
-      char file_name[10240];
+      char filename[10240];
 
       char* imgtype = getfileformat(1);
       if (!imgtype)
         return IUP_DEFAULT;
 
-      sprintf(file_name, "%s.%s", name, StrLower(imgtype));
-      if (GetSaveAsFile(file_name, imgtype) != -1)
+      sprintf(filename, "%s.%s", name, StrLower(imgtype));
+      if (GetSaveAsFile(filename, imgtype) != -1)
       {
-        if (!IupSaveImageAsText(elem, file_name, imgtype, name))
+        if (!IupSaveImageAsText(elem, filename, imgtype, name))
         {
 #ifdef USE_IM
-          if (!IupSaveImage(elem, file_name, imgtype))
+          if (!IupSaveImage(elem, filename, imgtype))
           {
             char* err_msg = IupGetGlobal("IUPIM_LASTERROR");
             if (err_msg)
@@ -534,8 +588,26 @@ static int layoutdlg_cb(Ihandle* self)
       if (dialog)
         IupShow(IupLayoutDialog(dialog));
       else
-        IupMessage("Error", "Will only hide dialogs.");
+        IupMessage("Error", "The element must be a dialog or be inside a dialog.");
     }
+  }
+  else
+    IupMessage("Error", "No elements.");
+
+  return IUP_DEFAULT;
+}
+
+static int propertiesdlg_cb(Ihandle* self)
+{
+  Ihandle* list = (Ihandle*)IupGetAttribute(self, "mainList");
+  char* name = IupGetAttribute(list, IupGetAttribute(list, "VALUE"));
+
+  if (name) /* the list may be empty */
+  {
+    Ihandle* elem = IupGetHandle(name);
+    Ihandle* dlg = IupElementPropertiesDialog(IupGetDialog(list), elem);
+    IupPopup(dlg, IUP_CENTERPARENT, IUP_CENTERPARENT);
+    IupDestroy(dlg);
   }
   else
     IupMessage("Error", "No elements.");
@@ -628,6 +700,7 @@ static int destroyall_cb(Ihandle* self)
   Ihandle* ih_names[MAX_NAMES];
   Ihandle* list = (Ihandle*)IupGetAttribute(self, "mainList");
   int i, j=0, num_names = IupGetAllNames(names, MAX_NAMES); 
+  memset(ih_names, 0, MAX_NAMES * sizeof(Ihandle*));
   for (i = 0; i < num_names; i++)
   {
     ih = IupGetHandle(names[i]);
@@ -667,13 +740,13 @@ static int destroyall_cb(Ihandle* self)
   return IUP_DEFAULT;
 }
 
-static void mainUpdateList(Ihandle* self, const char* file_name)
+static void mainUpdateList(Ihandle* self, const char* filename)
 {
   char *names[MAX_NAMES];
   char str_item[20];
   Ihandle* list = (Ihandle*)IupGetAttribute(self, "mainList");
   int i, n = 0, num_names = IupGetAllNames(names, MAX_NAMES); 
-  char* file_title = mainGetFileTitle(file_name);
+  char* file_title = mainGetFileTitle(filename);
   for (i = 0; i < num_names; i++)
   {
     Ihandle* elem = IupGetHandle(names[i]);
@@ -731,19 +804,19 @@ static int loadbuffer_cb(Ihandle* self)
 
 static int loadled_cb(Ihandle* self)
 {
-  char file_name[10240] = "./*.led";
-  int ret = IupGetFile(file_name);
+  char filename[10240] = "./*.led";
+  int ret = IupGetFile(filename);
   if (ret == 0)
   {
     char* error;
 
     mainUpdateInternals();
 
-    error = IupLoad(file_name);
+    error = IupLoad(filename);
     if (error)
       IupMessage("Error", error);
     else
-      mainUpdateList(self, file_name);
+      mainUpdateList(self, filename);
   }
   return IUP_DEFAULT;
 }
@@ -762,13 +835,13 @@ static char* ParseFile(const char* dir, const char* FileName, int *offset)
   {
     int size = (int)(file - FileName) + 1;
     int dir_size = (int)strlen(dir);
-    char* file_name = malloc(size+dir_size+1);
-    memcpy(file_name, dir, dir_size);
-    file_name[dir_size] = '\\';
-    memcpy(file_name+dir_size+1, FileName, size-1);
-    file_name[size+dir_size] = 0;
+    char* filename = malloc(size+dir_size+1);
+    memcpy(filename, dir, dir_size);
+    filename[dir_size] = '\\';
+    memcpy(filename+dir_size+1, FileName, size-1);
+    filename[size+dir_size] = 0;
     *offset += size;
-    return file_name;
+    return filename;
   }
 }
 
@@ -792,15 +865,15 @@ static char* ParseDir(const char* FileName, int *offset)
 }
 #endif
 
-static void LoadImageFile(Ihandle* self, const char* file_name)
+static void LoadImageFile(Ihandle* self, const char* filename)
 {
-  Ihandle* new_image = IupLoadImage(file_name);
+  Ihandle* new_image = IupLoadImage(filename);
   if (new_image)
   {
-    char* file_title = mainGetFileTitle(file_name);
+    char* file_title = mainGetFileTitle(filename);
     IupSetHandle(file_title, new_image);
     free(file_title);
-    mainUpdateList(self, file_name);
+    mainUpdateList(self, filename);
   }
   else
   {
@@ -845,14 +918,14 @@ static int loadimage_cb(Ihandle* self)
   /* parse multiple files */
   {
     int offset;
-    char* file_name;
+    char* filename;
     char* dir = ParseDir(FileName, &offset);
     if (dir)
     {
-      while ((file_name = ParseFile(dir, FileName + offset, &offset)) != NULL)
+      while ((filename = ParseFile(dir, FileName + offset, &offset)) != NULL)
       {
-        LoadImageFile(self, file_name);
-        free(file_name);
+        LoadImageFile(self, filename);
+        free(filename);
       }
       free(dir);
     }
@@ -867,18 +940,28 @@ static int loadimage_cb(Ihandle* self)
 }
 #endif
 
-static int dropfile_cb(Ihandle *self, char* file_name)
+static int dropfile_cb(Ihandle *self, char* filename)
 {
   char* error;
 
   mainUpdateInternals();
 
-  error = IupLoad(file_name);
+  error = IupLoad(filename);
   if (error)
     IupMessage("Error", error);
   else
-    mainUpdateList(self, file_name);
+    mainUpdateList(self, filename);
 
+  return IUP_DEFAULT;
+}
+
+static int use_utf8_cb(Ihandle *self)
+{
+  (void)self;
+  if (IupGetInt(NULL, "UTF8MODE"))
+    IupSetGlobal("UTF8MODE", "No");
+  else
+    IupSetGlobal("UTF8MODE", "Yes");
   return IUP_DEFAULT;
 }
 
@@ -896,12 +979,14 @@ static Ihandle* mainDialog(void)
       IupSetCallbacks(IupItem("Import Image(s)...", NULL), "ACTION", (Icallback)loadimage_cb, NULL),
 #endif
       IupSeparator(),
+      IupSetCallbacks(IupSetAttributes(IupItem("Use UTF-8", NULL), "AUTOTOGGLE=Yes"), "ACTION", (Icallback)use_utf8_cb, NULL),
       IupSetCallbacks(IupItem("Exit", NULL), "ACTION", (Icallback)close_cb, NULL),
       NULL)),
     IupSubmenu("Element", IupMenu(
       IupSetCallbacks(IupItem("Show...", NULL), "ACTION", (Icallback)showelem_cb, NULL),
-      IupSetCallbacks(IupItem("Hide...", NULL), "ACTION", (Icallback)hideelem_cb, NULL),
-      IupSetCallbacks(IupItem("Layout Dialog...", NULL), "ACTION", (Icallback)layoutdlg_cb, NULL),
+      IupSetCallbacks(IupItem("Hide Dialog", NULL), "ACTION", (Icallback)hideelem_cb, NULL),
+      IupSetCallbacks(IupItem("Dialog Layout...", NULL), "ACTION", (Icallback)layoutdlg_cb, NULL),
+      IupSetCallbacks(IupItem("Element Properties...", NULL), "ACTION", (Icallback)propertiesdlg_cb, NULL),
       IupSeparator(),
       IupSetCallbacks(IupItem("Destroy All...", NULL), "ACTION", (Icallback)destroyall_cb, NULL),
       IupSetCallbacks(IupItem("Show All Images...", NULL), "ACTION", (Icallback)showallimages_cb, NULL),
@@ -954,7 +1039,7 @@ static int converter_usage(void)
     "  IUP version: %s\n"
     "  Converts image files to source code that creates an IupImage.\n"
     "  Can pack several files in a single output file.\n"
-    "  Each image will correspond to a function called load_image_<filetitle>,\n"
+    "  Each image will correspond to a function called create_image_<filetitle>,\n"
     "  where <filetitle> is the file name of the input image without path.\n"
     "  -h            print this help\n"
     "  -t            output format, can be LED, LUA or C (default: C)\n"
@@ -1042,7 +1127,7 @@ static int image_converter(int argc, char **argv)
     intitle = iupStrFileGetTitle(inname);
     replace_dots(intitle);
 
-    if (!iupSaveImageAsText(image, outfile, imgtype, intitle))
+    if (!iupImageExportToFile(image, outfile, imgtype, intitle))
     {
       printf("Error: Failed to write to the output file.");
 
@@ -1070,15 +1155,20 @@ int main (int argc, char **argv)
     Ihandle* main_dialog;
 
     IupOpen(&argc, &argv);
+    IupImageLibOpen();
+    IupControlsOpen();
+    IupImOpen();
 #ifndef USE_NO_OPENGL  
     IupGLCanvasOpen();
 #endif  
-    IupControlsOpen();
-    IupImageLibOpen();
 
 #ifdef STOCK_TEST
     IupSetGlobal("IMAGESTOCKSIZE", STOCK_TEST);
+    IupSetGlobal("IMAGESTOCKAUTOSCALE", "NO");
 #endif
+
+    IupSetGlobal("GLOBALLAYOUTDLGKEY", "Yes");
+/*    IupSetGlobal("UTF8MODE", "YES"); */
 
     mainUpdateInternals();
 

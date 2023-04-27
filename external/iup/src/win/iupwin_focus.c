@@ -65,14 +65,17 @@ void iupwinWmSetFocus(Ihandle *ih)
     iupAttribSet(dialog, "_IUPWIN_LASTFOCUS", (char*)ih);  /* used by IupMenu and here. */
   else
   {
+    /* here ih is a dialog */
     /* if a control inside that dialog had the focus, then reset to it when the dialog gets the focus */
-    Ihandle* lastfocus = (Ihandle*)iupAttribGet(dialog, "_IUPWIN_LASTFOCUS");
-    if (lastfocus)
+    Ihandle* lastfocus = (Ihandle*)iupAttribGet(ih, "_IUPWIN_LASTFOCUS");
+    if (iupObjectCheck(lastfocus))
     {
       /* call the callback and update current focus before changing it again */
       iupCallGetFocusCb(ih);
 
-      IupSetFocus(lastfocus);
+      if (!iupAttribGetBoolean(ih, "IGNORELASTFOCUS"))
+        IupSetFocus(lastfocus);
+
       return;
     }
   }

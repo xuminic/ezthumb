@@ -27,15 +27,19 @@ typedef struct _Iarray Iarray;
  * Data is always initialized with zeros.
  * Must call \ref iupArrayInc, \ref iupArrayAdd or \ref iupArrayInsert to properly increase the number of elements.
  * \ingroup iarray */
-Iarray* iupArrayCreate(int start_max_count, int elem_size);
+IUP_SDK_API Iarray* iupArrayCreate(int start_max_count, int elem_size);
 
 /** Destroys the array.
  * \ingroup iarray */
-void iupArrayDestroy(Iarray* iarray);
+IUP_SDK_API void iupArrayDestroy(Iarray* iarray);
 
 /** Returns the pointer that contains the array.
  * \ingroup iarray */
-void* iupArrayGetData(Iarray* iarray);
+IUP_SDK_API void* iupArrayGetData(Iarray* iarray);
+
+/** Returns the pointer that contains the array, but also release it to be used elsewhere.
+* \ingroup iarray */
+IUP_SDK_API void* iupArrayReleaseData(Iarray* iarray);
 
 /** Increments the number of elements in the array.
  * The array count starts at 0. 
@@ -43,7 +47,7 @@ void* iupArrayGetData(Iarray* iarray);
  * Data is always initialized with zeros.
  * Returns the pointer that contains the array.
  * \ingroup iarray */
-void* iupArrayInc(Iarray* iarray);
+IUP_SDK_API void* iupArrayInc(Iarray* iarray);
 
 /** Increments the number of elements in the array by a given count.
  * New space is allocated at the end of the array.
@@ -51,7 +55,7 @@ void* iupArrayInc(Iarray* iarray);
  * Data is always initialized with zeros.
  * Returns the pointer that contains the array.
  * \ingroup iarray */
-void* iupArrayAdd(Iarray* iarray, int add_count);
+IUP_SDK_API void* iupArrayAdd(Iarray* iarray, int add_count);
 
 /** Increments the number of elements in the array by a given count
  * and moves the data so the new space starts at index.
@@ -59,15 +63,16 @@ void* iupArrayAdd(Iarray* iarray, int add_count);
  * Data is always initialized with zeros.
  * Returns the pointer that contains the array.
  * \ingroup iarray */
-void* iupArrayInsert(Iarray* iarray, int index, int insert_count);
+IUP_SDK_API void* iupArrayInsert(Iarray* iarray, int index, int insert_count);
 
 /** Remove the number of elements from the array.
+ * Memory allocation remains the same. 
  * \ingroup iarray */
-void iupArrayRemove(Iarray* iarray, int index, int remove_count);
+IUP_SDK_API void iupArrayRemove(Iarray* iarray, int index, int remove_count);
 
 /** Returns the actual number of elements in the array.
  * \ingroup iarray */
-int iupArrayCount(Iarray* iarray);
+IUP_SDK_API int iupArrayCount(Iarray* iarray);
 
 
 

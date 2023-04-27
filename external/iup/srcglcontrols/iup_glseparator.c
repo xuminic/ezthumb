@@ -98,6 +98,7 @@ Iclass* iupGLSeparatorNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("glsubcanvas"));
 
   ic->name = "glseparator";
+  ic->cons = "GLSeparator";
   ic->format = ""; /* none */
   ic->nativetype = IUP_TYPEVOID;
   ic->childtype = IUP_CHILDNONE;

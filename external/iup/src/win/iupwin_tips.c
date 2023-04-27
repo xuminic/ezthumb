@@ -171,7 +171,7 @@ void iupwinTipsUpdateInfo(Ihandle* ih, HWND tips_hwnd)
   {
     int balloon = IupGetInt(ih, "TIPBALLOON");  /* must use IupGetInt to use inheritance */
     DWORD style = GetWindowLong(tips_hwnd, GWL_STYLE);
-    int tip_balloon = style & TTS_BALLOON? 1: 0; 
+    int tip_balloon = (style & TTS_BALLOON)? 1: 0; 
     if (tip_balloon != balloon)
     {
       if (balloon)
@@ -236,7 +236,7 @@ void iupwinTipsGetDispInfo(LPARAM lp)
 
   tips_info = (NMTTDISPINFO*)lp;
   ih = iupwinHandleGet(tips_info->hdr.hwndFrom);  /* hwndFrom is the tooltip window */
-  if (!ih) 
+  if (!iupObjectCheck(ih))
     return;
 
   tips_hwnd = (HWND)iupAttribGet(ih, "_IUPWIN_TIPSWIN");

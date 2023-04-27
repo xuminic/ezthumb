@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
+          package="br.pucrio.tecgraf.iupweb"
+>
+
+	<uses-permission android:name="android.permission.INTERNET"/>
+
+</manifest>

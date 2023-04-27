@@ -12,7 +12,7 @@
 
 #include "iup_str.h"
 
-int IupHelp(const char *url)
+IUP_API int IupHelp(const char *url)
 {
   char *cmd;
   int ret;

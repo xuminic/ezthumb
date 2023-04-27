@@ -49,7 +49,7 @@ void iupdrvImageGetData(void* handle, unsigned char* imgdata)
   }
 }
 
-void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
+IUP_SDK_API void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
 {
   GdkPixbuf* pixbuf = (GdkPixbuf*)handle;
   int w, h, y, x, bpp;
@@ -90,7 +90,7 @@ void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
   }
 }
 
-void* iupdrvImageCreateImageRaw(int width, int height, int bpp, iupColor* colors, int colors_count, unsigned char *imgdata)
+IUP_SDK_API void* iupdrvImageCreateImageRaw(int width, int height, int bpp, iupColor* colors, int colors_count, unsigned char *imgdata)
 {
   GdkPixbuf* pixbuf;
   guchar *pixdata, *pixline_data;
@@ -165,7 +165,7 @@ void* iupdrvImageCreateImage(Ihandle *ih, const char* bgcolor, int make_inactive
   guchar *pixdata, *pixline_data;
   int rowstride, channels;
   unsigned char *imgdata, *line_data, bg_r=0, bg_g=0, bg_b=0;
-  int x, y, i, bpp, colors_count = 0, has_alpha = 0;
+  int x, y, bpp, colors_count = 0, has_alpha = 0;
   iupColor colors[256];
 
   bpp = iupAttribGetInt(ih, "BPP");
@@ -191,6 +191,8 @@ void* iupdrvImageCreateImage(Ihandle *ih, const char* bgcolor, int make_inactive
   {
     if (make_inactive)
     {
+      int i;
+
       for (i=0;i<colors_count;i++)
       {
         if (colors[i].a == 0)
@@ -201,8 +203,7 @@ void* iupdrvImageCreateImage(Ihandle *ih, const char* bgcolor, int make_inactive
           colors[i].a = 255;
         }
 
-        iupImageColorMakeInactive(&(colors[i].r), &(colors[i].g), &(colors[i].b), 
-                                  bg_r, bg_g, bg_b);
+        iupImageColorMakeInactive(&(colors[i].r), &(colors[i].g), &(colors[i].b), bg_r, bg_g, bg_b);
       }
     }
 
@@ -259,8 +260,7 @@ void* iupdrvImageCreateImage(Ihandle *ih, const char* bgcolor, int make_inactive
               *a = 255;
           }
 
-          iupImageColorMakeInactive(r, g, b, 
-                                    bg_r, bg_g, bg_b);
+          iupImageColorMakeInactive(r, g, b, bg_r, bg_g, bg_b);
         }
       }
     }
@@ -294,11 +294,11 @@ void* iupdrvImageCreateCursor(Ihandle *ih)
 
     r = 255; g = 255; b = 255;
     iupStrToRGB(iupAttribGet(ih, "1"), &r, &g, &b );
-    iupgdkColorSet(&fg, r, g, b);
+    iupgdkColorSetRGB(&fg, r, g, b);
 
     r = 0; g = 0; b = 0;
     iupStrToRGB(iupAttribGet(ih, "2"), &r, &g, &b );
-    iupgdkColorSet(&bg, r, g, b);
+    iupgdkColorSetRGB(&bg, r, g, b);
 
     sbits = (char*)malloc(2*size_bytes);
     if (!sbits) return NULL;
@@ -345,7 +345,8 @@ void* iupdrvImageCreateCursor(Ihandle *ih)
   return cursor;
 }
 
-void* iupdrvImageCreateMask(Ihandle *ih)
+#if 0  /* OLD unused code - kept for reference */
+void* iupgtkImageCreateMask(Ihandle *ih)
 {
 #if GTK_CHECK_VERSION(3, 0, 0)
   (void)ih;
@@ -391,6 +392,7 @@ void* iupdrvImageCreateMask(Ihandle *ih)
   return mask;
 #endif
 }
+#endif
 
 #if !GTK_CHECK_VERSION(3, 10, 0) /* Stock Items deprecated in GTK 3.10 */
 static GdkPixbuf* gtkImageRenderPixbuf(GtkIconSet* icon_set, int render_icon_size, int dir)
@@ -475,12 +477,10 @@ void* iupdrvImageLoad(const char* name, int type)
 #endif
   else /* IUPIMAGE_IMAGE or IUPIMAGE_ICON */
   {
-    int stock_size = 16;
     GdkPixbuf *pixbuf = NULL;
     GtkIconTheme* icon_theme;
     GError *error;
-
-    stock_size = iupImageStockGetSize();
+    int stock_size = iupImageStockGetSize();
 
     /* default approach */
     icon_theme = gtk_icon_theme_get_default();
@@ -561,7 +561,7 @@ int iupdrvImageGetInfo(void* handle, int *w, int *h, int *bpp)
   return 1;
 }
 
-int iupdrvImageGetRawInfo(void* handle, int *w, int *h, int *bpp, iupColor* colors, int *colors_count)
+IUP_SDK_API int iupdrvImageGetRawInfo(void* handle, int *w, int *h, int *bpp, iupColor* colors, int *colors_count)
 {
   /* GdkPixbuf are only 24 bpp or 32 bpp */
   (void)colors;
@@ -569,7 +569,7 @@ int iupdrvImageGetRawInfo(void* handle, int *w, int *h, int *bpp, iupColor* colo
   return iupdrvImageGetInfo(handle, w, h, bpp);
 }
 
-void iupdrvImageDestroy(void* handle, int type)
+IUP_SDK_API void iupdrvImageDestroy(void* handle, int type)
 {
 #if !GTK_CHECK_VERSION(3, 0, 0)
   if (type == IUPIMAGE_CURSOR)

@@ -1,0 +1,3 @@
+EXPORTS
+  iupfiledlglua_open
+  luaopen_iupluafiledlg

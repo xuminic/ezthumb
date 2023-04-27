@@ -20,7 +20,7 @@
 #include "iup_register.h"
 
 
-Ihandle* IupFileDlg(void)
+IUP_API Ihandle* IupFileDlg(void)
 {
   return IupCreate("filedlg");
 }
@@ -30,6 +30,7 @@ Iclass* iupFileDlgNewClass(void)
   Iclass* ic = iupClassNew(iupRegisterFindClass("dialog"));
 
   ic->name = "filedlg";
+  ic->cons = "FileDlg";
   ic->nativetype = IUP_TYPEDIALOG;
   ic->is_interactive = 1;
 

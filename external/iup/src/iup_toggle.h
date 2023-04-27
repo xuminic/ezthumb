@@ -1,5 +1,5 @@
 /** \file
- * \brief Toggle Controls Private Declarations
+ * \brief Toggle Controls (not exported API)
  *
  * See Copyright Notice in "iup.h"
  */
@@ -12,12 +12,15 @@ extern "C" {
 #endif
 
 
-void iupdrvButtonAddBorders(int *x, int *y);  /* reuse button borders */
+/* some drivers reuses iupdrvButtonAddBorders */
+void iupdrvButtonAddBorders(Ihandle* ih, int *x, int *y);
+
+void iupdrvToggleAddBorders(Ihandle* ih, int *x, int *y);
 
 void iupdrvToggleInitClass(Iclass* ic);
-void iupdrvToggleAddCheckBox(int *x, int *y, const char* str);
+void iupdrvToggleAddCheckBox(Ihandle* ih, int *x, int *y, const char* str);
 
-Ihandle *iupRadioFindToggleParent(Ihandle* ih_toggle);
+IUP_SDK_API Ihandle* iupRadioFindToggleParent(Ihandle* ih_toggle);
 char* iupToggleGetPaddingAttrib(Ihandle* ih);
 
 enum {IUP_TOGGLE_IMAGE, IUP_TOGGLE_TEXT};

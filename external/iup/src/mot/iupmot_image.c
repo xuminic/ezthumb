@@ -26,7 +26,7 @@
 void iupdrvImageGetData(void* handle, unsigned char* imgdata)
 {
   Pixmap pixmap = (Pixmap)handle;
-  int w, h, y, x, bpp;
+  int w, h, bpp;
   XImage *xi;
 
   if (!iupdrvImageGetInfo(handle, &w, &h, &bpp))
@@ -41,6 +41,7 @@ void iupdrvImageGetData(void* handle, unsigned char* imgdata)
     /* planes are packed and top-bottom in this imgdata */
     int planesize = w*h;
     unsigned char *line_data;
+    int y, x;
 
     for (y = 0; y<h; y++)
     {
@@ -55,10 +56,10 @@ void iupdrvImageGetData(void* handle, unsigned char* imgdata)
   }
 }
 
-void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
+IUP_SDK_API void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
 {
   Pixmap pixmap = (Pixmap)handle;
-  int w, h, y, x, bpp;
+  int w, h, bpp;
   XImage *xi;
 
   if (!iupdrvImageGetInfo(handle, &w, &h, &bpp))
@@ -71,6 +72,7 @@ void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
   if (xi)
   {
     /* planes are separated in imgdata */
+    int y, x;
     int planesize = w*h;
     unsigned char *r = imgdata,
                   *g = imgdata+planesize,
@@ -88,7 +90,7 @@ void iupdrvImageGetRawData(void* handle, unsigned char* imgdata)
   }
 }
 
-void* iupdrvImageCreateImageRaw(int width, int height, int bpp, iupColor* colors, int colors_count, unsigned char *imgdata)
+IUP_SDK_API void* iupdrvImageCreateImageRaw(int width, int height, int bpp, iupColor* colors, int colors_count, unsigned char *imgdata)
 {
   int y, x;
   Pixmap pixmap;
@@ -181,8 +183,7 @@ void* iupdrvImageCreateImage(Ihandle *ih, const char* bgcolor, int make_inactive
       }
 
       if (make_inactive)
-          iupImageColorMakeInactive(&(colors[i].r), &(colors[i].g), &(colors[i].b), 
-                                    bg_r, bg_g, bg_b);
+        iupImageColorMakeInactive(&(colors[i].r), &(colors[i].g), &(colors[i].b), bg_r, bg_g, bg_b);
 
       color2pixel[i] = iupmotColorGetPixel(colors[i].r, colors[i].g, colors[i].b);
     }
@@ -215,6 +216,7 @@ void* iupdrvImageCreateImage(Ihandle *ih, const char* bgcolor, int make_inactive
           unsigned char a = *(pixel_data+3);
           if (a != 255)
           {
+            /* flat alpha */
             r = iupALPHABLEND(r, bg_r, a);
             g = iupALPHABLEND(g, bg_g, a);
             b = iupALPHABLEND(b, bg_b, a);
@@ -318,7 +320,7 @@ void* iupdrvImageCreateCursor(Ihandle *ih)
   return (void*)cursor;
 }
 
-void* iupdrvImageCreateMask(Ihandle *ih)
+static Pixmap motImageCreateMask(Ihandle *ih)
 {
   int bpp,y,x,
       width = ih->currentwidth,
@@ -332,10 +334,10 @@ void* iupdrvImageCreateMask(Ihandle *ih)
 
   bpp = iupAttribGetInt(ih, "BPP");
   if (bpp > 8)
-    return NULL;
+    return 0;
 
   bits = (char*)malloc(size_bytes);
-  if (!bits) return NULL;
+  if (!bits) return 0;
   memset(bits, 0, size_bytes);
 
   iupImageInitNonBgColors(ih, colors);
@@ -360,7 +362,33 @@ void* iupdrvImageCreateMask(Ihandle *ih)
                                bits, width, height);
 
   free(bits);
-  return (void*)mask;
+  return mask;
+}
+
+Pixmap iupmotImageGetMask(const char* name)
+{
+  Pixmap mask;
+  Ihandle *ih;
+
+  if (!name)
+    return 0;
+
+  ih = iupImageGetImageFromName(name);
+  if (!ih)
+    return 0;
+
+  /* Check for an already created icon */
+  mask = (Pixmap)iupAttribGet(ih, "_IUPIMAGE_MASK");
+  if (mask)
+    return mask;
+
+  /* Not created, tries to create the mask */
+  mask = motImageCreateMask(ih);
+
+  /* save the mask */
+  iupAttribSet(ih, "_IUPIMAGE_MASK", (char*)mask);
+
+  return mask;
 }
 
 void* iupdrvImageLoad(const char* name, int type)
@@ -407,7 +435,7 @@ int iupdrvImageGetInfo(void* handle, int *w, int *h, int *bpp)
   return 1;
 }
 
-int iupdrvImageGetRawInfo(void* handle, int *w, int *h, int *bpp, iupColor* colors, int *colors_count)
+IUP_SDK_API int iupdrvImageGetRawInfo(void* handle, int *w, int *h, int *bpp, iupColor* colors, int *colors_count)
 {
   /* How to get the pallete? */
   (void)colors;
@@ -415,7 +443,7 @@ int iupdrvImageGetRawInfo(void* handle, int *w, int *h, int *bpp, iupColor* colo
   return iupdrvImageGetInfo(handle, w, h, bpp);
 }
 
-void iupdrvImageDestroy(void* handle, int type)
+IUP_SDK_API void iupdrvImageDestroy(void* handle, int type)
 {
   if (type == IUPIMAGE_CURSOR)
     XFreeCursor(iupmot_display, (Cursor)handle);

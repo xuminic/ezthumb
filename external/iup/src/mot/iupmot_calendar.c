@@ -31,7 +31,7 @@ Iclass* iupCalendarNewClass(void)
   return ic;
 }
 
-Ihandle *IupCalendar(void)
+IUP_API Ihandle* IupCalendar(void)
 {
   return IupCreate("calendar");
 }

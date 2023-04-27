@@ -16,11 +16,16 @@
 #include "iup_drv.h"
 
 #include "iupwin_info.h"
+#include "iupwin_str.h"
 
 #include <windows.h>
-#include <stdio.h>
+#include <ShlObj.h> /* for SHGetFolderPath */
 
-/* No need to test for UTF8MODE here */
+
+#ifdef _MSC_VER
+/* warning C4996: 'GetVersionExW': was declared deprecated */
+#pragma warning( disable : 4996 )
+#endif
 
 /* other method, when replaced should do it in CD also (cdwinp.cpp) */
 static BOOL winCheckWindowsVersion(DWORD major, DWORD minor) 
@@ -70,6 +75,11 @@ int iupwinIsWin7OrNew(void)
 int iupwinIsWin8OrNew(void)
 {
   return iupwinCheckWindowsVersion(6, 2);
+}
+
+int iupwinIsWin10OrNew(void)
+{
+  return iupwinCheckWindowsVersion(6, 4);
 }
 
 char *iupwinGetSystemLanguage(void)
@@ -294,4 +304,207 @@ int iupwinIsAppThemed(void)
     return myIsAppThemed();
   else
     return 0;
+}
+
+IUP_SDK_API void iupdrvGetScreenSize(int *width, int *height)
+{
+  RECT area;
+  SystemParametersInfoA(SPI_GETWORKAREA, 0, &area, 0);
+  *width = (int)(area.right - area.left);
+  *height = (int)(area.bottom - area.top);
+}
+
+IUP_SDK_API void iupdrvAddScreenOffset(int *x, int *y, int add)
+{
+  RECT area;
+  SystemParametersInfoA(SPI_GETWORKAREA, 0, &area, 0);
+  if (add == 1)
+  {
+    if (x) *x += area.left;
+    if (y) *y += area.top;
+  }
+  else
+  {
+    if (x) *x -= area.left;
+    if (y) *y -= area.top;
+  }
+}
+
+IUP_SDK_API void iupdrvGetFullSize(int *width, int *height)
+{
+  RECT rect;
+  GetWindowRect(GetDesktopWindow(), &rect);
+  *width = rect.right - rect.left;
+  *height = rect.bottom - rect.top;
+}
+
+IUP_SDK_API int iupdrvGetScreenDepth(void)
+{
+  int bpp;
+  HDC hDCDisplay = GetDC(NULL);
+  bpp = GetDeviceCaps(hDCDisplay, BITSPIXEL);
+  ReleaseDC(NULL, hDCDisplay);
+  return bpp;
+}
+
+IUP_SDK_API double iupdrvGetScreenDpi(void)
+{
+  double dpi;
+  HDC hDCDisplay = GetDC(NULL);
+  dpi = (double)GetDeviceCaps(hDCDisplay, LOGPIXELSY);
+  ReleaseDC(NULL, hDCDisplay);
+  return dpi;
+}
+
+IUP_SDK_API void iupdrvGetCursorPos(int *x, int *y)
+{
+  POINT CursorPoint;
+  GetCursorPos(&CursorPoint);
+  *x = (int)CursorPoint.x;
+  *y = (int)CursorPoint.y;
+
+  iupdrvAddScreenOffset(x, y, -1);
+}
+
+IUP_SDK_API void iupdrvGetKeyState(char* key)
+{
+  if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+    key[0] = 'S';
+  else
+    key[0] = ' ';
+  if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+    key[1] = 'C';
+  else
+    key[1] = ' ';
+  if (GetAsyncKeyState(VK_MENU) & 0x8000)
+    key[2] = 'A';
+  else
+    key[2] = ' ';
+  if ((GetAsyncKeyState(VK_LWIN) & 0x8000) || (GetAsyncKeyState(VK_RWIN) & 0x8000))
+    key[3] = 'Y';
+  else
+    key[3] = ' ';
+
+  key[4] = 0;
+}
+
+IUP_SDK_API char *iupdrvGetComputerName(void)
+{
+  DWORD size = MAX_COMPUTERNAME_LENGTH + 1;
+  TCHAR wstr[MAX_COMPUTERNAME_LENGTH + 1];
+  GetComputerName(wstr, &size);
+  return iupwinStrFromSystem(wstr);
+}
+
+#define UNLEN 256 /* from <Lmcons.h> */
+
+IUP_SDK_API char *iupdrvGetUserName(void)
+{
+  DWORD size = UNLEN+1;
+  TCHAR wstr[UNLEN+1];
+  GetUserName(wstr, &size);
+  return iupwinStrFromSystem(wstr);
+}
+
+IUP_SDK_API int iupdrvSetCurrentDirectory(const char* path)
+{
+  return SetCurrentDirectory(iupwinStrToSystemFilename(path));
+}
+
+IUP_SDK_API char* iupdrvGetCurrentDirectory(void)
+{
+  TCHAR* wcur_dir = NULL;
+  char* cur_dir;
+
+  int len = GetCurrentDirectory(0, NULL);
+  if (len == 0) return NULL;
+
+  wcur_dir = (TCHAR*)malloc((len + 2)*sizeof(TCHAR));
+  GetCurrentDirectory(len + 1, wcur_dir);
+  wcur_dir[len] = '\\';
+  wcur_dir[len + 1] = 0;
+
+  cur_dir = iupwinStrFromSystemFilename(wcur_dir);
+  free(wcur_dir);
+  return cur_dir;
+}
+
+/*
+Windows 7 and 10
+PreferencePath(0)=C:\Users\Tecgraf\
+PreferencePath(1)=C:\Users\Tecgraf\AppData\Roaming\
+
+Windows XP
+PreferencePath(0)=C:\Documents and Settings\Tecgraf\
+PreferencePath(1)=C:\Documents and Settings\Tecgraf\Application Data\
+*/
+
+IUP_SDK_API int iupdrvGetPreferencePath(char *filename, int use_system)
+{
+  char* homedrive;
+  char* homepath;
+
+  if (use_system)
+  {
+    TCHAR wpath[MAX_PATH];
+    if (SHGetFolderPath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, SHGFP_TYPE_CURRENT, wpath) == S_OK)
+    {
+      strcpy(filename, iupwinStrFromSystemFilename(wpath));
+      strcat(filename, "\\");
+      return 1;
+    }
+  }
+
+  homedrive = getenv("HOMEDRIVE");
+  homepath = getenv("HOMEPATH");
+  if (homedrive && homepath)
+  {
+    strcpy(filename, homedrive);
+    strcat(filename, homepath);
+    strcat(filename, "\\");
+    return 1;
+  }
+
+  filename[0] = '\0';
+  return 0;
+
+}
+
+IUP_API void IupLogV(const char* type, const char* format, va_list arglist)
+{
+  HANDLE EventSource;
+  WORD wtype = 0;
+
+  int size;
+  char* value = iupStrGetLargeMem(&size);
+  vsnprintf(value, size, format, arglist);
+
+  if (iupStrEqualNoCase(type, "DEBUG"))
+  {
+    OutputDebugString(iupwinStrToSystem(value));
+    return;
+  }
+  else if (iupStrEqualNoCase(type, "ERROR"))
+    wtype = EVENTLOG_ERROR_TYPE;
+  else if (iupStrEqualNoCase(type, "WARNING"))
+    wtype = EVENTLOG_WARNING_TYPE;
+  else if (iupStrEqualNoCase(type, "INFO"))
+    wtype = EVENTLOG_INFORMATION_TYPE;
+
+  EventSource = RegisterEventSource(NULL, TEXT("Application"));
+  if (EventSource)
+  {
+    TCHAR* wstr[1];
+    wstr[0] = iupwinStrToSystem(value);
+    ReportEvent(EventSource, wtype, 0, 0, NULL, 1, 0, wstr, NULL);
+    DeregisterEventSource(EventSource);
+  }
+}
+
+IUP_API void IupLog(const char* type, const char* format, ...)
+{
+  va_list arglist;
+  va_start(arglist, format);
+  IupLogV(type, format, arglist);
+  va_end(arglist);
 }
