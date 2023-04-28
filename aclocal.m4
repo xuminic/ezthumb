@@ -1031,7 +1031,7 @@ AC_SUBST([AMTAR], ['$${TAR-tar}'])
 _am_tools='gnutar m4_if([$1], [ustar], [plaintar]) pax cpio none'
 
 m4_if([$1], [v7],
-  [am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'],
+  [am__tar='$${TAR-tar} chf - "$$tardir"' am__untar='$${TAR-tar} xf -'],
 
   [m4_case([$1],
     [ustar],

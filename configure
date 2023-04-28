@@ -3135,7 +3135,7 @@ AMTAR='$${TAR-tar}'
 # We'll loop over all known methods to create a tar archive until one works.
 _am_tools='gnutar  pax cpio none'
 
-am__tar='$${TAR-tar} chof - "$$tardir"' am__untar='$${TAR-tar} xf -'
+am__tar='$${TAR-tar} chf - "$$tardir"' am__untar='$${TAR-tar} xf -'
 
 
 
