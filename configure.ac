@@ -108,9 +108,31 @@ case "$host_os" in
   *)
     SYSTOOL=unix
     CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup/include \
-	    -I/usr/include/ffmpeg -I/usr/include/freetype2"
+	    -I/usr/include/ffmpeg"
     LDFLAGS="$LDFLAGS -L./external/libcsoup"
     AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [])
+    HAVE_FREETYPE_PKG=no
+    if test "x$PKGCONFIG" != x; then
+      PKG_CHECK_MODULES([FREETYPE], [freetype2], [
+        CPPFLAGS="$CPPFLAGS $FREETYPE_CFLAGS"
+        LIBS="$LIBS $FREETYPE_LIBS"
+        HAVE_FREETYPE_PKG=yes
+      ], [
+        AC_MSG_WARN([pkg-config could not find freetype2, falling back to standard include paths.])
+      ])
+    fi
+    if test "x$HAVE_FREETYPE_PKG" = xno; then
+      AC_CHECK_PROG([FREETYPE_CONFIG], [freetype-config], [freetype-config], [])
+      if test "x$FREETYPE_CONFIG" != x; then
+        CPPFLAGS="$CPPFLAGS `$FREETYPE_CONFIG --cflags`"
+        LIBS="$LIBS `$FREETYPE_CONFIG --libs`"
+        HAVE_FREETYPE_PKG=yes
+      elif test -d /usr/include/freetype2; then
+        CPPFLAGS="$CPPFLAGS -I/usr/include/freetype2"
+      elif test -d /usr/local/include/freetype2; then
+        CPPFLAGS="$CPPFLAGS -I/usr/local/include/freetype2"
+      fi
+    fi
     if test "x$PKGCONFIG" = x; then
       SYSGUI=CFG_GUI_OFF
       AC_MSG_WARN([pkg-config is not found -- command line interface only])
@@ -183,8 +205,10 @@ AC_CHECK_LIB([jpeg], [jpeg_read_header], [],
   [AC_MSG_ERROR([libjpeg not found.])])
 AC_CHECK_LIB([png], [png_get_copyright], [],
   [AC_MSG_ERROR([libpng not found.])])
-AC_CHECK_LIB([freetype], [FT_Library_Version], [],
-  [AC_MSG_ERROR([Freetype not found.])])
+AS_IF([test "x$HAVE_FREETYPE_PKG" != xyes], [
+  AC_CHECK_LIB([freetype], [FT_Library_Version], [],
+    [AC_MSG_ERROR([Freetype not found.])])
+])
 AC_CHECK_LIB([gd], [gdImageCreate], [],
   [AC_MSG_ERROR([libgd not found.])])
 AC_CHECK_LIB([avutil], [avutil_version], [],
@@ -204,7 +228,11 @@ CURRLIB="$LIBS"
 AC_CHECK_HEADERS([sys/time.h],,,[AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([libavcodec/avcodec.h libavformat/avformat.h \
     libswscale/swscale.h libavutil/avutil.h libavutil/mathematics.h \
-    libavutil/imgutils.h  ft2build.h])
+    libavutil/imgutils.h])
+AC_CHECK_HEADER([ft2build.h],
+  [AC_DEFINE([HAVE_FT2BUILD_H], [1],
+    [Define to 1 if you have the <ft2build.h> header file.])],
+  [AC_MSG_ERROR([ft2build.h not found. Install libfreetype development headers or pass CPPFLAGS="-I/path/to/freetype2".])])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_INT64_T
